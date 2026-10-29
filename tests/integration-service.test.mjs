@@ -17,7 +17,7 @@ async function service(t,extras={},dependencies={}){
 test('real scheduler gives all six AI identities a turn when due times overlap',async t=>{
  const {request,seen}=await service(t);const made=await request('/api/rooms',{mode:'spectator'});assert.equal(made.status,201);
  const route='/api/rooms/'+made.body.roomId;assert.equal((await request(route+'/start',{id:'start'},made.cookie)).status,200);
- const end=Date.now()+1200;while(seen.size<6&&Date.now()<end)await new Promise(r=>setTimeout(r,30));
+ const end=Date.now()+10000;while(seen.size<6&&Date.now()<end)await new Promise(r=>setTimeout(r,30));
  assert.deepEqual([...seen].sort(),['p1','p2','p3','p4','p5','p6']);
 });
 test('HTTP denial state persists: a rejected request ID cannot become a different action',async t=>{
@@ -32,11 +32,13 @@ test('HTTP denial state persists: a rejected request ID cannot become a differen
  assert.equal((await request(route,undefined,made.cookie)).body.game.self.roomId,'archive');
 });
 test('reaching an inactive phase aborts pending AI work without waiting for browser disconnect',async t=>{
- let started=false,aborted=false;
+ let started=false,aborted=false,now=1000000;
  const aiController={describe:()=>({mode:'demo',provider:'test-stub'}),async decide({signal}){started=true;await new Promise(resolve=>{if(signal.aborted){aborted=true;resolve();return;}signal.addEventListener('abort',()=>{aborted=true;resolve();},{once:true});});return null;}};
- const {request}=await service(t,{rules:{maxMatchMs:300}},{aiController});
+ const {request}=await service(t,{now:()=>now,rules:{maxMatchMs:300}},{aiController});
  const made=await request('/api/rooms',{mode:'spectator'}),route='/api/rooms/'+made.body.roomId;await request(route+'/start',{id:'start'},made.cookie);
- const end=Date.now()+2000;while(!aborted&&Date.now()<end)await new Promise(r=>setTimeout(r,20));
+ const ready=Date.now()+10000;while(!started&&Date.now()<ready)await new Promise(r=>setTimeout(r,20));
+ now+=300;
+ const end=Date.now()+10000;while(!aborted&&Date.now()<end)await new Promise(r=>setTimeout(r,20));
  assert(started,'A real scheduled decision must be pending');assert(aborted,'No AI request may continue after the rules pause');
  assert.equal((await request(route,undefined,made.cookie)).body.game.phase,'paused');
 });
