@@ -8,4 +8,4 @@ The stale-401 negative control now reads the immutable audited frontend from Git
 
 The terminal-AI regression runs against the current checkout by default, retaining its real HTTP victory/pause/restart and reservation assertions. Supplying `TRANSPORT_TERMINAL_ROOT` still enforces the original independent `9b31317c618ea12810a369edb84f87834f9218b9` source pin before and after the run. This permits future transport corrections without treating every source change as a behavioral regression; the original pinned receipt remains unchanged.
 
-The UI recovery/focus/stale-owner and malformed-origin findings remain pending until their fixes and independent verification receipts are integrated. This document does not claim those findings are closed.
+At this receipt's original commit, UI recovery/focus/stale-owner and malformed-origin findings were pending. Subsequent corrections and independent verification are recorded in [the follow-up closure receipt](AUDIT-CLOSURE-20261029.md); this historical integration receipt is not their qualification evidence.
