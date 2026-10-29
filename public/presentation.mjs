@@ -33,7 +33,7 @@ export function eventText(event,game){
   default:return String(event.type||'Watch event').replaceAll('_',' ');
  }
 }
-export function outcomeText(reason){return ({tasks:'Every crew task is complete.',ejection:'The saboteur has been ejected.',parity:'The saboteur reached parity with the crew.',critical:'The critical system was not repaired in time.'})[reason]||String(reason||'The watch is over.');}
+export function outcomeText(reason){return ({tasks:'Every crew task is complete.',ejection:'Every saboteur has been ejected.',parity:'The saboteurs reached parity with the crew.',critical:'The critical system was not repaired in time.'})[reason]||String(reason||'The watch is over.');}
 export function replayEvents(data){const events=Array.isArray(data)?data:Array.isArray(data?.replay)?data.replay:Array.isArray(data?.events)?data.events:null;if(!events)throw new Error('The replay response is incomplete.');return events;}
 export function aiNotice(reason){
  return ({demo_configured:'Demo mode: the keepers use local behavior.',missing_credentials:'Demo mode: live AI is not configured.',budget_calls:'Demo mode: this match reached its AI call limit.',budget_tokens:'Demo mode: this match reached its AI token limit.',budget_cost:'Demo mode: this match reached its AI spending limit.',provider_unavailable:'Demo mode: the live AI provider is unavailable.',timeout:'Demo mode: the live AI provider did not respond in time.',reservation_failed:'Demo mode: AI spending could not be reserved.'})[reason]||'Demo mode: live AI is unavailable for this watch.';

@@ -1,12 +1,12 @@
 export class ApiError extends Error{
  constructor(message,status,code){super(message);this.status=status;this.code=code;}
 }
-export async function request(path,{method='GET',body,signal,keepalive=false,timeoutMs=15000}={}){
+export async function request(path,{method='GET',body,signal,keepalive=false,timeoutMs=15000,headers={}}={}){
  const timeout=new AbortController();
  const deadline=setTimeout(()=>timeout.abort(new DOMException('The request timed out. Please retry.','TimeoutError')),Math.max(100,Math.min(15000,timeoutMs)));
  const combined=signal?AbortSignal.any([signal,timeout.signal]):timeout.signal;
  try{
-  const response=await fetch(path,{method,credentials:'same-origin',cache:'no-store',keepalive,signal:combined,headers:body?{'Content-Type':'application/json'}:{},body:body?JSON.stringify(body):undefined});
+  const response=await fetch(path,{method,credentials:'same-origin',cache:'no-store',keepalive,signal:combined,headers:{...headers,...(body?{'Content-Type':'application/json'}:{})},body:body?JSON.stringify(body):undefined});
   let data;
   try{data=await response.json();}
   catch{if(combined.aborted)throw combined.reason;throw new ApiError('The beacon returned an unreadable response.',response.ok?undefined:response.status,'RESPONSE');}

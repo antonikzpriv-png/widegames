@@ -22,7 +22,7 @@ export function drawKeeper(ctx,player,x,y,{scale=1,step=0,selected=false,ghost=f
  ctx.fillStyle='#c4f2e8';ctx.beginPath();ctx.ellipse(5,-32+bob,8,5,-.15,0,Math.PI*2);ctx.fill();
  round(ctx,-12,-59+bob,24,8,3,player.color||'#edb66c',undefined,3);circle(ctx,0,-55+bob,5,'#fff0b3',undefined,2);
  circle(ctx,15,-7+bob,5,'#ffe299',undefined,2);
- if(label){text(ctx,player.name||'Keeper',0,36,14,'#102d3e');ctx.lineWidth=4;ctx.strokeStyle='#eff8e8';ctx.strokeText(player.name||'Keeper',0,36);text(ctx,player.name||'Keeper',0,36,14,'#102d3e');}
+ if(label){text(ctx,(player.badge?`${player.name} #${player.badge}`:player.name)||'Keeper',0,36,14,'#102d3e');ctx.lineWidth=4;ctx.strokeStyle='#eff8e8';ctx.strokeText((player.badge?`${player.name} #${player.badge}`:player.name)||'Keeper',0,36);text(ctx,(player.badge?`${player.name} #${player.badge}`:player.name)||'Keeper',0,36,14,'#102d3e');}
  ctx.restore();
 }
 function decor(ctx,room,time,reduced){
@@ -82,14 +82,14 @@ export function createWorldScene(canvas,{reduced=false}={}){
   }
   circle(ctx,world.WORLD_BELL.x,world.WORLD_BELL.y,19,'#e1a34f');circle(ctx,world.WORLD_BELL.x,world.WORLD_BELL.y,9,'#fff0ba',undefined,2);
   for(const body of visibleBodies(game)){ctx.save();ctx.translate(body.position.x,body.position.y);ctx.rotate(-.25);const color=game.players.find(p=>p.id===body.playerId)?.color||'#d3b48b';round(ctx,-25,-10,48,24,12,color);round(ctx,-15,-8,20,13,5,'#274958',undefined,3);ctx.restore();text(ctx,'FALLEN',body.position.x,body.position.y+31,11,'#fbf1d5');}
-  const actors=lobby?CHARACTERS.map((p,i)=>({...p,position:{x:690+(i%3)*110,y:280+Math.floor(i/3)*100},alive:true})):Array.from(samples.samples.values(),s=>s.player);
+  const actors=lobby?(room?.seats||CHARACTERS).map((p,i)=>({...p,position:{x:690+(i%3)*110,y:280+Math.floor(i/3)*100},alive:true})):Array.from(samples.samples.values(),s=>s.player);
   for(const player of actors.sort((a,b)=>a.position.y-b.position.y)){
    const p=lobby?player.position:samples.at(player.id,time,reduced);if(!p)continue;
    drawKeeper(ctx,player,p.x,p.y,{selected:player.id===game?.self?.id,step:!reduced&&player.moving&&(player.id===game?.self?.id||time-(samples.samples.get(player.id)?.at||0)<300)?time/95:0,scale:1.02});
   }
   ctx.restore();
   if(!overview&&game?.self&&point(game.self.position)){
-   const sx=(game.self.position.x-camera.x)*zoom+width/2,sy=(game.self.position.y-camera.y)*zoom+height/2,radius=world.WORLD.visibilityRadius*zoom;
+   const sx=(game.self.position.x-camera.x)*zoom+width/2,sy=(game.self.position.y-camera.y)*zoom+height/2,radius=(game.settings?.vision??world.WORLD.visibilityRadius)*zoom;
    const fog=ctx.createRadialGradient(sx,sy,radius*.35,sx,sy,radius);fog.addColorStop(0,'#091d3000');fog.addColorStop(.82,'#091d3038');fog.addColorStop(1,'#091d30e8');ctx.fillStyle=fog;ctx.fillRect(0,0,width,height);
   }
  }

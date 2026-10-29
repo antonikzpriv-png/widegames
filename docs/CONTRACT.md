@@ -1,5 +1,7 @@
 # Stable integration contract v1
 
+**Current extension:** [Multiplayer lobbies and rematches](MULTIPLAYER.md) supersedes fixed-roster, p1-only ownership, immutable-start-only lifecycle and historical owner/path allocations below. These original contracts remain the compatibility baseline for historical rooms.
+
 Setting: **Lantern Wake**, a drifting storm-beacon platform. Six keepers, five crew and one hidden saboteur. Room IDs/graph, characters, action names and rule defaults are in `shared/contracts.mjs`. No role in public character constants. Internal role strings are `crew` and `saboteur`. Starting room is bridge. Demo mode is explicitly labeled.
 
 ## Engine (Agent 2 / Core)

@@ -23,7 +23,7 @@ export function contexts(game,world){
  const nearby=active&&distance(pos,station)<=world.WORLD.interactionRadius;
  const task=(self?.tasks||[]).find(t=>!t.completed&&t.roomId===self?.roomId);
  const body=visibleBodies(game).find(b=>distance(pos,b.position)<=world.WORLD.reportRadius);
- const target=visiblePlayers(game).filter(p=>p.id!==self?.id&&distance(pos,p.position)<=world.WORLD.killRadius).sort((a,b)=>distance(pos,a.position)-distance(pos,b.position))[0];
+ const target=visiblePlayers(game).filter(p=>p.id!==self?.id&&!self?.teammates?.includes(p.id)&&distance(pos,p.position)<=world.WORLD.killRadius).sort((a,b)=>distance(pos,a.position)-distance(pos,b.position))[0];
  const allowed=type=>active&&available.includes(type);
  const repair=game?.sabotage?.active&&game.sabotage.roomId===self?.roomId;
  const bell=active&&distance(pos,world.WORLD_BELL)<=world.WORLD.interactionRadius;

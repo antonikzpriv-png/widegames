@@ -24,6 +24,9 @@ jobs:
         env:
           CHROME_PATH: /usr/bin/google-chrome
           LW_WORLD_BROWSER: '1'
+      - run: npm run test:multiplayer-browser
+        env:
+          CHROME_PATH: /usr/bin/google-chrome
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -36,3 +39,5 @@ jobs:
             _artifacts/world-browser-*/*.png
             _artifacts/world-ui-*/report.json
             _artifacts/world-ui-*/*.png
+            _artifacts/multiplayer-browser-*/report.json
+            _artifacts/multiplayer-browser-*/*.png

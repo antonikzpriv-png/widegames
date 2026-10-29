@@ -31,19 +31,19 @@ function actionContextCurrent(context){
 }
 function stopWorldMovement(){
  const owner=worldSession,game=room?.game;
- if(!owner||owner.id!==roomId||!game?.worldVersion||!game.self?.alive||game.phase!=='roam')return;
+ if(!owner||owner.id!==roomId||owner.matchId!==game?.matchId||!game?.worldVersion||!game.self?.alive||game.phase!=='roam')return;
  const seq=Math.max(owner.wireSeq||0,game.self.inputSeq||0)+1;if(!Number.isSafeInteger(seq))return;
  owner.wireSeq=seq;owner.lastVector={dx:0,dy:0};
  // This final stop must outlive the controller we are about to abort. It is
  // scoped to the old room cookie, bounded, and never accepts a stale response.
- request(roomPath(owner.id,'/input'),{method:'POST',body:{seq,dx:0,dy:0},keepalive:true,timeoutMs:1500}).catch(()=>{});
+ request(roomPath(owner.id,'/input'),{method:'POST',body:{seq,dx:0,dy:0,...(owner.generation!==undefined?{generation:owner.generation,matchId:owner.matchId}:{})},keepalive:true,timeoutMs:1500}).catch(()=>{});
 }
 function releaseWorld(){
  stopWorldMovement();
  const instance=worldExperience,owner=worldSession;worldExperience=null;
  try{instance?.dispose();}finally{if(worldSession===owner)worldSession=null;}
 }
-function ownsWorld(owner){return worldSession===owner&&roomId===owner.id&&!document.hidden&&controller&&!controller.signal.aborted;}
+function ownsWorld(owner){return worldSession===owner&&roomId===owner.id&&owner.generation===room?.generation&&owner.matchId===room?.game?.matchId&&!document.hidden&&controller&&!controller.signal.aborted;}
 async function worldInput(owner,input){
  if(!ownsWorld(owner))throw new DOMException('The room changed.','AbortError');
  let packet=worldInputEnvelope(input);const game=room?.game;
@@ -63,6 +63,7 @@ async function worldInput(owner,input){
   owner.clientSeq=clientSeq;owner.wireSeq=packet.seq;owner.lastPacket=packet;
  }
  owner.lastVector={dx:packet.dx,dy:packet.dy};
+ packet={...packet,...(owner.generation!==undefined?{generation:owner.generation,matchId:owner.matchId}:{})};
  const current=epoch,id=roomId,opened=controller;
  try{
   const data=await request(roomPath(id,'/input'),{method:'POST',body:packet,signal:opened.signal});
@@ -86,19 +87,20 @@ async function worldMutation(owner,suffix,body){
  if(!result?.ok)throw new Error(result?.error||'Wait for the current action to finish.');
  return result.data;
 }
-async function worldReplay(owner){
+async function worldReplay(owner,matchId){
  if(!ownsWorld(owner))throw new DOMException('The room changed.','AbortError');
  const current=epoch,opened=controller;
- const data=await request(roomPath(owner.id,'/replay'),{signal:opened.signal});
+ const data=await request(roomPath(owner.id,'/replay'),{signal:opened.signal,headers:matchId?{'X-Match-ID':matchId}:{}});
  if(!ownsWorld(owner)||current!==epoch||controller!==opened)throw new DOMException('The room changed.','AbortError');
  return data;
 }
 function renderWorld(){
  if(!worldExperience){
-  const host=h('div',{id:'world-host'}),owner={id:roomId};main.replaceChildren(host);worldSession=owner;
+  const host=h('div',{id:'world-host'}),owner={id:roomId,generation:room?.generation,matchId:room?.game?.matchId};main.replaceChildren(host);worldSession=owner;
   worldExperience=createWorldExperience(host,{
    action:(type,fields={})=>worldMutation(owner,'/action',actionEnvelope(type,fields)),
    input:input=>worldInput(owner,input),start:()=>worldMutation(owner,'/start',{id:crypto.randomUUID()}),
+   archive:matchId=>worldReplay(owner,matchId),lobby:(suffix,body)=>worldMutation(owner,suffix,body),rematch:()=>worldMutation(owner,'/rematch',{id:crypto.randomUUID()}),
    leave:()=>{if(worldSession===owner)home();},loadReplay:()=>worldReplay(owner)
   });
  }
@@ -140,8 +142,13 @@ async function busy(fn){
 function accept(data){
  const next=roomFrom(data);
  if(roomId&&next.roomId!==roomId)return;
- if(room?.game&&!next.game)return;
- if(room?.game&&next.game&&(next.game.version<room.game.version||(next.game.version===room.game.version&&next.game.serverNow<room.game.serverNow)))return;
+ const previousGeneration=room?.generation??0,nextGeneration=next.generation??0;
+ if(nextGeneration<previousGeneration)return;
+ if(nextGeneration===previousGeneration&&(next.revision??0)<(room?.revision??0))return;
+ const newWatch=nextGeneration>previousGeneration;
+ if(room?.game&&!next.game&&!newWatch)return;
+ if(!newWatch&&room?.game&&next.game&&(next.game.version<room.game.version||(next.game.version===room.game.version&&next.game.serverNow<room.game.serverNow)))return;
+ if(newWatch||room?.game?.matchId!==next.game?.matchId){releaseWorld();replay=null;replayIndex=0;draft='';draftMeeting=null;confirmTarget=null;retry=null;retryContext=null;pending=false;feedback.textContent='';tell('Current watch state synchronized.');}
  if(room?.game?.matchId!==next.game?.matchId||room?.game?.phase!==next.game?.phase||room?.game?.self?.id!==next.game?.self?.id)worldActionGeneration++;
  room=next;
  networkReady=true;
@@ -201,7 +208,7 @@ async function openRoom(id,initial,{remembered=false}={}){
 }
 function schedulePoll(current,delay=2000){
  clearTimeout(poll);
- if(current!==epoch||document.hidden||['ended','paused'].includes(room?.game?.phase))return;
+ if(current!==epoch||document.hidden)return;
  poll=setTimeout(async()=>{
   try{
    const data=await request(roomPath(roomId),{signal:controller.signal});
@@ -216,7 +223,7 @@ function schedulePoll(current,delay=2000){
  },delay);
 }
 function connect(current){
- if(document.hidden||['ended','paused'].includes(room?.game?.phase))return;
+ if(document.hidden)return;
  schedulePoll(current);
  try{
   const ws=new WebSocket(`${location.protocol==='https:'?'wss:':'ws:'}//${location.host}${roomPath(roomId,'/socket')}`);
@@ -232,16 +239,17 @@ function connect(current){
  }catch{schedulePoll(current);}
 }
 async function mutation(suffix,body,onSuccess){
- const current=epoch,id=roomId,context=suffix==='/action'?captureActionContext(body):null;
+ if(room?.generation!==undefined)body={generation:room.generation,...(suffix==='/action'?{matchId:room.game?.matchId}:{}),...body};
+ const generation=room?.generation,current=epoch,id=roomId,context=suffix==='/action'?captureActionContext(body):null;
  return busy(async()=>{
   try{
    const data=await request(roomPath(id,suffix),{method:'POST',body,signal:controller.signal});
-   if(current!==epoch)return {ok:false,error:'The room changed.'};
+   if(current!==epoch||(generation!==room?.generation&&suffix!=='/rematch'))return {ok:false,stale:true,error:'The watch changed.'};
    retry=null;retryContext=null;accept(data);if(onSuccess)onSuccess();else tell('Action confirmed.');
    return {ok:true,data};
   }catch(error){
    if(current!==epoch||error.name==='AbortError')return;
-   if(context&&!actionContextCurrent(context))return {ok:false,stale:true,error:'The action context changed.'};
+   if(generation!==room?.generation||(context&&!actionContextCurrent(context)))return {ok:false,stale:true,error:'The action context changed.'};
    if(error.status==null||error.status>=500){retryContext=context;retry=()=>mutation(suffix,body,onSuccess);tell('The request could not be confirmed. Retry keeps the same request ID so an accepted action cannot run twice.',true);}
    else{retry=null;retryContext=null;tell(error.message,true);}
    return {ok:false,error:error.message};
@@ -294,14 +302,17 @@ function deck(game){
  return wrapper;
 }
 function crew(game){
- return h('ul',{class:'crew-list'},(game?.players||CHARACTERS).map(p=>h('li',{},h('span',{class:'avatar','aria-hidden':'true'},p.name[0]),h('span',{class:'crew-name'},p.name,h('small',{},p.alive===false?'Fallen':p.id===room?.seatId?'You · human keeper':room?.mode==='human'&&p.id==='p1'?'Human keeper':'AI keeper')),p.role?h('span',{class:'tag'},p.role):null)));
+ return h('ul',{class:'crew-list'},(game?.players||CHARACTERS).map(p=>h('li',{},h('span',{class:'avatar','aria-hidden':'true'},p.name[0]),h('span',{class:'crew-name'},p.name,h('small',{},p.alive===false?'Fallen':p.id===room?.seatId?'You · human keeper':(room?.seats?room.seats.some(s=>s.id===p.id&&s.human):room?.mode==='human'&&p.id==='p1')?'Human keeper':'AI keeper')),p.role?h('span',{class:'tag'},p.role):null)));
 }
 function modeTag(){
  const ai=room?.ai;
  return h('span',{class:`tag ${ai?.mode==='live'?'':'demo'}`},aiLabel(ai));
 }
+async function joinInvitation(code){
+ await busy(async()=>{const data=await request('/api/invitations',{method:'POST',body:{code}});await openRoom(data.roomId);});
+}
 function landing(){
- return harbor({create,pending});
+ return harbor({create,pending,joinInvitation});
 }
 function setConfirmation(value,returnTo,current){
  if(current!==epoch)return;

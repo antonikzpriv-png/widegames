@@ -1,5 +1,7 @@
 # World experience contract
 
+**Current extension:** [Multiplayer lobbies and rematches](MULTIPLAYER.md) adds 4–15 actors, per-match speed/vision and options, multiple authenticated humans, private saboteur teammates and generation-aware rematches. Shared geometry/default constants remain immutable. Historical worktree paths and pre-main status below describe the original implementation, not current development requirements.
+
 Base: latest remote integration `d5eed65eb4737ceccab594c6dad911ff9033d2ba` (there is still no origin/main). Every editor uses a separate `D:/Widegames-work/world-*-20261029` checkout. The user's original running checkout and data are preserved. Official reference: https://www.innersloth.com/games/among-us/ and https://innersloth.itch.io/among-us . Original Lantern Wake maps, characters, artwork and names remain ours; reference assets are not shipped.
 
 The product becomes a full-screen illustrated top-down character game: WASD/arrows/touch movement, clickable navigation, nearby stations with minigames, bodies, sabotage, dedicated meetings/voting and reveal/replay scenes. AI uses the same authoritative world.

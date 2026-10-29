@@ -1,4 +1,5 @@
 ﻿import * as world from '../../shared/world.mjs';
+import {createLobbyPanel} from '../lobby.mjs';
 import {CHARACTERS} from '../../shared/contracts.mjs';
 import {aiLabel,clock,contexts,distance,point,roleLabel,taskKind,validTaskSession,visiblePlayers} from './model.mjs';
 import {createWorldScene,drawKeeper} from './scene.mjs';
@@ -38,10 +39,13 @@ export function createWorldExperience(host,callbacks){
  const lobby=make('section','lw-lobby'),lobbyTitle=make('h1','','KEEP THE LIGHT.'),lobbySub=make('p','','Six keepers. One hidden saboteur. A storm that won’t wait.'),roster=make('div','lw-lobby-roster'),start=button('Begin the watch',()=>request(()=>callbacks.start()),'lw-primary');
  for(const p of CHARACTERS){const card=make('div','lw-seat'),avatar=make('canvas');avatar.width=80;avatar.height=94;drawKeeper(avatar.getContext('2d'),p,40,64,{scale:1,label:false});card.append(avatar,make('span','',p.name));roster.append(card);}
  const lobbyNote=make('p','lw-lobby-note');lobby.append(make('p','lw-eyebrow','STORM BEACON · SIX KEEPER WATCH'),lobbyTitle,lobbySub,roster,start,lobbyNote);
+ let lobbyPanel=null;
+ const rematch=button('Rematch with this crew',()=>request(()=>callbacks.rematch()),'lw-secondary');rematch.hidden=true;
  const overlay=make('div','lw-scene-overlay');overlay.hidden=true;
  const roleScene=make('section','lw-role-scene');roleScene.hidden=true;roleScene.setAttribute('role','dialog');roleScene.setAttribute('aria-modal','true');roleScene.setAttribute('aria-labelledby',`${uid}-role-title`);
  const revealArt=make('canvas','lw-reveal-keeper');revealArt.width=240;revealArt.height=250;
  const revealTitle=make('h1');revealTitle.id=`${uid}-role-title`;const revealCopy=make('p'),revealClose=button('Enter the beacon',()=>{revealed.add(room.game.matchId);roleScene.hidden=true;render();canvas.focus();},'lw-primary');roleScene.append(make('p','lw-eyebrow','YOUR SECRET ASSIGNMENT'),revealArt,revealTitle,revealCopy,revealClose);
+ top.append(rematch);
  stage.append(top,progress,assignment,critical,phaseClock,feedback,mapToggle,mapPane,joystick,actions,lobby,overlay,roleScene);shell.append(stage);host.append(shell);
  let puzzle=null,taskSession=null,confirmTarget=null,ejectionKey=null,previousPhase=null,navigationEpoch=0;
  const seenEjections=new Set();
@@ -102,10 +106,13 @@ export function createWorldExperience(host,callbacks){
  }
  function render(){
   if(!room||disposed)return;const game=room.game,isLobby=!game,canWalk=game?.phase==='roam'&&game.self?.alive;
+  mapToggle.hidden=isLobby;mapPane.hidden=isLobby||!mapOpen;
   shell.dataset.phase=game?.phase||'lobby';lobby.hidden=!isLobby;assignment.hidden=isLobby;progress.hidden=isLobby;actions.hidden=isLobby||game.phase!=='roam'||!game.self?.alive;joystick.hidden=!movementAllowed();
+  if(isLobby&&room.settings&&callbacks.lobby){if(!lobbyPanel)lobbyPanel=createLobbyPanel({host:lobby,mutate:callbacks.lobby,archive:callbacks.archive,start:()=>request(()=>callbacks.start()),report:setFeedback});lobbyPanel.update(room,options);}
+  rematch.hidden=!room.isHost||!['ended','paused'].includes(game?.phase)||!callbacks.rematch;rematch.disabled=pending()||!options.connected;
   setText(mode,aiLabel(room.ai));setText(status,options.connected?'● Connected':'○ Reconnecting');status.dataset.connected=String(!!options.connected);
   const lastNotice=room.notices?.at(-1),noticeText=typeof lastNotice==='string'?lastNotice:lastNotice?.message||'';setText(aiNotice,noticeText);aiNotice.hidden=!noticeText;setText(lobbyNote,`${room.isHost?'You host this room. All six keepers are aboard.':'You are observing. The host will begin the watch.'}${noticeText?' '+noticeText:''}`);start.disabled=!room.isHost||pending()||!options.connected;
-  setText(role,roleLabel(game));role.dataset.role=game?.self?.role||'spectator';setText(location,game?.self?`${game.self.alive?'':'Fallen · '}${roomName(game.self.roomId)}`:`Public observation · roles ${game?.phase==='ended'?'revealed':'hidden'}`);
+  setText(role,roleLabel(game)+(game?.self?.teammates?.length?' · Teammates: '+game.self.teammates.map(id=>{const p=game.players.find(p=>p.id===id);return `${p?.name||id} #${id.slice(1)}`;}).join(', '):''));role.dataset.role=game?.self?.role||'spectator';setText(location,game?.self?`${game.self.alive?'':'Fallen · '}${roomName(game.self.roomId)}`:`Public observation · roles ${game?.phase==='ended'?'revealed':'hidden'}`);
   setText(help,canWalk?'WASD / arrows to walk · E use · R report · Q eliminate · M map':'Observe the watch · M map');
   const tasks=game?.self?.tasks||[],ids=new Set(tasks.map(t=>t.id));
   for(const [id,node]of taskRows)if(!ids.has(id)){node.remove();taskRows.delete(id);}
@@ -115,7 +122,7 @@ export function createWorldExperience(host,callbacks){
   phaseClock.hidden=!game?.deadlineAt;setText(phaseClock,`${game?.phase==='roam'?'Watch':'Council'} ${clock(game?.deadlineAt,options.now)}`);
   const current=contexts(game,world);
   for(const [key,b]of Object.entries(actionButtons)){const c=current[key];b.hidden=['eliminate','sabotage'].includes(key)&&game?.self?.role!=='saboteur';b.setAttribute('aria-disabled',String(!c.enabled||pending()||!options.connected));b.title=c.enabled?c.label:c.hint;b.setAttribute('aria-label',`${c.label}${key==='use'?' (E / Space)':key==='report'?' (R)':key==='eliminate'?' (Q)':''}`);}
-  canvas.setAttribute('aria-label',isLobby?'Six raincoat keepers gathered on the storm beacon.':`${roomName(game?.self?.roomId)}. Visible keepers: ${visiblePlayers(game).map(p=>p.name).join(', ')||'none'}. ${canWalk?'Use keyboard or click the deck to walk.':'Observation only. Open the map to view the platform.'}`);
+  canvas.setAttribute('aria-label',isLobby?'Six raincoat keepers gathered on the storm beacon.':`${roomName(game?.self?.roomId)}. Visible keepers: ${visiblePlayers(game).map(p=>p.badge?`${p.name} #${p.badge}`:p.name).join(', ')||'none'}. ${canWalk?'Use keyboard or click the deck to walk.':'Observation only. Open the map to view the platform.'}`);
   if(puzzle&&!validTaskSession(taskSession,room,world)){const old=puzzle;puzzle=null;old.dispose();const completed=game?.matchId===taskSession?.matchId&&game?.self?.tasks?.some(task=>task.id===taskSession?.taskId&&task.completed);setFeedback(completed?'Task complete.':'Station closed: the watch state or your location changed.');taskSession=null;}
   if(confirmTarget&&!validElimination()){confirmTarget=null;setFeedback('That keeper is no longer in reach.');}
   if(game?.phase!=='roam')ejectionKey=null;
@@ -130,7 +137,7 @@ export function createWorldExperience(host,callbacks){
   shell.dataset.critical=String(!!game?.sabotage?.active);
   const showRole=game?.phase==='roam'&&game.self&&!revealed.has(game.matchId);
   roleScene.hidden=!showRole;
-  if(showRole&&lastRole!==game.matchId){lastRole=game.matchId;setText(revealTitle,`YOU ARE ${game.self.role==='saboteur'?'THE SABOTEUR':'CREW'}`);setText(revealCopy,game.self.role==='saboteur'?'Hide in the rain. Sabotage the beacon, mislead the council, and outlast the crew.':'Keep the beacon alive. Complete your stations, report fallen keepers, and find the saboteur.');roleScene.dataset.role=game.self.role;const art=revealArt.getContext('2d');art.clearRect(0,0,240,250);drawKeeper(art,game.players.find(p=>p.id===game.self.id)||CHARACTERS[0],120,180,{scale:2.6,label:false});revealClose.focus();}
+  if(showRole&&lastRole!==game.matchId){lastRole=game.matchId;setText(revealTitle,`YOU ARE ${game.self.role==='saboteur'?(game.settings?.saboteurs>1?'A SABOTEUR':'THE SABOTEUR'):'CREW'}`);setText(revealCopy,game.self.role==='saboteur'?'Hide in the rain. Sabotage the beacon, mislead the council, and outlast the crew.':'Keep the beacon alive. Complete your stations, report fallen keepers, and find the saboteur.');roleScene.dataset.role=game.self.role;const art=revealArt.getContext('2d');art.clearRect(0,0,240,250);drawKeeper(art,game.players.find(p=>p.id===game.self.id)||CHARACTERS[0],120,180,{scale:2.6,label:false});revealClose.focus();}
   if(!showRole)roleScene.hidden=true;
   if(options.feedback&&options.feedback!==lastFeedback){lastFeedback=options.feedback;localFeedback=String(options.feedback);}
   setText(feedback,localFeedback||room.notices?.at(-1)?.message||'');

@@ -13,3 +13,7 @@ Demo bots run without credentials and are visibly labeled. Live mode requires AI
 The daily budget reader accepts development version-1 checkpoints with valid raw or canonical totals, then writes version2 with validated integer nanodollar totals. File contents are synced before atomic replacement. Filesystem/directory metadata and power-loss guarantees are not qualified. Restore the complete stopped-service data directory, including its budget, rather than restoring only room files and resetting deployment allowance.
 
 The repository was empty at task start, so origin/main had no base revision. The first integration-branch push became the default branch automatically. No main branch was created or merged. The integration branch is the reviewable implementation; publishing the app remains separate from local qualification.
+
+## Multiplayer development
+
+No extra database, service, credential, or build step is required. Configurable lobbies and private bounded replay archives use the existing single-writer data directory. Back up the whole stopped-service directory, including the deployment-day budget: rematches must never reset that ledger or uncertain reservations. See [multiplayer setup and verification](MULTIPLAYER.md).
