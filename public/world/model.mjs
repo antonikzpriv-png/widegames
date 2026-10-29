@@ -1,4 +1,4 @@
-﻿import {knowledge,descriptors} from './beacon-model.mjs';
+﻿import {knowledge,descriptors,actionDescriptors,hasActionDescriptor} from './beacon-model.mjs';
 /** Pure presentation rules. Inputs are redacted views, never engine state. */
 export const point = p => p && Number.isFinite(p.x) && Number.isFinite(p.y);
 export const distance = (a,b) => point(a)&&point(b)?Math.hypot(a.x-b.x,a.y-b.y):Infinity;
@@ -17,7 +17,21 @@ export function taskKind(task,index=0){
  // Engine relay tasks share a label; equipment varies by the actual station.
  return ({bridge:'wires',workshop:'wires',lantern:'tuning',engine:'tuning',archive:'sequence',galley:'sequence'})[task.roomId]||['wires','tuning','sequence'][index%3];
 }
+function beaconContexts(game){
+ const self=game.self,active=game.phase==='roam'&&!!self?.alive&&!game.systems?.selfTransit&&!self?.transit,hints=actionDescriptors(game),enabled=type=>active?hints.filter(h=>h.type===type&&h.enabled===true):[];
+ const context=(h,label,hint)=>({type:h?.type,label:h?.label||label,fields:{...h?.fields},enabled:!!h,hint});
+ const taskHint=enabled('task').find(h=>self.tasks?.some(t=>t.id===h.fields.taskId&&!t.completed)),task=taskHint&&self.tasks.find(t=>t.id===taskHint.fields.taskId),bell=enabled('meeting')[0];
+ const equipment=descriptors(game),repair=active&&equipment.find(h=>h.type==='systemRepair'&&h.enabled===true),other=active&&equipment.find(h=>['investigate','vent'].includes(h.type)&&h.enabled===true);
+ let use;
+ if(repair)use={type:'beaconPanel',descriptorId:repair.id,label:repair.label,enabled:true,hint:''};
+ else if(taskHint)use={...context(taskHint,'Task station','Approach a permitted task station.'),task};
+ else if(bell)use=context(bell,'Emergency bell','Approach the permitted bell.');
+ else if(other)use={type:'beaconPanel',descriptorId:other.id,label:other.label,enabled:true,hint:''};
+ else use={type:'beaconPanel',label:'Beacon equipment',enabled:active,hint:'Open Systems & evidence for server-permitted actions.'};
+ return {use,report:context(enabled('report')[0],'Report body','No permitted report target. Approach an observed fallen keeper.'),eliminate:context(self?.role==='saboteur'?enabled('eliminate').find(h=>h.fields.targetId!==self.id):null,'Eliminate','No permitted elimination target.'),sabotage:{type:'beaconPanel',label:'System sabotage options',enabled:active&&self?.role==='saboteur',hint:'Open Systems & evidence for sabotage choices and cooldowns.'}};
+}
 export function contexts(game,world){
+ if(game?.beaconVersion===1)return beaconContexts(game);
  const self=game?.self,pos=self?.position,available=game?.availableActions||[];
  const active=game?.phase==='roam'&&self?.alive&&point(pos)&&game.worldVersion===1;
  const station=world.WORLD_STATIONS[self?.roomId];
@@ -33,15 +47,6 @@ export function contexts(game,world){
  const bellAction={type:'meeting',label:'Emergency bell',fields:{},enabled:bell&&allowed('meeting'),hint:bell?'Bell unavailable: check cooldown, remaining emergencies and critical status.':'Use the bell in the Bridge. Unavailable during critical sabotage.'};
  // A distant unfinished Bridge task must not hide a bell that is actually in reach.
  let use=repair&&repairAction.enabled?repairAction:task&&taskAction.enabled?taskAction:bellAction.enabled?bellAction:repair?repairAction:task?taskAction:bellAction;
- if(game?.beaconVersion===1){
-  const hints=descriptors(game),nearbyHints=hints.filter(h=>['systemRepair','investigate','vent'].includes(h.type));
-  const preferred=nearbyHints.find(h=>h.type==='systemRepair'&&h.enabled)||(!taskAction.enabled&&!bellAction.enabled&&nearbyHints.find(h=>h.enabled));
-  if(preferred)use={type:'beaconPanel',descriptorId:preferred.id,label:preferred.label||'Beacon equipment',enabled:true,hint:preferred.reason||'Open equipment controls.'};
-  else if(taskAction.enabled)use=taskAction;
-  else if(bellAction.enabled)use=bellAction;
-  else use={type:'beaconPanel',label:'Beacon equipment',enabled:active&&!game.systems?.selfTransit,hint:'Open Systems & evidence for server-permitted actions.'};
- }
-
  return {
   use,
   report:{type:'report',label:'Report body',fields:{bodyId:body?.bodyId},enabled:!!body&&allowed('report'),hint:'Approach a visible fallen keeper.'},
@@ -67,5 +72,8 @@ export class ActorSamples{
 }
 export function validTaskSession(session,room,world){
  const game=room?.game,task=game?.self?.tasks?.find(t=>t.id===session?.taskId);
- return !!session&&room.roomId===session.roomId&&game?.matchId===session.matchId&&game.phase==='roam'&&game.self?.alive&&!game.systems?.selfTransit&&!game.self?.transit&&task&&!task.completed&&game.self.roomId===session.location&&task.roomId===session.location&&distance(game.self.position,world.WORLD_STATIONS[task.roomId])<=world.WORLD.interactionRadius&&game.availableActions?.includes('task');
+ const current=!!session&&room.roomId===session.roomId&&game?.matchId===session.matchId&&game.phase==='roam'&&game.self?.alive&&!game.systems?.selfTransit&&!game.self?.transit&&task&&!task.completed&&game.self.roomId===session.location;
+ if(!current)return false;
+ if(game.beaconVersion===1)return hasActionDescriptor(game,'task',{taskId:session.taskId});
+ return task.roomId===session.location&&distance(game.self.position,world.WORLD_STATIONS[task.roomId])<=world.WORLD.interactionRadius&&game.availableActions?.includes('task');
 }

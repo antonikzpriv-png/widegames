@@ -1,16 +1,23 @@
 import {BEACON_ACTION_FIELDS,BEACON_REPAIRS,BEACON_CAMERAS,BEACON_DEVICES,BEACON_DOORS} from '../../shared/beacon.mjs';
-const TYPES=new Set(['systemSabotage','systemRepair','vent','investigate','deviceCancel']);
+const TYPES=new Set(['systemSabotage','systemRepair','vent','investigate','deviceCancel','ability']);
 export const finitePoint=p=>!!p&&Number.isFinite(p.x)&&Number.isFinite(p.y);
 export function knowledge(game,player){
  if(game?.beaconVersion===1)return ['alive','dead'].includes(player?.status)?player.status:'unknown';
  return player?.alive===false?'dead':'alive';
 }
-export function descriptors(game){
+const BASE_FIELDS=Object.freeze({task:['taskId'],report:['bodyId'],eliminate:['targetId'],meeting:[]});
+export function actionDescriptors(game){
  if(game?.beaconVersion!==1)return [];
- return (game.interactions||[]).filter(h=>h&&typeof h.id==='string'&&TYPES.has(h.type)&&h.fields&&typeof h.fields==='object'&&!Array.isArray(h.fields)&&Object.keys(h.fields).length===BEACON_ACTION_FIELDS[h.type].length&&BEACON_ACTION_FIELDS[h.type].every(key=>typeof h.fields[key]==='string'));
+ return (game.interactions||[]).filter(h=>{
+  const fields=Object.hasOwn(BASE_FIELDS,h?.type)?BASE_FIELDS[h.type]:(TYPES.has(h?.type)?BEACON_ACTION_FIELDS[h.type]:null);
+  return fields&&typeof h.id==='string'&&h.fields&&typeof h.fields==='object'&&!Array.isArray(h.fields)&&Object.keys(h.fields).length===fields.length&&fields.every(key=>Object.hasOwn(h.fields,key)&&typeof h.fields[key]==='string')&&(h.type!=='ability'||h.fields.abilityId==='field-note'&&!!game.self&&h.fields.targetId===game.self.id);
+ });
 }
+// Base tasks must still go through equipment puzzles, never generic panel buttons.
+export function descriptors(game){return actionDescriptors(game).filter(h=>TYPES.has(h.type));}
+export function hasActionDescriptor(game,type,fields){return actionDescriptors(game).some(h=>h.enabled===true&&h.type===type&&Object.keys(h.fields).length===Object.keys(fields).length&&Object.keys(fields).every(key=>h.fields[key]===fields[key]));}
 export function descriptorKey(h){return JSON.stringify([h.id,h.type,Object.entries(h.fields).sort(([a],[b])=>a.localeCompare(b))]);}
-export function viewKey(room){const g=room?.game,s=g?.self;return JSON.stringify([room?.roomId,g?.matchId,g?.phase,s?.id,s?.alive,s?.roomId,s?.position,g?.systems?.selfTransit||s?.transit||null,g?.investigation?.session||null,g?.sabotage?.kind,g?.sabotage?.deadlineAt,g?.sabotage?.active,g?.sabotage?.repairsCompleted,g?.systems?.lights,g?.systems?.communications,g?.systems?.doors,g?.systems?.cooldowns,descriptors(g).map(h=>[descriptorKey(h),h.enabled])]);}
+export function viewKey(room){const g=room?.game,s=g?.self;return JSON.stringify([room?.roomId,g?.matchId,g?.phase,s?.id,s?.alive,s?.roomId,s?.position,g?.systems?.selfTransit||s?.transit||null,g?.investigation?.session||null,g?.sabotage?.kind,g?.sabotage?.deadlineAt,g?.sabotage?.active,g?.sabotage?.repairsCompleted,g?.systems?.lights,g?.systems?.communications,g?.systems?.doors,g?.systems?.cooldowns,actionDescriptors(g).map(h=>[descriptorKey(h),h.enabled]),g?.vision?.radius,s?.tasks?.map(t=>[t.id,t.completed,t.progress]),g?.abilities?.notes]);}
 export function criticalSites(game){
  if(game?.beaconVersion!==1||!game.sabotage?.active)return [];
  const kind=game.sabotage.kind,sites=game.systems?.critical?.sites||game.sabotage.sites;
@@ -55,4 +62,20 @@ export function observationText(observation,players=[]){
  if(kind==='occupancy'&&Array.isArray(data.rooms))return `${time}. Occupancy: ${data.rooms.map(r=>`${r.roomId}: ${Number.isFinite(r.count)?r.count:'unknown'}`).join('; ')}. Counts only; identities unavailable. Historical sample.`;
  if(kind==='cameras'&&Array.isArray(data.frames))return `${time}. Cameras: ${data.frames.map(c=>{const camera=BEACON_CAMERAS.find(f=>f.id===c.cameraId);return `${camera?.roomId||c.cameraId}: ${(c.players||[]).map(p=>who(p.id)).join(', ')||'no observed keepers'}${c.limited?' (limited sample)':''}`;}).join('; ')}. Historical camera sample, not eyewitness evidence.`;
  return `${time}. ${kind||'Device'} observation received; details unavailable in this client.`;
+}
+
+function sampledAt(at){const date=new Date(at);return Number.isFinite(at)&&Number.isFinite(date.getTime())?date.toISOString():'time unavailable';}
+const recordedPosition=p=>finitePoint(p)?`x ${p.x.toFixed(1)}, y ${p.y.toFixed(1)}`:'position unavailable';
+export function fieldNotes(game){
+ if(game?.beaconVersion!==1||!game.self)return [];
+ return (game.abilities?.notes||[]).filter(n=>n&&Number.isFinite(n.at)&&finitePoint(n.position)).map(n=>({id:n.id,at:n.at,roomId:n.roomId,position:{x:n.position.x,y:n.position.y}}));
+}
+export function fieldNoteText(note){return `Field note at ${sampledAt(note.at)}: ${note.roomId||'room unavailable'} (${recordedPosition(note.position)}). Your recorded location at that time.`;}
+export function hatchTraces(game){
+ if(game?.beaconVersion!==1)return [];
+ return (game.events||[]).filter(e=>e&&['vent_enter','vent_exit'].includes(e.type)&&Number.isFinite(e.at)&&finitePoint(e.position)&&typeof e.playerId==='string').map(e=>({id:e.id,type:e.type,at:e.at,playerId:e.playerId,roomId:e.roomId,position:{x:e.position.x,y:e.position.y},...(e.type==='vent_enter'?{entryId:e.entryId}:{exitId:e.exitId})}));
+}
+export function hatchTraceText(event,players=[]){
+ const name=players.find(p=>p.id===event.playerId)?.name||'Unidentified keeper',entering=event.type==='vent_enter',hatch=entering?event.entryId:event.exitId;
+ return `At ${sampledAt(event.at)}, ${name} ${entering?'entered':'exited'} ${hatch||'a hatch'} in ${event.roomId||'an unrecorded room'} (${recordedPosition(event.position)}). Historical local observation; the other endpoint is not shown.`;
 }
