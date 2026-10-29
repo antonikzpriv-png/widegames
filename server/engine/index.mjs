@@ -200,7 +200,7 @@ export function applyAction(input,playerId,action,now=Date.now()) {
   }
   if (action.type==='repair') {
     state.sabotage.repairers.push(p.id);state.sabotage.repairsCompleted++;
-    publicEvent(state,'repair',now,{playerId:p.id,repairsCompleted:state.sabotage.repairsCompleted});
+    publicEvent(state,'repair',now,{repairsCompleted:state.sabotage.repairsCompleted});
     if (state.sabotage.repairsCompleted>=state.sabotage.repairsRequired) {state.sabotage.active=false;publicEvent(state,'repaired',now);}
   }
   if (action.type==='eliminate') {
