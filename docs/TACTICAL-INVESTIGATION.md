@@ -25,3 +25,25 @@ Commands: node --test tests/tactical-investigation-map.test.mjs; node --test tes
 Preparation errors are not product claims: an initial Python locale read converted the existing data.mjs UTF8 BOM into invalid text; syntax caught it before any test ran, and explicit UTF8 normalization fixed it. First tactical run15/16: a test incorrectly required a communications error string from an already-dead actor; dead access denial is also correct. The assertion was split to verify explicit communications unavailability while living and denied access after death. No test is skipped or defect hidden.
 
 Annex fixture and actual schema4 engine integration remain pending the other owners' committed source; a subsequent receipt will pin/test them. No Chrome/provider calls/main/push/deploy, broad unrelated suite, other-worktree edits or independent approval is claimed.
+
+## Committed Annex fixture qualification
+
+Core map source **19e4bf6b0027590df3ea2245a164d5174aabb603**, combined only with investigation source **2119e021cd31dc9aad7d1727101af8c2b49a7466**, in ignored _artifacts/tactical-investigation-annex-19e4bf6. All server/shared files came from that committed Core tree; only the two investigation files were overlaid from the exact owned milestone. The source-manifest records both pins and SHA256 for every file. This is an explicit author composite, not claimed manager integration or independent Core approval. Manifest SHA256 **BC90C09BEAD376153B1516C577A72BBC882E702408B4027704F833233A446BF6**.
+
+Both real packaged maps now run35/35 module checks, zero failure/skip. Annex occupancy explicitly returns its eight actual room IDs; living room occupants are counted anonymously while dead/transit/corridor actors are excluded. Added controls interleave Beacon/Annex reads with the same owner ID, compare map-derived console hints and all room IDs, and reject cross-map sample transplantation in both restore validation and safe view. Historical light-radius fields remain unchanged after lighting restoration. Each owner can retain exactly64 observations: read66 evicts only the first two dates, preserves the remaining source/map/owner metadata through JSON restart, and never shares history with another actor. Restore also rejects a sampled position that is walkable elsewhere on the selected map but outside the camera's recorded field.
+
+Actual commands:
+
+```powershell
+$env:TEMP='D:/Widegames-work/temp'
+$env:TMP=$env:TEMP
+$env:npm_config_cache='D:/Widegames-work/npm-cache'
+$env:TACTICAL_INVESTIGATION_ROOT=(Join-Path (Get-Location) '_artifacts/tactical-investigation-annex-19e4bf6')
+node --test tests/tactical-investigation-map.test.mjs
+Remove-Item Env:TACTICAL_INVESTIGATION_ROOT
+node --test _artifacts/tactical-investigation-annex-19e4bf6/tests/tactical-investigation-map.test.mjs
+```
+
+For the second command, the owned test was copied unchanged into the ignored composite's tests directory to verify default relative source imports. Both invocations pass35/35 with zero skipped/todo/cancelled. Explicit-root evidence _artifacts/tactical-investigation-annex-bounds.txt SHA256 **51F3224A284B22CEE81055FD7F305F4462BF829C15BD70DF38D75BAC6AF5556B**. Default-import evidence _artifacts/tactical-investigation-annex-default.txt SHA256 **33FF084D10432050C23CAD2DAE8382C127E2DA50002C7570104C80D4078E3ECC**. First current-checkout milestone result48/48 (16 tactical Beacon +32 legacy) is preserved in _artifacts/tactical-investigation-milestone.txt SHA256 **7ADA86AFF243D1AF9ABEFC3A23AD949503600B0F436B1DFFB7BCC15192A19604**.
+
+Manager integration gap reported promptly: server/features/strategy/index.mjs deviceFacts still truncates occupancy to six rooms; Annex's eight-room sample requires a map-aware bound there, along with preserving the new source/map/provenance metadata. That is coordinator/Group2 ownership and is not edited here. Prepared real schema4 engine tests require a committed coordinator runtime; current uncommitted candidate is not qualified as a final source. Module tests use actual map geometry and real Core LOS delegation, but this composite's Core spatial wrapper predates its forthcoming map-aware dynamic-door update; Annex dynamic-door physics is not claimed qualified by these module checks.
