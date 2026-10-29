@@ -27,20 +27,20 @@
 
 .lw-world[data-critical=true] .lw-map-unavailable{top:190px}
 
-/* A separate mobile mute rail: gameplay/equipment and scrolling council
-   content end above it. Keep both the touch joystick and mute operable. */
+/* A shared mobile control rail: mute left, equipment toggle right.
+   Gameplay, equipment panes and scrolling council content end above it. */
 @media(max-width:700px),(max-height:540px) and (min-width:560px){
  .lw-world .lw-stage::after{content:"";position:absolute;left:0;right:0;bottom:0;height:60px;background:#102b40;z-index:11;pointer-events:none}
  .lw-world .lw-sound-toggle{left:12px;bottom:8px;width:88px;height:44px;min-height:44px;padding:8px 10px}
  .lw-world .lw-scene-overlay,.lw-world .lw-role-scene{bottom:60px;overflow:auto}
  .lw-world .lw-actions{bottom:80px}
  .lw-world .lw-joystick{bottom:185px}
- .lw-world .lw-beacon{bottom:190px}
- .lw-world .lw-beacon-pane{max-height:calc(100dvh - 318px)}
+ .lw-world .lw-beacon{right:12px;bottom:8px;width:150px;max-width:150px}
+ .lw-world .lw-beacon .lw-beacon-toggle{width:150px;max-width:150px;height:44px;min-height:44px;padding:6px 8px;font-size:12px;line-height:14px}
+ .lw-world .lw-beacon-pane{bottom:60px;max-height:calc(100dvh - 148px)}
 }
 @media(max-height:540px) and (min-width:560px){
  .lw-world .lw-actions{bottom:72px}
  .lw-world .lw-joystick{bottom:80px}
- .lw-world .lw-beacon{bottom:165px}
- .lw-world .lw-beacon-pane{max-height:calc(100dvh - 277px)}
+ .lw-world .lw-beacon-pane{max-height:calc(100dvh - 140px)}
 }

@@ -26,8 +26,8 @@ function media(query,{width,height}){return query.split(',').some(branch=>branch
  throw Error('Unsupported media contract: '+part);
 }));}
 const node=(classes,parent=null)=>({classes:classes.split(' '),parent});
-const world=node('lw-world'),stage=node('lw-stage',world),nodes=Object.fromEntries(['lw-sound-toggle','lw-joystick','lw-actions','lw-action','lw-beacon','lw-beacon-pane','lw-scene-overlay','lw-role-scene','lw-topbar','lw-exit'].map(name=>[name,node(name,stage)]));
-nodes['lw-action'].parent=nodes['lw-actions'];nodes['lw-beacon-pane'].parent=nodes['lw-beacon'];nodes['lw-exit'].parent=nodes['lw-topbar'];
+const world=node('lw-world'),stage=node('lw-stage',world),nodes=Object.fromEntries(['lw-sound-toggle','lw-joystick','lw-actions','lw-action','lw-beacon','lw-beacon-toggle','lw-beacon-pane','lw-scene-overlay','lw-role-scene','lw-topbar','lw-exit'].map(name=>[name,node(name,stage)]));
+nodes['lw-action'].parent=nodes['lw-actions'];nodes['lw-beacon-toggle'].parent=nodes['lw-beacon'];nodes['lw-beacon-pane'].parent=nodes['lw-beacon'];nodes['lw-exit'].parent=nodes['lw-topbar'];
 function matches(selector,target){
  // The modeled nodes have no state attributes or pseudo-elements. Stateful
  // exceptions are reviewed by the dedicated contract assertions below.
@@ -42,6 +42,7 @@ function style(name,view){const output={},rank={};for(const r of all){if(!r.quer
  }return output;}
 function length(value,view,axis){
  if(value===undefined||value==='auto')return null;if(value==='0')return 0;
+ if(value.startsWith('min(')){const m=value.match(/^min\((\d+)px,calc\((\d+)(vw|%) - (\d+)px\)\)$/);assert(m,'unsupported min '+value);return Math.min(+m[1],length(m[2]+m[3],view,axis)-+m[4]);}
  if(value.startsWith('calc(')){const m=value.match(/^calc\((\d+)(dvh|vh|vw|%) - (\d+)px\)$/);assert(m,'unsupported calc '+value);return length(m[1]+m[2],view,axis)-+m[3];}
  const m=value.match(/^(-?[\d.]+)(px|dvh|vh|vw|%)$/);assert(m,'unsupported length '+value);return +m[1]*(m[2]==='px'?1:m[2]==='vw'?view.width/100:m[2]==='%'?axis/100:view.height/100);
 }
@@ -65,12 +66,17 @@ for(const view of [{width:320,height:740},{width:390,height:844},{width:844,heig
   // Scrolling council input/vote targets are clipped to this actual viewport,
   // regardless of roster count, draft height, scroll offset or IME composition.
   for(const name of ['lw-scene-overlay','lw-role-scene']){const css=style(name,view),bounds=rect(overlayStyle(css),view);assert(disjoint(toggle,bounds),name+' must not place content under mute');if(name==='lw-scene-overlay')assert(['auto','scroll','hidden'].includes(css.overflow),'council input/votes must stay inside reserved scrolling viewport');assert(+sound['z-index']>+css['z-index']);}
-  // Equipment viewport is bounded by its real max-height. Toggle text may wrap
-  // up to88px; use that conservative extent rather than pretending to lay text.
+  // Equipment now has its own measured-by-CSS rail slot, not a floating
+  // toggle over council inputs. Its pane opens above the rail and scrolls.
   const beacon=style('lw-beacon',view),pane=style('lw-beacon-pane',view),groupBottom=view.height-length(beacon.bottom,view,view.height),paneBottom=groupBottom-length(pane.bottom,view,view.height),paneTop=paneBottom-length(pane['max-height'],view,view.height);
-  assert(toggle.top>=groupBottom,'mute must be below the complete equipment group');assert(paneTop>=0,'reserved rail must not push a full equipment pane above the viewport');
+  const equipmentStyle=style('lw-beacon-toggle',view),equipment=rect({...beacon,width:equipmentStyle.width,height:equipmentStyle.height},view,{width:150,height:44});
+  assert(disjoint(toggle,equipment),'equipment toggle must not intersect mute');assert(equipment.width>=44&&equipment.height>=44);
+  assert(equipment.left>=0&&equipment.top>=0&&equipment.right<=view.width&&equipment.bottom<=view.height);
+  for(const name of ['lw-scene-overlay','lw-role-scene'])assert(disjoint(equipment,rect(overlayStyle(style(name,view)),view)),'equipment toggle must not cover council input/vote or modal targets');
+  assert(paneTop>=0&&paneBottom<=equipment.top,'equipment pane must open above its own slot within the viewport');assert.equal(pane.overflow,'auto','historical evidence and equipment remain scrollable');
+  const paneWidth=length(pane.width,view,view.width);assert(equipment.right-paneWidth>=0&&equipment.right<=view.width,'equipment pane must remain horizontally in the viewport');
   // Exit remains in the topbar; the rail must leave that entire band free.
-  const header=style('lw-topbar',view);assert(toggle.top>length(header['min-height'],view,view.height));
+  const header=style('lw-topbar',view);assert(toggle.top>length(header['min-height'],view,view.height));assert(paneTop>=length(header['min-height'],view,view.height),'equipment pane must not cover Exit');
  });
 }
 
