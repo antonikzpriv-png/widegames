@@ -2,6 +2,7 @@
 import {mkdir,readFile,open,rename,lstat,unlink} from 'node:fs/promises';
 import path from 'node:path';
 import {randomUUID} from 'node:crypto';
+const MAX_LEDGER_BYTES=2000000;
 export async function createDailyBudget({directory,maxCostUsd=5,now=Date.now}){
  if(!Number.isFinite(maxCostUsd)||maxCostUsd<0||maxCostUsd>100)throw new Error('Invalid daily AI budget');
  await mkdir(directory,{recursive:true,mode:0o700});
@@ -10,7 +11,7 @@ export async function createDailyBudget({directory,maxCostUsd=5,now=Date.now}){
  const totalNanos=reservations=>Object.values(reservations).reduce((sum,value)=>sum+nanos(value),0);
  let ledger={version:2,day:new Date(now()).toISOString().slice(0,10),reservations:{},total:0,totalNanos:0},queue=Promise.resolve();
  try{
-  const info=await lstat(file);if(!info.isFile()||info.isSymbolicLink()||info.size>2000000)throw new Error('Invalid daily budget file');
+  const info=await lstat(file);if(!info.isFile()||info.isSymbolicLink()||info.size>MAX_LEDGER_BYTES)throw new Error('Invalid daily budget file');
   const saved=JSON.parse(await readFile(file,'utf8'));
   if(![1,2].includes(saved.version)||!/^\d{4}-\d{2}-\d{2}$/.test(saved.day)||!saved.reservations||Array.isArray(saved.reservations)||typeof saved.reservations!=='object'||Object.keys(saved.reservations).length>10000)throw new Error('Invalid daily budget data');
   const amounts=Object.values(saved.reservations);if(amounts.some(x=>!Number.isFinite(x)||x<0||x>100)||!Number.isFinite(saved.total)||saved.total<0||new Date(saved.day+'T00:00:00Z').toISOString().slice(0,10)!==saved.day||Object.keys(saved.reservations).some(id=>!/^[A-Za-z0-9:._-]{1,180}$/.test(id)))throw new Error('Invalid daily budget totals');
@@ -32,8 +33,10 @@ export async function createDailyBudget({directory,maxCostUsd=5,now=Date.now}){
    const reservedNanos=totalNanos(next.reservations)+nanos(amount);
    if(Object.keys(next.reservations).length>=10000||reservedNanos>limitNanos)throw new Error('Deployment daily AI budget exhausted');
    Object.defineProperty(next.reservations,id,{value:amount,enumerable:true,writable:true,configurable:true});next.total=reservedNanos/1e9;next.totalNanos=reservedNanos;
+   const serialized=JSON.stringify(next);
+   if(Buffer.byteLength(serialized)>MAX_LEDGER_BYTES)throw new Error('Deployment daily AI budget storage limit reached');
    const temporary=file+'.'+randomUUID()+'.tmp';
-   try{const handle=await open(temporary,'wx',0o600);try{await handle.writeFile(JSON.stringify(next));await handle.sync();}finally{await handle.close();}await rename(temporary,file);}catch(error){await unlink(temporary).catch(()=>{});throw error;}
+   try{const handle=await open(temporary,'wx',0o600);try{await handle.writeFile(serialized);await handle.sync();}finally{await handle.close();}await rename(temporary,file);}catch(error){await unlink(temporary).catch(()=>{});throw error;}
    ledger=next;return status();
   });queue=run;return run;
  }
