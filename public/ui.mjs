@@ -34,7 +34,7 @@ export function syncChildren(parent,source){
   for(const [event,handler]of Object.entries(current._uiHandlers||{}))current.removeEventListener(event,handler);
   current._uiHandlers=next._uiHandlers||{};
   for(const [event,handler]of Object.entries(current._uiHandlers))current.addEventListener(event,handler);
-  if(['INPUT','TEXTAREA','SELECT'].includes(current.tagName)&&current.value!==next.value)current.value=next.value;
+  if(['INPUT','TEXTAREA','SELECT'].includes(current.tagName)&&!current._uiComposing&&current.value!==next.value)current.value=next.value;
   syncChildren(current,next);
  }
  while(parent.childNodes.length>wanted.length)parent.lastChild.remove();
