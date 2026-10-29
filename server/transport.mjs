@@ -1,4 +1,4 @@
-﻿import http from 'node:http';
+import http from 'node:http';
 import {WebSocketServer,WebSocket} from 'ws';
 import {serveStatic} from './static.mjs';
 import {createRoomStore} from './store.mjs';
@@ -16,9 +16,9 @@ function json(res,status,body,headers={}) {
 }
 async function body(req,max) {
   if(!/^application\/json(?:\s*;|$)/i.test(req.headers['content-type']||''))fail(400,'INVALID_JSON','Send an application/json object.');
-  if(Number(req.headers['content-length'])>max)fail(413,'BODY_TOO_LARGE','Request body is too large.');
+  if(Number(req.headers['content-length'])>max){req.resume();fail(413,'BODY_TOO_LARGE','Request body is too large.');}
   let size=0;const chunks=[];
-  for await(const chunk of req){size+=chunk.length;if(size>max)fail(413,'BODY_TOO_LARGE','Request body is too large.');chunks.push(chunk);}
+  for await(const chunk of req.iterator({destroyOnReturn:false})){size+=chunk.length;if(size>max){req.resume();fail(413,'BODY_TOO_LARGE','Request body is too large.');}chunks.push(chunk);}
   let value;try{value=JSON.parse(Buffer.concat(chunks).toString('utf8'));}catch{fail(400,'INVALID_JSON','Send a valid JSON object.');}
   if(!object(value))fail(400,'INVALID_JSON','Send a JSON object.');return value;
 }
@@ -34,6 +34,7 @@ function limiter(now) {
 // Optional dependencies let transport tests exercise faults without provider calls.
 export async function createGameServer(config,dependencies={}) {
   const now=config.now||Date.now;
+  const origin=new URL(config.publicOrigin).origin,secure=origin.startsWith('https:');
   const engine=dependencies.engine||await import('./engine/index.mjs');
   const ai=dependencies.aiController||(await import('./ai/index.mjs')).createAiController({config:config.ai});
   const store=dependencies.store||await createRoomStore(config.dataDir);
@@ -43,7 +44,6 @@ export async function createGameServer(config,dependencies={}) {
     service=createRooms({store,engine,ai,now,maxActiveRooms:config.maxActiveRooms??12,roomTtlMs:config.roomTtlMs??3600000});await service.restore();
   } catch(error){await store.close();throw error;}
   const {rooms,get,run,commit,view}=service;
-  const origin=new URL(config.publicOrigin).origin,secure=origin.startsWith('https:');
   const limit=limiter(now),tasks=new Set();let closing=false,maintenance=null,closePromise;
   function track(promise){tasks.add(promise);promise.finally(()=>tasks.delete(promise)).catch(()=>{});return promise;}
   function checkOrigin(req,required=false) {
