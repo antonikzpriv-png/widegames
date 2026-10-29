@@ -268,3 +268,37 @@ git diff --check
 ~~~
 
 Limits remain those of the AEC receipt: local Windows main/process/HTTP/WS/ordinary store restart and byte-exact packaging, not Chrome/browser, Docker/Linux/hosted deployment, full matches/suite, power-loss/ACL or original live-model/provider qualification. No Chrome, providers, full suite, runtime/other-worktree edits, main/push/deploy or new features. Only harness parameterization and this receipt changed; qualification closure is finished.
+
+## Last frozen production asset closure: exact104f494
+
+**25/25 unchanged production checks passed**, first run, at final frozen **104f494d6c575901b113cbf2ba57960365326355**. Actual53286ca1df771dbca6c4e19417d8b10bb9a929e0 ->104 Git diff confirms **public/world/beacon.css is the sole deployed/runtime delta**: the mobile equipment toggle joins the separate lower control rail and its pane ends above that rail. CSS blob b77603635b5c6aa375637dc530a538d6c3cf6d71 ->71cdc03c823c5679b852556977b2190b9ca9612a. Server/shared/package/lock/Dockerfile are unchanged; remaining changes are non-deployed tests/docs/scripts. This qualification verifies served CSS bytes and production behavior, not screenshot/layout geometry; manager owns the concurrent browser run.
+
+Fresh ignored exact archive _artifacts/tactical-production-104f494: **288 canonical raw Git blobs**,72 runtime files,43 public/shared assets,150 local module edges and5 literal browser asset references. All counts derive from the manifest. Raw blobs verified against Git object IDs on extraction and all hashes verified again after execution. Tar PAX pin matches exact104; tar SHA256 **b5dab45f3e363befc30acffe6aa4eea5833709047112c1b97a3b109992975eb8**. Source comparison JSON records the unchanged runtime path set and CSS-only delta. Offline production install used only ws8.22.0 with D: cache/temp; Puppeteer absent. No overlays or source changes.
+
+The parameterized standalone harness was used **unchanged**, Git blob bd05fc87fec52c5323563a3275c744f5e5d7551b. TACTICAL_PRODUCTION_REVIEW_PIN selects104; archive/evidence defaults derive from it. Same25 report check labels match both preserved AEC and532 reports exactly. Real normal-default schema4 main exercised both authenticated settings/start maps, HTTP/WS roles/position/private data and source permission checks,43 byte-exact assets, real notes/input/action receipts, same-DATA_DIR identity/map/settings/note/reservation restart, and sampled paused legacy1/2/3 file preservation. No runtime flags or dependencies were injected. The existing synthetic uncertain daily reservation remains explicitly labeled no-provider-send, not claimed live usage.
+
+Actual run **6609ms**, two child main PIDs16132/24440 both naturally exit0/signalnull through the real SIGTERM handler via Windows IPC. **0 external provider fetch attempts,0 forced stops,0 socket privacy errors**. All288 archived source files remain unchanged. AEC/532 archives, reports and earlier failure evidence remain preserved.
+
+Final copyable paths relative to D:/Widegames-work/tactical-maps-builder-20261029:
+
+- Report: **_artifacts/tactical-production-104f494-run-MWbXsv/report.json**
+- Manifest: **_artifacts/tactical-production-104f494-manifest.json**
+- Source comparison: _artifacts/tactical-production-104f494-comparison.json
+- Raw tar: _artifacts/tactical-production-104f494.tar
+- Install/run logs: _artifacts/tactical-production-104f494-install.txt and tactical-production-104f494-run.txt
+
+Exact install command (cwd _artifacts/tactical-production-104f494), then unchanged harness from assigned root:
+
+~~~powershell
+$env:TEMP='D:/Widegames-work/temp'
+$env:TMP=$env:TEMP
+$env:npm_config_cache='D:/Widegames-work/npm-cache'
+npm ci --omit=dev --ignore-scripts --no-audit --no-fund --offline --cache D:/Widegames-work/npm-cache
+# Return to assigned worktree root.
+$env:TACTICAL_PRODUCTION_REVIEW_PIN='104f494d6c575901b113cbf2ba57960365326355'
+Remove-Item Env:TACTICAL_PRODUCTION_REVIEW_ROOT -ErrorAction SilentlyContinue
+node tests/tactical-map-production-review.mjs
+git diff --check
+~~~
+
+Limits remain: loopback Windows main/HTTP/WS/ordinary restart and exact source/assets, not Chrome/browser, Docker/Linux/hosted deployment, full unit suite or full matches, crash/power-loss/ACL or live provider qualification. No new test, harness/runtime/other-worktree edit, feature/review, Chrome, provider, broad suite, main/push/deploy. **This closure changes only this document and finishes the assigned last asset qualification.**
