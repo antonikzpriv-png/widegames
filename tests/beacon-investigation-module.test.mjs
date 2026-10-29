@@ -127,3 +127,25 @@ test('strict restore validation rejects hidden-field injection, unknown owners, 
   for (const change of corruptions) { const state = copy(f.state); change(state); assert.throws(() => investigation.validateInvestigationState(state), /Invalid investigation/); }
   const state = copy(f.state); state.investigation.observations.owner[0].data.players[0].position = { x: 1, y: 2 }; assert.throws(() => investigation.getInvestigationView(state, 'owner', 100, f.ctx), /Invalid investigation/);
 });
+
+test('camera frames remain bounded with a larger roster and never expose private actor fields', () => {
+  const f = fixture();
+  for (let n = 0; n < 10; n++) f.state.players.push({ ...copy(f.state.players[1]), id: `extra-${n}`, position: { x: 300, y: 510 }, tasks: ['PRIVATE_TASK'], secretRoute: 'PRIVATE_EXIT' });
+  f.start(); f.advance(100); const observation = f.view().observations[0], frame = observation.data.frames.find(value => value.cameraId === 'archive-camera');
+  assert.equal(frame.players.length, 6); assert.equal(frame.limited, true); assert(!JSON.stringify(observation).includes('PRIVATE_'));
+  for (const target of frame.players) assert.deepEqual(Object.keys(target).sort(), ['id', 'position']);
+});
+
+test('strict restore protects configured read duration, cooldown charge and plausible camera coordinates', () => {
+  const f = fixture(); f.start();
+  let bad = copy(f.state); bad.investigation.sessions.owner.deadlineAt--; assert.throws(() => investigation.validateInvestigationState(bad));
+  f.advance(100); bad = copy(f.state); bad.investigation.cooldowns.owner = 0; assert.throws(() => investigation.validateInvestigationState(bad));
+  bad = copy(f.state); bad.investigation.observations.owner[0].data.frames[0].players[0].position = { x: -1, y: 0 }; assert.throws(() => investigation.validateInvestigationState(bad));
+});
+
+test('actor IDs cannot alias inherited object keys through JSON restoration', () => {
+  const f = fixture('vitals'); f.owner.id = '__proto__'; f.start(); f.advance(100);
+  const saved = JSON.parse(JSON.stringify(f.state)); assert.equal(investigation.validateInvestigationState(saved), true);
+  assert(Object.hasOwn(saved.investigation.sessions, '__proto__')); assert.equal(investigation.getInvestigationView(saved, '__proto__', 100, f.ctx).observations.length, 1);
+  assert.equal(Object.getPrototypeOf(saved.investigation.sessions), Object.prototype);
+});

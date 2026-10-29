@@ -44,3 +44,46 @@ node --check server/engine/investigation/data.mjs
 19 tests passed, zero failed/skipped. Real shared static geometry plus a labeled dynamic-door/visibility fixture isolates ctx delegation. It does not yet qualify the other builder's authoritative world LOS or root schema3 scheduling. Tests cover pure strict validation/hints, canonical player authority, exact read boundary, limited cameras/lights/door occlusion, immutable private dated samples, no camera witness, occupancy/vitals hidden-field safety, movement/phase/death/transit/comms/LOS cancellation, cooldowns, stale reads, actor/spectator isolation, bounded history, strict malformed restore and JSON round trip. Initial two round-trip comparisons exposed null-prototype dictionary differences; switched to normal serializable maps with explicit safe own-property writes, preserving prototype safety after engine cloning. The final19-check run passes. No failed product assertion was skipped.
 
 Pending integration qualification: exact committed Core/Systems/manager modules, actual schema3 engine deadlines/actions/restore, camera-context agreement and shared camera fixture clarification. Group2 NEXT_FEATURE_INTERFACES was absent in this foundation, found/read in the coordinator's later committed tree; no group2 feature implementation was added. No Chrome, paid/live provider, full unrelated suite, push/main/merge/deployment or OS durability claim.
+
+## Follow-up author integration qualification
+
+Early milestone **35fb1e9f322062dcdeb7695a3f7b936fd2df0219** was integrated by the coordinator as a663a8b. Follow-up adds strict shared-fixture validation, plausible static camera coordinates on restore, exact configured read-duration/cooldown integrity, and bounded-camera/prototype-key cases; no other owner's runtime is changed. All established wire/session/observation fields retain the milestone shape.
+
+**32 tests passed, zero failed/skipped:**22 module controls and10 actual engine integration controls. These are author checks of this implementation, not independent approval. Exact tested coordinator dependencies: **58bdd512983363d1a8801b39bb34d3d4d4891b33**, including its committed full spatial knowledge and Systems implementation. Earlier seven/ten-engine checks used cb00e33f25bf9ba561743818a5dc8f562fac6fb8; the final32-check run uses58bdd51 and explicitly confirms owner-only vitals knowledge adoption. No uncommitted world/system dependency is claimed as qualified.
+
+An ignored qualification copy `_artifacts/beacon-investigation-engine-58bdd51` was built using `git show 58bdd51:<path>` for every server/shared file, replacing only server/engine/investigation/** with this owned follow-up. Actual authoritative createMatch(world:true,systems:true), applyAction, applyInput, tick and getPlayerView execute in that copy. This is an explicitly pinned composite author fixture, not a new Git worktree or another owner's file edit. Actual seeded roles are inspected only by test staging; no AI/client receives full state. Tests use accepted navigation/actions and original engine world geometry, not teleports or invented winners. Only terminal duration/cooldown and several equipment initial cooldowns are shortened in the fixture.
+
+```
+$env:TEMP='D:/Widegames-work/temp'
+$env:TMP=$env:TEMP
+$env:npm_config_cache='D:/Widegames-work/npm-cache'
+$env:BEACON_INVESTIGATION_ENGINE_ROOT=(Join-Path (Get-Location) '_artifacts/beacon-investigation-engine-58bdd51')
+node --test tests/beacon-investigation-module.test.mjs tests/beacon-investigation-engine.test.mjs
+node --check server/engine/investigation/index.mjs
+node --check server/engine/investigation/data.mjs
+git diff --check
+```
+
+Final combined result32/32, zero skipped, Node exit0. Log `_artifacts/beacon-investigation-58bdd51-author-checks.txt`, SHA256 `BA41CED56FD1A8FF1BB23B769128128AAE4A4A3227EF7DE67954630A209EAC80`.
+
+Actual engine boundaries exercised:
+
+- A late tick samples at the original exact scheduled deadline rather than its later receipt time. Repeated accepted request ID does not restart a read or duplicate its observation. Mid-read JSON engine-state restoration completes once, preserves dates and passes the current module validator.
+- Shared world LOS actually originates at each camera. Normal/archive corridor sightings are present; real lights sabotage and a real closed west-upper door suppress the distant sighting. Other actors' role/tasks/motion do not enter samples. Six-per-camera bounds are also tested with a larger unit roster.
+- Real communications sabotage cancels an in-progress read immediately, with unavailable status and no fake successful empty data. Real radio repair plus expired actor cooldown enables a subsequent read.
+- Real steering, emergency discussion, reader death and private hatch entry cancel reading. A keeper within reach of both the Archive console and hatch can enter a real linked vent; its own read fails transit and another keeper's occupancy read excludes the underground actor despite its retained roomId.
+- Real remote elimination in Engine is discovered by a Galley vitals reader after its timed sample. Only the entitled reader adopts dead status from that sample; spectator projection is unchanged and other investigation histories stay empty. Positions/roles are absent from vitals payload.
+- Reading the later camera frame containing the real killer produces no attack-eyewitness evidence and no dead-body row. Private device records carry only explicit owner visibleTo. Live getReplay stays null; module records never enter the public timeline. Ended replay guarding remains the coordinator's engine responsibility.
+
+Tests default to the current checkout's actual engine; BEACON_INVESTIGATION_ENGINE_ROOT is an explicit qualification override. Missing schema3 support fails clearly rather than skipping or counting a schema1/2 fixture as success. Default loading was separately exercised by copying the two owned tests into the ignored qualification layout, removing the override and running:
+
+```
+Remove-Item Env:BEACON_INVESTIGATION_ENGINE_ROOT -ErrorAction SilentlyContinue
+node --test _artifacts/beacon-investigation-engine-58bdd51/tests/beacon-investigation*.test.mjs
+```
+
+Default result32/32 pass, zero skips. Log `_artifacts/beacon-investigation-default-author-checks.txt`, SHA256 `E3380165CD621AD90664CF3F616E6C60AB54A9911CF49689C1BC20BC44DAC441`.
+
+The dependency snapshot still defines radial cameras via shared points and normal/lights vision defaults; no directional shared fixture was invented or copied into an owner file. Optional facingRad/fovRad/radius narrowing is implemented and validated when the coordinator supplies those public fields. The earlier requested camera-context agreement is confirmed by the real engine tests. Root's programmatic beacon-rule validator currently permits observationLimit up to128; this module intentionally enforces the group1 contract's maximum64, so root should align its accepted setting. The default64 works. Shared camera field clarification and root setting alignment remain coordinator-owned decisions, not permission to edit shared/root here.
+
+No full unrelated suite, HTTP/OS persistence durability, browser/Chrome, provider, push/main/deploy or independent approval is claimed. Restoration here is actual JSON engine state, not a simulated filesystem crash. Additional independent audit of another builder waits for explicit assignment; this module itself still requires manager/Core independent review.

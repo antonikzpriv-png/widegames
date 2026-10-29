@@ -1,5 +1,6 @@
 ﻿import { BEACON_DEVICES, BEACON_CAMERAS, DEFAULT_BEACON_RULES } from '../../../shared/beacon.mjs';
 import { ROOM_LAYOUT } from '../../../shared/contracts.mjs';
+import { WORLD, isWalkable } from '../../../shared/world.mjs';
 
 export const MAX_OBSERVATIONS = 64;
 export const MAX_ACTORS = 64;
@@ -19,7 +20,6 @@ export const distance = (a, b) => point(a) && point(b) ? Math.hypot(a.x - b.x, a
 export const moving = (player, at) => !!player.motion && (player.motion.path?.length > 0 || player.motion.destination != null || (player.motion.manual && player.motion.leaseUntil > at));
 export const inTransit = (state, id) => !!state.systems?.transit && Object.hasOwn(state.systems.transit, id);
 export const communications = state => state.systems?.communications?.active === true;
-export const error = (code, message) => ({ code, message });
 export function rules(state) {
   const result = {};
   for (const key of ['deviceReadMs', 'deviceCooldownMs', 'observationLimit', 'visionRadius', 'lightsVisionRadius']) result[key] = state.beaconRules?.[key] ?? DEFAULT_BEACON_RULES[key];
@@ -54,7 +54,7 @@ function cameraFrame(state, player, camera, ctx, config) {
   const visible = state.players.filter(target => {
     if (!target.alive || inTransit(state, target.id) || !point(target.position) || distance(camera.position, target.position) > radius) return false;
     const angle = Math.atan2(target.position.y - camera.position.y, target.position.x - camera.position.x) - facing;
-    if (Math.abs(Math.atan2(Math.sin(angle), Math.cos(angle))) > fov / 2 + 1e-10) return false;
+    if (distance(camera.position, target.position) > 1e-8 && Math.abs(Math.atan2(Math.sin(angle), Math.cos(angle))) > fov / 2 + 1e-10) return false;
     return ctx.sees(state, observer, target.position);
   }).sort((a, b) => distance(camera.position, a.position) - distance(camera.position, b.position) || a.id.localeCompare(b.id));
   return { cameraId: camera.id, limited: visible.length > MAX_CAMERA_PLAYERS, players: visible.slice(0, MAX_CAMERA_PLAYERS).map(target => ({ id: target.id, position: { x: target.position.x, y: target.position.y } })) };
@@ -81,6 +81,13 @@ export function sample(state, player, device, at, ctx) {
 
 const keys = (value, allowed) => record(value) && Object.keys(value).every(key => allowed.includes(key));
 const assert = condition => { if (!condition) throw new Error('Invalid investigation state'); };
+export function validateFixtures() {
+  assert(Array.isArray(BEACON_DEVICES) && BEACON_DEVICES.length > 0 && BEACON_DEVICES.length <= 16 && devices.size === BEACON_DEVICES.length);
+  for (const device of BEACON_DEVICES) assert(typeof device.id === 'string' && /^[A-Za-z0-9_-]{1,64}$/.test(device.id) && ['cameras', 'occupancy', 'vitals'].includes(device.kind) && typeof device.label === 'string' && device.label.length <= 120 && roomIds.has(device.roomId) && point(device.position) && isWalkable(device.position));
+  assert(Array.isArray(BEACON_CAMERAS) && BEACON_CAMERAS.length > 0 && BEACON_CAMERAS.length <= 8 && new Set(BEACON_CAMERAS.map(camera => camera.id)).size === BEACON_CAMERAS.length);
+  for (const camera of BEACON_CAMERAS) assert(typeof camera.id === 'string' && /^[A-Za-z0-9_-]{1,64}$/.test(camera.id) && roomIds.has(camera.roomId) && point(camera.position) && isWalkable(camera.position) && (camera.radius === undefined || Number.isFinite(camera.radius) && camera.radius > 0 && camera.radius <= 10000) && (camera.facingRad === undefined || Number.isFinite(camera.facingRad)) && (camera.fovRad === undefined || Number.isFinite(camera.fovRad) && camera.fovRad > 0 && camera.fovRad <= Math.PI * 2));
+}
+
 export function validateObservation(observation, actorId, actors, updatedAt) {
   assert(keys(observation, ['id', 'deviceId', 'kind', 'at', 'data']));
   const device = deviceFor(observation.deviceId);
@@ -91,7 +98,7 @@ export function validateObservation(observation, actorId, actors, updatedAt) {
     for (const frame of observation.data.frames) {
       assert(keys(frame, ['cameraId', 'limited', 'players']) && BEACON_CAMERAS.some(camera => camera.id === frame.cameraId) && !cameras.has(frame.cameraId) && typeof frame.limited === 'boolean' && Array.isArray(frame.players) && frame.players.length <= MAX_CAMERA_PLAYERS); cameras.add(frame.cameraId);
       const seen = new Set();
-      for (const player of frame.players) { assert(keys(player, ['id', 'position']) && actors.has(player.id) && !seen.has(player.id) && keys(player.position, ['x', 'y']) && point(player.position)); seen.add(player.id); }
+      for (const player of frame.players) { assert(keys(player, ['id', 'position']) && actors.has(player.id) && !seen.has(player.id) && keys(player.position, ['x', 'y']) && point(player.position) && player.position.x >= 0 && player.position.x <= WORLD.width && player.position.y >= 0 && player.position.y <= WORLD.height && isWalkable(player.position)); seen.add(player.id); }
     }
   } else if (device.kind === 'occupancy') {
     assert(keys(observation.data, ['rooms']) && Array.isArray(observation.data.rooms) && observation.data.rooms.length === roomIds.size);
@@ -105,6 +112,7 @@ export function validateObservation(observation, actorId, actors, updatedAt) {
   }
 }
 export function validateState(state) {
+  validateFixtures();
   assert(Array.isArray(state.players) && state.players.length > 0 && state.players.length <= MAX_ACTORS && time(state.updatedAt));
   const actors = new Set(state.players.map(player => player.id));
   assert(actors.size === state.players.length && state.players.every(player => typeof player.id === 'string' && /^[A-Za-z0-9_-]{1,64}$/.test(player.id) && typeof player.alive === 'boolean'));
@@ -112,10 +120,13 @@ export function validateState(state) {
   assert(keys(investigation, ['version', 'sessions', 'observations', 'cooldowns']) && investigation.version === 1);
   for (const map of [investigation.sessions, investigation.observations, investigation.cooldowns]) assert(record(map) && Object.keys(map).length <= actors.size && Object.keys(map).every(id => actors.has(id)));
   for (const [id, session] of Object.entries(investigation.sessions)) {
-    assert(keys(session, ['deviceId', 'startedAt', 'deadlineAt', 'anchor', 'status', 'endedAt', 'reason']) && deviceFor(session.deviceId) && time(session.startedAt) && session.startedAt <= state.updatedAt && time(session.deadlineAt) && session.deadlineAt > session.startedAt && session.deadlineAt - session.startedAt <= 86400000 && keys(session.anchor, ['x', 'y']) && point(session.anchor));
+    assert(keys(session, ['deviceId', 'startedAt', 'deadlineAt', 'anchor', 'status', 'endedAt', 'reason']) && deviceFor(session.deviceId) && time(session.startedAt) && session.startedAt <= state.updatedAt && time(session.deadlineAt) && session.deadlineAt > session.startedAt && session.deadlineAt - session.startedAt === config.deviceReadMs && keys(session.anchor, ['x', 'y']) && point(session.anchor));
     assert(['reading', 'elapsed', 'failed'].includes(session.status));
     if (session.status === 'reading') assert(session.endedAt === null && session.reason === null);
     else assert(time(session.endedAt) && session.endedAt >= session.startedAt && session.endedAt <= state.updatedAt && (session.status === 'elapsed' ? session.endedAt === session.deadlineAt && session.reason === null : ['cancelled', 'dead', 'phase', 'communications', 'transit', 'position', 'movement', 'out_of_range', 'stale'].includes(session.reason)));
+    if (session.status === 'reading') assert((own(investigation.cooldowns, id) ?? 0) <= session.startedAt);
+    else assert(own(investigation.cooldowns, id) === session.endedAt + config.deviceCooldownMs);
+    if (session.status === 'failed' && session.reason === 'stale') assert(session.endedAt > session.deadlineAt);
     if (session.status === 'elapsed') assert(own(investigation.observations, id)?.some(observation => observation.id === `obs:${id}:${session.deviceId}:${session.endedAt}`));
   }
   for (const [id, observations] of Object.entries(investigation.observations)) {
