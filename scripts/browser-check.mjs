@@ -14,7 +14,7 @@ const root=fileURLToPath(new URL('../',import.meta.url));
 const output=path.join(root,'_artifacts','browser-'+Date.now());await mkdir(output,{recursive:true});
 const report={fixture:'Seeded QA, accelerated deadlines, real demo bots; no live provider calls.',checks:[],errors:[],consoleErrors:[],privacyChecks:0,screenshots:[],outcomes:[]};
 const check=(condition,name)=>{report.checks.push({name,passed:!!condition});assert(condition,name);console.log('PASS '+name);};
-let browser,game,skew=0,humanCreations=0;
+let browser,game,activePage,skew=0,humanCreations=0;
 const pending=new Set();
 function safeRoom(room){
  if(!room?.game)return;
@@ -27,6 +27,7 @@ function safeRoom(room){
  report.privacyChecks++;
 }
 function track(promise){pending.add(promise);promise.catch(error=>report.errors.push(String(error))).finally(()=>pending.delete(promise));}
+async function drain(){let timer;try{await Promise.race([Promise.allSettled([...pending]),new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error('HTTP privacy audit did not drain within eight seconds')),8000);})]);}finally{clearTimeout(timer);}}
 function seedFor(role){for(let i=0;i<100;i++){const seed='browser-fixture-'+role+'-'+i;if(engine.createMatch({id:'seed',seed,now:0}).players[0].role===role)return seed;}throw Error('No fixture seed');}
 function nextRoom(from,to){const queue=[[from]],seen=new Set([from]);for(const route of queue){if(route.at(-1)===to)return route[1];for(const id of ROOM_LAYOUT.find(r=>r.id===route.at(-1)).neighbors)if(!seen.has(id)){seen.add(id);queue.push([...route,id]);}}}
 async function clickText(page,label){await page.locator(`button::-p-text(${label})`).click();}
@@ -38,7 +39,7 @@ async function taskAndReturn(page){
  for(const target of [task.roomId,'bridge']){
   while((r=await view(page)).game.self.roomId!==target){
    const next=nextRoom(r.game.self.roomId,target);
-   await page.waitForFunction(id=>{const b=document.querySelector(`[data-room="${id}"]`);return b&&!b.disabled;},{timeout:8000},next);
+   await page.waitForFunction(id=>{const b=document.querySelector(`[data-room="${id}"]`);return b&&!b.disabled&&b.getAttribute('aria-disabled')!=='true';},{timeout:8000},next);
    await page.locator(`[data-room="${next}"]`).click();await waitState(page,x=>x.game.self.roomId===next);
   }
   if(target===task.roomId){await page.locator(`[data-focus="task-${task.id}"]`).click();await waitState(page,x=>x.game.self.tasks.find(t=>t.id===task.id)?.completed);}
@@ -67,9 +68,9 @@ try{
  await new Promise(r=>game.server.listen(port,'127.0.0.1',r));
  const origin=`http://127.0.0.1:${port}`;
  browser=await puppeteer.launch({executablePath:process.env.CHROME_PATH||(process.platform==='win32'?'C:/Program Files/Google/Chrome/Application/chrome.exe':'/usr/bin/google-chrome'),headless:true,userDataDir:path.join(output,'chrome-profile'),args:['--no-sandbox','--disable-dev-shm-usage']});
- const page=await browser.newPage();await page.setViewport({width:1440,height:1000});page.setDefaultTimeout(12000);
+ const page=await browser.newPage();activePage=page;await page.setViewport({width:1440,height:1000});page.setDefaultTimeout(12000);
  page.on('pageerror',e=>report.errors.push(e.message));page.on('console',m=>{if(m.type()==='error')report.consoleErrors.push(m.text());});
- page.on('response',response=>{if(response.url().startsWith(origin+'/api/rooms')&&response.ok())track(response.json().then(r=>{if(r.game)safeRoom(r);}));});
+ page.on('requestfinished',request=>{const response=request.response();if(response?.url().startsWith(origin+'/api/rooms')&&response.ok())track(response.json().then(r=>{if(r.game)safeRoom(r);}));});
  const cdp=await page.createCDPSession();await cdp.send('Network.enable');cdp.on('Network.webSocketFrameReceived',event=>{try{const value=JSON.parse(event.response.payloadData);if(value.type==='state')safeRoom(value.room);}catch(error){report.errors.push(String(error));}});
  await page.goto(origin,{waitUntil:'networkidle0'});await screenshot(page,'01-harbor-desktop');
  check((await page.title()).includes('Lantern Wake'),'Original game shell loads');
@@ -104,11 +105,11 @@ try{
  await page.setViewport({width:320,height:720});check(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'Mobile game fits 320px without horizontal overflow');
  await finish(page,false);await page.waitForSelector('.results');await clickText(page,'Load full replay');await page.waitForSelector('#replay-step');r=await view(page);
  check(r.game.players.every(p=>['crew','saboteur'].includes(p.role)),'Roles reveal after the all-AI match, not before');await screenshot(page,'08-all-ai-results-mobile');
- await Promise.allSettled([...pending]);check(!report.errors.length,'No browser runtime or payload privacy failures');
+ await drain();check(!report.errors.length,'No browser runtime or payload privacy failures');
  report.browser=await browser.version();report.rules=config.rules;
-}catch(error){report.failure=String(error.stack||error);throw error;}
+}catch(error){report.failure=String(error.stack||error);try{if(activePage)await screenshot(activePage,'failure');}catch{}throw error;}
 finally{
  const failures=[];try{await browser?.close();}catch(e){failures.push(String(e));}try{await game?.close();}catch(e){failures.push(String(e));}
- await Promise.allSettled([...pending]);report.cleanupErrors=failures;await writeFile(path.join(output,'report.json'),JSON.stringify(report,null,2));console.log('Browser evidence: '+output);
+ try{await drain();}catch(error){failures.push(String(error));}report.cleanupErrors=failures;await writeFile(path.join(output,'report.json'),JSON.stringify(report,null,2));console.log('Browser evidence: '+output);
  if(failures.length)throw new Error('Browser qualification cleanup failed: '+failures.join('; '));
 }
