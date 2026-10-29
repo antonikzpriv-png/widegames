@@ -22,7 +22,7 @@ export function createLobbyMapSelector({id,settings,change=()=>{}}){
   for(const map of maps){let option=entries.get(map.id);if(!option){option=dom('option');option.value=map.id;entries.set(map.id,option);select.append(option);}setText(option,map.name||map.id);}
   select.value=room?.map?.id||'';const selected=maps.find(m=>m.id===room?.map?.id);setText(description,selected?.description||'');
   select.disabled=busy||!!options.pending||!room?.isHost||!!room?.game||!options.connected||typeof settings!=='function';
-  const reason=!room?.isHost?'Only the host can choose a map before the watch.':!options.connected?'Reconnect before changing the map.':typeof settings!=='function'?'Map selection is unavailable in this client.':busy?message||'Saving map selection...':message||`Server selection: ${selected?.name||room?.map?.id||'unavailable'} (revision ${room?.settingsRevision??'unavailable'}).`;
+  const reason=!room?.isHost?'Only the host can choose a map before the watch.':!options.connected?'Reconnect before changing the map.':typeof settings!=='function'?'Map selection is unavailable in this client.':busy?message||'Saving map selection...':message||`Selected map: ${selected?.name||room?.map?.id||'unavailable'}.`;
   setText(status,reason);
  }
  return {node,update,get pending(){return busy;},suspend(){generation++;message='';},dispose(){disposed=true;generation++;node.remove();}};

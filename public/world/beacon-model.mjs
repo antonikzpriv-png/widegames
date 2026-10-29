@@ -1,5 +1,5 @@
 import {getMap} from '../../shared/maps/index.mjs';
-import {mapKey} from './map-model.mjs';
+import {mapKey,roomName as mapRoomName} from './map-model.mjs';
 import {BEACON_ACTION_FIELDS} from '../../shared/beacon.mjs';
 const TYPES=new Set(['systemSabotage','systemRepair','vent','investigate','deviceCancel','ability']);
 export const finitePoint=p=>!!p&&Number.isFinite(p.x)&&Number.isFinite(p.y);
@@ -35,15 +35,16 @@ const seconds=(deadline,now)=>Number.isFinite(deadline)&&Number.isFinite(now)?Ma
 export function systemSummary(game,now=game?.serverNow){
  const s=game?.systems;if(!s)return 'System status unavailable.';
  const state=value=>value?.active===true?`disrupted${seconds(value.deadlineAt,now)!==null?' ('+seconds(value.deadlineAt,now)+'s remaining)':''}`:value?.active===false?'normal':'unknown';
- const doors=(s.doors||[]).map(d=>`${d.id}: ${d.closed===true?'closed'+(seconds(d.deadlineAt,now)!==null?' ('+seconds(d.deadlineAt,now)+'s remaining)':''):d.closed===false?'open':'unknown'}`).join('; ');
+ const doors=(s.doors||[]).map(d=>`${d.id}: ${d.status==='pending'?'closing'+(seconds(d.closeAt,now)!==null?' ('+seconds(d.closeAt,now)+'s warning)':''):d.status==='jammed'?'jammed, open':d.closed===true?'closed'+(seconds(d.deadlineAt,now)!==null?' ('+seconds(d.deadlineAt,now)+'s remaining)':''):d.closed===false?'open':'unknown'}`).join('; ');
  return `Lights: ${state(s.lights)}. Communications: ${state(s.communications)}.${doors?' Doors: '+doors+'.':''}`;
 }
 export function cooldownText(game,now){
  if(game?.self?.role!=='saboteur')return '';
  const c=game.systems?.cooldowns;if(!c)return '';
- return [['auxiliaryAt','Auxiliary sabotage'],['criticalAt','Critical sabotage'],['ventAt','Hatch travel']].filter(([key])=>seconds(c[key],now)>0).map(([key,label])=>`${label}: ${seconds(c[key],now)}s cooldown`).join('. ');
+ return [['auxiliaryAt',game.tacticalVersion===1?'Faction auxiliary sabotage':'Auxiliary sabotage'],['criticalAt',game.tacticalVersion===1?'Faction critical sabotage':'Critical sabotage'],['ventAt','Hatch travel']].filter(([key])=>seconds(c[key],now)>0).map(([key,label])=>`${label}: ${seconds(c[key],now)}s cooldown`).join('. ');
 }
 export function interactionLabel(h,game,map=getMap(game?.map)){
+ if(map.id!=='beacon'&&h.type==='vent'&&/^Hatch to /.test(h.label||'')){const hatch=map.fixtures.vents.find(v=>v.id===h.fields.exitId);if(hatch)return `Hatch to ${mapRoomName(map,hatch.roomId)}`;}
  if(h.type==='systemSabotage'&&h.fields.kind==='door'){const door=map.fixtures.doors.find(d=>d.id===h.fields.targetId);return `${h.label||'Disrupt door'}: ${h.fields.targetId}${door?' ('+door.roomId+')':''}`;}
  if(h.type==='systemRepair'&&h.fields.systemId==='door')return `${h.label||'Reopen door'}: ${h.fields.siteId}`;
  return h.label||h.type;
@@ -53,7 +54,7 @@ export function sessionText(investigation,now,map=getMap()){
  const name=map.fixtures.devices.find(d=>d.id===session.deviceId)?.label||session.deviceId||'terminal',cooldown=seconds(session.cooldownAt,now),suffix=cooldown>0?` Equipment cooldown: ${cooldown}s.`:'';
  if(session.status==='reading')return `Reading ${name}${seconds(session.deadlineAt,now)!==null?' - '+seconds(session.deadlineAt,now)+'s remaining':''}. Stay still at the device. Movement, council or communications loss can cancel the read.`;
  if(session.status==='elapsed')return `Read complete: ${name}. See your timestamped observations.${suffix}`;
- const reasons={cancelled:'cancelled by you',dead:'keeper fell',phase:'watch phase changed',communications:'communications lost',transit:'hatch transit',position:'position unavailable',movement:'keeper moved',out_of_range:'console no longer in range',stale:'sampling deadline missed'};
+ const reasons={cancelled:'cancelled by you',dead:'keeper fell',phase:'watch phase changed',communications:'communications lost',transit:'hatch transit',position:'position unavailable',movement:'keeper moved',out_of_range:'console no longer in range',stale:'sampling deadline missed',map:'map changed'};
  return `Read ${session.status==='stale'?'stale':'failed'}: ${name}${session.reason?' - '+(reasons[session.reason]||'unavailable'):''}. No new sample.${suffix}`;
 }
 export function observationText(observation,players=[],map=getMap(observation.map)){
