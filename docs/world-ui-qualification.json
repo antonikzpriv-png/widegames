@@ -1,0 +1,177 @@
+{
+  "sourceCommit": "2e7a28c167e3bce225f0c4570dbbbb90933da0f0",
+  "modifiedPaths": "",
+  "runtimeCommit": "2e7a28c167e3bce225f0c4570dbbbb90933da0f0",
+  "fixture": "Real transport, cookies, WS and engine. Seeded roles/tasks, idle AI scheduling and a controlled clock; no API responses mocked. Long transit uses real navigate actions. Critical-council preconditions use legal engine actions by fixture AI seats; this is not a full demo-AI match or performance claim.",
+  "checks": [
+    {
+      "name": "lobby: all six original keeper seats and real host start",
+      "pass": true
+    },
+    {
+      "name": "crew assignment: private own role reveal, status and exit remain visible",
+      "pass": true
+    },
+    {
+      "name": "real keyboard movement refreshes integer leases and stops after keyup",
+      "pass": true,
+      "detail": {
+        "start": {
+          "x": 728,
+          "y": 272
+        },
+        "end": {
+          "x": 869.3000000000005,
+          "y": 272
+        },
+        "leases": 7
+      }
+    },
+    {
+      "name": "stage layout and map: desktop, 320, 390, 768 and mobile landscape",
+      "pass": true,
+      "detail": [
+        {
+          "width": 1440,
+          "height": 1000,
+          "stage": {
+            "width": 1440,
+            "height": 1000
+          }
+        },
+        {
+          "width": 320,
+          "height": 740,
+          "stage": {
+            "width": 320,
+            "height": 740
+          }
+        },
+        {
+          "width": 390,
+          "height": 844,
+          "stage": {
+            "width": 390,
+            "height": 844
+          }
+        },
+        {
+          "width": 768,
+          "height": 1024,
+          "stage": {
+            "width": 768,
+            "height": 1024
+          }
+        },
+        {
+          "width": 844,
+          "height": 390,
+          "stage": {
+            "width": 844,
+            "height": 390
+          }
+        }
+      ]
+    },
+    {
+      "name": "actual touch joystick releases to zero; click-to-walk arrives without extrapolating position",
+      "pass": true
+    },
+    {
+      "name": "synthetic blur event stops a real lease and idle updates preserve canvas identity",
+      "pass": true
+    },
+    {
+      "name": "an open task is invalidated by actual movement before any task request",
+      "pass": true
+    },
+    {
+      "name": "real spectator cookie + HTTP polling fallback exposes no private assignment or action controls",
+      "pass": true
+    },
+    {
+      "name": "actual wires task: puzzle gates one real task completion",
+      "pass": true
+    },
+    {
+      "name": "actual tuning task: puzzle gates one real task completion",
+      "pass": true
+    },
+    {
+      "name": "actual sequence task: puzzle gates one real task completion",
+      "pass": true
+    },
+    {
+      "name": "emergency transition + persistent live chat draft/focus and literal text",
+      "pass": true
+    },
+    {
+      "name": "vote cast status hides targets until tally; server ejection ends match",
+      "pass": true
+    },
+    {
+      "name": "role-revealed results/replay are attributed, readable and keyboard scrubbable",
+      "pass": true
+    },
+    {
+      "name": "saboteur Q confirmation: keyboard Cancel restores only valid trigger; confirm is real",
+      "pass": true
+    },
+    {
+      "name": "report key opens actual reported-body council; no invented opponent roles",
+      "pass": true
+    },
+    {
+      "name": "nonterminal ejection scene states only the role supplied by the safe server view",
+      "pass": true
+    },
+    {
+      "name": "critical countdown stays visible on mobile; real crew USE contributes an actual repair",
+      "pass": true
+    },
+    {
+      "name": "critical deadline continues through a real reported-body council",
+      "pass": true
+    }
+  ],
+  "errors": [],
+  "cleanup": {
+    "browserClosed": true,
+    "serverClosed": true,
+    "ownedDataRemoved": true
+  },
+  "browser": "Chrome/156.0.8078.73",
+  "node": "v24.20.0",
+  "sourceUnchanged": true,
+  "screenshots": [
+    "world-screenshots/mobile-critical-repair.png",
+    "world-screenshots/saboteur-fallen.png"
+  ],
+  "capturedScreenshotNames": [
+    "desktop-lobby.png",
+    "desktop-role.png",
+    "world-1440x1000.png",
+    "world-320x740.png",
+    "world-390x844.png",
+    "world-768x1024.png",
+    "world-844x390.png",
+    "desktop-map.png",
+    "spectator-mobile.png",
+    "task-wires.png",
+    "task-tuning.png",
+    "task-sequence.png",
+    "desktop-discussion.png",
+    "mobile-discussion.png",
+    "desktop-vote.png",
+    "desktop-results.png",
+    "desktop-replay.png",
+    "mobile-replay.png",
+    "saboteur-role.png",
+    "saboteur-fallen.png",
+    "report-council.png",
+    "ejection-scene.png",
+    "mobile-critical.png",
+    "mobile-critical-repair.png",
+    "critical-council.png"
+  ]
+}

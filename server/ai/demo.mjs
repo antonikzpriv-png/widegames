@@ -1,4 +1,5 @@
 import { ROOM_LAYOUT, CHARACTERS } from '../../shared/contracts.mjs';
+import { worldCandidates, visibleWorldPlayer } from './world.mjs';
 
 const rooms = new Map(ROOM_LAYOUT.map(room => [room.id, room]));
 const ordered = list => [...list].sort((a, b) => String(a.id).localeCompare(String(b.id)));
@@ -106,7 +107,7 @@ export function observe(view, memory) {
   }
   memory.observation = {
     roomId: view.self.roomId,
-    nearby: (view.players ?? []).filter(p => p.id !== view.self.id && p.alive && p.roomId === view.self.roomId).map(p => p.id).slice(0, 6),
+    nearby: (view.players ?? []).filter(p => p.id !== view.self.id && p.alive && (view.worldVersion === 1 ? visibleWorldPlayer(view, p) : p.roomId === view.self.roomId)).map(p => p.id).slice(0, 6),
     dead: [...dead].slice(0, 6)
   };
 }
@@ -134,6 +135,7 @@ export function candidates(view, memory) {
     return actions;
   }
   if (view.phase !== 'roam') return actions;
+  if (view.worldVersion === 1) return worldCandidates(view, memory, suspect(view, memory));
   if (can('report')) for (const bodyId of visibleBodies(view)) actions.push({ type: 'report', bodyId });
   if (can('repair') && view.sabotage?.active && view.sabotage.roomId === view.self.roomId) actions.push({ type: 'repair' });
   if (view.self.role === 'saboteur') {

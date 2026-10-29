@@ -1,11 +1,14 @@
 import { randomBytes, createHash } from 'node:crypto';
 import { CHARACTERS, ROOM_LAYOUT, DEFAULT_RULES, ACTION_TYPES } from '../../shared/contracts.mjs';
+import {worldRuntime} from './world-runtime.mjs';
+const worldEngine=worldRuntime(await import(process.env.WORLD_ENGINE_GEOMETRY_MODULE||'../../shared/world.mjs'));
+const isWorld=state=>state.schemaVersion===2&&state.worldVersion===1;
 
 const MAX_REQUESTS = 2048;
 const MAX_EVENTS = 256;
 const MAX_REPLAY = 12000;
 const roomIds = ROOM_LAYOUT.map(r => r.id);
-const fields = {move:['roomId'],task:['taskId'],eliminate:['targetId'],report:['bodyId'],say:['text'],vote:['targetId'],sabotage:[],repair:[],meeting:[],wait:[]};
+const fields = {move:['roomId'],task:['taskId'],eliminate:['targetId'],report:['bodyId'],say:['text'],vote:['targetId'],sabotage:[],repair:[],meeting:[],wait:[],navigate:['x','y']};
 const clone = value => structuredClone(value);
 const fail = (code, message) => ({code,message});
 const finiteTime = n => typeof n === 'number' && Number.isSafeInteger(n) && n >= 0;
@@ -19,6 +22,7 @@ function record(state,type,at,data={}) {
   if (state.replay.length>MAX_REPLAY) state.replay.shift();
 }
 function end(state,winner,reason,at) {
+  if(isWorld(state))worldEngine.stopAll(state,at,'ended',record);
   state.phase='ended'; state.deadlineAt=null; state.outcome={winner,reason,at};
   publicEvent(state,'ended',at,{winner,reason}); record(state,'ended',at,{winner,reason});
   record(state,'role_reveal',at,{players:state.players.map(p=>({id:p.id,role:p.role}))});
@@ -32,6 +36,7 @@ function victory(state,at) {
   if (tasks.length && tasks.every(t=>t.completed)) end(state,'crew','tasks',at);
 }
 function startMeeting(state,calledBy,reason,bodyId,at) {
+  if(isWorld(state))worldEngine.stopAll(state,at,'meeting',record);
   state.phase='discussion'; state.deadlineAt=at+state.rules.discussionMs;
   state.meeting={id:`m${++state.meetingCount}`,calledBy,reason,bodyId,deadlineAt:state.deadlineAt,messages:[],votes:[],eligibleVoters:state.players.filter(p=>p.alive).map(p=>p.id),tallied:false};
   publicEvent(state,'meeting',at,{calledBy,reason,bodyId}); record(state,'meeting',at,{calledBy,reason,bodyId});
@@ -59,6 +64,7 @@ function tally(state,at) {
   record(state,'vote_result',at,{votes:clone(state.meeting.votes),ejectedId});
   if (ejectedId) {
     const p=state.players.find(p=>p.id===target); p.alive=false;
+    if(isWorld(state))worldEngine.stop(state,p,at,'death',record);
     transferTasks(state,p,at);
     publicEvent(state,'ejected',at,{playerId:p.id}); record(state,'ejected',at,{playerId:p.id,role:p.role});
   }
@@ -72,10 +78,12 @@ function advance(state,now) {
     const critical=state.sabotage?.active ? state.sabotage.deadlineAt : Infinity;
     const max=state.startedAt+state.rules.maxMatchMs;
     const deadline=Math.min(critical,max,state.deadlineAt ?? Infinity);
+    if(isWorld(state))changed=worldEngine.settle(state,Math.min(deadline,now),record)||changed;
     if (deadline>now) break;
     changed=true;
     if (critical===deadline) end(state,'saboteur','critical',deadline);
     else if (max===deadline) {
+      if(isWorld(state))worldEngine.stopAll(state,deadline,'paused',record);
       state.phase='paused'; state.deadlineAt=null; state.pauseReason='maximum_duration';
       publicEvent(state,'paused',deadline,{reason:'maximum_duration'}); record(state,'paused',deadline,{reason:'maximum_duration'});
     } else if (state.phase==='roam') startMeeting(state,null,'timeout',null,deadline);
@@ -89,7 +97,8 @@ function advance(state,now) {
   return changed;
 }
 
-export function createMatch({id,mode='human',humanPlayerId='p1',now=Date.now(),seed,config={}}={}) {
+export function createMatch({id,mode='human',humanPlayerId='p1',now=Date.now(),seed,config={},world=false}={}) {
+  if (typeof world!=='boolean')throw new TypeError('Invalid world option');
   if (typeof id!=='string' || !/^[A-Za-z0-9_-]{1,100}$/.test(id) || !['human','spectator'].includes(mode) || !finiteTime(now) || humanPlayerId!=='p1') throw new TypeError('Invalid match options');
   if (!config || typeof config!=='object' || Array.isArray(config)) throw new TypeError('Invalid rules');
   const rules={...DEFAULT_RULES};
@@ -108,16 +117,17 @@ export function createMatch({id,mode='human',humanPlayerId='p1',now=Date.now(),s
     tasks:i===saboteurIndex?[]:Array.from({length:rules.tasksPerCrew},(_,j)=>{const roomId=roomIds[random(roomIds.length)];return {id:`t${createHash('sha256').update(`${secret}:task:${i}:${j}`).digest('hex').slice(0,20)}`,label:`Service ${ROOM_LAYOUT.find(r=>r.id===roomId).name} relay`,roomId,completed:false};}),
     cooldowns:{moveAt:now,taskAt:now,killAt:now+rules.initialKillCooldownMs,sabotageAt:now+rules.sabotageCooldownMs,meetingAt:now+rules.meetingCooldownMs},meetingsRemaining:rules.meetingsPerPlayer}));
   const state={schemaVersion:1,id,mode,version:1,phase:'roam',startedAt:now,updatedAt:now,deadlineAt:now+rules.roamDeadlineMs,rules,players,bodies:[],sabotage:null,meeting:null,meetingCount:0,outcome:null,sequence:0,events:[],replaySequence:0,replay:[],requests:Object.fromEntries(players.map(p=>[p.id,[]]))};
-  publicEvent(state,'started',now); record(state,'started',now,{roles:players.map(p=>({id:p.id,role:p.role})),tasks:players.map(p=>({id:p.id,tasks:clone(p.tasks)}))});
+  if(world)worldEngine.initialize(state,now);
+  publicEvent(state,'started',now); record(state,'started',now,{...(world?{worldVersion:1,positions:players.map(p=>({id:p.id,position:clone(p.position)}))}:{}),roles:players.map(p=>({id:p.id,role:p.role})),tasks:players.map(p=>({id:p.id,tasks:clone(p.tasks)}))});
   return state;
 }
 
 function validateEnvelope(action) {
   if (!action || typeof action!=='object' || Array.isArray(action) || ![Object.prototype,null].includes(Object.getPrototypeOf(action))) return fail('INVALID_ACTION','Invalid action envelope.');
-  if (typeof action.id!=='string' || !/^[A-Za-z0-9:_-]{1,100}$/.test(action.id) || !ACTION_TYPES.includes(action.type)) return fail('INVALID_ACTION','Invalid action envelope.');
+  if (typeof action.id!=='string' || !/^[A-Za-z0-9:_-]{1,100}$/.test(action.id) || !(ACTION_TYPES.includes(action.type)||action.type==='navigate')) return fail('INVALID_ACTION','Invalid action envelope.');
   const keys=['id','type',...fields[action.type]];
   if (Object.keys(action).some(k=>!keys.includes(k)) || keys.some(k=>!Object.hasOwn(action,k))) return fail('INVALID_ACTION','Invalid action fields.');
-  if (fields[action.type].some(k=>typeof action[k]!=='string' || action[k].length>(k==='text'?2000:100))) return fail('INVALID_ACTION','Invalid action fields.');
+  if (action.type==='navigate' ? fields.navigate.some(k=>!Number.isFinite(action[k])) : fields[action.type].some(k=>typeof action[k]!=='string' || action[k].length>(k==='text'?2000:100))) return fail('INVALID_ACTION','Invalid action fields.');
   return null;
 }
 function denial(state,p,a,now) {
@@ -137,26 +147,28 @@ function denial(state,p,a,now) {
     return null;
   }
   if (state.phase!=='roam') return fail('WRONG_PHASE','Action requires roaming.');
-  if (a.type==='move') {
+  if (a.type==='navigate') {
+    if(!isWorld(state)||!worldEngine.walkable(a))return fail('INVALID_DESTINATION','Choose a walkable world destination.');
+  } else if (a.type==='move') {
     if (!ROOM_LAYOUT.find(r=>r.id===p.roomId).neighbors.includes(a.roomId)) return fail('INVALID_ROOM','Choose an adjacent room.');
     if (now<p.cooldowns.moveAt) return fail('COOLDOWN','Movement is cooling down.');
   } else if (a.type==='task') {
     const t=p.tasks.find(t=>t.id===a.taskId);
-    if (p.role!=='crew' || !t || t.completed || t.roomId!==p.roomId) return fail('INVALID_TASK','No available task here.');
+    if (p.role!=='crew' || !t || t.completed || (isWorld(state)?!worldEngine.nearby(p.position,worldEngine.station(t.roomId),worldEngine.WORLD.interactionRadius):t.roomId!==p.roomId)) return fail('INVALID_TASK','No available task here.');
     if (now<p.cooldowns.taskAt) return fail('COOLDOWN','Task equipment is cooling down.');
   } else if (a.type==='eliminate') {
     const target=state.players.find(t=>t.id===a.targetId);
-    if (p.role!=='saboteur' || !target || !target.alive || target.role!=='crew' || target.roomId!==p.roomId) return fail('INVALID_TARGET','No valid target here.');
+    if (p.role!=='saboteur' || !target || !target.alive || target.role!=='crew' || (isWorld(state)?!worldEngine.nearby(p.position,target.position,worldEngine.WORLD.killRadius):target.roomId!==p.roomId)) return fail('INVALID_TARGET','No valid target here.');
     if (now<p.cooldowns.killAt) return fail('COOLDOWN','Elimination is cooling down.');
   } else if (a.type==='sabotage') {
     if (p.role!=='saboteur' || state.sabotage?.active) return fail('UNAVAILABLE','Sabotage is unavailable.');
     if (now<p.cooldowns.sabotageAt) return fail('COOLDOWN','Sabotage is cooling down.');
   } else if (a.type==='repair') {
-    if (p.role!=='crew' || !state.sabotage?.active || p.roomId!==state.sabotage.roomId || state.sabotage.repairers.includes(p.id)) return fail('UNAVAILABLE','No repair available here.');
+    if (p.role!=='crew' || !state.sabotage?.active || (isWorld(state)?!worldEngine.nearby(p.position,worldEngine.station(state.sabotage.roomId),worldEngine.WORLD.interactionRadius):p.roomId!==state.sabotage.roomId) || state.sabotage.repairers.includes(p.id)) return fail('UNAVAILABLE','No repair available here.');
   } else if (a.type==='report') {
-    if (!state.bodies.some(b=>b.id===a.bodyId && !b.reported && b.roomId===p.roomId)) return fail('INVALID_BODY','No reportable body here.');
+    if (!state.bodies.some(b=>b.id===a.bodyId && !b.reported && (isWorld(state)?worldEngine.nearby(p.position,b.position,worldEngine.WORLD.reportRadius):b.roomId===p.roomId))) return fail('INVALID_BODY','No reportable body here.');
   } else if (a.type==='meeting') {
-    if (p.roomId!=='bridge' || p.meetingsRemaining<1 || state.sabotage?.active) return fail('UNAVAILABLE','Emergency bell unavailable.');
+    if ((isWorld(state)?!worldEngine.nearby(p.position,worldEngine.bell,worldEngine.WORLD.interactionRadius):p.roomId!=='bridge') || p.meetingsRemaining<1 || state.sabotage?.active) return fail('UNAVAILABLE','Emergency bell unavailable.');
     if (now<p.cooldowns.meetingAt) return fail('COOLDOWN','Emergency bell is cooling down.');
   }
   return null;
@@ -176,6 +188,7 @@ export function applyAction(input,playerId,action,now=Date.now()) {
   if (!finiteTime(now) || now<input.updatedAt) return reject(fail('INVALID_TIME','Invalid server time.'));
   if (typeof playerId!=='string' || !state.players.some(p=>p.id===playerId)) return reject(fail('INVALID_PLAYER','Unknown keeper.'));
   const invalid=validateEnvelope(action); if (invalid) return reject(invalid);
+  if(action.type==='navigate'&&!isWorld(state))return reject(fail('INVALID_ACTION','Invalid action envelope.'));
   const fingerprint=JSON.stringify(Object.fromEntries(['type',...fields[action.type]].map(k=>[k,action[k]])));
   const prior=state.requests[playerId].find(r=>r.id===action.id);
   if (prior) {
@@ -185,13 +198,21 @@ export function applyAction(input,playerId,action,now=Date.now()) {
   if(state.requests[playerId].length>=MAX_REQUESTS)return reject(fail('REQUEST_LIMIT','This keeper has reached the match request limit. Existing requests remain idempotent.'));
   state=clone(state);
   const p=state.players.find(p=>p.id===playerId);
-  const error=denial(state,p,action,now);
+  let error=denial(state,p,action,now);
+  let path,target;
+  if(!error&&isWorld(state)&&['navigate','move'].includes(action.type)){
+    target=action.type==='move'?worldEngine.station(action.roomId):action;path=worldEngine.navigation(p,target,now);
+    if(path===null)error=fail('UNREACHABLE','No walkable route reaches that destination.');
+  }
   // Persist both success and rule denials, bounded per actor. Never save malformed envelopes.
   state.requests[playerId].push({id:action.id,fingerprint,accepted:!error,...(error?{error}: {})});
   state.version++; state.updatedAt=now;
   if (error) return {state,events:timed.events,accepted:false,error};
   const seq=state.sequence;
-  if (action.type==='move') {p.roomId=action.roomId;p.cooldowns.moveAt=now+state.rules.moveCooldownMs;}
+  if (action.type==='move'||action.type==='navigate') {
+    if(isWorld(state))worldEngine.navigate(p,target,path,now);else p.roomId=action.roomId;
+    p.cooldowns.moveAt=now+state.rules.moveCooldownMs;
+  }
   if (action.type==='task') {p.tasks.find(t=>t.id===action.taskId).completed=true;p.cooldowns.taskAt=now+state.rules.taskCooldownMs;}
   if (action.type==='sabotage') {
     state.sabotage={active:true,roomId:'engine',deadlineAt:now+state.rules.criticalDurationMs,repairsCompleted:0,repairsRequired:2,repairers:[]};
@@ -206,10 +227,11 @@ export function applyAction(input,playerId,action,now=Date.now()) {
   if (action.type==='eliminate') {
     const target=state.players.find(t=>t.id===action.targetId);target.alive=false;
     p.cooldowns.killAt=now+state.rules.killCooldownMs;
-    state.bodies.push({id:`body-${target.id}`,playerId:target.id,roomId:p.roomId,reported:false});
+    if(isWorld(state))worldEngine.stop(state,target,now,'death',record);
+    state.bodies.push({id:`body-${target.id}`,playerId:target.id,roomId:target.roomId,reported:false,...(isWorld(state)?{position:clone(target.position),at:now}:{})});
     transferTasks(state,target,now);
     // Attribution is private to actual eyewitnesses; never enters the public timeline.
-    record(state,'witness',now,{playerId:p.id,targetId:target.id,roomId:p.roomId,visibleTo:state.players.filter(w=>w.alive&&w.roomId===p.roomId).map(w=>w.id)});
+    record(state,'witness',now,{playerId:p.id,targetId:target.id,roomId:p.roomId,...(isWorld(state)?{position:clone(target.position)}:{}),visibleTo:state.players.filter(w=>w.alive&&(isWorld(state)?worldEngine.sees(w.position,p.position)&&worldEngine.sees(w.position,target.position):w.roomId===p.roomId)).map(w=>w.id)});
     publicEvent(state,'eliminated',now,{playerId:target.id});
   }
   if (action.type==='report') {
@@ -223,7 +245,7 @@ export function applyAction(input,playerId,action,now=Date.now()) {
     state.meeting.messages.push(message);publicEvent(state,'said',now,message);
   }
   if (action.type==='vote') state.meeting.votes.push({playerId:p.id,targetId:action.targetId});
-  record(state,'action',now,{playerId:p.id,action:clone(action)});
+  record(state,'action',now,{playerId:p.id,action:clone(action),...(isWorld(state)?{position:clone(p.position)}:{})});
   victory(state,now);
   return {state,events:[...timed.events,...clone(state.events.filter(e=>Number(e.id.slice(1))>seq))],accepted:true};
 }
@@ -231,16 +253,19 @@ export function applyAction(input,playerId,action,now=Date.now()) {
 export function getPlayerView(state,playerIdOrNull,now=Date.now()) {
   const p=state.players.find(p=>p.id===playerIdOrNull);
   const ended=state.phase==='ended';
-  const visible=q=>!p || q.id===p.id || q.roomId===p.roomId || ended;
+  const visible=q=>!p || q.id===p.id || ended || (isWorld(state)?worldEngine.sees(p.position,q.position):q.roomId===p.roomId);
+  const bodyVisible=b=>!p||(isWorld(state)?worldEngine.sees(p.position,b.position):b.roomId===p.roomId);
+  const bodyEvent=b=>({id:b.id,type:'body',bodyId:b.id,playerId:b.playerId,roomId:b.roomId,at:isWorld(state)?b.at:state.updatedAt,...(isWorld(state)?{position:clone(b.position)}:{})});
   const events=clone(state.events);
   if (p) {
-    for (const e of state.replay.filter(e=>e.type==='witness' && e.visibleTo.includes(p.id)).slice(-30)) events.push({id:e.id,type:'witness',at:e.at,playerId:e.playerId,targetId:e.targetId,roomId:e.roomId});
+    for (const e of state.replay.filter(e=>e.type==='witness' && e.visibleTo.includes(p.id)).slice(-30)) events.push({id:e.id,type:'witness',at:e.at,playerId:e.playerId,targetId:e.targetId,roomId:e.roomId,...(isWorld(state)?{position:clone(e.position)}:{})});
     // The frozen view has no bodies field: local sightings are safe timeline entries.
-    for (const b of state.bodies.filter(b=>!b.reported&&b.roomId===p.roomId)) events.push({id:b.id,type:'body',bodyId:b.id,playerId:b.playerId,roomId:b.roomId,at:state.updatedAt});
-  } else for (const b of state.bodies.filter(b=>!b.reported)) events.push({id:b.id,type:'body',bodyId:b.id,playerId:b.playerId,roomId:b.roomId,at:state.updatedAt});
+    for (const b of state.bodies.filter(b=>!b.reported&&bodyVisible(b))) events.push(bodyEvent(b));
+  } else for (const b of state.bodies.filter(b=>!b.reported)) events.push(bodyEvent(b));
   const hints=[];
-  if (p) for (const type of ACTION_TYPES) {
+  if (p) for (const type of [...new Set([...ACTION_TYPES.filter(type=>type!=='navigate'),...(isWorld(state)?['navigate']:[])])]) {
     let candidates=[{id:'hint',type}];
+    if(type==='navigate')candidates=[{id:'hint',type,x:p.position.x,y:p.position.y}];
     if (type==='move') candidates=roomIds.map(roomId=>({id:'hint',type,roomId}));
     if (type==='task') candidates=p.tasks.map(t=>({id:'hint',type,taskId:t.id}));
     if (type==='eliminate') candidates=state.players.map(q=>({id:'hint',type,targetId:q.id}));
@@ -249,13 +274,39 @@ export function getPlayerView(state,playerIdOrNull,now=Date.now()) {
     if (type==='vote') candidates=[{id:'hint',type,targetId:'skip'}];
     if (candidates.some(a=>!denial(state,p,a,now))) hints.push(type);
   }
-  return {matchId:state.id,version:state.version,phase:state.phase,serverNow:now,deadlineAt:state.deadlineAt,
-    rooms:clone(ROOM_LAYOUT),players:state.players.map(q=>({id:q.id,name:q.name,color:q.color,alive:q.alive,roomId:visible(q)?q.roomId:null,...(ended?{role:q.role}:{})})),
-    self:p?{id:p.id,role:p.role,alive:p.alive,roomId:p.roomId,tasks:clone(p.tasks),cooldowns:clone(p.cooldowns),meetingsRemaining:p.meetingsRemaining}:null,
+  return {matchId:state.id,...(isWorld(state)?{worldVersion:1}:{}),version:state.version,phase:state.phase,serverNow:now,deadlineAt:state.deadlineAt,
+    rooms:clone(ROOM_LAYOUT),players:state.players.map(q=>({id:q.id,name:q.name,color:q.color,alive:q.alive,roomId:visible(q)?q.roomId:null,...(isWorld(state)?{position:visible(q)?clone(q.position):null}:{}),...(ended?{role:q.role}:{})})),
+    self:p?{id:p.id,role:p.role,alive:p.alive,roomId:p.roomId,...(isWorld(state)?{position:clone(p.position),inputSeq:p.motion.seq,moving:worldEngine.moving(state,p,now),destination:clone(p.motion.destination)}:{}),tasks:clone(p.tasks),cooldowns:clone(p.cooldowns),meetingsRemaining:p.meetingsRemaining}:null,
     tasks:{completed:state.players.flatMap(q=>q.tasks).filter(t=>t.completed).length,total:state.players.flatMap(q=>q.tasks).length},
     sabotage:state.sabotage?{active:state.sabotage.active,roomId:state.sabotage.roomId,deadlineAt:state.sabotage.deadlineAt,repairsCompleted:state.sabotage.repairsCompleted,repairsRequired:state.sabotage.repairsRequired}:null,
     meeting:state.meeting?{id:state.meeting.id,calledBy:state.meeting.calledBy,reason:state.meeting.reason,bodyId:state.meeting.bodyId,deadlineAt:state.meeting.deadlineAt,messages:clone(state.meeting.messages),votes:state.meeting.votes.map(v=>state.meeting.tallied?clone(v):{playerId:v.playerId}),eligibleVoters:clone(state.meeting.eligibleVoters)}:null,
     outcome:clone(state.outcome),events:events.sort((a,b)=>a.at-b.at).slice(-MAX_EVENTS),availableActions:hints};
 }
 
-export function getReplay(state) {return state.phase==='ended'?clone(state.replay):null;}
+export function getReplay(state) {
+  // Settle may append an earlier arrival after another keeper's later sample.
+  // Stable numeric sorting preserves causal append order for equal timestamps.
+  return state.phase==='ended'?clone(state.replay).sort((a,b)=>a.at-b.at):null;
+}
+
+/** Steer only the authenticated actor; sequence state is separate from action IDs. */
+export function applyInput(input,playerId,request,now=Date.now()) {
+  const timed=tick(input,now);let state=timed.state;
+  const reject=error=>({state,events:timed.events,accepted:false,error});
+  if(!finiteTime(now)||now<input.updatedAt)return reject(fail('INVALID_TIME','Invalid server time.'));
+  if(!isWorld(state))return reject(fail('WORLD_REQUIRED','Movement input requires a world match.'));
+  if(typeof playerId!=='string'||!state.players.some(p=>p.id===playerId))return reject(fail('INVALID_PLAYER','Unknown keeper.'));
+  if(!request||typeof request!=='object'||Array.isArray(request)||![Object.prototype,null].includes(Object.getPrototypeOf(request))||Object.keys(request).some(k=>!['seq','dx','dy'].includes(k))||!['seq','dx','dy'].every(k=>Object.hasOwn(request,k))||!Number.isSafeInteger(request.seq)||request.seq<=0||![request.dx,request.dy].every(n=>Number.isInteger(n)&&n>=-1&&n<=1))return reject(fail('INVALID_INPUT','Input requires a positive sequence and integer axes -1..1.'));
+  const actor=state.players.find(p=>p.id===playerId),motion=actor.motion;
+  if(request.seq<motion.seq)return reject(fail('STALE_INPUT','A newer movement input is already recorded.'));
+  if(request.seq===motion.seq){
+    if(request.dx!==motion.dx||request.dy!==motion.dy)return reject(fail('INPUT_CONFLICT','Sequence already used for a different direction.'));
+    return {state,events:timed.events,accepted:!motion.error,...(motion.error?{error:clone(motion.error)}:{}),duplicate:true};
+  }
+  const error=['ended','paused'].includes(state.phase)?fail('MATCH_INACTIVE','This match is not active.'):!actor.alive?fail('PLAYER_DEAD','Eliminated keepers cannot move.'):state.phase!=='roam'?fail('WRONG_PHASE','Movement requires roaming.'):null;
+  state=clone(state);const p=state.players.find(p=>p.id===playerId);
+  if(error){p.motion.seq=request.seq;p.motion.dx=request.dx;p.motion.dy=request.dy;p.motion.error=error;state.version++;state.updatedAt=now;return {state,events:timed.events,accepted:false,error:clone(error)};}
+  if(worldEngine.input(p,request,now))record(state,'direction',now,{playerId:p.id,dx:request.dx,dy:request.dy,position:clone(p.position)});
+  state.version++;state.updatedAt=now;
+  return {state,events:timed.events,accepted:true};
+}

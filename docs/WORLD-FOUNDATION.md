@@ -1,0 +1,7 @@
+# World foundation verification
+
+The coordinator implemented the shared original six-room world, physical floor/corridor and furniture collision, body-radius wall clearance, normalized sliding movement, nearby line-of-sight, distinct spawn positions and deterministic bounded grid pathfinding. Static grid caches contain only fixed public geometry and have a fixed node/edge bound; they do not retain match/player information.
+
+Six geometry checks pass, including every station pair and the emergency bell, route segment collision sampling, diagonal speed, external walls, furniture, invalid destinations, visibility, deterministic paths and immutable inputs. The first invocation exposed an unnecessarily order-sensitive room-ID fixture (same IDs, different ordering); the check now compares the sets. Its 14-second all-pairs route run also motivated bounded static caching and linear waypoint compression. The final all-pairs run takes about327ms, with no new physical shortcuts; total six-test run605ms. This is a local fixture observation, not a hosted-load guarantee.
+
+The emergency interaction point sits at the chart table's usable south edge, outside its collider, so both human and AI can approach it legally. Production configuration explicitly enables the new world and a100ms simulation cadence. Old direct-constructor fixtures remain legacy unless they opt in, as documented in WORLD-CONTRACT.md. New world engine/transport and actual-production browser checks remain necessary; these geometry checks alone do not qualify the new game.

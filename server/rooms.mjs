@@ -1,5 +1,5 @@
-﻿import {randomBytes,createHash} from 'node:crypto';
-import {ROOM_ID} from './store.mjs';
+import {randomBytes,createHash} from 'node:crypto';
+import {ROOM_ID,validateRoom} from './store.mjs';
 
 export class ServiceError extends Error {
   constructor(status,code,message){super(message);this.status=status;this.code=code;}
@@ -37,7 +37,7 @@ export function createRooms({store,engine,ai,now=Date.now,maxActiveRooms=12,room
     const result=room.queue.catch(()=>{}).then(()=>{if(room.removed)fail(404,'ROOM_NOT_FOUND','Room not found.');return fn(room.data);});
     room.queue=result.catch(()=>{});return result;
   }
-  async function commit(room,next){next.updatedAt=Math.max(next.updatedAt,now());await store.save(next);room.data=next;}
+  async function commit(room,next){next.updatedAt=Math.max(next.updatedAt,now());validateRoom(next);await store.save(next);room.data=next;}
   function view(room,identity) {
     const data=room.data;
     const summary=ai.describe(data.aiContext);
@@ -74,5 +74,5 @@ export function createRooms({store,engine,ai,now=Date.now,maxActiveRooms=12,room
       await store.remove(data.id);room.removed=true;room.abort.abort();for(const ws of room.sockets)ws.close(1001,'Room expired');rooms.delete(data.id);return true;
     });
   }
-  return {rooms,get,run,commit,view,restore,create,expire};
+  return {rooms,get,run,commit,view,restore,create,expire,validate:validateRoom};
 }

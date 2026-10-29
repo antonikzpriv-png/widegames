@@ -38,7 +38,7 @@ export async function createGameServer(config,dependencies={}) {
   const origin=validatePublicOrigin(config.publicOrigin),secure=origin.startsWith('https:');
   const engine=dependencies.engine||await import('./engine/index.mjs');
   const ai=dependencies.aiController||(await import('./ai/index.mjs')).createAiController({config:config.ai});
-  const store=dependencies.store||await createRoomStore(config.dataDir);
+  const store=dependencies.store||await createRoomStore(config.dataDir,{worldGeometry:dependencies.worldGeometry});
   let daily,service;
   try {
     daily=dependencies.dailyBudget||await createDailyBudget({directory:config.dataDir,maxCostUsd:config.ai?.maxDailyCostUsd??5,now});
@@ -72,7 +72,7 @@ export async function createGameServer(config,dependencies={}) {
         if(!['human','spectator'].includes(input.mode)||Object.keys(input).some(k=>!['mode','name'].includes(k))||(input.name!==undefined&&(typeof input.name!=='string'||input.name.length>40)))fail(400,'INVALID_ROOM','Choose human or spectator mode.');
         const {room,token,identity}=await service.create(input.mode);json(res,201,view(room,identity),{'Set-Cookie':cookie(room.data.id,token,secure)});return;
       }
-      const match=/^\/api\/rooms\/([A-Za-z0-9_-]+)(?:\/(join|start|action|replay|socket))?$/.exec(url.pathname);
+      const match=/^\/api\/rooms\/([A-Za-z0-9_-]+)(?:\/(join|start|action|input|replay|socket))?$/.exec(url.pathname);
       if(!match)fail(404,'NOT_FOUND','Route not found.');
       const room=get(match[1]),route=match[2]||'';
       if(route==='join'&&req.method==='POST') {
@@ -89,6 +89,25 @@ export async function createGameServer(config,dependencies={}) {
         if(room.data.state?.phase!=='ended')fail(409,'REPLAY_UNAVAILABLE','Replay is available after the match ends.');
         json(res,200,{roomId:room.data.id,replay:engine.getReplay(room.data.state)});return;
       }
+      if(route==='input'&&req.method==='POST') {
+        limit(`input-ip:${ip}`,600);limit(`input-actor:${room.data.id}:${identity.hash}`,600);
+        if(identity.seatId!=='p1'||room.data.mode!=='human')fail(403,'SPECTATOR','Only this room\'s human seat can send movement input.');
+        const input=await body(req,Math.min(config.maxBodyBytes??8192,8192));
+        if(Object.keys(input).length!==3||!['seq','dx','dy'].every(key=>Object.hasOwn(input,key))||!Number.isSafeInteger(input.seq)||input.seq<=0||!['dx','dy'].every(key=>Number.isInteger(input[key])&&input[key]>=-1&&input[key]<=1))fail(400,'INVALID_INPUT','Movement requires exactly {seq,dx,dy}: a positive safe sequence and integer directions from -1 to 1.');
+        await run(room,async data=>{
+          if(!data.state)fail(409,'NOT_STARTED','Start the match first.');
+          if(typeof engine.applyInput!=='function')fail(409,'INPUT_UNAVAILABLE','Continuous movement is not available for this match.');
+          const result=engine.applyInput(structuredClone(data.state),identity.seatId,input,now());
+          if(!object(result)||typeof result.accepted!=='boolean'||!object(result.state)||result.state.id!==data.state.id||result.state.mode!==data.state.mode||result.state.schemaVersion!==data.state.schemaVersion||!Number.isSafeInteger(result.state.version)||result.state.version<data.state.version)throw new Error('Invalid engine input result');
+          const next=structuredClone(data);next.state=result.state;
+          // Validate even an inert result before considering a durable update.
+          service.validate(next);
+          if(result.accepted&&result.state.schemaVersion===2&&result.state.players.find(player=>player.id===identity.seatId)?.motion.seq!==input.seq)throw new Error('Invalid engine input sequence');
+          if(result.state.version!==data.state.version){await commit(room,next);broadcast(room);}
+          if(!result.accepted){const error=result.error||{};fail(409,typeof error.code==='string'&&/^[A-Z][A-Z0-9_]{0,63}$/.test(error.code)?error.code:'INPUT_REJECTED',typeof error.message==='string'&&error.message.length<=240?error.message:'Movement input rejected.');}
+        });
+        json(res,200,view(room,identity));return;
+      }
       if((route==='start'||route==='action')&&req.method==='POST') {
         limit(`write:${ip}`,180);limit(`actor:${room.data.id}:${identity.hash}`,60);
         const input=await body(req,Math.min(config.maxBodyBytes??8192,8192));
@@ -99,7 +118,7 @@ export async function createGameServer(config,dependencies={}) {
             if(Object.keys(input).some(k=>k!=='id'))fail(400,'INVALID_START','Start accepts only a request ID.');
             if(data.startId===input.id)return;
             if(data.state)fail(409,'ALREADY_STARTED','This match has already started.');
-            const next=structuredClone(data);next.startId=input.id;next.state=engine.createMatch({id:data.id,mode:data.mode,humanPlayerId:'p1',now:now(),config:config.rules||{}});await commit(room,next);
+            const next=structuredClone(data);next.startId=input.id;next.state=engine.createMatch({id:data.id,mode:data.mode,humanPlayerId:'p1',now:now(),config:config.rules||{},world:config.worldMode===true});await commit(room,next);
           } else {
             if(!identity.seatId)fail(403,'SPECTATOR','Spectators cannot act.');
             if(!data.state)fail(409,'NOT_STARTED','Start the match first.');

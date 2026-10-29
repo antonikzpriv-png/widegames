@@ -1,0 +1,33 @@
+{
+  "sourceCommit": "2e7a28c167e3bce225f0c4570dbbbb90933da0f0",
+  "platform": "Windows / Node24.20.0",
+  "offline": {
+    "command": "npm test",
+    "registered": 432,
+    "passed": 426,
+    "failed": 0,
+    "skipped": 6,
+    "durationMs": 75030.5459
+  },
+  "preparation": {
+    "command": "npm run check",
+    "javascriptModules": 91,
+    "passed": true
+  },
+  "browser": {
+    "command": "npm run test:browser",
+    "checks": 26,
+    "privacyChecks": 473,
+    "errors": 0
+  },
+  "extendedUi": {
+    "command": "LW_WORLD_BROWSER=1 node --test tests/world-ui-browser.test.mjs",
+    "registered": 1,
+    "passed": 1,
+    "scenarioChecks": 19,
+    "errors": 0,
+    "sourceUnchanged": true
+  },
+  "liveProviderTested": false,
+  "deployed": false
+}
