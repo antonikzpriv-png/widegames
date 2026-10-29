@@ -95,7 +95,10 @@ function tell(message,error=false){
  feedback.replaceChildren(...(message?[h('span',{},message)]:[]));
  feedback.classList.toggle('error',error);
  feedback.setAttribute?.('data-retry',String(Boolean(retry)));
- if(retry)feedback.append(button('Retry same request',()=>retry?.(),{class:'quiet'}));
+ if(retry){
+  const retained=retry,current=epoch,id=roomId;
+  feedback.append(button('Retry same request',()=>{if(current===epoch&&roomId===id&&retry===retained)return retained();},{class:'quiet'}));
+ }
 }
 function connectionFailure(message){tell(message,true);connectionIssue=true;networkReady=false;}
 function persistId(id){

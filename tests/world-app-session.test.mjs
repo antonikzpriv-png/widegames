@@ -55,6 +55,12 @@ test('a retained old retry control cannot run its action in a new room',async()=
  await f.open('B');const count=f.requests.length;retry.click();assert.equal(f.requests.length,count);assert.equal(f.requests.filter(request=>request.path.endsWith('/action')).length,1);assert.equal(f.api.getRoom().roomId,'B');
 });
 
+test('an old room retry cannot invoke a different uncertain action from the new room',async()=>{
+ const f=await fixture(),a=await f.open('A');const first=a.callbacks.action('task',{taskId:'task-A'});f.requests.at(-1).reject(new Error('A lost reply'));await assert.rejects(first);const old=f.feedback.children.find(node=>node.text==='Retry same request');
+ const b=await f.open('B'),second=b.callbacks.action('task',{taskId:'task-B'}),sent=f.requests.at(-1);sent.reject(new Error('B lost reply'));await assert.rejects(second);const current=f.feedback.children.find(node=>node.text==='Retry same request'),count=f.requests.length;
+ old.click();assert.equal(f.requests.length,count,'Old control must not dispatch the current retry');const retried=current.click(),request=f.requests.at(-1);assert.equal(request.path,'/api/rooms/B/action');assert.equal(request.options.body.id,sent.options.body.id);assert.equal(request.options.body.taskId,'task-B');request.resolve(state('B',2));await retried;
+});
+
 test('a failed movement connection revokes readiness until resync, while stop remains best effort',async()=>{
  const f=await fixture(),scene=await f.open('A');const moving=scene.callbacks.input({seq:1,dx:1,dy:0});f.requests[0].reject(new TypeError('Synthetic connection reset'));await assert.rejects(moving,/connection reset/);
  f.api.mount();assert.equal(scene.updates.at(-1)[1].connected,false);
