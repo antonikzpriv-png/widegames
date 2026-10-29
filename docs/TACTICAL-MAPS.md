@@ -126,3 +126,33 @@ git diff --check
 Evidence: _artifacts/tactical-map-investigation-review-first.txt, tactical-map-investigation-review-final-targeted.txt and exact archive manifest. Tests default to current-checkout runtime; explicit archive pin verifies all hashes. A pre-schema4 owner foundation skips only this integration suite with its stated reason; explicit source override requires real schema4 and cannot silently fall back. No historical source is silently imported by ordinary current tests.
 
 Limits: bounded B3/root/restore/knowledge integration on radial packaged cameras and8 keepers, not browser camera UI, HTTP identity boundary, actual disk process restart, directional custom FOV, camera saturation/load, exhaustive door/camera pairs, complete tactical matches or live provider qualification. This does not approve Core spatial code independently. Existing future-systems-activation finding remains open outside this assignment. No investigation/root/spatial/runtime edits, model calls, installs, Chrome, paid calls, main/push/deploy or other worktree edits.
+
+## Independent closure of736 future-activation finding
+
+**Verified fixed** by B2 **c96acb6e1544e22a44479c16075805c3f69bf09f**, independently tested after manager integration at **2c1f9d87756bea572f1df3a57c08a69fa4930232**. Integration was already committed when this assignment began, following b9c1a442b88024f659ea05e40b00737b6562413f and10f3c87. Used a fresh exact integrated-source archive, not a composite overlay. Systems tree diff between B2c96 and manager2c1 is empty; the corrected model Git blob is1609a7155a8073d1bcd9af08d084de2dab8f0689. Reviewed the full committed four-file c96 diff: systems/model.mjs, new checkpoint controls, finalized module fixture timestamp, and owner receipt. No B2/root/runtime edits made here.
+
+Source: own ignored _artifacts/tactical-systems-closure-2c1f9d8, all281 canonical raw Git blobs SHA1-verified on extraction and SHA256-manifest-verified before and after testing. No overlays or source changes. Original independent test is unchanged from736b145: Git blob 45a19c5120fde5ebe11eb13298378bddfb00c97d, raw Git-byte SHA256 **1612d22905d579030fe34dac91edc384eb544922919dd8cdee06d27a89d0cb24**; same blob exists in current owner HEAD and manager2c1. No assertions, expected failures, request clocks or fixture fields changed for closure. The historical51b6cf4 archive, initial4-pass/8-fail evidence, future-probe JSON and earlier receipts remain preserved. This new green result does not overwrite or relabel those red results.
+
+Validator review: for finalized v2 checkpoints, updatedAt and optional startedAt are valid integers with checkpoint>=begin. Active lights/comms, every non-open door, active passage and retained canonical critical start must lie within [begin,checkpoint]; completed repair contribution timestamps must also be within it. Rule-duration checks remain. True future expiry/warning-close/arrival/failure deadlines remain legal; faction/personal future cooldown reservations are bounded by plausible horizons rather than clipped to checkpoint. Retained critical reservation is exactly canonical start+cooldown, and active passage charge is exactly arrival+cooldown with a local valid entry origin. All added restrictions are v2-only. B2's module fixture timestamp change finalizes updatedAt before invoking checkpoint validation; it retains the prior behavior assertions and matches root's finalization contract. No validator was inserted into transient advance/apply mutations.
+
+**Actual bounded execution:21/21 passed,0 failures,0 skips,12185ms**, one invocation:
+
+- The original12 independent checks unchanged: all8 corrupt future-activation rejections now pass on both maps, while4 original positive shared-cooldown/privacy/foreign-door/critical-deadline-tie controls remain green.
+- B2's9 new targeted controls passed from their exact committed test file. Both maps accept initial future reservations and all5 legally activated sabotage kinds with true future due dates through actual isolated store save/close/reopen/load. Additional controls reject pre-match activation, future repair contributions, excessive reservation extensions and invalid passage histories/origins/charges. Active passage and arrival checkpoints restart correctly with retained personal cooldown. Legacy schema3/v1 keeps its historical timing tolerance and valid future due dates.
+
+The B2 file was reviewed and executed as supplementary owner-authored controls; the decisive independent negative-to-positive evidence remains the unchanged Core12. No new controls were necessary and tests/tactical-map-systems-review.test.mjs is untouched. All store fixture directories were created under the new archive's own ignored _artifacts/test-temp and removed by the bounded test cleanup; that directory is empty after execution. No original/manager data was used.
+
+Exact commands (cwd D:/Widegames-work/tactical-maps-builder-20261029):
+
+~~~powershell
+$env:TEMP='D:/Widegames-work/temp'
+$env:TMP=$env:TEMP
+$env:TACTICAL_MAP_ENGINE_ROOT=(Join-Path (Get-Location) '_artifacts/tactical-systems-closure-2c1f9d8')
+$env:TACTICAL_MAP_ENGINE_PIN='2c1f9d87756bea572f1df3a57c08a69fa4930232'
+$env:TACTICAL_SYSTEMS_SOURCE_ROOT=$env:TACTICAL_MAP_ENGINE_ROOT
+node --test tests/tactical-map-systems-review.test.mjs _artifacts/tactical-systems-closure-2c1f9d8/tests/tactical-systems-checkpoint.test.mjs
+git diff --exit-code 736b145 -- tests/tactical-map-systems-review.test.mjs
+git diff --check
+~~~
+
+Evidence: _artifacts/tactical-map-systems-closure-2c1f9d8.txt and new raw-source manifest. The specific736 finding is closed at this exact integration pin. Limits: checkpoint/module/root/store qualification of the reported invariant and tested positive cases, not exhaustive corruption authentication, reconstruction of cleared activation history or historical dynamic LOS, complete matches, browser, providers, production packaging/server or deployment. Legacy-v1 tolerance is deliberately unchanged. Only this receipt is committed for closure; no runtime/test changes, installs, Chrome, broad suite, providers, other worktree edits, main/push/deploy. Production-only qualification has not started.
