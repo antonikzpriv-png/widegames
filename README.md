@@ -39,6 +39,7 @@ Calls, conservative token/cost reservations and retries are bounded per match; a
 npm test
 npm run check
 npm run test:browser
+npm run test:beacon-browser
 ```
 
 The first two run offline engine, AI, authorization, persistence and presentation regressions. Audit suites require a full Git checkout with historical commits; CI fetches that history. Browser qualification requires an installed Chrome/Chromium; `CHROME_PATH` overrides its location. On Windows the default is the standard Google Chrome installation; on Linux it is `/usr/bin/google-chrome`. It starts its own real local server and fresh private fixture, exercises both complete match modes and writes screenshots/report under `_artifacts/world-browser-*/`. These are explicitly seeded, accelerated demo fixtures, with no paid provider calls. The systems browser audit additionally checks sabotage, devices, hidden deaths, hatches, private notes, reconnect and native mobile equipment controls through real routes. Current qualification, screenshots and limits are recorded in [Group1 verification](docs/BEACON-VERIFICATION.md); [earlier verification](docs/VERIFICATION.md) remains historical.

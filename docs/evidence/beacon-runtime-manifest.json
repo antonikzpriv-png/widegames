@@ -1,0 +1,246 @@
+{
+  "qualifiedRuntimeCommit": "afc6b1a94d201a943e84b955fcb492fc2ed031bc",
+  "comparedCommit": "26e1e0348bb533ed25bd8c747175d6c974ef9e47",
+  "files": [
+    {
+      "path": "public/api.mjs",
+      "gitBlob": "ba16136932617c60547aa6f1d01ccfe31e607999"
+    },
+    {
+      "path": "public/app.mjs",
+      "gitBlob": "fece1447a2590ef34920344def4e01955bed4602"
+    },
+    {
+      "path": "public/favicon.svg",
+      "gitBlob": "7952c588002d15da06629b0a5960092d88790a96"
+    },
+    {
+      "path": "public/features/abilities/index.mjs",
+      "gitBlob": "9918eb6404e09e39d060ac6e683b472085bdf12f"
+    },
+    {
+      "path": "public/features/lobbies/index.mjs",
+      "gitBlob": "64eb435fd90fc29234825b1ec2a817aca69b4729"
+    },
+    {
+      "path": "public/features/panels.mjs",
+      "gitBlob": "71ad24d857ff28683b4dc7c9fd67c340e47afcb8"
+    },
+    {
+      "path": "public/features/replay/index.mjs",
+      "gitBlob": "41e5c84b2764b3d97871670f60e510ca4e3cc40e"
+    },
+    {
+      "path": "public/features/strategy/index.mjs",
+      "gitBlob": "12c510268b75e5d047845c00ec5591791709d973"
+    },
+    {
+      "path": "public/features/tasks/index.mjs",
+      "gitBlob": "ad1d7457e067b8adf4e880209e0d50c584839c1a"
+    },
+    {
+      "path": "public/features/watch-panels.mjs",
+      "gitBlob": "e0647e8aa068b902605ce28cdb66e25ef5185658"
+    },
+    {
+      "path": "public/game.css",
+      "gitBlob": "6322ff9c1cf2a231ff64d841a06bc9dbfca65eaa"
+    },
+    {
+      "path": "public/harbor.mjs",
+      "gitBlob": "3913b1f452f9c14d0650b56c0528e1433ed43748"
+    },
+    {
+      "path": "public/index.html",
+      "gitBlob": "97ed6a60b10cb5dff3f1bc266d25034531b2d1e3"
+    },
+    {
+      "path": "public/panels.mjs",
+      "gitBlob": "231ba3b53a0166d3ab354fdc62264f39e0041ac3"
+    },
+    {
+      "path": "public/presentation.mjs",
+      "gitBlob": "5671299fc5257b1e507705abaa7531c19a416403"
+    },
+    {
+      "path": "public/styles.css",
+      "gitBlob": "7121386ce7e9ae4c70da34e42a61ec79fad1a77c"
+    },
+    {
+      "path": "public/ui.mjs",
+      "gitBlob": "8f7bf80b22d6551f56fd384cb74ea19899db69db"
+    },
+    {
+      "path": "public/world-input-envelope.mjs",
+      "gitBlob": "34442588eb9d2be90751c3c5161b597ce20cf315"
+    },
+    {
+      "path": "public/world/beacon-model.mjs",
+      "gitBlob": "f13b43ee94d4f3162efe7094e932084f3a7df125"
+    },
+    {
+      "path": "public/world/beacon-panel.mjs",
+      "gitBlob": "903a2305e1f877ce576b9f150df4b9130a71abe6"
+    },
+    {
+      "path": "public/world/beacon-scene.mjs",
+      "gitBlob": "b570f467f14e51ff423e3a43f13ca2f2988c10db"
+    },
+    {
+      "path": "public/world/beacon.css",
+      "gitBlob": "cce5b146b7641a613e83839880e112f1e95f4319"
+    },
+    {
+      "path": "public/world/dom.mjs",
+      "gitBlob": "db40fe90055603e7cc74909be982a52c2ffeab27"
+    },
+    {
+      "path": "public/world/experience.mjs",
+      "gitBlob": "60ef9fbb67db4d49e859fa2cb174a9c25853d61d"
+    },
+    {
+      "path": "public/world/input.mjs",
+      "gitBlob": "a544a8ae9718458f7181bf9d98a4091f8c1bf38f"
+    },
+    {
+      "path": "public/world/model.mjs",
+      "gitBlob": "3f1b5709db81fef056710fdc2d45bd6275aa1c60"
+    },
+    {
+      "path": "public/world/phases.mjs",
+      "gitBlob": "a0cccccdb8be9ba74317f97f001f0409f4e3be66"
+    },
+    {
+      "path": "public/world/puzzles.mjs",
+      "gitBlob": "093392cea9586a2c6610595f390ed6109b2d915a"
+    },
+    {
+      "path": "public/world/replay.mjs",
+      "gitBlob": "88e70dcb8bb94015b172610c941aa099db67c651"
+    },
+    {
+      "path": "public/world/scene.mjs",
+      "gitBlob": "9daa6d813782f9c76ca3a71fb36c70912332f42b"
+    },
+    {
+      "path": "server/ai/anthropic.mjs",
+      "gitBlob": "91719efbb15086fbc82b85773f5f8812402e839d"
+    },
+    {
+      "path": "server/ai/demo.mjs",
+      "gitBlob": "b40811cf8bdd0ebef42de56092fb9f0fdfa7e01c"
+    },
+    {
+      "path": "server/ai/index.mjs",
+      "gitBlob": "29003704050d03ee27eb7bcc634a66a84c0640c0"
+    },
+    {
+      "path": "server/ai/world.mjs",
+      "gitBlob": "b6ecc9b31b2ece7c00ce023f42d19ed452874349"
+    },
+    {
+      "path": "server/budget.mjs",
+      "gitBlob": "a69eb7bd30d45c58701fe93885bf1291815011fb"
+    },
+    {
+      "path": "server/config.mjs",
+      "gitBlob": "ab78b20f0ffc298a1fbf19a6aa6be51244060294"
+    },
+    {
+      "path": "server/engine/index.mjs",
+      "gitBlob": "8a286fb46a13b85695656498c17be1d9ed8bf9bc"
+    },
+    {
+      "path": "server/engine/investigation/data.mjs",
+      "gitBlob": "56a0f22267357c4b38f4f7ded3ac835db7cf1a7d"
+    },
+    {
+      "path": "server/engine/investigation/index.mjs",
+      "gitBlob": "ba8fac757e77a3f4af3b11b8782a99ccb4cd26b4"
+    },
+    {
+      "path": "server/engine/systems/index.mjs",
+      "gitBlob": "804cc1b3c5e82ee18ff9ef5b4d5867796c93e9d0"
+    },
+    {
+      "path": "server/engine/systems/model.mjs",
+      "gitBlob": "d5289903f2d66a8340302ab042891749340de257"
+    },
+    {
+      "path": "server/engine/world-runtime.mjs",
+      "gitBlob": "aa718782aea32472df3e723528ea087fb3d2a442"
+    },
+    {
+      "path": "server/engine/world/geometry.mjs",
+      "gitBlob": "a4b58c3f0906d8be43c6dd4b59c0a09cbc361421"
+    },
+    {
+      "path": "server/engine/world/index.mjs",
+      "gitBlob": "2d0a6b312bb38a9d587dc5f4975341c89cb17ae0"
+    },
+    {
+      "path": "server/engine/world/knowledge.mjs",
+      "gitBlob": "0823423f21e553c06b88e0e43bdb814b2f7806a2"
+    },
+    {
+      "path": "server/engine/world/motion.mjs",
+      "gitBlob": "95ad5c02e8f986af1a3bae7dfd4567116dc98046"
+    },
+    {
+      "path": "server/features/abilities/index.mjs",
+      "gitBlob": "2c4eb10987b73b14325ad1675c7635df360583dc"
+    },
+    {
+      "path": "server/features/lobbies/index.mjs",
+      "gitBlob": "f5e08a1b365abb17ac5e9321e0d467e7b7ef7774"
+    },
+    {
+      "path": "server/features/replay/index.mjs",
+      "gitBlob": "5441f407e599a4114a23a595d9c4d1d91ba4fc78"
+    },
+    {
+      "path": "server/features/strategy/index.mjs",
+      "gitBlob": "d9432d9fef6f1146e13bedd1582e0de74ded4207"
+    },
+    {
+      "path": "server/features/tasks/index.mjs",
+      "gitBlob": "48742458c5e7043bef16e79128b27f35f0f42d9e"
+    },
+    {
+      "path": "server/main.mjs",
+      "gitBlob": "9c9d392059483d65fbe84656fba1af3edef585ef"
+    },
+    {
+      "path": "server/origin.mjs",
+      "gitBlob": "19ed10d65c7fe5bd421902e973ea1bb9b7903d62"
+    },
+    {
+      "path": "server/rooms.mjs",
+      "gitBlob": "88393016f6ff72615fd8bb330e416724f8d67c57"
+    },
+    {
+      "path": "server/static.mjs",
+      "gitBlob": "e3801ae2f1b38f24a86d9936b44e43f052157e37"
+    },
+    {
+      "path": "server/store.mjs",
+      "gitBlob": "59b2ea81cac4891e26c56cb941116f05d6c4fef7"
+    },
+    {
+      "path": "server/transport.mjs",
+      "gitBlob": "ab679466ecb46cc750cecd1bd9f2a0ac21c361c8"
+    },
+    {
+      "path": "shared/beacon.mjs",
+      "gitBlob": "37d9e7d904a7b0caa350d8cc8f90dc3a44d6d6b0"
+    },
+    {
+      "path": "shared/contracts.mjs",
+      "gitBlob": "ea395a080f8bd6ee3230d62be0884799bbabd4e6"
+    },
+    {
+      "path": "shared/world.mjs",
+      "gitBlob": "a2bc61a0320e6033feb8956e59884399d0a34d06"
+    }
+  ]
+}
