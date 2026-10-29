@@ -1,5 +1,5 @@
 import {BEACON_ACTION_FIELDS} from '../../../shared/beacon.mjs';
-import {SYSTEM_LIMITS,kinds,criticalKinds,fixturesFor,tactical,cooldownFor,own,object,time,point,exact,rulesFor,validateRoster,validateSystemsState} from './model.mjs';
+import {SYSTEM_LIMITS,kinds,criticalKinds,fixturesFor,tactical,cooldownFor,own,object,time,exact,rulesFor,validateRoster,validateSystemsState} from './model.mjs';
 import {openTacticalDoor,doorBusy,thresholdOccupied} from './tactical-doors.mjs';
 export {SYSTEM_LIMITS,validateSystemsState};
 export const SYSTEM_ACTIONS=Object.freeze(['sabotage','repair','systemSabotage','systemRepair','vent']);
@@ -24,7 +24,7 @@ function openDoor(state,door,at,ctx,reason){if(tactical(state))Object.assign(doo
 function witnesses(state,actor,location,ctx){return state.players.filter(p=>p.id===actor.id||(p.alive&&!own(state.systems.transit,p.id)&&ctx.sees(state,p,actor.position)&&ctx.sees(state,p,location))).map(p=>p.id);}
 function cancelTransit(state,p,at,ctx,reason){const t=own(state.systems.transit,p.id);if(!t)return false;delete state.systems.transit[p.id];ctx.stop(state,p,at,'vent-cancelled');ctx.record(state,'vent_cancelled',at,{playerId:p.id,entryId:t.entryId,reason,visibleTo:[p.id]});return true;}
 export function advanceSystems(state,at,ctx){
- if(!time(at)||!readyContext(ctx))throw new Error('Invalid systems clock/context');const s=state.systems,{doors,vents}=fixturesFor(state),jobs=[];
+ if(!time(at)||!readyContext(ctx))throw new Error('Invalid systems clock/context');const s=state.systems,{doors,vents,geometry}=fixturesFor(state),jobs=[];
  for(const kind of ['lights','communications'])if(s[kind].active&&s[kind].deadlineAt<=at)jobs.push({at:s[kind].deadlineAt,kind});
  for(const d of s.doors){
   if(tactical(state)&&d.status==='pending'&&d.closeAt<=at)jobs.push({at:d.closeAt,kind:'door-close',id:d.id});
@@ -35,7 +35,7 @@ export function advanceSystems(state,at,ctx){
  for(const job of jobs){
   if(job.kind==='door-close'){
    const d=currentDoor(state,job.id);if(d.status!=='pending')continue;
-   const occupied=thresholdOccupied(state,doors.get(d.id),fixturesFor(state).geometry.WORLD.bodyRadius);d.status=occupied?'jammed':'closed';d.closed=!occupied;d.closeAt=null;
+   const occupied=thresholdOccupied(state,doors.get(d.id),geometry.WORLD.bodyRadius);d.status=occupied?'jammed':'closed';d.closed=!occupied;d.closeAt=null;
    emit(state,'door',d.closed,job.at,ctx,{doorId:d.id,status:d.status,deadlineAt:d.deadlineAt,reason:occupied?'obstructed':'warning-ended'});
   }else if(job.kind==='door')openDoor(state,currentDoor(state,job.id),job.at,ctx,'expired');
   else if(job.kind!=='vent')clearEffect(state,job.kind,job.at,ctx,'expired');
@@ -114,7 +114,7 @@ export function validateSystemAction(state,p,action,now,ctx){
  return null;
 }
 export function applySystemAction(state,p,action,now,ctx){
- if(validateSystemAction(state,p,action,now,ctx))return false;const {doors,vents,repairs}=fixturesFor(state),a=normalized(state,p,action,now,ctx),r=rulesFor(state),personal=own(state.systems.cooldowns,p.id),c=tactical(state)?state.systems.factionCooldowns.saboteur:personal;
+ if(validateSystemAction(state,p,action,now,ctx))return false;const {vents,repairs}=fixturesFor(state),a=normalized(state,p,action,now,ctx),r=rulesFor(state),personal=own(state.systems.cooldowns,p.id),c=tactical(state)?state.systems.factionCooldowns.saboteur:personal;
  if(a.type==='systemSabotage'){
   if(criticalKinds.includes(a.kind)){
    const sites=repairs[a.kind].map(site=>({...clone(site),progress:0,repairedBy:null,repairedAt:null}));

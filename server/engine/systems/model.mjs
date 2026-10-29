@@ -1,4 +1,4 @@
-import {BEACON_DOORS,BEACON_VENTS,BEACON_REPAIRS,DEFAULT_BEACON_RULES} from '../../../shared/beacon.mjs';
+import {BEACON_VENTS,BEACON_REPAIRS,DEFAULT_BEACON_RULES} from '../../../shared/beacon.mjs';
 import {DEFAULT_RULES} from '../../../shared/contracts.mjs';
 import * as geometry from '../../../shared/world.mjs';
 import {getMap} from '../../../shared/maps/index.mjs';
@@ -56,6 +56,11 @@ export function validateSystemsState(state){
  for(const actor of Reflect.ownKeys(s.cooldowns)){const c=own(s.cooldowns,actor);if(!ids.has(actor)||!exact(c,v2?['ventAt']:['criticalAt','auxiliaryAt','ventAt'])||!Object.values(c).every(time))throw new Error('Invalid systems cooldown');}
  if(v2&&(!exact(s.factionCooldowns,['saboteur'])||!exact(s.factionCooldowns.saboteur,['criticalAt','auxiliaryAt'])||!Object.values(s.factionCooldowns.saboteur).every(time)))throw new Error('Invalid faction cooldown');
  if(v2&&['ended','paused'].includes(state.phase)&&(s.lights.active||s.communications.active))throw new Error('Active terminal systems');
+ if(v2){
+  const started=[s.lights,s.communications].filter(effect=>effect.active).map(effect=>effect.startedAt);
+  started.push(...s.doors.filter(door=>door.status!=='open').map(door=>door.startedAt));
+  if(started.some(at=>s.factionCooldowns.saboteur.auxiliaryAt<at+r.auxiliaryCooldownMs))throw new Error('Lost faction auxiliary reservation');
+ }
  for(const actor of Reflect.ownKeys(s.transit)){
   const t=own(s.transit,actor),p=state.players.find(p=>p.id===actor),entry=vents.get(t?.entryId),exit=vents.get(t?.exitId);
   if(!ids.has(actor)||!p.alive||p.role!=='saboteur'||state.phase!=='roam'||!exact(t,['entryId','exitId','startedAt','deadlineAt','origin','originRoomId'])||!entry||!exit||!entry.links.includes(exit.id)||!time(t.startedAt)||!time(t.deadlineAt)||t.deadlineAt-t.startedAt!==r.ventTravelMs||!point(t.origin)||!geo.isWalkable(t.origin)||t.originRoomId!==p.roomId||!point(p.position)||p.position.x!==t.origin.x||p.position.y!==t.origin.y||own(s.cooldowns,actor).ventAt<t.deadlineAt+r.ventCooldownMs)throw new Error('Invalid hatch transit');
@@ -65,6 +70,7 @@ export function validateSystemsState(state){
   const c=state.sabotage,fixtures=own(repairs,c?.kind);
   if(!exact(c,['active','kind','roomId','startedAt','deadlineAt','repairsCompleted','repairsRequired','repairers','sites'])||!criticalKinds.includes(c.kind)||typeof c.active!=='boolean'||!time(c.startedAt)||!time(c.deadlineAt)||c.deadlineAt-c.startedAt!==r.criticalDurationMs||c.roomId!==fixtures[0].roomId||c.repairsRequired!==fixtures.length||!Number.isSafeInteger(c.repairsCompleted)||c.repairsCompleted<0||c.repairsCompleted>fixtures.length||!Array.isArray(c.repairers)||c.repairers.length!==c.repairsCompleted||new Set(c.repairers).size!==c.repairers.length||!Array.isArray(c.sites)||c.sites.length!==fixtures.length||new Set(c.sites.map(s=>s?.id)).size!==fixtures.length||c.active!==(c.repairsCompleted<c.repairsRequired))throw new Error('Invalid critical system');
   for(const site of c.sites){const f=fixtures.find(f=>f.id===site.id);if(!f||!exact(site,['id','roomId','position','label','progress','repairedBy','repairedAt'])||site.roomId!==f.roomId||site.label!==f.label||!point(site.position)||site.position.x!==f.position.x||site.position.y!==f.position.y||![0,1].includes(site.progress)||(site.progress===0?(site.repairedBy!==null||site.repairedAt!==null):(!c.repairers.includes(site.repairedBy)||!time(site.repairedAt)||site.repairedAt<c.startedAt||site.repairedAt>=c.deadlineAt)))throw new Error('Invalid critical repair site');}
+  if(v2&&s.factionCooldowns.saboteur.criticalAt<c.startedAt+r.criticalCooldownMs)throw new Error('Lost faction critical reservation');
   const finished=c.sites.filter(site=>site.progress===1);if(finished.length!==c.repairsCompleted||new Set(finished.map(site=>site.repairedBy)).size!==finished.length||c.repairers.some(actor=>!ids.has(actor)||state.players.find(p=>p.id===actor).role!=='crew'||!finished.some(site=>site.repairedBy===actor)))throw new Error('Invalid critical repairers');
  }
  return true;
