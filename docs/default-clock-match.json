@@ -1,0 +1,23 @@
+{
+  "fixture": "Fresh actual npm start, standard rules, real wall clock, unseeded demo bots; no browsers or provider calls",
+  "elapsedMs": 72927,
+  "frames": 37,
+  "outcome": {
+    "winner": "crew",
+    "reason": "tasks",
+    "at": 1793288247377
+  },
+  "ai": {
+    "mode": "demo",
+    "provider": "demo",
+    "calls": 0,
+    "tokens": 0,
+    "costUsd": 0,
+    "limitReason": "demo_configured",
+    "strategy": "demo",
+    "navigation": "local",
+    "council": "demo"
+  },
+  "replayEvents": 71,
+  "roleReveals": 6
+}
