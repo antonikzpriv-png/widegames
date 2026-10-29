@@ -11,13 +11,14 @@ export function spatialGeometry(geometry){
   const {WORLD,WORLD_FLOORS,WORLD_OBSTACLES,WORLD_ROOMS,isWalkable,worldRoomAt,worldSpawn,distance,WORLD_STATIONS,WORLD_BELL}=geometry;
   if(!WORLD||!Array.isArray(WORLD_FLOORS)||!Array.isArray(WORLD_OBSTACLES)||!Array.isArray(WORLD_ROOMS)||![WORLD.width,WORLD.height,WORLD.speed,WORLD.bodyRadius,WORLD.grid,WORLD.inputLeaseMs].every(n=>Number.isFinite(n)&&n>0)||typeof isWalkable!=='function'||typeof distance!=='function')throw new TypeError('Invalid spatial geometry');
   const floor=p=>valid(p)&&WORLD_FLOORS.some(r=>inside(p,r));
+  const inTransit=(state,id)=>!!state?.systems?.transit&&Object.hasOwn(state.systems.transit,id)&&!!state.systems.transit[id];
   const closed=state=>BEACON_DOORS.filter(d=>state?.systems?.doors?.some(s=>s.id===d.id&&s.closed===true));
   const checker=state=>{const doors=closed(state);return p=>valid(p)&&isWalkable(p)&&!doors.some(r=>{const x=Math.max(r.x,Math.min(p.x,r.x+r.width)),y=Math.max(r.y,Math.min(p.y,r.y+r.height));return Math.hypot(p.x-x,p.y-y)<WORLD.bodyRadius||inside(p,r);});};
   const walkable=(p,state)=>checker(state)(p);
   const segment=(a,b,walk)=>{if(!valid(a)||!valid(b))return false;const n=Math.max(1,Math.ceil(distance(a,b)/4));for(let i=0;i<=n;i++)if(!walk({x:a.x+(b.x-a.x)*i/n,y:a.y+(b.y-a.y)*i/n}))return false;return true;};
   function radius(state,observerId){
     const rules={...DEFAULT_BEACON_RULES,...state?.beaconRules},observer=observerId===undefined||observerId===null?null:state?.players?.find(p=>p.id===observerId);
-    if(observerId!==undefined&&observerId!==null&&(!observer||!observer.alive||state?.systems?.transit?.[observerId]))return 0;
+    if(observerId!==undefined&&observerId!==null&&(!observer||!observer.alive||inTransit(state,observerId)))return 0;
     const base=observer?.role==='saboteur'?rules.saboteurVisionRadius:rules.visionRadius;
     const value=state?.systems?.lights?.active&&observer?.role!=='saboteur'?Math.min(base,rules.lightsVisionRadius):base;
     return Number.isFinite(value)&&value>=0?value:0;
@@ -58,5 +59,5 @@ export function spatialGeometry(geometry){
   }
   const station=id=>{const value=Array.isArray(WORLD_STATIONS)?WORLD_STATIONS.find(s=>s.roomId===id||s.id===id):WORLD_STATIONS[id];return value?.position??value;};
   const bridge=WORLD_ROOMS.find(r=>r.id==='bridge');const viewpoint=point(bridge?.center??worldSpawn('p2'));if(!isWalkable(viewpoint))throw new TypeError('Bridge viewpoint must be walkable');
-  return {WORLD,point,valid,floor,walkable,move,path,sees,nearby,radius,station,bell:WORLD_BELL?.position??WORLD_BELL,worldRoomAt,worldSpawn,distance,viewpoint,staticWalkable:isWalkable,rooms:WORLD_ROOMS};
+  return {WORLD,point,valid,floor,inTransit,walkable,move,path,sees,nearby,radius,station,bell:WORLD_BELL?.position??WORLD_BELL,worldRoomAt,worldSpawn,distance,viewpoint,staticWalkable:isWalkable,rooms:WORLD_ROOMS};
 }
