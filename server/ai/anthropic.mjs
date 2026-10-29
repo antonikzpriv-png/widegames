@@ -17,6 +17,7 @@ const bounded = (value, size = 280) => typeof value === 'string' ? value.slice(0
 export function makeRequest(view, player, memory, choices) {
   if (!['discussion', 'voting'].includes(view.phase)) throw new AiFailure('provider_response');
   const safe = {
+    ...(view.tacticalVersion===1?{map:{id:bounded(view.map?.id,64),version:view.map?.version},rooms:(view.rooms??[]).slice(0,24).map(r=>({id:bounded(r.id,64),name:bounded(r.name,80)}))}:{}),
     matchId: bounded(view.matchId, 100), phase: view.phase, serverNow: view.serverNow,
     self: { id: view.self.id, role: view.self.role, roomId: view.self.roomId, tasks: (view.self.tasks ?? []).slice(0, 20).map(t => ({ id: t.id, roomId: t.roomId, completed: !!t.completed })) },
     players: (view.players ?? []).slice(0, 12).map(p => ({ id:p.id,...(view.beaconVersion?{alive:p.alive,status:p.status}:{alive:!!p.alive}),roomId:p.roomId })),

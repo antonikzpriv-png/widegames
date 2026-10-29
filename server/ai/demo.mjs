@@ -61,7 +61,7 @@ const VOICES = Object.freeze({
 function dialogue(view, memory) {
   const target = suspect(view, memory);
   const name = (view.players??CHARACTERS).find(p => p.id === target)?.name;
-  const room = rooms.get(view.self.roomId)?.name ?? 'my station';
+  const room = (view.rooms??ROOM_LAYOUT).find(r=>r.id===view.self.roomId)?.name ?? 'my station';
   const number = Math.min(memory.discussionCount ?? 0, 2);
   const voice=VOICES[view.self.id]??Object.values(VOICES)[[...view.self.id].reduce((n,c)=>n+c.charCodeAt(0),0)%Object.keys(VOICES).length];
   if (view.self.role === 'saboteur') return [
@@ -72,7 +72,7 @@ function dialogue(view, memory) {
   const witness = memory.witnesses?.[target];
   if (witness && number < 2) {
     const victim = (view.players??CHARACTERS).find(p => p.id === witness.targetId)?.name;
-    const where = rooms.get(witness.roomId)?.name;
+    const where = (view.rooms??ROOM_LAYOUT).find(r=>r.id===witness.roomId)?.name??witness.roomId;
     return voice[number] + ' I saw ' + name + ' attack ' + victim + ' in ' + where + '. That is firsthand; I will vote for ' + name + '.';
   }
   const sample=view.beaconVersion?deviceFacts(view).at(-1):null;
@@ -98,7 +98,7 @@ export function observe(view, memory) {
     memory.discussionCount = 0;
   }
   for (const event of view.events ?? []) {
-    if (event.type === 'witness' && event.playerId !== view.self.id && event.playerId !== event.targetId && (view.players??CHARACTERS).some(p => p.id === event.playerId) && (view.players??CHARACTERS).some(p => p.id === event.targetId) && rooms.has(event.roomId)) {
+    if (event.type === 'witness' && event.playerId !== view.self.id && event.playerId !== event.targetId && (view.players??CHARACTERS).some(p => p.id === event.playerId) && (view.players??CHARACTERS).some(p => p.id === event.targetId) && (view.rooms??ROOM_LAYOUT).some(room=>room.id===event.roomId)) {
       memory.witnesses ??= {};
       memory.witnesses[event.playerId] = { targetId: event.targetId, roomId: event.roomId, at: Number.isFinite(event.at) ? event.at : view.serverNow };
     }
