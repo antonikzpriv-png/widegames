@@ -22,7 +22,7 @@ export function eventText(event,game){
   case 'body':return `${name(event.playerId)} was found in ${roomName(event.roomId)}.`;
   case 'witness':return `You saw ${name(event.playerId)} eliminate ${name(event.targetId)} in ${roomName(event.roomId)}.`;
   case 'sabotage':return `Critical sabotage in ${roomName(event.roomId)}.`;
-  case 'repair':return `${name(event.playerId)} contributed a repair.`;
+  case 'repair':return `Critical repair progress: ${event.repairsCompleted||1} contribution${event.repairsCompleted===1?'':'s'}.`;
   case 'repaired':return 'The critical system is repaired.';
   case 'said':return `${name(event.playerId)}: ${event.text||''}`;
   case 'ended':return `${event.winner==='crew'?'Crew':'Saboteur'} victory: ${outcomeText(event.reason)}`;
