@@ -110,11 +110,12 @@ try{
  await finish(page,false);await page.waitForSelector('.results');await clickText(page,'Load full replay');await page.waitForSelector('#replay-step');r=await view(page);
  check(r.game.players.every(p=>['crew','saboteur'].includes(p.role)),'Roles reveal after the all-AI match, not before');await screenshot(page,'08-all-ai-results-mobile');
  await drain();check(!report.errors.length,'No browser runtime or payload privacy failures');
+ check(!report.consoleErrors.length,'No primary-page browser console errors');
  report.browser=await browser.version();report.rules=config.rules;
 }catch(error){report.failure=String(error.stack||error);try{if(activePage)await screenshot(activePage,'failure');}catch{}throw error;}
 finally{
  const failures=[];try{await browser?.close();}catch(e){failures.push(String(e));}try{await game?.close();}catch(e){failures.push(String(e));}
  try{await drain();}catch(error){failures.push(String(error));}report.cleanupErrors=failures;await writeFile(path.join(output,'report.json'),JSON.stringify(report,null,2));console.log('Browser evidence: '+output);
- if(report.errors.length&&!report.failure)throw new Error('Late browser privacy/runtime audit errors: '+report.errors.join('; '));
+ if((report.errors.length||report.consoleErrors.length)&&!report.failure)throw new Error('Late browser privacy/runtime/console audit errors: '+[...report.errors,...report.consoleErrors].join('; '));
  if(failures.length)throw new Error('Browser qualification cleanup failed: '+failures.join('; '));
 }
