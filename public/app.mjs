@@ -66,24 +66,28 @@ async function openRoom(id,initial){
  if(changed){room=null;replay=null;replayIndex=0;draft='';draftMeeting=null;confirmTarget=null;}
  persistId(id);
  history.replaceState(null,'',`/r/${encodeURIComponent(id)}`);
- const current=epoch;
- controller=new AbortController();render();
+ const current=epoch,opened=new AbortController();
+ controller=opened;render();
+ const ownsOpen=()=>current===epoch&&roomId===id&&controller===opened&&!opened.signal.aborted;
  try{
   if(initial)accept(initial);
   else{
    let data;
-   try{data=await request(roomPath(id),{signal:controller.signal});}
+   try{data=await request(roomPath(id),{signal:opened.signal});}
    catch(error){
+    if(!ownsOpen())return;
     if(error.status!==401||attemptedJoins.has(id))throw error;
+    // A retry must recheck cookies before another POST, including uncertain success.
+    data=await request(roomPath(id,'/join'),{method:'POST',body:{},signal:opened.signal});
+    if(!ownsOpen())return;
     attemptedJoins.add(id);
-    data=await request(roomPath(id,'/join'),{method:'POST',body:{},signal:controller.signal});
    }
-   if(current!==epoch)return;
+   if(!ownsOpen())return;
    accept(data);
   }
-  if(current===epoch)connect(current);
+  if(ownsOpen())connect(current);
  }catch(error){
-  if(current===epoch&&error.name!=='AbortError'){
+  if(ownsOpen()&&error.name!=='AbortError'){
    if([401,403,404].includes(error.status))tell(error.message,true);
    else{connectionFailure(error.message);schedulePoll(current);}
    render();
@@ -190,6 +194,15 @@ function modeTag(){
 function landing(){
  return h('section',{class:'hero'},h('div',{},h('p',{class:'eyebrow'},'A storm beacon. Six keepers. One saboteur.'),h('h1',{},'Keep the light.',h('br'),'Question the quiet.'),h('p',{},'The storm has cut us off. Walk the decks, keep the beacon alive, and decide which familiar face is hiding a different purpose.'),h('div',{class:'actions'},button('Join the crew',()=>create('human'),{class:'primary',disabled:pending,'data-focus':'create-human'}),button('Watch the keepers',()=>create('spectator'),{disabled:pending,'data-focus':'create-spectator'})),h('p',{class:'muted'},'Play one keeper with five AI companions, or watch six AI keepers. No account needed.')),h('div',{class:'panel'},h('div',{class:'panel-title'},h('h2',{},'The drifting beacon'),h('span',{class:'tag'},'06 rooms')),deck(null),h('div',{class:'deck-caption'},h('span',{},'LANTERN WAKE'),h('span',{},'NORTH / STORMWARD'))));
 }
+function setConfirmation(value,returnTo,current){
+ if(current!==epoch)return;
+ confirmTarget=value;render();
+ if(returnTo){
+  const key=`eliminate-${returnTo}`;
+  const trigger=[...main.querySelectorAll('[data-focus]')].find(node=>node.getAttribute('data-focus')===key);
+  if(trigger?.isConnected&&!trigger.disabled)trigger.focus({preventScroll:true});
+ }
+}
 function saveFocus(){
  const active=document.activeElement;
  return {key:active?.getAttribute('data-focus'),start:active?.selectionStart,end:active?.selectionEnd,scroll:main.querySelector('.dialogue')?.scrollTop};
@@ -204,7 +217,7 @@ function render(){
  const phaseText=phase?phaseLabel(phase):'';if(announcement.textContent!==phaseText)announcement.textContent=phaseText;
  if(!roomId){output.append(landing());syncChildren(main,output);restoreFocus(saved);return;}
  if(!room){output.append(h('div',{class:'loading'},h('h1',{},'Finding the beacon…'),h('p',{},'Connecting to your room.'),button('Retry connection',()=>openRoom(roomId),{'data-focus':'reconnect'}),button('Back to harbor',home)));syncChildren(main,output);restoreFocus(saved);return;}
- const game=room.game,now=Date.now()+offset;
+ const game=room.game,now=Date.now()+offset,current=epoch;
  output.append(h('div',{id:'watch-heading',class:'game-heading'},h('div',{},h('p',{class:'eyebrow'},phaseLabel(game?.phase||room.phase)),h('h1',{},game?.phase==='ended'?'The watch has ended.':game?'The watch is yours.':'All keepers aboard.'),h('span',{class:'connection'},room.seatId?'Your crew seat · ':'Spectating · ',room.roomId,connected?' · Connected':' · Polling connection')),h('div',{class:'actions'},modeTag(),button('Copy room link',async()=>{try{await navigator.clipboard.writeText(location.href);tell('Room link copied. Visitors join as spectators.');}catch{tell(`Share this address: ${location.href}`);}},{'data-focus':'copy-link'}),button('Leave room',home,{'data-focus':'leave-room'}))));
  for(const notice of room.notices||[])output.append(h('p',{class:'notice'},typeof notice==='string'?notice:notice.message||'AI mode changed.'));
  if(room.ai?.limitReason&&!(room.notices||[]).length)output.append(h('p',{class:'notice'},aiNotice(room.ai.limitReason)));
@@ -212,7 +225,7 @@ function render(){
  if(game?.deadlineAt)output.append(h('div',{id:'phase-clock',class:'phase-note'},h('span',{},game.phase==='roam'?'Next council in':'Phase ends in'),timer(game.deadlineAt,now)));
  const council=game&&['discussion','voting'].includes(game.phase);
  const grid=h('div',{id:'game-layout',class:`game-grid${council?' council-layout':''}${!game?' lobby-layout':''}`});
- const options={pending,act,now,draft,setDraft:value=>{draft=value;},confirmTarget,setConfirm:value=>{confirmTarget=value;render();}};
+ const options={pending,act,now,draft,setDraft:value=>{draft=value;},confirmTarget,setConfirm:(value,returnTo)=>setConfirmation(value,returnTo,current)};
  const left=h('div',{class:'stack'});
  if(game)left.append(watchPanel(game,options));
  left.append(h('section',{class:'panel crew-panel'},h('h2',{},'The six keepers'),crew(game)));grid.append(left);
