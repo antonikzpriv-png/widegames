@@ -50,3 +50,31 @@ The first qualification used the coordinator geometry working file read-only; th
 ## Immutable final dependency pin
 
 Geometry commit: eb64cc8fc6f9a024c0fe6c84dabf384e897819fe; shared/world.mjs blob a2bc61a0320e6033feb8956e59884399d0a34d06. Extracted only shared/world.mjs and shared/contracts.mjs with git archive into this checkout's ignored _artifacts/world-geometry-eb64cc8. Repeated all49 engine/world tests with WORLD_ENGINE_GEOMETRY_MODULE pointing to that immutable module: 49 pass, zero fail/skip. Final exact-pin output: _artifacts/world-engine-pinned-eb64cc8-results.txt. The API was introduced at6f6f7c0; eb64cc8 includes the usable bell standing point and bounded geometry caches. No manager geometry was edited. This supersedes the earlier dependency wording while preserving its actual run history.
+
+
+## Replay chronology correction
+
+The independent AI review receipt 2e06f74f87abfd40f7164a06d2bcd821b4e09317 exposed a separate Core defect at aa471eb: per-player movement settlement appended a600ms lease expiry before another actor's100ms arrival. The original failing evidence and immutable aa471eb composite remain in this checkout's ignored artifacts. The independent AI tests and their nine-group result are unchanged.
+
+getReplay now sorts its existing defensive clone numerically by actual event.at, only when phase is ended. Node24's stable Array.sort retains original append order for equal times. No tie-breaking by actor/type/ID is introduced: causal same-time death, task transfer, witness, validated action, report, tally, ejection, terminal and reveal records keep their recorded order. Actual fractional arrival times remain unrounded. Internal replay insertion order, IDs, replaySequence, state version, outcome, attribution and the existing12000-event bound are untouched. No genuine event is dropped or retimed. Already chronological schema1 exports retain exactly their prior JSON payload/order. Nonterminal and paused exports remain null.
+
+New tests/world-engine-replay.test.mjs covers numeric ordering of100ms, fractional100.694444...ms and600ms across three actors; equal100ms arrivals; legal death/report/ejection with preserved witness attribution and causal ties; nested defensive copies from frozen state; JSON restoration; schema1 exact payload preservation and phase guards. The prior active tests/world-core-ai-review-chronology.test.mjs now passes against the changed current checkout; it still fails when explicitly pointed at the unchanged aa471eb archive.
+
+Focused author verification with immutable shared geometry eb64cc8fc6f9a024c0fe6c84dabf384e897819fe (blob a2bc61a0320e6033feb8956e59884399d0a34d06):
+
+~~~powershell
+$env:TEMP='D:/Widegames-work/temp'
+$env:TMP=$env:TEMP
+$env:npm_config_cache='D:/Widegames-work/npm-cache'
+$env:WORLD_ENGINE_GEOMETRY_MODULE='file:///D:/Widegames-work/world-core-20261029/_artifacts/world-core-ai-pin/shared/world.mjs'
+Remove-Item Env:WORLD_CORE_AI_REVIEW_ROOT -ErrorAction SilentlyContinue
+Remove-Item Env:WORLD_CORE_AI_REVIEW_EXACT_PIN -ErrorAction SilentlyContinue
+node --test tests/world-engine-replay.test.mjs tests/world-core-ai-review-chronology.test.mjs
+node --test --test-name-pattern='bodies carry|deadlines settle|critical beats|victories|JSON restart' tests/world-engine-lifecycle.test.mjs
+node --test --test-name-pattern='all four exact win|bounded replay retains|maximum' tests/engine-rules.test.mjs
+node --check server/engine/index.mjs
+node --check tests/world-engine-replay.test.mjs
+git diff --check
+~~~
+
+Results:5/5 focused replay checks;5/5 selected world lifecycle checks;7/7 selected legacy checks including the four victory subcases. Total17 passed, zero failures/skips. Outputs: _artifacts/world-replay-fix-focused.txt, world-replay-fix-lifecycle.txt and world-replay-fix-legacy.txt. The old chronology failure remains _artifacts/world-core-ai-chronology-defect.txt; it was not overwritten or relabeled. This is the engine author's fix verification; Reviewer/manager must independently inspect/integrate/qualify the exact commit. No AI, frontend, shared, transport, root or other-worktree source was edited, and no full suite, Chrome, paid provider, deployment, main or push was used.
