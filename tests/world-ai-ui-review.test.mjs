@@ -15,6 +15,13 @@ const source = (path, revision = pin) => revision ? execFileSync('git', ['show',
 const strip = text => text.replace(/^\uFEFF/, '').replace(/^import .*$/gm, '').replace(/^export /gm, '');
 const flush = () => new Promise(resolve => setImmediate(resolve));
 
+// Draw tests instrument drawKeeper after stripping imports; restore the scene's
+// real beacon helpers and their transitive dependencies, not placeholder stubs.
+// Older pinned scenes have no beacon import and keep their original VM setup.
+const sceneDependencies = /from ['"]\.\/beacon-scene\.mjs['"]/.test(source('public/world/scene.mjs'))
+  ? await import(new URL('public/world/beacon-scene.mjs', uiRoot)) : {};
+const { visionFrame, drawBeaconFixtures } = sceneDependencies;
+
 // Actual frontend logic, controlled network completions, minimal DOM. These
 // adversarial retained callbacks are not claims about native click scheduling.
 function fixture(sourcePin = pin) {
@@ -132,7 +139,7 @@ test('independent frontend: observed positional movement animates without privat
   const model = presentationModel(), captured = [], gradient = { addColorStop() {} };
   const ctx = new Proxy({}, { get: (_, key) => String(key).startsWith('create') ? () => gradient : () => {}, set: () => true });
   const canvas = { getContext: () => ctx, getBoundingClientRect: () => ({ left: 0, top: 0, width: 800, height: 600 }) };
-  const context = vm.createContext({ world, CHARACTERS, ...model, captured });
+  const context = vm.createContext({ world, CHARACTERS, ...model, visionFrame, drawBeaconFixtures, captured });
   const createScene = vm.runInContext(`(()=>{${strip(source('public/world/scene.mjs'))};drawKeeper=(ctx,player,x,y,options)=>captured.push({id:player.id,step:options.step});return createWorldScene;})()`, context);
   const scene = createScene(canvas), view = room(); view.game.players[1].position = { x: 850, y: 300 };
   try {
@@ -154,7 +161,7 @@ test('independent frontend source/draw trace: doorway paint aligns with six actu
   const model = presentationModel(), rectangles = [], gradient = { addColorStop() {} };
   const ctx = new Proxy({}, { get: (_, key) => String(key).startsWith('create') ? () => gradient : (...args) => { if (key === 'fillRect') rectangles.push(args); }, set: () => true });
   const canvas = { getContext: () => ctx, getBoundingClientRect: () => ({ left: 0, top: 0, width: 800, height: 600 }) };
-  const context = vm.createContext({ world, CHARACTERS, ...model });
+  const context = vm.createContext({ world, CHARACTERS, ...model, visionFrame, drawBeaconFixtures });
   const createScene = vm.runInContext(`(()=>{${strip(source('public/world/scene.mjs'))};drawKeeper=()=>{};return createWorldScene;})()`, context);
   const scene = createScene(canvas);
   try {
