@@ -125,3 +125,31 @@ Within those images, the two maps have distinct environmental art and readable n
 The council backdrop obstruction is closed in the sampled desktop council/results: Sound: off is above the backdrop and outside the card. Mobile council CSS uses a single-column scrollable overlay and the mute remains fixed above it; there is no saved mobile council image here from which to establish a second specific occluded council action. I do not claim a collision-free mobile council from desktop pixels. The driver's14-mobile screenshot is saved only at390x844, although its native-event loop also checks320x740 and844x390 equipment-pane/document bounds. Thus320px is supported by the manager's recorded checks and CSS inspection, not a320px screenshot; no ninth image or fabricated320px evidence was substituted.
 
 Limits: headless Chrome156 with native keyboard/touch events and reduced-motion desktop, seeded validated demo actions and accelerated authoritative clocks. No physical phone, actual audio hardware/listening, exhaustive responsive states, new native test, full suite or production approval. Exactly docs/TACTICAL-CLIENT.md is appended by this task; prior receipts/red evidence remain intact. No Chrome, server, external service or paid provider was started; manager retains the Chrome lease.
+
+
+## Mobile mute collision closure candidate, 2026-10-30
+
+Focused fix commit: `22f492335f576b79b57c70afa5d3fb9fb0c1c1ec`, after the9b5954e screenshot finding. Runtime change is ONLY public/world/beacon.css. A60px mobile bottom strip now contains the88x44 mute control at left12/bottom8. The existing portrait and short-landscape control groups move up together by60px, equipment panes lose the same60px of maximum scroll height (preserving their prior top boundary), and council/role overlays end above the strip with scrolling. The decorative strip cannot intercept pointers. Neither joystick nor mute is hidden; Exit/topbar, JavaScript input leases, sound default-off/owner guards, IME/draft handling and modal ownership are unchanged. Desktop layout is unchanged.
+
+The actual root breakpoints were read, including portrait max-width700 and short landscape max-height540/min-width560. The coordinator's observed6333ab8a6e30e583262cb5d3f50d66493b4f4000 game.css matches this worktree after CRLF normalization. No manager source or frozen browser tree was edited. The relevant resulting rectangles are:
+
+| Viewport | Mute | Joystick | Council visible content ends at |
+| --- | --- | --- | --- |
+|320x740|x12..100, y688..732|x18..112, y461..555|y680|
+|390x844|x12..100, y792..836|x18..112, y565..659|y784|
+|844x390|x12..100, y338..382|x18..110, y218..310|y330|
+
+These are CSS-derived border boxes, not newly measured browser rectangles. tests/tactical-client-mobile-layout.test.mjs reads the real game.css and beacon.css, parses media/cascade specificity and positioned/calc dimensions, and checks nonintersection with both crew2/saboteur4 action groups, the complete joystick, the scroll-clipped council/role viewport, equipment bounds and the topbar band. It also checks joystick display and mute touch dimensions/interactivity. It does not merely assert the newly chosen offsets; moving a control into another actual target or extending a scrolling overlay under mute fails the geometric relation. Intrinsic sound size for the old-CSS negative fixture is explicitly88x44; current CSS fixes that size. Council text/roster layout is not simulated: its existing scroll clipping bounds all visible descendant vote/input hit targets. The new test is a limited CSS evaluator, not a native layout/font/hit-testing engine.
+
+Preserved evidence: `_artifacts/tactical-mobile-mute-20261030/beacon-before.css` and `layout-before.log` retain the old portrait overlap and unreserved landscape council viewport failures (1 pass/3 fail). `layout-first-green.log` passed32 with4 existing Annex skips because that invocation omitted the real map override; it is not claimed as full Annex coverage. Final `layout-final-green.log` passed36/36 with no failures/skips using actual Core maps, including the retained imported UI IME/focus/equipment/async/sound checks. The first four are the new CSS contracts; all36 are bounded unit/DOM checks, not36 new native workflows. `receipt.json` records candidate/runtime fingerprints. Candidate beacon.css SHA256: `6b3e1aca9bbb600bfd1a5bf00bbf7c00e66161e173377eddc89c3ac0d810bafd`. Changed test syntax and git diff --check pass.
+
+Exact focused command:
+
+```powershell
+$env:TEMP='D:/Widegames-work/temp'
+$env:TMP=$env:TEMP
+$env:TACTICAL_CLIENT_MAP_ROOT='D:/Widegames-work/tactical-maps-builder-20261029'
+node --test tests/tactical-client-mobile-layout.test.mjs tests/tactical-client-compatibility.test.mjs tests/tactical-client-ui.test.mjs
+```
+
+Manager native follow-up must measure disjoint mute/joystick/action/council targets and touch the actual joystick center in320/390 portrait and844x390 landscape, then mute during council/voting with an explicit state wait. Suggested CSS-derived joystick centers are(65,508), (65,612), (64,264), respectively; use actual bounding boxes in the native driver. Equipment-pane scroll/close, visible Exit, chat composition/draft/focus and council vote targets remain part of that native check. Prior3805e6f screenshots, the manager's concurrently frozen4088 run and the earlier AEC production pin retain their original source identity; they do not qualify this changed CSS. No Chrome, server, full suite, external asset/provider, push/main/deployment or production approval was performed. Manager retains the exclusive Chrome lease.
