@@ -22,7 +22,7 @@ function fixture({map,beaconRules={},legacy=false}={}){
 const sabotage=(kind,targetId='beacon')=>({type:'systemSabotage',kind,targetId});
 const repair=(kind,siteId)=>({type:'systemRepair',systemId:kind,siteId});
 const place=(p,site)=>{p.position={...site.position};p.roomId=site.roomId;};
-function apply(f,p,a,at=start){assert.equal(systems.validateSystemAction(f.state,p,a,at,f.ctx),null);assert.equal(systems.applySystemAction(f.state,p,a,at,f.ctx),true);assert.equal(systems.validateSystemsState(json(f.state)),true);}
+function apply(f,p,a,at=start){assert.equal(systems.validateSystemAction(f.state,p,a,at,f.ctx),null);assert.equal(systems.applySystemAction(f.state,p,a,at,f.ctx),true);f.state.updatedAt=at;assert.equal(systems.validateSystemsState(json(f.state)),true);}
 function restored(f){f.state=json(f.state);f.sabs=f.state.players.filter(p=>p.role==='saboteur');f.crew=f.state.players.filter(p=>p.role==='crew');return f;}
 const panel=(f,d)=>({position:d.width<d.height?{x:d.x-f.ctx.geometry.WORLD.bodyRadius-4,y:d.y+d.height/2}:{x:d.x+d.width/2,y:d.y-f.ctx.geometry.WORLD.bodyRadius-4},roomId:d.roomId});
 
