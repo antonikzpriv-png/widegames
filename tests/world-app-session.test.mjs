@@ -92,3 +92,12 @@ test('late root task failures cannot overwrite a newer council or moved-away con
   request.reject(new Error('OLD TASK FAILURE'));await assert.rejects(pending,error=>error.name==='AbortError');assert(!f.feedback.textContent.includes('OLD TASK FAILURE'));assert(!f.feedback.children.some(node=>node.text==='Retry same request'));
  }
 });
+
+test('an unavailable remembered watch returns to the menu without altering explicit share links',async()=>{
+ const remembered=await fixture(),opening=remembered.api.openRoom('old',undefined,{remembered:true});remembered.requests[0].reject(Object.assign(new Error('Room unavailable'),{status:404}));await opening;assert.equal(remembered.api.getRoom(),null);assert.match(remembered.feedback.textContent,/previous watch is unavailable/);
+ const explicit=await fixture(),link=explicit.api.openRoom('shared');explicit.requests[0].reject(Object.assign(new Error('Room unavailable'),{status:404}));await link;assert.equal(explicit.api.getRoom(),null);assert.equal(explicit.feedback.textContent,'Room unavailable');
+});
+
+test('late remembered-room failure cannot send a current room back to the menu',async()=>{
+ const f=await fixture(),old=f.api.openRoom('old',undefined,{remembered:true}),request=f.requests[0];await f.open('B');request.reject(Object.assign(new Error('Old room unavailable'),{status:404}));await old;assert.equal(f.api.getRoom().roomId,'B');
+});

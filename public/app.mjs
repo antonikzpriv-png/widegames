@@ -163,7 +163,7 @@ async function create(mode){
   tell(mode==='human'?'Your crew seat is ready.':'Spectator room ready.');
  });
 }
-async function openRoom(id,initial){
+async function openRoom(id,initial,{remembered=false}={}){
  const changed=id!==roomId;
  if(changed)releaseWorld();
  stop();roomId=id;
@@ -192,6 +192,7 @@ async function openRoom(id,initial){
   if(ownsOpen())connect(current);
  }catch(error){
   if(ownsOpen()&&error.name!=='AbortError'){
+   if(remembered&&error.status===404){home();tell('Your previous watch is unavailable. Start a new watch.');return;}
    if([401,403,404].includes(error.status))tell(error.message,true);
    else{connectionFailure(error.message);schedulePoll(current);}
    render();
@@ -334,6 +335,7 @@ function render(){
  if(!roomId){output.append(landing());syncChildren(main,output);restoreFocus(saved);return;}
  if(!room){output.append(h('div',{class:'loading'},h('h1',{},'Finding the beacon…'),h('p',{},'Connecting to your room.'),button('Retry connection',()=>openRoom(roomId),{'data-focus':'reconnect'}),button('Back to harbor',home)));syncChildren(main,output);restoreFocus(saved);return;}
  const game=room.game,now=Date.now()+offset,current=epoch;
+ if(game&&!game.worldVersion)output.append(h('p',{class:'notice'},'This earlier watch keeps its original board and replay. Exit to start a new walking-world watch.'));
  output.append(h('div',{id:'watch-heading',class:'game-heading'},h('div',{},h('p',{class:'eyebrow'},phaseLabel(game?.phase||room.phase)),h('h1',{},game?.phase==='ended'?'The watch has ended.':game?'The watch is yours.':'All keepers aboard.'),h('span',{class:'connection'},room.seatId?'Your crew seat · ':'Spectating · ',room.roomId,connected?' · Connected':' · Polling connection')),h('div',{class:'actions'},modeTag(),button('Copy room link',async()=>{try{await navigator.clipboard.writeText(location.href);tell('Room link copied. Visitors join as spectators.');}catch{tell(`Share this address: ${location.href}`);}},{'data-focus':'copy-link'}),button('Leave room',home,{'data-focus':'leave-room'}))));
  for(const notice of room.notices||[])output.append(h('p',{class:'notice'},typeof notice==='string'?notice:notice.message||'AI mode changed.'));
  if(room.ai?.limitReason&&!(room.notices||[]).length)output.append(h('p',{class:'notice'},aiNotice(room.ai.limitReason)));
@@ -369,6 +371,6 @@ const initial=roomIdFromPath(location.pathname);
 if(initial)openRoom(initial);
 else{
  let remembered;try{remembered=sessionStorage.getItem('lantern-room');}catch{}
- if(remembered&&/^[A-Za-z0-9_-]{1,100}$/.test(remembered))openRoom(remembered);else render();
+ if(remembered&&/^[A-Za-z0-9_-]{1,100}$/.test(remembered))openRoom(remembered,undefined,{remembered:true});else render();
 }
 setInterval(()=>{if(document.hidden)return;if(worldExperience&&room)worldExperience.update(room,{now:Date.now()+offset,connected:networkReady,pending,feedback:feedback.textContent});for(const item of document.querySelectorAll('[data-deadline]'))item.textContent=clockText(secondsUntil(Number(item.dataset.deadline),Date.now()+offset));},500);
