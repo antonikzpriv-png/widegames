@@ -22,9 +22,16 @@ function releaseWorld(){
 function ownsWorld(owner){return worldSession===owner&&roomId===owner.id&&!document.hidden&&controller&&!controller.signal.aborted;}
 async function worldInput(owner,input){
  if(!ownsWorld(owner))throw new DOMException('The room changed.','AbortError');
+ const packet=worldInputEnvelope(input),game=room?.game;
+ if(!game?.self?.alive||game.phase!=='roam'){
+  if(!packet.dx&&!packet.dy)return room; // The authority already freezes non-roam motion.
+  throw new DOMException('Movement requires an active watch.','AbortError');
+ }
+ if(!packet.dx&&!packet.dy&&!owner.lastVector?.dx&&!owner.lastVector?.dy&&!game.self.moving)return room;
+ owner.lastVector={dx:packet.dx,dy:packet.dy};
  const current=epoch,id=roomId,opened=controller;
  try{
-  const data=await request(roomPath(id,'/input'),{method:'POST',body:worldInputEnvelope(input),signal:opened.signal});
+  const data=await request(roomPath(id,'/input'),{method:'POST',body:packet,signal:opened.signal});
   if(!ownsWorld(owner)||current!==epoch||controller!==opened)throw new DOMException('The room changed.','AbortError');
   accept(data);return data;
  }catch(error){
