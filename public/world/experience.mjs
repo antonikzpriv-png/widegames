@@ -17,6 +17,7 @@ let instance=0;
 
 /** A safe-view-only game surface. The owner supplies networking and request IDs. */
 export function createWorldExperience(host,callbacks){
+ if(document.head&&!document.querySelector('link[data-beacon-style]')){const link=make('link');link.rel='stylesheet';link.href='/world/beacon.css';link.setAttribute('data-beacon-style','');document.head.append(link);}
  const uid=`lw-world-${++instance}`,shell=make('section','lw-world'),canvas=make('canvas','lw-world-canvas');
  shell.setAttribute('aria-label','Lantern Wake game');canvas.setAttribute('role','img');canvas.setAttribute('aria-label','Storm beacon world');canvas.tabIndex=0;
  const stage=make('div','lw-stage');stage.append(canvas);
@@ -37,7 +38,7 @@ export function createWorldExperience(host,callbacks){
  const joystick=make('div','lw-joystick'),knob=make('div','lw-joystick-knob');joystick.append(knob);joystick.setAttribute('aria-hidden','true');
  const mapToggle=button('Map  M',()=>toggleMap(),'lw-map-toggle');mapToggle.setAttribute('aria-expanded','false');
  const mapPane=make('section','lw-map-pane'),mapHeading=make('h2','','Platform map'),mapCanvas=make('canvas','lw-mini-map');mapPane.hidden=true;mapPane.id=`${uid}-map`;mapToggle.setAttribute('aria-controls',mapPane.id);mapCanvas.setAttribute('role','img');mapCanvas.setAttribute('aria-label','Known platform layout and currently visible keepers');mapPane.append(mapHeading,mapCanvas,make('p','','Map shows only positions supplied by the server.'));
- const lobby=make('section','lw-lobby'),lobbyTitle=make('h1','','KEEP THE LIGHT.'),lobbySub=make('p','','Six keepers. One hidden saboteur. A storm that won’t wait.'),roster=make('div','lw-lobby-roster'),start=button('Begin the watch',()=>request(()=>callbacks.start()),'lw-primary');
+ const lobby=make('section','lw-lobby'),lobbyTitle=make('h1','','KEEP THE LIGHT.'),lobbySub=make('p','','Keep the beacon alive. Hidden saboteurs may be aboard.'),roster=make('div','lw-lobby-roster'),start=button('Begin the watch',()=>request(()=>callbacks.start()),'lw-primary');
  const lobbyRows=new Map();
  const lobbyNote=make('p','lw-lobby-note');lobby.append(make('p','lw-eyebrow','STORM BEACON · KEEPER WATCH'),lobbyTitle,lobbySub,roster,start,lobbyNote);
  const overlay=make('div','lw-scene-overlay');overlay.hidden=true;
@@ -50,7 +51,7 @@ export function createWorldExperience(host,callbacks){
  let beaconPanel=null;
  let room=null,options={now:Date.now(),connected:false,pending:false,feedback:''},disposed=false,localPending=0,lastRoom=null,raf=0,mapOpen=false,localFeedback='',lastFeedback='',lastRole=null;
  const reduced=matchMedia('(prefers-reduced-motion: reduce)'),scene=createWorldScene(canvas,{reduced:reduced.matches}),mini=createWorldScene(mapCanvas,{reduced:true}),revealed=new Set();
- const input=createWorldInput({target:canvas,joystick,knob,getState:()=>({enabled:movementAllowed(),inputAllowed:room?.game?.phase==='roam'&&room?.game?.self?.alive&&!room?.game?.systems?.selfTransit,position:room?.game?.self?.position,inputSeq:room?.game?.self?.inputSeq||0}),onInput:value=>{if(value.dx||value.dy)navigationEpoch++;return callbacks.input(value);},onClick:e=>{
+ const input=createWorldInput({target:canvas,joystick,knob,getState:()=>({enabled:movementAllowed(),inputAllowed:room?.game?.phase==='roam'&&room?.game?.self?.alive&&!room?.game?.systems?.selfTransit&&!room?.game?.self?.transit,position:room?.game?.self?.position,inputSeq:room?.game?.self?.inputSeq||0}),onInput:value=>{if(value.dx||value.dy)navigationEpoch++;return callbacks.input(value);},onClick:e=>{
   const target=scene.toWorld(e.clientX,e.clientY),position=room?.game?.self?.position,pin=room?.roomId,match=room?.game?.matchId,intent=++navigationEpoch;
   if(!world.findWorldPath(position,target)){setFeedback('That route is blocked. Choose a clear part of the deck.');return null;}
   // Acknowledged stop precedes navigation so a late zero cannot cancel the new route.
@@ -65,7 +66,7 @@ export function createWorldExperience(host,callbacks){
  for(const pane of [council.node,results.node,confirmation,ejection,paused]){pane.hidden=true;overlay.append(pane);}
  roleScene.addEventListener('keydown',event=>{if(event.key==='Escape'){revealed.add(room.game.matchId);render();canvas.focus();}else trapDialog(roleScene,event);});
  confirmation.addEventListener('keydown',event=>{if(event.key==='Escape'){event.preventDefault();closeConfirmation();}else trapDialog(confirmation,event);});
- function validElimination(){const g=room?.game,target=g?.players?.find(p=>p.id===confirmTarget);return g?.phase==='roam'&&g.self?.alive&&g.self.role==='saboteur'&&target?.alive&&point(target.position)&&distance(g.self.position,target.position)<=world.WORLD.killRadius&&g.availableActions?.includes('eliminate');}
+ function validElimination(){const g=room?.game,target=g?.players?.find(p=>p.id===confirmTarget);return g?.phase==='roam'&&g.self?.alive&&g.self.role==='saboteur'&&target?.alive&&(g.beaconVersion!==1||knowledge(g,target)==='alive')&&point(target.position)&&distance(g.self.position,target.position)<=world.WORLD.killRadius&&g.availableActions?.includes('eliminate');}
  function closeConfirmation(restore=true){confirmTarget=null;render();if(restore)restoreTrigger(actionButtons.eliminate);}
  function closeTask(restore=true){const current=puzzle;puzzle=null;taskSession=null;current?.dispose();render();if(restore)restoreTrigger(actionButtons.use);}
  function openTask(task){
@@ -88,7 +89,7 @@ export function createWorldExperience(host,callbacks){
   if(disposed||pending()||!options.connected)throw new Error('Wait for the connection or pending action.');
   localPending++;render();try{return await callbacks.action(type,fields);}finally{if(!disposed){localPending--;render();}}
  }
- function movementAllowed(){return !document.hidden&&!!room?.game?.self?.alive&&room.game.worldVersion===1&&room.game.phase==='roam'&&options.connected&&!pending()&&roleScene.hidden&&overlay.hidden&&!beaconPanel?.open&&!room.game.systems?.selfTransit;}
+ function movementAllowed(){return !document.hidden&&!!room?.game?.self?.alive&&room.game.worldVersion===1&&room.game.phase==='roam'&&options.connected&&!pending()&&roleScene.hidden&&overlay.hidden&&!beaconPanel?.open&&!room.game.systems?.selfTransit&&!room.game.self?.transit;}
  function pending(){return options.pending||localPending>0;}
  function setFeedback(message){if(disposed)return;localFeedback=String(message||'');setText(feedback,localFeedback);}
  async function request(fn){if(disposed||pending())return;localPending++;render();try{return await fn();}catch(error){if(!disposed)setFeedback(error?.message||'The request failed. Try again.');}finally{if(!disposed){localPending--;render();}}}
@@ -99,15 +100,16 @@ export function createWorldExperience(host,callbacks){
   if(!options.connected){setFeedback('Connection interrupted. Reconnect before acting.');return;}
   if(pending()||!context.enabled){setFeedback(pending()?'An action is still being sent.':context.hint);return;}
   input.stop();
+  if(context.type==='beaconPanel'){beaconPanel?.show(context.descriptorId);return;}
   if(context.type==='task'){openTask(context.task);return;}
   if(context.type==='eliminate'){confirmTarget=context.fields.targetId;render();confirmNo.focus();return;}
   request(()=>callbacks.action(context.type,context.fields));
  }
  function render(){
-  if(!room||disposed)return;const game=room.game,isLobby=!game,canWalk=game?.phase==='roam'&&game.self?.alive;
+  if(!room||disposed)return;const game=room.game,isLobby=!game,canWalk=game?.phase==='roam'&&game.self?.alive&&!game.systems?.selfTransit&&!game.self?.transit;
   const keepers=room.game?.players||room.roster||CHARACTERS;
   for(const [id,row]of lobbyRows)if(!keepers.some(p=>p.id===id)){row.remove();lobbyRows.delete(id);}
-  for(const p of keepers)if(!lobbyRows.has(p.id)){const card=make('div','lw-seat'),avatar=make('canvas');avatar.width=80;avatar.height=94;drawKeeper(avatar.getContext('2d'),p,40,64,{scale:1,label:false});card.append(avatar,make('span','',p.name));roster.append(card);lobbyRows.set(p.id,card);}
+  for(const p of keepers){let card=lobbyRows.get(p.id);if(!card){card=make('div','lw-seat');const avatar=make('canvas');avatar.width=80;avatar.height=94;card.append(avatar,make('span'));roster.append(card);lobbyRows.set(p.id,card);}const identity=JSON.stringify([p.name,p.color]);if(card.dataset.identity!==identity){const art=card.children[0].getContext('2d');art.clearRect(0,0,80,94);drawKeeper(art,p,40,64,{scale:1,label:false});setText(card.children[1],p.name);card.dataset.identity=identity;}}
   shell.dataset.phase=game?.phase||'lobby';lobby.hidden=!isLobby;assignment.hidden=isLobby;progress.hidden=isLobby;actions.hidden=isLobby||game.phase!=='roam'||!game.self?.alive;joystick.hidden=!movementAllowed();
   setText(mode,aiLabel(room.ai));setText(status,options.connected?'● Connected':'○ Reconnecting');status.dataset.connected=String(!!options.connected);
   const lastNotice=room.notices?.at(-1),noticeText=typeof lastNotice==='string'?lastNotice:lastNotice?.message||'';setText(aiNotice,noticeText);aiNotice.hidden=!noticeText;setText(lobbyNote,`${room.isHost?`You host this room. ${keepers.length} keepers are aboard.`:'You are observing. The host will begin the watch.'}${noticeText?' '+noticeText:''}`);start.disabled=!room.isHost||pending()||!options.connected;
@@ -145,8 +147,7 @@ export function createWorldExperience(host,callbacks){
   if(ejectionKey&&previousPhase==='voting')ejectionClose.focus();
   previousPhase=game?.phase;
   if(game?.beaconVersion===1&&!beaconPanel){
-   if(document.head&&!document.querySelector('link[data-beacon-style]')){const link=make('link');link.rel='stylesheet';link.href='/world/beacon.css';link.setAttribute('data-beacon-style','');document.head.append(link);}
-   beaconPanel=createBeaconPanel({id:uid,action:perform,stop:()=>input.stop(),feedback:setFeedback,change:()=>{input.sync();render();}});stage.append(beaconPanel.node);
+   beaconPanel=createBeaconPanel({id:uid,action:perform,stop:()=>input.stop({force:true}),feedback:setFeedback,change:()=>{input.sync();render();}});stage.append(beaconPanel.node);
   }
   if(beaconPanel){beaconPanel.update(room,{...options,pending:pending()});beaconPanel.node.hidden=game?.beaconVersion!==1||!roleScene.hidden||!!puzzle||!!confirmTarget;}
   if(game?.beaconVersion===1&&game.sabotage?.active){setText(criticalTitle,game.sabotage.kind==='flood'?'FLOOD WARNING':'BEACON POWER FAILURE');setText(criticalInfo,criticalText(game));}
