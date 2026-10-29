@@ -4,6 +4,9 @@ import vm from 'node:vm';
 import {readFileSync} from 'node:fs';
 import * as model from '../public/world/model.mjs';
 import {CHARACTERS} from '../shared/contracts.mjs';
+import {getMap} from '../shared/maps/index.mjs';
+import * as mapHelpers from '../public/world/map-model.mjs';
+import * as beaconHelpers from '../public/world/beacon-model.mjs';
 
 // Actual experience render with a small DOM and inert drawing/input/phase panes.
 // Safe-view/geometry fixtures test labels, not engine actions or browser accessibility.
@@ -20,8 +23,12 @@ function fixture(){
  const document={...events(),hidden:false,createElement:tag=>new Node(tag)};
  const pane=()=>({node:new Node('section'),update(){},focus(){},dispose(){}});
  const world={WORLD:{interactionRadius:92,killRadius:70,reportRadius:130},WORLD_STATIONS:{bridge:{x:100,y:100}},WORLD_BELL:{x:200,y:100}};
- const context=vm.createContext({...model,world,CHARACTERS,document,window:events(),Date,performance:{now:()=>100},matchMedia:()=>({matches:true}),requestAnimationFrame:()=>1,cancelAnimationFrame(){},
+ const context=vm.createContext({...model,...mapHelpers,mapRoomName:mapHelpers.roomName,...beaconHelpers,getMap,world,CHARACTERS,document,window:events(),Date,performance:{now:()=>100},matchMedia:()=>({matches:true}),requestAnimationFrame:()=>1,cancelAnimationFrame(){},
   drawKeeper(){},createWorldScene:()=>({update(){},draw(){},dispose(){}}),createWorldInput:()=>({stop(){},sync(){},dispose(){}}),createCouncil:pane,createResults:pane,restoreTrigger(){},trapDialog(){}});
+ const module=(file,names)=>Object.assign(context,vm.runInContext(`(()=>{${readFileSync(new URL('../public/world/'+file+'.mjs',import.meta.url),'utf8').replace(/^\uFEFF/,'').replace(/^import .*$/gm,'').replace(/^export /gm,'')};return {${names}};})()`,context));
+ module('dom','dom,control,setText,trapDialog,restoreTrigger');
+ module('lobby-map','createLobbyMapSelector');
+ module('sound','createLocalSound');
  const source=readFileSync(new URL('../public/world/experience.mjs',import.meta.url),'utf8').replace(/^\uFEFF/,'').replace(/^import .*$/gm,'').replace(/^export /gm,'');
  const create=vm.runInContext(`(()=>{${source};return createWorldExperience;})()`,context),host=new Node('main');
  const experience=create(host,{action:async()=>{throw Error('Unexpected action in label fixture');},input:async()=>{},start:async()=>{},leave(){},loadReplay:async()=>({replay:[]})});
