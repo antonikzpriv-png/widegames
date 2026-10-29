@@ -1,23 +1,6 @@
 {
-  "sourceCommit": "92a48151dfeaca1069b3f07645f0689e301d4ee1",
-  "modifiedPaths": [
-    "M README.md",
-    " M public/world/experience.mjs",
-    " M public/world/model.mjs",
-    " M public/world/puzzles.mjs",
-    " M scripts/world-browser-check.mjs",
-    " M server/ai/world.mjs",
-    " M server/engine/index.mjs",
-    " M server/store.mjs",
-    " M shared/contracts.mjs",
-    " M tests/world-ai-ui-review.test.mjs",
-    " M tests/world-core-ai-review.test.mjs",
-    " M tests/world-engine-lifecycle.test.mjs",
-    " M tests/world-transport-core.test.mjs",
-    "?? docs/WORLD-TASKS.md",
-    "?? server/engine/tasks.mjs",
-    "?? tests/world-tasks.test.mjs"
-  ],
+  "sourceCommit": "74c09fb20d13807dfaa9f00e29e07e8858ed6e98",
+  "modifiedPaths": [],
   "fixture": "Actual app/main browser modules, native HTTP/WS, persistent store, seeded world engine and real labeled demo AI. Physical routes may use normal authenticated navigate requests and accelerated server time; no state/winner fabrication or provider calls.",
   "checks": [
     {
@@ -125,7 +108,7 @@
       "passed": true
     }
   ],
-  "privacyChecks": 1088,
+  "privacyChecks": 1135,
   "errors": [],
   "consoleErrors": [
     "Failed to load resource: the server responded with a status of 409 (Conflict)",
@@ -154,12 +137,12 @@
     {
       "winner": "crew",
       "reason": "tasks",
-      "at": 1793309946424
+      "at": 1793310082211
     },
     {
       "winner": "crew",
       "reason": "tasks",
-      "at": 1793310109456
+      "at": 1793310245385
     }
   ],
   "inputPackets": 8,
