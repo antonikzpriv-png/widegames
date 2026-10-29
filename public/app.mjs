@@ -4,11 +4,12 @@ import {request,roomPath,actionEnvelope,roomFrom,roomIdFromPath} from './api.mjs
 import {watchPanel,taskPanel,criticalPanel,councilPanel,timelinePanel,resultsPanel,timer} from './panels.mjs';
 import {replayEvents,aiNotice,aiLabel} from './presentation.mjs';
 import {createWorldExperience} from './world/experience.mjs';
+import {worldInputEnvelope} from './world-input-envelope.mjs';
 
 const main=document.querySelector('#main');
 const feedback=document.querySelector('#feedback');
 let room=null,roomId=null,controller=null,socket=null,poll=null;
-let epoch=0,pending=false,offset=0,connected=false,connectionIssue=false;
+let epoch=0,pending=false,offset=0,connected=false,networkReady=false,connectionIssue=false;
 let draft='',draftMeeting=null,confirmTarget=null,replay=null,replayIndex=0,retry=null;
 const attemptedJoins=new Set();
 let worldExperience=null,worldSession=null,lastInputFailure=0;
@@ -22,7 +23,7 @@ async function worldInput(owner,input){
  if(!ownsWorld(owner))throw new DOMException('The room changed.','AbortError');
  const current=epoch,id=roomId,opened=controller;
  try{
-  const data=await request(roomPath(id,'/input'),{method:'POST',body:input,signal:opened.signal});
+  const data=await request(roomPath(id,'/input'),{method:'POST',body:worldInputEnvelope(input),signal:opened.signal});
   if(!ownsWorld(owner)||current!==epoch||controller!==opened)throw new DOMException('The room changed.','AbortError');
   accept(data);return data;
  }catch(error){
@@ -53,7 +54,7 @@ function renderWorld(){
    leave:()=>{if(worldSession===owner)home();},loadReplay:()=>worldReplay(owner)
   });
  }
- worldExperience.update(room,{now:Date.now()+offset,connected,pending,feedback:feedback.textContent});
+ worldExperience.update(room,{now:Date.now()+offset,connected:networkReady,pending,feedback:feedback.textContent});
 }
 
 function tell(message,error=false){
@@ -62,7 +63,7 @@ function tell(message,error=false){
  feedback.classList.toggle('error',error);
  if(retry)feedback.append(button('Retry same request',()=>retry?.(),{class:'quiet'}));
 }
-function connectionFailure(message){tell(message,true);connectionIssue=true;}
+function connectionFailure(message){tell(message,true);connectionIssue=true;networkReady=false;}
 function persistId(id){
  try{if(id)sessionStorage.setItem('lantern-room',id);else sessionStorage.removeItem('lantern-room');}catch{}
 }
@@ -71,7 +72,7 @@ function stop(){
  epoch++;
  controller?.abort();controller=null;
  clearTimeout(poll);poll=null;
- connected=false;pending=false;retry=null;
+ connected=false;networkReady=false;pending=false;retry=null;
  if(uncertain)connectionFailure('Resynchronizing the room. Check its current state before acting again.');
  if(socket){socket.onclose=null;socket.onerror=null;socket.close();socket=null;}
 }
@@ -89,6 +90,7 @@ function accept(data){
  if(room?.game&&!next.game)return;
  if(room?.game&&next.game&&(next.game.version<room.game.version||(next.game.version===room.game.version&&next.game.serverNow<room.game.serverNow)))return;
  room=next;
+ networkReady=true;
  if(connectionIssue)tell('Connection restored.');
  if(room.game?.serverNow)offset=room.game.serverNow-Date.now();
  const meeting=room.game?.meeting?.id;
@@ -309,4 +311,4 @@ else{
  let remembered;try{remembered=sessionStorage.getItem('lantern-room');}catch{}
  if(remembered&&/^[A-Za-z0-9_-]{1,100}$/.test(remembered))openRoom(remembered);else render();
 }
-setInterval(()=>{if(document.hidden)return;if(worldExperience&&room)worldExperience.update(room,{now:Date.now()+offset,connected,pending,feedback:feedback.textContent});for(const item of document.querySelectorAll('[data-deadline]'))item.textContent=clockText(secondsUntil(Number(item.dataset.deadline),Date.now()+offset));},500);
+setInterval(()=>{if(document.hidden)return;if(worldExperience&&room)worldExperience.update(room,{now:Date.now()+offset,connected:networkReady,pending,feedback:feedback.textContent});for(const item of document.querySelectorAll('[data-deadline]'))item.textContent=clockText(secondsUntil(Number(item.dataset.deadline),Date.now()+offset));},500);
