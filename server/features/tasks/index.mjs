@@ -1,0 +1,8 @@
+/** Trusted packaged task definitions, never client or model code. */
+export function createTaskRegistry(definitions=[]){
+ const kinds=new Map();for(const d of definitions){if(!d||typeof d.id!=='string'||kinds.has(d.id)||typeof d.validate!=='function'||typeof d.apply!=='function')throw new TypeError('Invalid task registration');kinds.set(d.id,Object.freeze({...d}));}
+ return Object.freeze({validate(state,p,a,now,ctx){const t=p.tasks.find(t=>t.id===a.taskId);if(p.role!=='crew'||!t||t.completed||!ctx.nearby(state,p,ctx.geometry.WORLD_STATIONS[t.roomId],ctx.geometry.WORLD.interactionRadius))return {code:'INVALID_TASK',message:'No available task here.'};if(now<p.cooldowns.taskAt)return {code:'COOLDOWN',message:'Task equipment is cooling down.'};const d=kinds.get(t.kind??'relay');return d?d.validate(t,a,state,p,now,ctx):{code:'TASK_UNSUPPORTED',message:'This task definition is unavailable.'};},apply(state,p,a,now,ctx){const t=p.tasks.find(t=>t.id===a.taskId),d=kinds.get(t.kind??'relay');d.apply(t,a,state,p,now,ctx);p.cooldowns.taskAt=now+state.rules.taskCooldownMs;ctx.record(state,'task_progress',now,{playerId:p.id,taskId:t.id,completed:t.completed,visibleTo:[p.id]});},progress(task){return {kind:task.kind??'relay',completed:!!task.completed,progress:task.completed?1:0,total:1};},kinds:Object.freeze([...kinds.keys()])});
+}
+export const relayTask=Object.freeze({id:'relay',validate(task,a){return a.type==='task'||(a.interactionId==='confirm'&&a.value==='complete')?null:{code:'INVALID_TASK_INPUT',message:'Unrecognized relay interaction.'};},apply(task){task.completed=true;}});
+export const taskService=createTaskRegistry([relayTask]);
+

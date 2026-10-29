@@ -1,0 +1,10 @@
+import {BEACON_REPAIRS} from '../../../shared/beacon.mjs';
+import {WORLD_STATIONS,WORLD_BELL,distance} from '../../../shared/world.mjs';
+/** Goals are local proposals derived exclusively from the already-redacted view. */
+export function createGoalRegistry(definitions=[]){const list=[...definitions];if(list.some(d=>!d||typeof d.id!=='string'||typeof d.select!=='function')||new Set(list.map(d=>d.id)).size!==list.length)throw new TypeError('Invalid goal registration');return Object.freeze({select(view,memory){for(const d of list){const value=d.select(view,memory);if(value)return {...value,goalId:d.id};}return null;}});}
+export function localNavigationIntent(view,target){if(!target||!Number.isFinite(target.x)||!Number.isFinite(target.y)||!view.availableActions.includes('navigate')||view.self?.transit)return {type:'wait'};if(view.self.moving&&view.self.destination&&distance(view.self.destination,target)<1)return {type:'wait'};return {type:'navigate',x:target.x,y:target.y};}
+export const localGoals=createGoalRegistry([
+{id:'repair',select(view){if(view.self?.role!=='crew')return null;const critical=view.sabotage?.active?view.sabotage:null;let sites=critical?.sites??(critical?BEACON_REPAIRS[critical.kind??'power']:null);if(sites?.length){const target=sites.filter(s=>!s.completed&&!s.repaired).sort((a,b)=>distance(view.self.position,a.position)-distance(view.self.position,b.position))[0];if(target)return {target:target.position,systemId:critical.kind??'power',siteId:target.id};}for(const kind of ['lights','communications'])if(view.systems?.[kind]?.active)return {target:BEACON_REPAIRS[kind][0].position,systemId:kind,siteId:BEACON_REPAIRS[kind][0].id};return null;}},
+{id:'task',select(view){if(view.self?.role!=='crew')return null;const task=view.self.tasks.filter(t=>!t.completed).sort((a,b)=>distance(view.self.position,WORLD_STATIONS[a.roomId])-distance(view.self.position,WORLD_STATIONS[b.roomId]))[0];return task?{target:WORLD_STATIONS[task.roomId],taskId:task.id}:null;}}
+]);
+

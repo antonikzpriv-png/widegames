@@ -1,6 +1,6 @@
 /** Public original beacon fixtures; never hidden roles or per-match state. */
 export const BEACON_VERSION=1;
-export const BEACON_ACTION_FIELDS=Object.freeze({systemSabotage:['kind','targetId'],systemRepair:['systemId','siteId'],vent:['entryId','exitId'],investigate:['deviceId'],deviceCancel:[],ability:['abilityId','targetId']});
+export const BEACON_ACTION_FIELDS=Object.freeze({systemSabotage:['kind','targetId'],systemRepair:['systemId','siteId'],vent:['entryId','exitId'],investigate:['deviceId'],deviceCancel:[],taskInteract:['taskId','interactionId','value'],ability:['abilityId','targetId']});
 export const DEFAULT_BEACON_RULES=Object.freeze({visionRadius:360,lightsVisionRadius:110,saboteurVisionRadius:400,lightsDurationMs:45000,communicationsDurationMs:35000,doorDurationMs:12000,ventTravelMs:1600,ventCooldownMs:15000,deviceReadMs:2000,deviceCooldownMs:5000,observationLimit:64});
 export const BEACON_DOORS=Object.freeze([
 {id:'west-upper',roomId:'archive',x:520,y:450,width:26,height:80},
