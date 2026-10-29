@@ -11,3 +11,42 @@ Stormbreak Annex is1800x1400 with eight named rooms. Northern ring, cross-deck b
 Coordinator: assign exact map before initialize/task generation; use geometry.ROOM_LAYOUT/WORLD_VIEWPOINT/WORLD_SPAWN_ROOM and fixtures. Integrations: resolve five Annex door rectangles by map; grace/occupancy checks must include body-radius overlap before setting closed. Spatial runtime refuses collision and invalidates blocked routes, but never teleports occupants; systems must defer/jam occupied thresholds. Device/camera owner must resolve Annex fixtures.
 
 Initial controls use real public geometry: registry/default exact legacy equivalence; immutable graph with cycles/spur;12 nonoverlapping spawns; every fixture and56 ordered station routes; interleaved original/Annex caches. No provider, browser or root tactical lifecycle qualification implied. Spatial metadata adaptation follows as a separate milestone.
+
+## Two-door fixture correction
+
+The first frozen fixture milestone19e4bf6 exposed a meaningful follow-up counterexample: simultaneously closed annex-west-ladder and annex-central-riser disconnected Ballast Vault/Drift Canteen. The new every-legal-pair connectivity regression fails on that exact fixture, evidence _artifacts/tactical-map-two-door-negative.txt. Final replacement: annex-west-ladder becomes annex-north-riser at {x:850,y:450,width:100,height:24}, roomId muster. All other room/floor/fixture coordinates remain unchanged. This keeps both western ladder and southern link permanently traversable; the upper central riser becomes a closable chokepoint with east/west detours. Consumers must use the correction commit's full registry. No published/persisted production map migration is performed.
+
+An intermediate uncommitted east-bypass placement also failed the same control when combined with north-east, isolating the eastern sector; evidence tactical-map-two-door-negative-east-bypass.txt. The final north-riser placement preserves three independently closable entrances to central sectors and leaves the full east cross-deck permanently available. No assertion was weakened.
+
+Initial spatial invocation hit an import syntax error before assertions; corrected the obsolete import. The later42-check focused run had41 passes and one static helper LOS failure: the intended prop check had not been inserted due to a CRLF-sensitive text edit. The authoritative spatial LOS tests already passed. Corrected the shared Annex helper, retaining the unchanged negative assertion and evidence _artifacts/tactical-map-focused-static-los-negative.txt; original shared/world.mjs is untouched.
+
+## Spatial runtime handoff
+
+createSpatialWorld(geometry) retains all current exports: WORLD, point, walkable, station, bell, sees, nearby, initialize, stop, stopAll, settle, navigation, navigate, input, moving, observe, projectWorld, adoptVitals, validateSpatialState. No root engine or shared contracts changed. Geometry fixtures select doors, local passage traces and native owner-vitals recognition. WORLD_SPAWN_ROOM selects fallback roster placement, WORLD_VIEWPOINT selects immutable spectator location, and ROOM_LAYOUT supplies the non-Bridge metadata fallback. For raw legacy/custom geometry without these fields, the original Bridge/default beacon fixtures remain supported. Original p1..p6 coordinates and custom12 fallback layout compare exactly with the original runtime inputs. Schema1/2 remain outside this factory.
+
+Annex spectator vision.mode is 'viewpoint', origin {x:900,y:260}; original beacon retains mode 'bridge', origin {x:800,y:285}. Annex spectator observation IDs use o:muster:<sequence>; original o:bridge remains unchanged. Self vision.mode remains player, ended reveal unchanged. Unknown remote deaths, sight/body/witness/muster/owner-vitals knowledge, bounded dated hatch traces, explicit recipients, JSON cursors and defensive projection copies remain intact. Old-map hatch/device IDs cannot establish Annex observations. No remote position/role/destination, hidden passage endpoint or recipient list is introduced.
+
+Final door fixtures: annex-north-west, annex-north-east, annex-north-riser, annex-cross-deck, annex-central-riser. The early19e4bf6 fixture is superseded by the accompanying spatial milestone. Exact north-riser replacement described above; other geometry/station/bell/passage/repair/device/camera coordinates did not change. Annex static canSeeWorldPoint also blocks opaque props; original shared/world.mjs helpers remain untouched. Static geometry caches are descriptor-local; authoritative dynamic route caches exist only inside each path call, so interleaved matches/door changes cannot reuse another match's result. Accepted routes stop at collision and clear destination; new proposals recompute alternate paths. No teleport, automatic reroute, client speed or new authority added.
+
+Checks and actual results:
+
+- New tactical-map registry/spatial tests:16 distinct checks.56 ordered station routes,280 single-door ordered station routes,80 routes covering all10 legal two-door combinations from Muster to all8 rooms,12 ordered critical-site pairs, all fixtures,12 nonoverlapping native/custom spawns, two-map interleaving, LOS/lights/proximity, stale path collision/reopen, speed/diagonal/lease/sequence, corridor last room, JSON restart, map-specific private knowledge/muster/reveal and defensive copies.
+- Relevant original tests:26 passed (geometry7, knowledge10, hatch/restore5, actual schema3 engine integration4). Real engine controls include schema1/2 opt-out creation, local death/muster privacy, prop-blocked bell permissions and chronological private passage traces.
+- Combined invocation:41 passed/1 failed on the missed static LOS edit; unchanged failed assertion then passed in its focused rerun. Thus42 distinct final checks passed across those invocations, no skips; not a claim of a clean42-test invocation. All negative evidence retained, including both legal-pair isolation counterexamples and initial import compile error. No behavioral assertion was weakened.
+
+Commands from this assigned worktree (Node24.20.0, synthetic module clocks/rosters, no providers):
+
+~~~powershell
+$env:TEMP='D:/Widegames-work/temp'
+$env:TMP=$env:TEMP
+node --test tests/tactical-map-registry.test.mjs
+node --test tests/tactical-map-spatial.test.mjs
+node --test --test-name-pattern='every legal pair' tests/tactical-map-spatial.test.mjs
+node --test tests/tactical-map-registry.test.mjs tests/tactical-map-spatial.test.mjs tests/beacon-world-geometry.test.mjs tests/beacon-world-knowledge.test.mjs tests/beacon-world-traces.test.mjs tests/beacon-world-engine.test.mjs
+node --test --test-name-pattern='Annex static sight' tests/tactical-map-registry.test.mjs
+git diff --check
+~~~
+
+Evidence in ignored _artifacts: tactical-map-spatial-first.txt (initial9 passing), tactical-map-two-door-negative.txt, tactical-map-two-door-negative-east-bypass.txt, tactical-map-two-door-positive.txt, tactical-map-focused-static-los-negative.txt (combined41/42), tactical-map-static-los-positive.txt. Some commands precede the added final controls; the final file contains16 tactical checks. Module fixtures directly construct authoritative-clone-like states and record actual supplied times; they do not claim client acceptance or root schema4 lifecycle coverage. Legacy integration controls use real engine exports. No fake model prompt receives hidden state.
+
+Limits/manager integration: root must resolve and persist exact map before init/tasks and pass geometry into root context, systems and investigation; root tactical schema4/restore/lobby/AI/transport integration is coordinator-owned. Occupied-threshold one-second grace, radius-overlap/defer/jam and no displacement require Integrations' version2 systems implementation and independent integration checks. The spatial layer does not excuse an invalid closed door around an occupant. These controls prove geometric alternate routes for all legal one/two closures, not the systems closure schedule. No camera presentation/browser, complete tactical match, provider or deployed production qualification is implied, and this is not independent approval of Core's implementation. Manager/other owner must review. No runtime changes outside ownership, installs, Chrome, other worktree edits, main/push/deploy.
