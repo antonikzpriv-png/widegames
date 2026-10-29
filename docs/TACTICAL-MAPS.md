@@ -88,3 +88,41 @@ node --test tests/tactical-map-systems-review.test.mjs
 ~~~
 
 Evidence: _artifacts/tactical-map-systems-independent.txt (4 pass/8 fail, missing expected rejection), tactical-map-systems-future-probe.json (eight accepted corrupted-checkpoint cases). All261 original archive hashes verify again after the run. Runtime fix62498d816971c39e46f8ee625da278066b88cd5c remains separate from this independent review/test receipt. No B2/root/other-worktree code edits or self-approval; no Chrome, providers, installs, full suite, main/push/deploy.
+
+## Independent B3 investigation review: exactc99cd2a
+
+Bounded acceptance of the tested B3/root boundaries; **no new concrete product defect found**. Exact source **c99cd2ada0f261ef323e75080cf707e6a95b8757**, excluding manager's uncommitted tactical-default configuration. Tests explicitly use tactical:true/direct createMatch for schema4; legacy control explicitly uses world:true,systems:true without tactical. Owner B3 runtime2119e021cd31dc9aad7d1727101af8c2b49a7466 is byte-identical at this pin: index.mjs Git blob86a5067b30c20c9ed4a1df4ec5f6c28ff5c16f5c, data.mjs blobf5d0e220e05e23be8c40dca54e9392a56991629d. Owner test milestones1c8dae7c0e3613d761820d4afcb4513177feb8f4 and8d28407f3ca12774363469ae478700be7dc32695 were inspected as context, not rerun as independent evidence.
+
+Source qualification: own ignored _artifacts/tactical-investigation-c99cd2a contains267 canonical raw Git blobs verified against object IDs during extraction, with per-file SHA256 manifest. No runtime overlays, archived source mutations or other-worktree changes. All267 hashes verify before tests and again after execution. Only this document and tests/tactical-map-investigation-review.test.mjs are changed for this assignment. Prior736b145 receipt, eight failed future-systems-activation controls and evidence remain unchanged and were not rerun.
+
+Root binding inspected directly: context.sees delegates to spatial sees using p.id only when state.players.includes(p); otherwise it supplies null. B3 access uses actorFor to recover the canonical actor from the supplied ID. Camera frames deliberately construct a separate stationary crew observer at camera.position; it is not a canonical player and therefore receives the public-camera vision policy, independent of operator faction. B3 separately clamps the field radius before LOS and excludes dead/transit targets, with no role/route/attack payload in frame entries. Camera samples are private device observations, not witness records. Spatial knowledge adopts only owner-native vitals samples; camera contacts do not promote attack/death knowledge. No model or provider is invoked by these engine/module paths.
+
+Six independent checks, each exercising both actual maps:
+
+1. Real root camera reads by crew and saboteur operators, with four intentionally staged living targets: near, floor-connected behind a door, behind a solid prop, and380 units away. Normal360 field includes near/corridor targets, excludes opaque-prop target and outside-field target; limited:false confirms exclusion is not cap eviction. Lights110 masks the distant contact for either operator faction. After real warning/closure, the within-radius corridor target is masked by the correct map door while near contact remains. Original normal sample stays historical after lighting restoration. Beacon uses engine-camera/east-lower/turbine; Annex uses annex-west-camera/annex-cross-deck/rivet-bench.
+2. A nonzero input1ms before completion cancels with no sample; input exactly at completion follows the already-settled legitimate sample. This validates actual chronological precedence instead of incorrectly demanding cancellation of a read completed before a same-time input action.
+3. Actual elimination of the reader1ms before deadline cancels for dead; automatic phase transition tied exactly with completion wins precedence and fails the read for phase at the original timestamp. No invented successful/empty observation appears.
+4. Actual persisted room snapshots accept unchanged valid facts, reject an unchanged sample transplanted to another owner, wrong provenance owner/type, other-map identity, future sample time with matching rewritten ID, and future session start. Detached valid samples without sessions are an explicit control; the future-observation fixture removes its elapsed session so rejection is not merely a broken session-to-observation link. An actual schema3 camera read retains its old sample/session/frame shape and passes full snapshot validation.
+5. A dated pre-attack frame contains the victim; after a real remote kill, a new frame omits it and contains the attacker. Old facts remain unchanged, roster status stays unknown/last-known rather than becoming globally dead, other actor/spectator knowledge is unchanged, no witness/body/report hint is granted remotely. A guessed remote body ID is denied by the real engine with INVALID_BODY. No camera fact grants physical report or eyewitness authority.
+6. Interleaved map histories survive JSON restart/full snapshot validation and safe projection from deeply frozen state. Mutating returned map/provenance/field/device coordinates cannot alter state. Frame player facts remain exactly id/position; sample map/owner/timestamp and private replay recipient scope remain intact. Other actors/spectator do not receive the reader's samples.
+
+All staging uses real accepted navigate/input/actions and engine deadlines. Supplied clocks,8-keeper roster/seed and100/1000ms reads are labeled offline fixtures. Raw state/roles/path lengths are harness oracles only; no fake model/client prompt receives them. No hand-edited root positions, roles or phase state is used for positive behavior. Deliberately corrupt snapshot copies are limited to negative validation cases.
+
+Actual results: initial six-check invocation **5 passed/1 failed**, where the sole failure was this review test expecting UNAVAILABLE instead of the documented actual remote-report denial INVALID_BODY. Read the root report branch, corrected that specific expectation, retained accepted:false and all privacy/permission assertions. Also strengthened future-time isolation and non-cap masking controls. Only the three affected groups were rerun: **3/3 passed**. Thus all six final distinct checks have passing evidence across the two bounded invocations; no claim of a clean six-check final invocation, no skips or product assertions weakened. Initial run1521ms, targeted follow-up1245ms. No broader suite or owner test suite was run.
+
+Exact commands from the assigned D: worktree:
+
+~~~powershell
+$env:TEMP='D:/Widegames-work/temp'
+$env:TMP=$env:TEMP
+$env:TACTICAL_MAP_INVESTIGATION_ROOT=(Join-Path (Get-Location) '_artifacts/tactical-investigation-c99cd2a')
+$env:TACTICAL_MAP_INVESTIGATION_PIN='c99cd2ada0f261ef323e75080cf707e6a95b8757'
+node --check tests/tactical-map-investigation-review.test.mjs
+node --test tests/tactical-map-investigation-review.test.mjs
+node --test --test-name-pattern='camera fields|real checkpoint|dated before' tests/tactical-map-investigation-review.test.mjs
+git diff --check
+~~~
+
+Evidence: _artifacts/tactical-map-investigation-review-first.txt, tactical-map-investigation-review-final-targeted.txt and exact archive manifest. Tests default to current-checkout runtime; explicit archive pin verifies all hashes. A pre-schema4 owner foundation skips only this integration suite with its stated reason; explicit source override requires real schema4 and cannot silently fall back. No historical source is silently imported by ordinary current tests.
+
+Limits: bounded B3/root/restore/knowledge integration on radial packaged cameras and8 keepers, not browser camera UI, HTTP identity boundary, actual disk process restart, directional custom FOV, camera saturation/load, exhaustive door/camera pairs, complete tactical matches or live provider qualification. This does not approve Core spatial code independently. Existing future-systems-activation finding remains open outside this assignment. No investigation/root/spatial/runtime edits, model calls, installs, Chrome, paid calls, main/push/deploy or other worktree edits.
