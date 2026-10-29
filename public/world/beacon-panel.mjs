@@ -1,3 +1,4 @@
+import {getMap} from '../../shared/maps/index.mjs';
 import {dom,control,setText,restoreTrigger} from './dom.mjs';
 import {clock} from './model.mjs';
 import {descriptors,descriptorKey,viewKey,systemSummary,criticalText,observationText,sessionText,cooldownText,interactionLabel,fieldNotes,fieldNoteText,hatchTraces,hatchTraceText} from './beacon-model.mjs';
@@ -21,19 +22,19 @@ export function createBeaconPanel({id,action,stop,feedback,change=()=>{}}){
   try{await stop();if(!current(h,key,origin))return;await action(h.type,fields);}catch(error){if(current(h,key,origin)&&error?.name!=='AbortError')feedback(error?.message||'Beacon action failed. Try again.');}finally{busy=false;if(!disposed)update(room,options);}
  }
  function update(next,nextOptions={}){
-  if(disposed)return;room=next;options=nextOptions;const game=room?.game,identity=JSON.stringify([room?.roomId,game?.matchId,game?.phase,game?.self?.id]);
+  if(disposed)return;room=next;options=nextOptions;const game=room?.game,map=getMap(game?.map??room?.map),identity=JSON.stringify([room?.roomId,game?.matchId,map.id,map.version,game?.phase,game?.self?.id]);
   if(lastConnected!==options.connected||lastSignal!==options.signal){generation++;lastConnected=options.connected;lastSignal=options.signal;}
   const context=viewKey(room);if(lastContext!==context){generation++;lastContext=context;}
   if(lastIdentity!==identity){generation++;if(lastIdentity!==null){open=false;pane.hidden=true;toggle.setAttribute('aria-expanded','false');}lastIdentity=identity;samples.clear();observations.replaceChildren();noteNodes.clear();notes.replaceChildren();traceNodes.clear();traces.replaceChildren();}
   node.hidden=game?.beaconVersion!==1;if(node.hidden)return;
-  setText(summary,systemSummary(game,options.now));setText(cooldowns,cooldownText(game,options.now));cooldowns.hidden=!cooldowns.textContent;setText(critical,game.sabotage?.active?`${clock(game.sabotage.deadlineAt,options.now)} remaining. ${criticalText(game)}`:'');critical.hidden=!game.sabotage?.active;
+  setText(summary,systemSummary(game,options.now));setText(cooldowns,cooldownText(game,options.now));cooldowns.hidden=!cooldowns.textContent;setText(critical,game.sabotage?.active?`${clock(game.sabotage.deadlineAt,options.now)} remaining. ${criticalText(game,map)}`:'');critical.hidden=!game.sabotage?.active;
   const travel=game.systems?.selfTransit||game.self?.transit;transit.hidden=!travel;setText(transit,travel?`Hatch transit${travel.exitId?' to '+travel.exitId:''}${Number.isFinite(travel.deadlineAt)?' - '+clock(travel.deadlineAt,options.now)+' remaining':''}. Walking and equipment unavailable.`:'');
-  setText(session,sessionText(game.investigation,options.now));
+  setText(session,sessionText(game.investigation,options.now,map));
   const hints=descriptors(game),ids=new Set(hints.map(h=>h.id));
   for(const [id,row]of rows)if(!ids.has(id)){const focused=row.node.contains(document.activeElement);row.node.remove();rows.delete(id);if(focused&&open)restoreTrigger(close);}
-  for(const h of hints){let row=rows.get(h.id);if(!row){const node=dom('div','lw-beacon-control'),button=control('',()=>send(h.id)),reason=dom('span');node.append(button,reason);controls.append(node);row={node,button,reason};rows.set(h.id,row);}setText(row.button,interactionLabel(h));row.button.dataset.beaconAction=h.type;row.button.dataset.interactionId=h.id;row.button.disabled=busy||!!options.pending;row.button.setAttribute('aria-disabled',String(h.enabled!==true||!options.connected||row.button.disabled));setText(row.reason,[h.roomId?`Location: ${h.roomId}.`:'',h.enabled===true?'':h.reason||'Unavailable'].filter(Boolean).join(' '));}
+  for(const h of hints){let row=rows.get(h.id);if(!row){const node=dom('div','lw-beacon-control'),button=control('',()=>send(h.id)),reason=dom('span');node.append(button,reason);controls.append(node);row={node,button,reason};rows.set(h.id,row);}setText(row.button,interactionLabel(h,game,map));row.button.dataset.beaconAction=h.type;row.button.dataset.interactionId=h.id;row.button.disabled=busy||!!options.pending;row.button.setAttribute('aria-disabled',String(h.enabled!==true||!options.connected||row.button.disabled));setText(row.reason,[h.roomId?`Location: ${h.roomId}.`:'',h.enabled===true?'':h.reason||'Unavailable'].filter(Boolean).join(' '));}
   empty.hidden=hints.length>0;setText(empty,!game.self?'Observing only. No private equipment access.':game.phase!=='roam'?'Equipment is unavailable during this phase.':'No permitted actions here. Approach a device, repair site or hatch.');
-  for(const [index,sample]of (game.investigation?.observations||[]).entries()){const key=sample.id||`${sample.deviceId}:${sample.at}:${index}`;if(samples.has(key))continue;const li=dom('li','',observationText(sample,game.players));observations.append(li);samples.set(key,li);}
+  for(const [index,sample]of (game.investigation?.observations||[]).entries()){const key=sample.id||`${sample.deviceId}:${sample.at}:${index}`;if(samples.has(key))continue;const li=dom('li','',observationText(sample,game.players,sample.map?getMap(sample.map):map));observations.append(li);samples.set(key,li);}
   const sampleIds=new Set((game.investigation?.observations||[]).map((s,i)=>s.id||`${s.deviceId}:${s.at}:${i}`));for(const [key,li]of samples)if(!sampleIds.has(key)){li.remove();samples.delete(key);}
   const ownNotes=fieldNotes(game),localTraces=hatchTraces(game);
   setText(notesHeading,`YOUR FIELD NOTES (${ownNotes.length})`);setText(traceHeading,`HISTORICAL HATCH OBSERVATIONS (${localTraces.length})`);
