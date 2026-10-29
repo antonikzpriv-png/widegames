@@ -158,3 +158,13 @@ for(const selection of MAP_CATALOG)test('registered map '+selection.id+' uses on
  const other=MAP_CATALOG.find(value=>value.id!==selection.id);
  if(other){const f=fixture({map:reference}),foreign=getMap(other.id);assert.equal(systems.validateSystemAction(f.state,f.sabs[0],sabotage('door',foreign.fixtures.doors[0].id),start,f.ctx).code,'INVALID_TARGET');const another=fixture({map:other.id});apply(f,f.sabs[0],sabotage('door',map.fixtures.doors[0].id));assert(another.state.systems.doors.every(d=>d.status==='open'));assert.deepEqual(f.state.systems.doors.map(d=>d.id),map.fixtures.doors.map(d=>d.id));}
 });
+
+
+test('threshold guard uses real unreported body position while ignoring reported/ejected saved positions and preserving living safety',()=>{
+ for(const mode of ['living','unreported','reported','no-body']){
+  const f=fixture(),door=f.map.fixtures.doors[0],p=f.crew[0],threshold={x:door.x+door.width/2,y:door.y+door.height/2};p.alive=mode==='living';p.position={...threshold};
+  if(mode==='unreported'){p.position={x:800,y:285};f.state.bodies=[{id:'body-'+p.id,playerId:p.id,position:{...threshold},reported:false}];}
+  if(mode==='reported')f.state.bodies=[{id:'body-'+p.id,playerId:p.id,position:{...threshold},reported:true}];
+  apply(f,f.sabs[0],sabotage('door',door.id));systems.advanceSystems(f.state,start+1000,f.ctx);assert.equal(f.state.systems.doors[0].status,['living','unreported'].includes(mode)?'jammed':'closed',mode);
+ }
+});
