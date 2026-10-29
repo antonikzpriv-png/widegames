@@ -1,5 +1,5 @@
 import {element as h,button,clockText,secondsUntil} from './ui.mjs';
-import {canAct,localBodies,localTargets,nameOf,roomName,eventText,outcomeText} from './presentation.mjs';
+import {canAct,localBodies,localTargets,nameOf,roomName,eventText,replayText,outcomeText} from './presentation.mjs';
 export function timer(deadline,now,label='Time remaining'){
  return h('span',{class:'timer',role:'timer','aria-label':label,'data-deadline':deadline},clockText(secondsUntil(deadline,now)));
 }
@@ -31,7 +31,7 @@ export function taskPanel(game,{pending,act}){
 }
 export function criticalPanel(game,now){
  const critical=game.sabotage;if(!critical?.active)return null;
- return h('section',{class:'panel critical',role:'region','aria-label':'Critical sabotage'},h('div',{class:'panel-title'},h('h2',{},'Critical system failing'),timer(critical.deadlineAt,now,'Critical system time remaining')),h('p',{},`Repair in ${roomName(critical.roomId)} · ${critical.repairsCompleted} / ${critical.repairsRequired} keepers contributed.`),h('small',{},'The critical countdown continues during council.'));
+ return h('section',{id:'critical-alert',class:'panel critical',role:'region','aria-label':'Critical sabotage'},h('div',{class:'panel-title'},h('h2',{},'Critical system failing'),timer(critical.deadlineAt,now,'Critical system time remaining')),h('p',{},`Repair in ${roomName(critical.roomId)} · ${critical.repairsCompleted} / ${critical.repairsRequired} keepers contributed.`),h('small',{},'The critical countdown continues during council.'));
 }
 export function councilPanel(game,{pending,act,now,draft,setDraft}){
  if(!['discussion','voting'].includes(game.phase))return null;
@@ -42,7 +42,7 @@ export function councilPanel(game,{pending,act,now,draft,setDraft}){
  if(!log.children.length)log.append(h('li',{class:'empty'},'The council is quiet. Share what you witnessed.'));
  pane.append(log);
  if(isDiscussion&&game.self?.alive){
-  const id='council-message',input=h('textarea',{id,name:'message',maxlength:280,rows:3,placeholder:'What did you see?','data-focus':'council-message',disabled:!canAct(game,'say',pending),oninput:event=>setDraft(event.target.value)});input.value=draft;
+  const id='council-message',input=h('textarea',{id,name:'message',maxlength:280,rows:3,placeholder:'What did you see?','data-focus':'council-message',disabled:!canAct(game,'say',pending),oncompositionstart:event=>{event.target._uiComposing=true;},oncompositionend:event=>{event.target._uiComposing=false;setDraft(event.target.value);},oninput:event=>setDraft(event.target.value)});input.value=draft;
   pane.append(h('form',{onsubmit:event=>{event.preventDefault();const text=event.currentTarget.elements.namedItem('message').value.trim();if(!text)return;act('say',{text});}},h('label',{for:id},'Your message'),input,h('div',{class:'panel-title'},h('small',{},'Up to 280 characters · limited messages per council'),h('button',{type:'submit',class:'primary',disabled:!canAct(game,'say',pending),'data-focus':'send-message'},'Send message'))));
  }else if(isDiscussion)pane.append(h('p',{class:'empty'},'Listen to the council. Only living keepers can speak.'));
  else{
@@ -64,7 +64,7 @@ export function resultsPanel(game,{replay,loadReplay,replayIndex,setReplayIndex,
  if(!replay)pane.append(button('Load full replay',loadReplay,{class:'primary',disabled:pending,'data-focus':'load-replay'}));
  else{
   const current=replay[replayIndex],range=h('input',{type:'range',id:'replay-step',min:0,max:Math.max(0,replay.length-1),value:replayIndex,'data-focus':'replay-step',oninput:event=>setReplayIndex(Number(event.target.value))});
-  pane.append(h('h3',{},'Role-revealed replay'),h('p',{class:'muted'},'Recorded events and attributed actions from this match.'),h('label',{for:'replay-step'},`Event ${replay.length?replayIndex+1:0} of ${replay.length}`),range,h('p',{class:'replay-event','aria-live':'polite'},current?eventText(current,game):'No recorded events.'),h('div',{class:'actions'},button('Previous',()=>setReplayIndex(replayIndex-1),{disabled:replayIndex<=0,'data-focus':'replay-prev'}),button('Next',()=>setReplayIndex(replayIndex+1),{disabled:replayIndex>=replay.length-1,'data-focus':'replay-next'})),h('details',{},h('summary',{},'Read the complete replay'),h('ol',{class:'timeline replay-log'},replay.map(event=>h('li',{},eventText(event,game))))));
+  pane.append(h('h3',{},'Role-revealed replay'),h('p',{class:'muted'},'Recorded events and attributed actions from this match.'),h('label',{for:'replay-step'},`Event ${replay.length?replayIndex+1:0} of ${replay.length}`),range,h('p',{class:'replay-event','aria-live':'polite'},current?replayText(current,game):'No recorded events.'),h('div',{class:'actions'},button('Previous',()=>setReplayIndex(replayIndex-1),{disabled:replayIndex<=0,'data-focus':'replay-prev'}),button('Next',()=>setReplayIndex(replayIndex+1),{disabled:replayIndex>=replay.length-1,'data-focus':'replay-next'})),h('details',{},h('summary',{},'Read the complete replay'),h('ol',{class:'timeline replay-log'},replay.map(event=>h('li',{},replayText(event,game))))));
  }
  return pane;
 }
