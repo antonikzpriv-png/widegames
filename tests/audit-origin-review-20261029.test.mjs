@@ -1,4 +1,4 @@
-﻿/** Independent PUBLIC_ORIGIN review; optional override selects an exact archived revision. */
+/** Independent PUBLIC_ORIGIN review; optional override selects an exact archived revision. */
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import path from 'node:path';
@@ -9,15 +9,17 @@ import {spawn} from 'node:child_process';
 import http from 'node:http';
 import {inspect} from 'node:util';
 
-const root=process.env.ORIGIN_REVIEW_ROOT||fileURLToPath(new URL('../',import.meta.url));
+const checkoutRoot=fileURLToPath(new URL('../',import.meta.url));
+const root=process.env.ORIGIN_REVIEW_ROOT||checkoutRoot;
 const {loadConfig}=await import(pathToFileURL(path.join(root,'server/config.mjs')));
 const {createGameServer}=await import(pathToFileURL(path.join(root,'server/transport.mjs')));
 const {WebSocket}=createRequire(path.join(root,'package.json'))('ws');
-const temp=path.resolve('D:/Widegames-work/temp');
+const temp=path.join(checkoutRoot,'_artifacts','test-temp');
+await mkdir(temp,{recursive:true});
 const userMarker='origin-review-synthetic-user',secretMarker='origin-review-synthetic-password',providerMarker='origin-review-synthetic-provider-key';
 const stub={describe:()=>({mode:'demo',provider:'review-stub',calls:0,tokens:0,costUsd:0}),async decide(){return null;}};
 const invalid=[
- ['opaque-file','file:///D:/origin-review-fixture'],['opaque-data','data:text/plain,fixture'],['opaque-about','about:blank'],['literal-null','null'],
+ ['opaque-file',pathToFileURL(path.join(temp,'origin-review-fixture')).href],['opaque-data','data:text/plain,fixture'],['opaque-about','about:blank'],['literal-null','null'],
  ['websocket','ws://localhost:3000'],['secure-websocket','wss://example.test'],['ftp','ftp://example.test'],
  ['userinfo',`http://${userMarker}:${secretMarker}@localhost:3000`],['username-only',`https://${userMarker}@example.test`],
  ['userinfo-invalid-port',`http://${userMarker}:${secretMarker}@localhost:999999`],
@@ -45,13 +47,14 @@ async function socket(port,route,cookie,origin){return new Promise((resolve,reje
 });}
 async function until(predicate,timeout=10000){const end=Date.now()+timeout;while(!predicate()&&Date.now()<end)await new Promise(r=>setTimeout(r,10));assert.ok(predicate(),'Review child did not start or exit within bound');}
 async function cli(f,publicOrigin,label){
- const directory=path.join(f.directory,label),env=Object.fromEntries(Object.entries({PATH:process.env.PATH,SystemRoot:process.env.SystemRoot,WINDIR:process.env.WINDIR,COMSPEC:process.env.COMSPEC,PATHEXT:process.env.PATHEXT,TEMP:temp,TMP:temp,npm_config_cache:'D:/Widegames-work/npm-cache'}).filter(([,value])=>value!==undefined));
+ const directory=path.join(f.directory,label),env=Object.fromEntries(Object.entries({PATH:process.env.PATH,SystemRoot:process.env.SystemRoot,WINDIR:process.env.WINDIR,COMSPEC:process.env.COMSPEC,PATHEXT:process.env.PATHEXT,TEMP:temp,TMP:temp,npm_config_cache:process.env.npm_config_cache||path.join(checkoutRoot,'_artifacts','npm-cache')}).filter(([,value])=>value!==undefined));
  Object.assign(env,{HOST:'127.0.0.1',PORT:'0',DATA_DIR:directory,PUBLIC_ORIGIN:publicOrigin,AI_PROVIDER:'demo',ANTHROPIC_API_KEY:providerMarker});
  const script=`process.on('message',message=>{if(message==='stop'){process.disconnect();process.emit('SIGTERM');}});await import(${JSON.stringify(pathToFileURL(path.join(root,'server/main.mjs')).href)});`;
  const child=spawn(process.execPath,['--input-type=module','--eval',script],{cwd:root,env,stdio:['ignore','pipe','pipe','ipc'],windowsHide:true});let stdout='',stderr='';child.stdout.on('data',c=>stdout+=c);child.stderr.on('data',c=>stderr+=c);
- const exited=new Promise((resolve,reject)=>{child.once('exit',(code,signal)=>resolve({code,signal}));child.once('error',reject);});
+ const exited=new Promise((resolve,reject)=>{child.once('close',(code,signal)=>resolve({code,signal}));child.once('error',reject);});
  f.closes.push(async()=>{if(child.connected)child.send('stop',()=>{});const timer=setTimeout(()=>child.kill(),3000);try{await exited;}finally{clearTimeout(timer);}});
  await until(()=>child.exitCode!==null||stdout.includes('Listening on'));
+ if(child.exitCode!==null)await exited; // Drain both output streams before checking rejected CLI logs.
  return {child,directory,get stdout(){return stdout;},get stderr(){return stderr;},get port(){return Number(/Listening on 127\.0\.0\.1:(\d+)/.exec(stdout)?.[1])||null;},exited};
 }
 
@@ -115,12 +118,13 @@ test('real CLI rejects userinfo origins without logging synthetic URL or provide
 test('real CLI accepts HTTPS root/default-port origin and keeps provider marker out of logs/health',async t=>{
  const f=await fixture(t,'cli-valid'),child=await cli(f,'https://example.test:443/','state');assert.ok(child.port,child.stderr);
  const health=await request(child.port,'/api/health',{origin:'https://example.test'});assert.equal(health.status,200);
+ child.child.send('stop',()=>{});assert.equal((await child.exited).code,0);
  for(const output of [child.stdout,child.stderr,health.text])assert.equal(output.includes(providerMarker),false);
 });
 
 test('opaque origin cannot mint a room using Origin null; cross-site protection must remain intact',async t=>{
  const f=await fixture(t,'opaque-null');let service;
- try{service=await running(f,config(f.directory,'file:///D:/origin-review-null-fixture'));}catch(error){assert.match(error.message,/origin|URL/i);assert.deepEqual(await readdir(f.directory),[]);return;}
+ try{service=await running(f,config(f.directory,pathToFileURL(path.join(temp,'origin-review-null-fixture')).href));}catch(error){assert.match(error.message,/origin|URL/i);assert.deepEqual(await readdir(f.directory),[]);return;}
  const crossSite=await request(service.port,'/api/rooms',{method:'POST',origin:'null',body:{mode:'human'},headers:{'Sec-Fetch-Site':'cross-site'}});assert.equal(crossSite.status,403);
  const result=await request(service.port,'/api/rooms',{method:'POST',origin:'null',body:{mode:'human'}});assert.notEqual(result.status,201,'Invalid opaque PUBLIC_ORIGIN must not authorize null-origin room creation');
 });
