@@ -129,7 +129,14 @@ test('AI scheduler gives all six actors turns and real demo bots reach a replay 
   const f=await fixture(t,{now:()=>now,tickMs:10,ai:{provider:'demo',decisionIntervalMs:100},rules:{tasksPerCrew:1,moveCooldownMs:1,taskCooldownMs:1,initialKillCooldownMs:100000,killCooldownMs:100000,sabotageCooldownMs:100000,roamDeadlineMs:100000,maxMatchMs:1000000}},{aiController:ai});
   const clock=setInterval(()=>{now+=100;},10);t.after(()=>clearInterval(clock));
   const host=await f.create('spectator'),route=`/api/rooms/${host.body.roomId}`;await f.request(route+'/start',{method:'POST',cookie:host.cookie,data:{id:'s'}});
-  await until(()=>f.game.rooms.get(host.body.roomId).data.state.phase==='ended');
+  const deadline=performance.now()+10000;
+  while(f.game.rooms.get(host.body.roomId).data.state.phase!=='ended'){
+    if(performance.now()>=deadline){
+      const current=f.game.rooms.get(host.body.roomId),state=current.data.state,tasks=state.players.flatMap(player=>player.tasks);
+      assert.fail(`AI scheduler did not end within 10000ms: ${JSON.stringify({phase:state.phase,version:state.version,virtualNow:now,actors:[...turns].sort(),tasks:`${tasks.filter(task=>task.completed).length}/${tasks.length}`,aiBusy:current.aiBusy,aiBlocked:current.aiBlocked})}`);
+    }
+    await delay(10);
+  }
   assert.equal(turns.size,6);const room=(await f.request(route,{cookie:host.cookie})).body;assert.equal(room.game.outcome.winner,'crew');assert.equal(room.ai.mode,'demo');assert.equal(room.ai.calls,0);
   assert(room.game.players.every(p=>['crew','saboteur'].includes(p.role)));const replay=await f.request(route+'/replay',{cookie:host.cookie});assert.equal(replay.status,200);assert(replay.body.replay.length>0);
 });
