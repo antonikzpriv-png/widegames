@@ -8,9 +8,9 @@ export function createWorldInput({target,joystick,knob,getState,onInput,onClick,
   const now=clock();if(!force&&dx===lastVector.dx&&dy===lastVector.dy&&(!dx&&!dy||now-lastSent<190))return;
   lastVector={dx,dy};lastSent=now;
   sequence=Math.max(sequence,getState().inputSeq||0)+1;
-  try{Promise.resolve(onInput({seq:sequence,dx,dy})).catch(error=>onError(error));}catch(error){onError(error);}
+  let result;try{result=Promise.resolve(onInput({seq:sequence,dx,dy}));}catch(error){result=Promise.reject(error);}result.catch(error=>onError(error));return result;
  };
- const stop=()=>{keys.clear();stick=null;route=[];pointer=null;if(knob)knob.style.transform='translate(0px,0px)';send(0,0,true);};
+ const stop=()=>{const state=getState(),shouldSend=(state.enabled||lastVector.dx||lastVector.dy)&&state.inputAllowed!==false;keys.clear();stick=null;route=[];pointer=null;if(knob)knob.style.transform='translate(0px,0px)';if(shouldSend)return send(0,0,true);lastVector={dx:0,dy:0};return Promise.resolve();};
  const vector=()=>{
   if(!moving())return {dx:0,dy:0};
   let dx=0,dy=0;
@@ -20,11 +20,11 @@ export function createWorldInput({target,joystick,knob,getState,onInput,onClick,
   if(keys.has('s')||keys.has('arrowdown'))dy++;
   if(stick){dx=stick.dx;dy=stick.dy;}
   if(!dx&&!dy&&route.length){const pos=getState().position;if(pos){while(route.length&&Math.hypot(route[0].x-pos.x,route[0].y-pos.y)<12)route.shift();if(route.length){dx=route[0].x-pos.x;dy=route[0].y-pos.y;}}}
-  const length=Math.hypot(dx,dy);return length?{dx:dx/length,dy:dy/length}:{dx:0,dy:0};
+  const length=Math.hypot(dx,dy);return length?{dx:Math.abs(dx/length)>=.32?Math.sign(dx):0,dy:Math.abs(dy/length)>=.32?Math.sign(dy):0}:{dx:0,dy:0};
  };
  const tick=()=>{if(!moving()){if(lastVector.dx||lastVector.dy)stop();return;}const {dx,dy}=vector();send(dx,dy);};
  const keydown=e=>{
-  if(e.defaultPrevented||e.ctrlKey||e.metaKey||e.altKey||typing(e))return;
+  if(e.defaultPrevented||e.isComposing||e.keyCode===229||e.ctrlKey||e.metaKey||e.altKey||typing(e))return;
   const key=e.key.toLowerCase();
   if(['w','a','s','d','arrowup','arrowleft','arrowdown','arrowright'].includes(key)&&moving()){
    e.preventDefault();route=[];keys.add(key);tick();
@@ -35,13 +35,13 @@ export function createWorldInput({target,joystick,knob,getState,onInput,onClick,
   }
  };
  const keyup=e=>{const key=e.key.toLowerCase();if(keys.delete(key)){e.preventDefault();tick();}};
- const visibility=()=>{if(doc.hidden)stop();};
+ const visibility=()=>{if(doc.hidden){stop();win.clearInterval(timer);timer=null;}else if(!disposed&&timer===null)timer=win.setInterval(tick,50);};
  const click=e=>{if(!moving()||e.button!==0)return;const path=onClick(e);if(path){keys.clear();stick=null;route=path;tick();}};
  const stickMove=e=>{if(e.pointerId!==pointer)return;const r=joystick.getBoundingClientRect();const x=e.clientX-r.left-r.width/2,y=e.clientY-r.top-r.height/2,length=Math.hypot(x,y),scale=Math.min(38,length)/(length||1);stick=length<9?{dx:0,dy:0}:{dx:x/length,dy:y/length};knob.style.transform=`translate(${x*scale}px,${y*scale}px)`;tick();};
  const stickDown=e=>{if(!moving())return;e.preventDefault();pointer=e.pointerId;route=[];keys.clear();joystick.setPointerCapture(e.pointerId);stickMove(e);};
  const stickEnd=e=>{if(e.pointerId===pointer)stop();};
  win.addEventListener('keydown',keydown);win.addEventListener('keyup',keyup);win.addEventListener('blur',stop);doc.addEventListener('visibilitychange',visibility);
  target.addEventListener('click',click);joystick.addEventListener('pointerdown',stickDown);joystick.addEventListener('pointermove',stickMove);joystick.addEventListener('pointerup',stickEnd);joystick.addEventListener('pointercancel',stickEnd);joystick.addEventListener('lostpointercapture',stickEnd);
- timer=win.setInterval(tick,50);
+ if(!doc.hidden)timer=win.setInterval(tick,50);
  return {stop,sync(){sequence=Math.max(sequence,getState().inputSeq||0);if(!moving()&&(lastVector.dx||lastVector.dy))stop();},dispose(){if(disposed)return;stop();disposed=true;win.clearInterval(timer);win.removeEventListener('keydown',keydown);win.removeEventListener('keyup',keyup);win.removeEventListener('blur',stop);doc.removeEventListener('visibilitychange',visibility);target.removeEventListener('click',click);joystick.removeEventListener('pointerdown',stickDown);joystick.removeEventListener('pointermove',stickMove);joystick.removeEventListener('pointerup',stickEnd);joystick.removeEventListener('pointercancel',stickEnd);joystick.removeEventListener('lostpointercapture',stickEnd);}};
 }

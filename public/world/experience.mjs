@@ -1,8 +1,11 @@
 ﻿import * as world from '../../shared/world.mjs';
 import {CHARACTERS} from '../../shared/contracts.mjs';
-import {aiLabel,clock,contexts,point,roleLabel,visiblePlayers} from './model.mjs';
+import {aiLabel,clock,contexts,distance,point,roleLabel,taskKind,validTaskSession,visiblePlayers} from './model.mjs';
 import {createWorldScene,drawKeeper} from './scene.mjs';
 import {createWorldInput} from './input.mjs';
+import {createTaskPuzzle} from './puzzles.mjs';
+import {createCouncil,createResults} from './phases.mjs';
+import {restoreTrigger,trapDialog} from './dom.mjs';
 
 const roomName=id=>({bridge:'Bridge',archive:'Archive',lantern:'Lantern',workshop:'Workshop',galley:'Galley',engine:'Engine'})[id]||'At sea';
 const make=(tag,className,text)=>{const e=document.createElement(tag);if(className)e.className=className;if(text!==undefined)e.textContent=text;return e;};
@@ -19,6 +22,7 @@ export function createWorldExperience(host,callbacks){
  status.setAttribute('role','status');top.append(brand,mode,status,leave);
  const progress=make('div','lw-progress'),progressLabel=make('span','','CREW TASKS'),meter=make('progress'),progressCount=make('span');meter.max=1;meter.value=0;meter.setAttribute('aria-label','Crew tasks complete');progress.append(progressLabel,meter,progressCount);
  const assignment=make('aside','lw-assignment'),role=make('strong','lw-role'),location=make('span','lw-location'),taskList=make('ul','lw-tasks'),help=make('p','lw-help','WASD / arrows to walk · E use · R report · Q eliminate · M map');assignment.append(role,location,taskList,help);
+ const aiNotice=make('p','lw-ai-notice');assignment.append(aiNotice);
  const taskRows=new Map();
  const critical=make('div','lw-critical');critical.hidden=true;critical.setAttribute('role','region');critical.setAttribute('aria-label','Critical countdown');
  const criticalTitle=make('strong','','BEACON FAILURE'),criticalClock=make('span','lw-critical-clock'),criticalInfo=make('span');criticalClock.setAttribute('role','timer');criticalClock.setAttribute('aria-label','Critical time remaining');critical.append(criticalTitle,criticalClock,criticalInfo);
@@ -39,12 +43,43 @@ export function createWorldExperience(host,callbacks){
  const revealArt=make('canvas','lw-reveal-keeper');revealArt.width=240;revealArt.height=250;
  const revealTitle=make('h1');revealTitle.id=`${uid}-role-title`;const revealCopy=make('p'),revealClose=button('Enter the beacon',()=>{revealed.add(room.game.matchId);roleScene.hidden=true;render();canvas.focus();},'lw-primary');roleScene.append(make('p','lw-eyebrow','YOUR SECRET ASSIGNMENT'),revealArt,revealTitle,revealCopy,revealClose);
  stage.append(top,progress,assignment,critical,phaseClock,feedback,mapToggle,mapPane,joystick,actions,lobby,overlay,roleScene);shell.append(stage);host.append(shell);
+ let puzzle=null,taskSession=null,confirmTarget=null,ejectionKey=null,previousPhase=null,navigationEpoch=0;
+ const seenEjections=new Set();
  let room=null,options={now:Date.now(),connected:false,pending:false,feedback:''},disposed=false,localPending=0,lastRoom=null,raf=0,mapOpen=false,localFeedback='',lastFeedback='',lastRole=null;
  const reduced=matchMedia('(prefers-reduced-motion: reduce)'),scene=createWorldScene(canvas,{reduced:reduced.matches}),mini=createWorldScene(mapCanvas,{reduced:true}),revealed=new Set();
- const input=createWorldInput({target:canvas,joystick,knob,getState:()=>({enabled:movementAllowed(),position:room?.game?.self?.position,inputSeq:room?.game?.self?.inputSeq||0}),onInput:value=>callbacks.input(value),onClick:e=>{const target=scene.toWorld(e.clientX,e.clientY),position=room?.game?.self?.position;const path=world.findWorldPath(position,target);if(!path)setFeedback('That route is blocked. Choose a clear part of the deck.');return path;},onShortcut:key=>{if(key==='m')toggleMap();else activate(({e:'use',' ':'use',q:'eliminate',r:'report'})[key]);},onError:error=>setFeedback(error?.message||'Movement could not be sent. Reconnect and try again.')});
- function movementAllowed(){return !!room?.game?.self?.alive&&room.game.worldVersion===1&&room.game.phase==='roam'&&options.connected&&!pending()&&roleScene.hidden&&overlay.hidden;}
+ const input=createWorldInput({target:canvas,joystick,knob,getState:()=>({enabled:movementAllowed(),inputAllowed:room?.game?.phase==='roam'&&room?.game?.self?.alive,position:room?.game?.self?.position,inputSeq:room?.game?.self?.inputSeq||0}),onInput:value=>{if(value.dx||value.dy)navigationEpoch++;return callbacks.input(value);},onClick:e=>{
+  const target=scene.toWorld(e.clientX,e.clientY),position=room?.game?.self?.position,pin=room?.roomId,match=room?.game?.matchId,intent=++navigationEpoch;
+  if(!world.findWorldPath(position,target)){setFeedback('That route is blocked. Choose a clear part of the deck.');return null;}
+  // Acknowledged stop precedes navigation so a late zero cannot cancel the new route.
+  input.stop().then(()=>{if(!disposed&&intent===navigationEpoch&&room?.roomId===pin&&room?.game?.matchId===match&&movementAllowed())return perform('navigate',{x:target.x,y:target.y});}).catch(error=>{if(!disposed&&error?.name!=='AbortError')setFeedback(error?.message||'The walking route could not be sent.');});return null;
+ },onShortcut:key=>{if(key==='m')toggleMap();else activate(({e:'use',' ':'use',q:'eliminate',r:'report'})[key]);},onError:error=>{if(!disposed&&!document.hidden&&options.connected&&error?.name!=='AbortError')setFeedback(error?.message||'Movement could not be sent. Reconnect and try again.');}});
+ const council=createCouncil({id:uid,action:perform,feedback:setFeedback,pending});
+ const results=createResults({id:uid,loadReplay:()=>callbacks.loadReplay(),feedback:setFeedback,isCurrent:matchId=>!disposed&&room?.game?.phase==='ended'&&room.game.matchId===matchId});
+ const confirmation=make('section','lw-confirm'),confirmTitle=make('h2','','Eliminate keeper?'),confirmCopy=make('p'),confirmYes=button('Confirm elimination',async()=>{if(!validElimination()){closeConfirmation();setFeedback('That keeper is no longer in reach.');return;}const targetId=confirmTarget;closeConfirmation(false);await request(()=>callbacks.action('eliminate',{targetId}));},'lw-danger'),confirmNo=button('Cancel',()=>closeConfirmation(),'lw-secondary');
+ confirmation.setAttribute('role','dialog');confirmation.setAttribute('aria-modal','true');confirmation.setAttribute('aria-labelledby',uid+'-confirm');confirmTitle.id=uid+'-confirm';confirmation.append(make('p','lw-eyebrow','SABOTEUR ACTION'),confirmTitle,confirmCopy,confirmYes,confirmNo);
+ const ejection=make('section','lw-ejection'),ejectionArt=make('canvas','lw-ejection-art'),ejectionTitle=make('h1'),ejectionCopy=make('p'),ejectionClose=button('Return to watch',()=>{ejectionKey=null;render();canvas.focus();},'lw-primary');ejectionArt.width=200;ejectionArt.height=220;ejection.append(make('p','lw-eyebrow','COUNCIL DECISION'),ejectionArt,ejectionTitle,ejectionCopy,ejectionClose);
+ const paused=make('section','lw-paused');paused.append(make('p','lw-eyebrow','WATCH PAUSED'),make('h1','','THE STORM HOLDS.'),make('p','','The maximum match duration was reached. The server paused this watch without declaring a winner. You can exit at any time.'));
+ for(const pane of [council.node,results.node,confirmation,ejection,paused]){pane.hidden=true;overlay.append(pane);}
+ roleScene.addEventListener('keydown',event=>{if(event.key==='Escape'){revealed.add(room.game.matchId);render();canvas.focus();}else trapDialog(roleScene,event);});
+ confirmation.addEventListener('keydown',event=>{if(event.key==='Escape'){event.preventDefault();closeConfirmation();}else trapDialog(confirmation,event);});
+ function validElimination(){const g=room?.game,target=g?.players?.find(p=>p.id===confirmTarget);return g?.phase==='roam'&&g.self?.alive&&g.self.role==='saboteur'&&target?.alive&&point(target.position)&&distance(g.self.position,target.position)<=world.WORLD.killRadius&&g.availableActions?.includes('eliminate');}
+ function closeConfirmation(restore=true){confirmTarget=null;render();if(restore)restoreTrigger(actionButtons.eliminate);}
+ function closeTask(restore=true){const current=puzzle;puzzle=null;taskSession=null;current?.dispose();render();if(restore)restoreTrigger(actionButtons.use);}
+ function openTask(task){
+  taskSession={taskId:task.id,roomId:room.roomId,matchId:room.game.matchId,location:room.game.self.roomId};
+  puzzle=createTaskPuzzle({id:uid,task,kind:taskKind(task,room.game.self.tasks.indexOf(task)),onClose:()=>closeTask(),onSubmit:async()=>{
+   if(!validTaskSession(taskSession,room,world)){closeTask();setFeedback('Station closed: the task or your location changed.');return;}
+   const current=puzzle,taskId=taskSession.taskId;current.setPending(true);
+   try{await perform('task',{taskId});if(puzzle===current){closeTask();setFeedback('Task submitted. The server confirms your progress.');}}catch(error){setFeedback(error?.message||'Task could not be sent.');if(puzzle===current)current.setPending(false);}
+  }});input.stop();overlay.append(puzzle.node);render();puzzle.focus();
+ }
+ async function perform(type,fields){
+  if(disposed||pending()||!options.connected)throw new Error('Wait for the connection or pending action.');
+  localPending++;render();try{return await callbacks.action(type,fields);}finally{if(!disposed){localPending--;render();}}
+ }
+ function movementAllowed(){return !document.hidden&&!!room?.game?.self?.alive&&room.game.worldVersion===1&&room.game.phase==='roam'&&options.connected&&!pending()&&roleScene.hidden&&overlay.hidden;}
  function pending(){return options.pending||localPending>0;}
- function setFeedback(message){localFeedback=String(message||'');setText(feedback,localFeedback);}
+ function setFeedback(message){if(disposed)return;localFeedback=String(message||'');setText(feedback,localFeedback);}
  async function request(fn){if(disposed||pending())return;localPending++;render();try{return await fn();}catch(error){if(!disposed)setFeedback(error?.message||'The request failed. Try again.');}finally{if(!disposed){localPending--;render();}}}
  function toggleMap(){mapOpen=!mapOpen;mapPane.hidden=!mapOpen;mapToggle.setAttribute('aria-expanded',String(mapOpen));if(mapOpen){mini.update(room,performance.now());mini.draw(performance.now(),{overview:true});}}
  function activate(key){
@@ -53,14 +88,15 @@ export function createWorldExperience(host,callbacks){
   if(!options.connected){setFeedback('Connection interrupted. Reconnect before acting.');return;}
   if(pending()||!context.enabled){setFeedback(pending()?'An action is still being sent.':context.hint);return;}
   input.stop();
-  if(context.type==='task'){setFeedback(`${context.label}: station ready.`);return;}
+  if(context.type==='task'){openTask(context.task);return;}
+  if(context.type==='eliminate'){confirmTarget=context.fields.targetId;render();confirmNo.focus();return;}
   request(()=>callbacks.action(context.type,context.fields));
  }
  function render(){
   if(!room||disposed)return;const game=room.game,isLobby=!game;
   shell.dataset.phase=game?.phase||'lobby';lobby.hidden=!isLobby;assignment.hidden=isLobby;progress.hidden=isLobby;actions.hidden=isLobby||game.phase!=='roam'||!game.self?.alive;joystick.hidden=!movementAllowed();
   setText(mode,aiLabel(room.ai));setText(status,options.connected?'● Connected':'○ Reconnecting');status.dataset.connected=String(!!options.connected);
-  setText(lobbyNote,room.isHost?'You host this room. All six keepers are aboard.':'You are observing. The host will begin the watch.');start.disabled=!room.isHost||pending()||!options.connected;
+  const lastNotice=room.notices?.at(-1),noticeText=typeof lastNotice==='string'?lastNotice:lastNotice?.message||'';setText(aiNotice,noticeText);aiNotice.hidden=!noticeText;setText(lobbyNote,`${room.isHost?'You host this room. All six keepers are aboard.':'You are observing. The host will begin the watch.'}${noticeText?' '+noticeText:''}`);start.disabled=!room.isHost||pending()||!options.connected;
   setText(role,roleLabel(game));role.dataset.role=game?.self?.role||'spectator';setText(location,game?.self?`${game.self.alive?'':'Fallen · '}${roomName(game.self.roomId)}`:'Public observation · roles hidden');
   const tasks=game?.self?.tasks||[],ids=new Set(tasks.map(t=>t.id));
   for(const [id,node]of taskRows)if(!ids.has(id)){node.remove();taskRows.delete(id);}
@@ -71,16 +107,34 @@ export function createWorldExperience(host,callbacks){
   const current=contexts(game,world);
   for(const [key,b]of Object.entries(actionButtons)){const c=current[key];b.hidden=['eliminate','sabotage'].includes(key)&&game?.self?.role!=='saboteur';b.setAttribute('aria-disabled',String(!c.enabled||pending()||!options.connected));b.title=c.enabled?c.label:c.hint;b.setAttribute('aria-label',`${c.label}${key==='use'?' (E / Space)':key==='report'?' (R)':key==='eliminate'?' (Q)':''}`);}
   canvas.setAttribute('aria-label',isLobby?'Six raincoat keepers gathered on the storm beacon.':`${roomName(game?.self?.roomId)}. Visible keepers: ${visiblePlayers(game).map(p=>p.name).join(', ')||'none'}. Use keyboard or click the deck to walk.`);
+  if(puzzle&&!validTaskSession(taskSession,room,world)){const old=puzzle;puzzle=null;old.dispose();const completed=game?.matchId===taskSession?.matchId&&game?.self?.tasks?.some(task=>task.id===taskSession?.taskId&&task.completed);setFeedback(completed?'Task complete.':'Station closed: the watch state or your location changed.');taskSession=null;}
+  if(confirmTarget&&!validElimination()){confirmTarget=null;setFeedback('That keeper is no longer in reach.');}
+  if(game?.phase!=='roam')ejectionKey=null;
+  const recentEjection=(game?.events||[]).filter(event=>event.type==='vote_result'&&event.ejectedId).at(-1);
+  if(game?.phase==='roam'&&recentEjection){const key=`${game.matchId}:${recentEjection.id||recentEjection.at}:${recentEjection.ejectedId}`;if(!seenEjections.has(key)){seenEjections.add(key);ejectionKey=key;const player=game.players.find(p=>p.id===recentEjection.ejectedId);setText(ejectionTitle,`${player?.name||'A keeper'} WAS EJECTED.`);setText(ejectionCopy,player?.role?`Revealed role: ${player.role}.`:'The beacon has not revealed their role. Keep watching.');const art=ejectionArt.getContext('2d');art.clearRect(0,0,200,220);drawKeeper(art,player||CHARACTERS[0],100,160,{scale:2.2,label:false});}}
+  const isCouncil=['discussion','voting'].includes(game?.phase);
+  council.node.hidden=!isCouncil;results.node.hidden=game?.phase!=='ended';paused.hidden=game?.phase!=='paused';confirmation.hidden=!confirmTarget;ejection.hidden=!ejectionKey;
+  if(isCouncil)council.update(game,options);
+  if(game?.phase==='ended')results.update(game);
+  if(confirmTarget){const target=game.players.find(p=>p.id===confirmTarget);setText(confirmTitle,`Eliminate ${target?.name||'keeper'}?`);setText(confirmCopy,'This action cannot be undone. The server checks your target and cooldown again.');confirmYes.disabled=pending()||!options.connected;}
+  overlay.hidden=!(isCouncil||game?.phase==='ended'||game?.phase==='paused'||puzzle||confirmTarget||ejectionKey);
+  shell.dataset.critical=String(!!game?.sabotage?.active);
   const showRole=game?.phase==='roam'&&game.self&&!revealed.has(game.matchId);
   roleScene.hidden=!showRole;
   if(showRole&&lastRole!==game.matchId){lastRole=game.matchId;setText(revealTitle,`YOU ARE ${game.self.role==='saboteur'?'THE SABOTEUR':'CREW'}`);setText(revealCopy,game.self.role==='saboteur'?'Hide in the rain. Sabotage the beacon, mislead the council, and outlast the crew.':'Keep the beacon alive. Complete your stations, report fallen keepers, and find the saboteur.');roleScene.dataset.role=game.self.role;const art=revealArt.getContext('2d');art.clearRect(0,0,240,250);drawKeeper(art,game.players.find(p=>p.id===game.self.id)||CHARACTERS[0],120,180,{scale:2.6,label:false});revealClose.focus();}
   if(!showRole)roleScene.hidden=true;
   if(options.feedback&&options.feedback!==lastFeedback){lastFeedback=options.feedback;localFeedback=String(options.feedback);}
   setText(feedback,localFeedback||room.notices?.at(-1)?.message||'');
+  joystick.hidden=!movementAllowed();
+  if(isCouncil&&previousPhase!==game.phase&&game.phase==='discussion')council.focus();
+  if(ejectionKey&&previousPhase==='voting')ejectionClose.focus();
+  previousPhase=game?.phase;
   input.sync();
  }
- function frame(now){if(disposed||document.hidden)return;scene.draw(now);if(mapOpen)mini.draw(now,{overview:true});raf=requestAnimationFrame(frame);}
- function visibility(){if(document.hidden){cancelAnimationFrame(raf);input.stop();}else if(!disposed){scene.draw(performance.now());raf=requestAnimationFrame(frame);}}
- document.addEventListener('visibilitychange',visibility);raf=requestAnimationFrame(frame);
- return {update(next,nextOptions={}){if(disposed)return;if(lastRoom&&lastRoom!==next.roomId){input.stop();revealed.clear();localFeedback='';lastRole=null;}lastRoom=next.roomId;room=next;options={...options,...nextOptions};scene.update(room,performance.now());mini.update(room,performance.now());render();},dispose(){if(disposed)return;input.dispose();disposed=true;cancelAnimationFrame(raf);document.removeEventListener('visibilitychange',visibility);scene.dispose();mini.dispose();shell.remove();}};
+ function frame(now){raf=0;if(disposed||document.hidden)return;scene.draw(now);if(mapOpen)mini.draw(now,{overview:true});raf=requestAnimationFrame(frame);}
+ function blur(){navigationEpoch++;}
+ window.addEventListener('blur',blur);
+ function visibility(){navigationEpoch++;if(document.hidden){cancelAnimationFrame(raf);raf=0;input.stop();}else if(!disposed&&!raf){scene.draw(performance.now());raf=requestAnimationFrame(frame);}}
+ document.addEventListener('visibilitychange',visibility);if(!document.hidden)raf=requestAnimationFrame(frame);
+ return {update(next,nextOptions={}){if(disposed)return;if(lastRoom&&lastRoom!==next.roomId){input.stop();puzzle?.dispose();puzzle=null;taskSession=null;confirmTarget=null;ejectionKey=null;seenEjections.clear();revealed.clear();localFeedback='';lastRole=null;}lastRoom=next.roomId;room=next;options={...options,...nextOptions};scene.update(room,performance.now());mini.update(room,performance.now());render();},dispose(){if(disposed)return;input.dispose();disposed=true;cancelAnimationFrame(raf);document.removeEventListener('visibilitychange',visibility);window.removeEventListener('blur',blur);scene.dispose();mini.dispose();puzzle?.dispose();results.dispose();shell.remove();}};
 }

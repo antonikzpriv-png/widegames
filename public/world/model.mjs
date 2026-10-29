@@ -9,11 +9,12 @@ export function visibleBodies(game){return (game?.events||[]).filter(e=>e.type==
 export function roleLabel(game){return !game?.self?'Spectator':game.self.role==='saboteur'?'Saboteur':'Crew';}
 export function aiLabel(ai){return ai?.mode==='live'?'HYBRID · live council / local navigation':ai?.mode==='demo'?'DEMO · local keepers':'AI mode pending';}
 export function taskKind(task,index=0){
- const text=`${task.id} ${task.label}`.toLowerCase();
- if(/wire|relay|circuit/.test(text))return 'wires';
- if(/tune|signal|beacon|frequency|calibrat/.test(text))return 'tuning';
+ const text=String(task.label||'').toLowerCase();
+ if(/wire|circuit/.test(text))return 'wires';
+ if(/tune|signal|frequency|calibrat/.test(text))return 'tuning';
  if(/sequence|log|record|filter|suppl/.test(text))return 'sequence';
- return ['wires','tuning','sequence'][index%3];
+ // Engine relay tasks share a label; equipment varies by the actual station.
+ return ({bridge:'wires',workshop:'wires',lantern:'tuning',engine:'tuning',archive:'sequence',galley:'sequence'})[task.roomId]||['wires','tuning','sequence'][index%3];
 }
 export function contexts(game,world){
  const self=game?.self,pos=self?.position,available=game?.availableActions||[];
@@ -26,8 +27,13 @@ export function contexts(game,world){
  const allowed=type=>active&&available.includes(type);
  const repair=game?.sabotage?.active&&game.sabotage.roomId===self?.roomId;
  const bell=active&&distance(pos,world.WORLD_BELL)<=world.WORLD.interactionRadius;
+ const repairAction={type:'repair',label:'Repair beacon',fields:{},enabled:nearby&&allowed('repair'),hint:nearby?'Repair is unavailable. Each crew keeper can contribute once.':'Reach the flashing station to help repair.'};
+ const taskAction={type:'task',label:task?.label||'Task station',fields:{taskId:task?.id},task,enabled:nearby&&allowed('task'),hint:nearby?'Task equipment is unavailable or cooling down.':'Reach your glowing task station.'};
+ const bellAction={type:'meeting',label:'Emergency bell',fields:{},enabled:bell&&allowed('meeting'),hint:bell?'Bell unavailable: check cooldown, remaining emergencies and critical status.':'Use the bell in the Bridge. Unavailable during critical sabotage.'};
+ // A distant unfinished Bridge task must not hide a bell that is actually in reach.
+ const use=repair&&repairAction.enabled?repairAction:task&&taskAction.enabled?taskAction:bellAction.enabled?bellAction:repair?repairAction:task?taskAction:bellAction;
  return {
-  use:repair?{type:'repair',label:'Repair beacon',fields:{},enabled:nearby&&allowed('repair'),hint:'Reach the flashing station to help repair.'}:task?{type:'task',label:task.label,fields:{taskId:task.id},task,enabled:nearby&&allowed('task'),hint:'Reach your glowing task station.'}:{type:'meeting',label:'Emergency bell',fields:{},enabled:bell&&allowed('meeting'),hint:'Use the bell in the Bridge. Unavailable during critical sabotage.'},
+  use,
   report:{type:'report',label:'Report body',fields:{bodyId:body?.bodyId},enabled:!!body&&allowed('report'),hint:'Approach a visible fallen keeper.'},
   eliminate:{type:'eliminate',label:target?`Eliminate ${target.name}`:'Eliminate',fields:{targetId:target?.id},enabled:self?.role==='saboteur'&&!!target&&allowed('eliminate'),hint:target?'Wait for the elimination cooldown.':'Approach a visible keeper.'},
   sabotage:{type:'sabotage',label:'Sabotage',fields:{},enabled:self?.role==='saboteur'&&allowed('sabotage'),hint:'Sabotage is unavailable or cooling down.'}
@@ -40,8 +46,9 @@ export class ActorSamples{
   const seen=new Set();
   for(const player of visiblePlayers(game)){
    seen.add(player.id);const old=this.samples.get(player.id);
+   if(old&&distance(old.to,player.position)<.001){old.player={...player,moving:player.id===game.self?.id?game.self.moving:old.player.moving};continue;}
    const prior=old?this.at(player.id,at):player.position;
-   this.samples.set(player.id,{from:prior,to:{...player.position},at,player});
+   this.samples.set(player.id,{from:prior,to:{...player.position},at,player:{...player,moving:player.id===game.self?.id?game.self.moving:!!old}});
   }
   for(const id of this.samples.keys())if(!seen.has(id))this.samples.delete(id);
  }
