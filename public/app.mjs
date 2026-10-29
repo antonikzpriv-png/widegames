@@ -13,15 +13,15 @@ let room=null,roomId=null,controller=null,socket=null,poll=null;
 let epoch=0,pending=false,offset=0,connected=false,networkReady=false,connectionIssue=false;
 let draft='',draftMeeting=null,confirmTarget=null,replay=null,replayIndex=0,retry=null,retryContext=null;
 const attemptedJoins=new Set();
-let worldExperience=null,worldSession=null,lastInputFailure=0;
+let worldExperience=null,worldSession=null,lastInputFailure=0,worldActionGeneration=0;
 
 function captureActionContext(body){
  const game=room?.game,self=game?.self;if(!game?.worldVersion||!body.type)return null;
- return {matchId:game.matchId,phase:game.phase,type:body.type,actor:self?.id,location:self?.roomId,position:self?.position?{...self.position}:null,taskId:body.taskId,knownTask:self?.tasks?.some(task=>task.id===body.taskId)};
+ return {generation:worldActionGeneration,matchId:game.matchId,phase:game.phase,type:body.type,actor:self?.id,location:self?.roomId,position:self?.position?{...self.position}:null,taskId:body.taskId,knownTask:self?.tasks?.some(task=>task.id===body.taskId)};
 }
 function actionContextCurrent(context){
  if(!context)return true;const game=room?.game,self=game?.self;
- if(game?.matchId!==context.matchId||game.phase!==context.phase||self?.id!==context.actor||!self?.alive)return false;
+ if(context.generation!==worldActionGeneration||game?.matchId!==context.matchId||game.phase!==context.phase||self?.id!==context.actor||!self?.alive)return false;
  if(context.type==='task'){
   if(self.roomId!==context.location)return false;
   if(context.position&&self.position&&Math.hypot(self.position.x-context.position.x,self.position.y-context.position.y)>.1)return false;
@@ -142,6 +142,7 @@ function accept(data){
  if(roomId&&next.roomId!==roomId)return;
  if(room?.game&&!next.game)return;
  if(room?.game&&next.game&&(next.game.version<room.game.version||(next.game.version===room.game.version&&next.game.serverNow<room.game.serverNow)))return;
+ if(room?.game?.matchId!==next.game?.matchId||room?.game?.phase!==next.game?.phase||room?.game?.self?.id!==next.game?.self?.id)worldActionGeneration++;
  room=next;
  networkReady=true;
  if(retryContext&&!actionContextCurrent(retryContext)){retry=null;retryContext=null;tell('Current watch state synchronized.');}

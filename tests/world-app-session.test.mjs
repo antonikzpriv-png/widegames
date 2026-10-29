@@ -86,8 +86,9 @@ test('fresh controls allocate after lifecycle stops while duplicate/stale client
 });
 
 test('late root task failures cannot overwrite a newer council or moved-away context',async()=>{
- for(const change of ['phase','position']){
+ for(const change of ['phase','position','phase-return']){
   const f=await fixture(),scene=await f.open('A');const pending=scene.callbacks.action('task',{taskId:'task-A'}),request=f.requests.at(-1);const newer=state('A',2,change==='phase'?'discussion':'roam');if(change==='position')newer.game.self.position.x+=100;f.api.accept(newer);
+  if(change==='phase-return'){f.api.accept(state('A',3,'discussion'));f.api.accept(state('A',4,'roam'));}
   request.reject(new Error('OLD TASK FAILURE'));await assert.rejects(pending,error=>error.name==='AbortError');assert(!f.feedback.textContent.includes('OLD TASK FAILURE'));assert(!f.feedback.children.some(node=>node.text==='Retry same request'));
  }
 });
