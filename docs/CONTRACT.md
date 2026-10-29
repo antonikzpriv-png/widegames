@@ -1,3 +1,9 @@
+# Current tactical integration contract
+
+Normal new rooms use room schema3, match schema4/worldVersion1/beaconVersion1/tacticalVersion1 and an immutable map/version plus tactical preset. See [TACTICAL-INTERFACES.md](TACTICAL-INTERFACES.md) for actual exports, HTTP settings, observations and extension examples, [TACTICAL-CONTRACT.md](TACTICAL-CONTRACT.md) for ownership and [TACTICAL-RULES.md](TACTICAL-RULES.md) for semantics. Room/match schemas1/2/3 retain their original behavior. Unsupported future versions stop restoration with the original file preserved. The earlier contracts below are historical and apply to their stated versions.
+
+---
+
 # Current beacon integration contract
 
 New normal-start rooms use room schema2 and match schema3/worldVersion1/beaconVersion1. Existing room/match schema1 and world schema2 remain compatible and retain their original semantics. This additive section and docs/BEACON-GROUP1-CONTRACT.md / NEXT_FEATURE_INTERFACES.md supersede the historical v1 assumptions below. main is the actual default branch; Group1 work is on codex/beacon-systems-20261029 from90bb6e8.

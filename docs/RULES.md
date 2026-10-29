@@ -1,3 +1,9 @@
+# Current tactical rules
+
+Normal new rooms use the tactical preset on Storm Beacon or Stormbreak Annex. Read [TACTICAL-RULES.md](TACTICAL-RULES.md) for map-specific repairs, shared cooldowns, one-second door warnings/25-second closures, discovery knowledge, exact deadline precedence and equipment limits. The schema3 rules below remain the original saved-game behavior; they do not override schema4 tactical rules.
+
+---
+
 # Lantern Wake current beacon rules
 
 New rooms created by normal startup use room schema2 and match schema3/worldVersion1/beaconVersion1. Existing schema1 board and schema2 walking-world matches remain on their original rules; no identities, accepted action IDs, spending reservations or replay records are rewritten. The historical engine notes below describe earlier versions. This section takes precedence for new beacon matches.

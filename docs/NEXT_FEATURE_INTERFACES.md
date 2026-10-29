@@ -1,3 +1,9 @@
+# Tactical integration addendum
+
+The existing executable feature services below are retained. [TACTICAL-INTERFACES.md](TACTICAL-INTERFACES.md) adds exact map-aware registrations and integrated examples for task progression, strategic navigation, roster/factions, death/abilities, UI panels and ended replay. Group2 branches were not merged at the recorded main90bb6e8 and are not prerequisites. Resolve geometry from each persisted map, never fixed six-room constants; do not replace existing task, planner, lobby, ability or replay services.
+
+---
+
 # Group 2 executable feature interfaces
 
 Group1 starts from main90bb6e881f75f77e85b8b49729971a710b4c91b4. The entry points remain npm start -> server/main.mjs -> native HTTP/ws -> server/engine/index.mjs; browser entry is public/app.mjs -> public/world/experience.mjs. No donor server or additional stack is required. Model calls remain council-only and budgeted. All examples below are trusted packaged code, not dynamically loaded client/model scripts.
