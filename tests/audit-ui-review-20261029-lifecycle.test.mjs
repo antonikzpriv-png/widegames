@@ -1,6 +1,7 @@
 ﻿import test from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
+import {readFileSync} from 'node:fs';
 import {execFileSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
 
@@ -9,7 +10,7 @@ const BASE='0842a0090f1cfd1ec43b898f16e8191e5b9c2497';
 const candidate=process.env.AUDIT_UI_REVIEW_PIN;
 const git=(...args)=>execFileSync('git',args,{cwd:root,encoding:'utf8'});
 if(candidate){assert.match(candidate,/^[a-f0-9]{40}$/);assert.equal(git('rev-parse',`${candidate}^{commit}`).trim(),candidate);}
-const source=(pin,path)=>git('show',`${pin}:${path}`);
+const source=(pin,path)=>pin?git('show',`${pin}:${path}`):readFileSync(new URL(path,new URL('../',import.meta.url)),'utf8');
 const strip=code=>code.replace(/^import .*$/gm,'').replace(/^export /gm,'');
 const dataUrl=code=>'data:text/javascript;base64,'+Buffer.from(code).toString('base64');
 const flush=()=>new Promise(resolve=>setImmediate(resolve));
@@ -60,7 +61,7 @@ async function appFixture(pin,adapter){
  context.globalThis=context;
  const app=source(pin,'public/app.mjs');assert(app.includes('const rulesToggle='));
  const code=strip(source(pin,'shared/contracts.mjs'))+'\n'+strip(source(pin,'public/ui.mjs'))+'\nconst h=element;\n'+strip(source(pin,'public/presentation.mjs'))+'\n'+strip(source(pin,'public/panels.mjs'))+'\n'+strip(app.slice(0,app.indexOf('const rulesToggle=')));
- vm.runInNewContext(code+';connect=()=>{};globalThis.audit={openRoom,accept,render,getRoom:()=>room,getConfirm:()=>confirmTarget};',context,{filename:`ui-review-${pin}.mjs`});
+ vm.runInNewContext(code+';connect=()=>{};globalThis.audit={openRoom,stop,accept,render,getRoom:()=>room,getConfirm:()=>confirmTarget};',context,{filename:`ui-review-${pin}.mjs`});
  const find=key=>dom.document.querySelectorAll('[data-focus]').find(node=>node.getAttribute('data-focus')===key);
  return {api:context.audit,requests,document:dom.document,find,timers,frames,
   activate(node){assert(node,'missing fixture control');node.focus();const handlers=[...node._listeners.get('click')||[]];assert(handlers.length);return handlers[0]({currentTarget:node,target:node,preventDefault(){}});},
@@ -85,35 +86,36 @@ test('historical 0842: old deferred 401 issues join using the newer navigation s
  assert.equal(f.requests[1].path,`/api/rooms/${roomA}/join`);assert.notEqual(f.requests[1].options.signal,oldRequest.options.signal);assert.equal(f.requests[1].options.signal.aborted,false);f.requests[1].resolve(room(roomA));await old;assert.equal(f.api.getRoom().roomId,roomB);
 });
 
-const awaiting=!candidate&&'Awaiting explicit full frontend fix SHA in AUDIT_UI_REVIEW_PIN; no fix verification claimed.';
-test('candidate: visible retry performs GET before one new join and recovers after pre-delivery failure',{skip:awaiting},async()=>{
+// Positives run by default on this checkout; an explicit pin reads committed objects.
+
+test('candidate: visible retry performs GET before one new join and recovers after pre-delivery failure',async()=>{
  const f=await appFixture(candidate);await failInitialJoin(f);const retry=f.activate(f.find('reconnect'));assert.equal(f.requests[2].path,`/api/rooms/${roomA}`);f.requests[2].reject(unauthorized());await flush();
  assert.equal(f.requests.length,4);assert.equal(f.requests[3].path,`/api/rooms/${roomA}/join`);f.requests[3].resolve({...room(roomA),seatId:null,game:null});await retry;assert.equal(f.api.getRoom().seatId,null);assert(!f.find('reconnect'));
 });
-test('candidate: stale 401 cannot join or poison a later legitimate room attempt',{skip:awaiting},async()=>{
- const f=await appFixture(candidate),old=f.api.openRoom(roomA),oldRequest=f.requests[0];await f.api.openRoom(roomB,room(roomB));oldRequest.reject(unauthorized());await old;
- assert.equal(f.requests.length,1);assert.equal(f.api.getRoom().roomId,roomB);
+test('candidate: stale 401 cannot join or poison a later legitimate room attempt',async()=>{
+ const f=await appFixture(candidate),old=f.api.openRoom(roomA),oldRequest=f.requests[0];await f.api.openRoom(roomB,room(roomB));oldRequest.reject(unauthorized());await flush();if(f.requests.length>1){f.requests.at(-1).resolve(room(roomA));await old;}
+ assert.equal(f.requests.length,1);await old;assert.equal(f.api.getRoom().roomId,roomB);
  const back=f.api.openRoom(roomA);f.requests[1].reject(unauthorized());await flush();assert.equal(f.requests[2].path,`/api/rooms/${roomA}/join`);assert.notEqual(f.requests[2].options.signal,oldRequest.options.signal);f.requests[2].resolve({...room(roomA),seatId:null,game:null});await back;
 });
-test('candidate: late old join completion cannot overwrite current room or reuse its controller',{skip:awaiting},async()=>{
+test('candidate: late old join completion cannot overwrite current room or reuse its controller',async()=>{
  const f=await appFixture(candidate),old=f.api.openRoom(roomA),getSignal=f.requests[0].options.signal;f.requests[0].reject(unauthorized());await flush();const join=f.requests[1];assert.equal(join.options.signal,getSignal);
  await f.api.openRoom(roomB,room(roomB));assert.equal(join.options.signal.aborted,true);join.resolve({...room(roomA),seatId:null,game:null});await old;assert.equal(f.api.getRoom().roomId,roomB);
 });
-test('candidate: Cancel restores trigger focus without sending an action',{skip:awaiting},async()=>{
- const f=await appFixture(candidate);await f.api.openRoom(roomA,room(roomA));f.activate(f.find('eliminate-p2'));const cancel=f.document.querySelectorAll('button').find(n=>n.textContent==='Cancel');f.activate(cancel);await f.drainFrames();assert.equal(f.document.activeElement,f.find('eliminate-p2'));assert.equal(f.requests.length,0);
+test('candidate: Cancel restores trigger focus without sending an action',async()=>{
+ const f=await appFixture(candidate);await f.api.openRoom(roomA,room(roomA));f.activate(f.find('eliminate-p2'));const cancel=f.document.querySelectorAll('button').find(n=>n.textContent==='Cancel');f.activate(cancel);await f.drainFrames();assert(f.document.activeElement===f.find('eliminate-p2'),'Cancel must restore the elimination trigger');assert.equal(f.requests.length,0);
 });
-for(const change of ['room','phase'])test(`candidate: deferred Cancel focus cannot steal ownership after ${change} change`,{skip:awaiting},async()=>{
+for(const change of ['room','phase'])test(`candidate: deferred Cancel focus cannot steal ownership after ${change} change`,async()=>{
  const f=await appFixture(candidate);await f.api.openRoom(roomA,room(roomA));f.activate(f.find('eliminate-p2'));const cancel=f.document.querySelectorAll('button').find(n=>n.textContent==='Cancel');f.activate(cancel);
  let opening;if(change==='room')opening=f.api.openRoom(roomB,room(roomB));else f.api.accept({...room(roomA,'discussion'),game:{...room(roomA,'discussion').game,version:2}});
- const stable=f.find('leave-room');assert(stable);stable.focus();if(opening)await opening;await f.drainFrames();assert.equal(f.document.activeElement,stable);assert.equal(f.requests.length,0);
+ const stable=f.find('leave-room');assert(stable);stable.focus();if(opening)await opening;await f.drainFrames();assert(f.document.activeElement===stable,'stale Cancel must not steal or remove current focus');assert.equal(f.requests.length,0);
 });
 
 // Real local HTTP controls for uncertain-success join, never browser cookie emulation claims.
 async function uncertainJoinControl(t,pin,recoverHost){
  const {createGameServer}=await import('../server/transport.mjs');
- const {mkdtemp,rm}=await import('node:fs/promises');const path=(await import('node:path')).default;
+ const {mkdir,mkdtemp,rm}=await import('node:fs/promises');const path=(await import('node:path')).default;
  const {once}=await import('node:events');
- const parent=path.resolve('D:/Widegames-work/temp'),directory=await mkdtemp(path.join(parent,'audit-ui-review-20261029-'));
+ const parent=path.resolve(root,'_artifacts');await mkdir(parent,{recursive:true});const directory=await mkdtemp(path.join(parent,'audit-ui-review-20261029-'));
  const origin='http://ui-review.test';
  const game=await createGameServer({dataDir:directory,publicOrigin:origin,tickMs:60000,ai:{provider:'demo'}},{aiController:{describe:()=>({mode:'demo',provider:'inert-review-fixture'}),decide:async()=>null}});
  game.server.listen(0,'127.0.0.1');await once(game.server,'listening');const base=`http://127.0.0.1:${game.server.address().port}`;
@@ -144,10 +146,32 @@ async function uncertainJoinControl(t,pin,recoverHost){
 for(const recoverHost of [false,true]){
  const label=recoverHost?'existing host seat/cookie':'spectator identity/cookie';
  test(`baseline positive HTTP control: uncertain join success preserves ${label}`,async t=>uncertainJoinControl(t,BASE,recoverHost));
- test(`candidate HTTP: uncertain join success preserves ${label} through GET-first retry`,{skip:awaiting},async t=>uncertainJoinControl(t,candidate,recoverHost));
+ test(`candidate HTTP: uncertain join success preserves ${label} through GET-first retry`,async t=>uncertainJoinControl(t,candidate,recoverHost));
 }
 
 
-test('candidate: background retry cannot repeatedly auto-join after a failed initial attempt',{skip:awaiting},async()=>{
+test('candidate: background retry cannot repeatedly auto-join after a failed initial attempt',async()=>{
  const f=await appFixture(candidate);await failInitialJoin(f);const scheduled=[...f.timers.values()].find(timer=>timer.ms===2000);assert(scheduled);const polling=scheduled.fn();assert.equal(f.requests[2].path,`/api/rooms/${roomA}`);f.requests[2].reject(unauthorized());await polling;assert.equal(f.requests.filter(r=>r.path.endsWith('/join')).length,1);assert.equal(f.api.getRoom(),null);
+});
+
+
+test('candidate: acknowledged successful join remains bounded after later unauthorized reopen',async()=>{
+ const f=await appFixture(candidate),opening=f.api.openRoom(roomA);f.requests[0].reject(unauthorized());await flush();f.requests[1].resolve({...room(roomA),seatId:null,game:null});await opening;
+ const reopened=f.api.openRoom(roomA);f.requests[2].reject(unauthorized());await reopened;assert.equal(f.requests.length,3);assert.equal(f.requests.filter(r=>r.path.endsWith('/join')).length,1);
+});
+
+for(const change of ['room','phase'])test(`candidate: queued old Cancel handler is inert after ${change} ownership changes`,async()=>{
+ const f=await appFixture(candidate);await f.api.openRoom(roomA,room(roomA));f.activate(f.find('eliminate-p2'));const cancel=f.document.querySelectorAll('button').find(n=>n.textContent==='Cancel');const oldHandler=[...cancel._listeners.get('click')][0];
+ if(change==='room'){await f.api.openRoom(roomB,room(roomB));f.activate(f.find('eliminate-p2'));}else f.api.accept({...room(roomA,'discussion'),game:{...room(roomA,'discussion').game,version:2}});
+ const stable=change==='room'?f.document.querySelectorAll('button').find(n=>n.textContent==='Cancel'):f.find('leave-room');stable.focus();oldHandler({currentTarget:cancel,target:cancel,preventDefault(){}});await f.drainFrames();assert(f.document.activeElement===stable,'stale Cancel must preserve current focus');assert.equal(f.requests.length,0);if(change==='room')assert.equal(f.api.getConfirm(),'p2');
+});
+
+
+test('candidate: canceled room-open unauthorized completion cannot start a join',async()=>{
+ const f=await appFixture(candidate),opening=f.api.openRoom(roomA),request=f.requests[0];f.api.stop();assert.equal(request.options.signal.aborted,true);request.reject(unauthorized());await flush();if(f.requests.length>1){f.requests.at(-1).resolve(room(roomA));await opening;}assert.equal(f.requests.length,1);await opening;assert.equal(f.api.getRoom(),null);
+});
+
+test('candidate: queued Cancel cannot focus a now-disabled elimination trigger',async()=>{
+ const f=await appFixture(candidate);await f.api.openRoom(roomA,room(roomA));f.activate(f.find('eliminate-p2'));const cancel=f.document.querySelectorAll('button').find(n=>n.textContent==='Cancel'),handler=[...cancel._listeners.get('click')][0];
+ const next=room(roomA);next.game.version=2;next.game.availableActions=['move'];f.api.accept(next);const stable=f.find('leave-room');stable.focus();handler({currentTarget:cancel,target:cancel,preventDefault(){}});await f.drainFrames();assert(f.find('eliminate-p2').disabled);assert(f.document.activeElement===stable,'disabled return target must not steal focus');assert.equal(f.requests.length,0);
 });
