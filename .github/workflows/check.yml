@@ -20,6 +20,9 @@ jobs:
       - run: npm run test:browser
         env:
           CHROME_PATH: /usr/bin/google-chrome
+      - run: npm run test:tactical-browser
+        env:
+          CHROME_PATH: /usr/bin/google-chrome
       - run: npm run test:beacon-browser
         env:
           CHROME_PATH: /usr/bin/google-chrome
@@ -41,3 +44,5 @@ jobs:
             _artifacts/world-ui-*/*.png
             _artifacts/beacon-browser-*/report.json
             _artifacts/beacon-browser-*/*.png
+            _artifacts/tactical-browser-*/report.json
+            _artifacts/tactical-browser-*/*.png

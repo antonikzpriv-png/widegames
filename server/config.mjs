@@ -1,5 +1,6 @@
 import path from 'node:path';
 import {validatePublicOrigin} from './origin.mjs';
+import {getMap} from '../shared/maps/index.mjs';
 function integer(env,name,fallback,min,max){const raw=env[name];if(raw===undefined||raw==='')return fallback;const n=Number(raw);if(!Number.isInteger(n)||n<min||n>max)throw new Error(`${name} must be ${min}..${max}`);return n;}
 export function loadConfig(env=process.env){
  const provider=env.AI_PROVIDER||'demo';if(!['demo','anthropic'].includes(provider))throw new Error('AI_PROVIDER must be demo or anthropic');
@@ -8,7 +9,8 @@ export function loadConfig(env=process.env){
  const port=integer(env,'PORT',3000,0,65535),host=env.HOST||'127.0.0.1';
  const visionRadius=integer(env,'BEACON_VISION_RADIUS',360,80,900),lightsVisionRadius=integer(env,'BEACON_LIGHTS_VISION_RADIUS',Math.min(110,visionRadius),1,900),saboteurVisionRadius=integer(env,'BEACON_SABOTEUR_VISION_RADIUS',400,80,900);
  if(lightsVisionRadius>visionRadius)throw new Error('BEACON_LIGHTS_VISION_RADIUS cannot exceed BEACON_VISION_RADIUS');
+ const selectedMap=getMap(env.LANTERN_MAP||'beacon');
  const publicOrigin=validatePublicOrigin(env.PUBLIC_ORIGIN===undefined||env.PUBLIC_ORIGIN===''?`http://localhost:${port}`:env.PUBLIC_ORIGIN);
- return {host,port,dataDir:path.resolve(env.DATA_DIR||'data'),publicOrigin,worldMode:true,systemsMode:true,beaconRules:{visionRadius,lightsVisionRadius,saboteurVisionRadius},maxActiveRooms:integer(env,'MAX_ACTIVE_ROOMS',12,1,100),roomTtlMs:3600000,maxBodyBytes:8192,tickMs:100,
+ return {host,port,dataDir:path.resolve(env.DATA_DIR||'data'),publicOrigin,worldMode:true,systemsMode:true,tacticalMode:true,mapId:selectedMap.id,beaconRules:{visionRadius,lightsVisionRadius,saboteurVisionRadius},maxActiveRooms:integer(env,'MAX_ACTIVE_ROOMS',12,1,100),roomTtlMs:3600000,maxBodyBytes:8192,tickMs:100,
  ai:{provider,apiKey:env.ANTHROPIC_API_KEY||'',model:env.ANTHROPIC_MODEL||'claude-haiku-4-5-20251001',maxCalls:integer(env,'MAX_AI_CALLS',48,0,500),maxTokens:integer(env,'MAX_AI_TOKENS',120000,0,250000),maxCostUsd:cost,maxDailyCostUsd:dailyCost,timeoutMs:10000,decisionIntervalMs:1800}};
 }

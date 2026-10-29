@@ -13,7 +13,7 @@ import {createGameServer} from '../server/transport.mjs';
 import {loadConfig} from '../server/config.mjs';
 import {createDailyBudget} from '../server/budget.mjs';
 const root=fileURLToPath(new URL('../',import.meta.url));
-async function directory(t){await mkdir(path.join(root,'_artifacts'),{recursive:true});const dir=await mkdtemp(path.join(root,'_artifacts/tactical-root-'));t.after(()=>rm(dir,{recursive:true,force:true}));return dir;}
+async function directory(t){await mkdir(path.join(root,'_artifacts'),{recursive:true});const dir=await mkdtemp(path.join(root,'_artifacts/tactical-root-'));assert.equal(path.dirname(dir),path.join(root,'_artifacts'));t.after(()=>rm(dir,{recursive:true,force:true}));return dir;}
 const clone=v=>structuredClone(v);
 function saved({tactical=true,map=MAP_CATALOG[0]}={}){const room=createRoom('human',1000,{},tactical?{tactical:true,mapId:map.id}:{});issueIdentity(room,true);room.startId='fixture:start';room.state=engine.createMatch({id:room.id,mode:'human',now:1000,seed:'root-fixture',world:true,systems:true,...(tactical?{tactical:true,map:{id:map.id,version:map.version}}:{})});return room;}
 
