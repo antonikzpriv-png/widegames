@@ -29,7 +29,7 @@ export function createWorldExperience(host,callbacks){
  const phaseClock=make('span','lw-phase-clock');phaseClock.setAttribute('role','timer');phaseClock.setAttribute('aria-label','Phase time remaining');
  const feedback=make('p','lw-feedback');feedback.setAttribute('role','status');feedback.setAttribute('aria-live','polite');
  const actions=make('nav','lw-actions');actions.setAttribute('aria-label','Context actions');const actionButtons={};
- for(const [key,title,hotkey,icon] of [['use','USE','E','✦'],['report','REPORT','R','!'],['eliminate','ELIMINATE','Q','×'],['sabotage','SABOTAGE','','ϟ']]){
+ for(const [key,title,hotkey,icon] of [['use','USE','E','\u2699\ufe0e'],['report','REPORT','R','!'],['eliminate','ELIMINATE','Q','×'],['sabotage','SABOTAGE','','\u26a1\ufe0e']]){
   const b=button('',()=>activate(key),`lw-action lw-action-${key}`),symbol=make('span','lw-action-icon',icon),label=make('span','lw-action-label',title),kbd=make('kbd','',hotkey);b.append(symbol,label,kbd);b.dataset.worldAction=key;actions.append(b);actionButtons[key]=b;
  }
  const joystick=make('div','lw-joystick'),knob=make('div','lw-joystick-knob');joystick.append(knob);joystick.setAttribute('aria-hidden','true');
@@ -69,8 +69,16 @@ export function createWorldExperience(host,callbacks){
   taskSession={taskId:task.id,roomId:room.roomId,matchId:room.game.matchId,location:room.game.self.roomId};
   puzzle=createTaskPuzzle({id:uid,task,kind:taskKind(task,room.game.self.tasks.indexOf(task)),onClose:()=>closeTask(),onSubmit:async()=>{
    if(!validTaskSession(taskSession,room,world)){closeTask();setFeedback('Station closed: the task or your location changed.');return;}
-   const current=puzzle,taskId=taskSession.taskId;current.setPending(true);
-   try{await perform('task',{taskId});if(puzzle===current){closeTask();setFeedback('Task submitted. The server confirms your progress.');}}catch(error){setFeedback(error?.message||'Task could not be sent.');if(puzzle===current)current.setPending(false);}
+   const current=puzzle,session=taskSession,taskId=session.taskId;
+   const ownsSubmission=()=>!disposed&&puzzle===current&&taskSession===session&&validTaskSession(session,room,world);
+   current.setPending(true);
+   try{
+    await perform('task',{taskId});
+    if(ownsSubmission()){closeTask();setFeedback('Task submitted. The server confirms your progress.');}
+   }catch(error){
+    if(!ownsSubmission())return;
+    setFeedback(error?.message||'Task could not be sent.');current.setPending(false);
+   }
   }});input.stop();overlay.append(puzzle.node);render();puzzle.focus();
  }
  async function perform(type,fields){
