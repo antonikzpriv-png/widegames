@@ -18,7 +18,15 @@ const nearby=(state,p,target,range=geometry.WORLD.interactionRadius)=>runtime(st
 const sees=(state,p,target)=>runtime(state).sees(p.position,target,state,p.id);
 const context=()=>({record,publicEvent,nearby,sees,geometry,stop:(s,p,at,reason)=>runtime(s).stop(s,p,at,reason,record)});
 function refreshKnowledge(state,at){if(!isBeacon(state))return false;return spatialEngine.observe(state,at,record)||false;}
-function featureHints(state,p,now){if(!isBeacon(state)||!p?.alive||state.phase!=='roam'||state.systems.transit?.[p.id])return [];const ctx=context();return [...systemsModule.systemActionHints(state,p,now,ctx),...investigationModule.investigationActionHints(state,p,now,ctx),...abilityService.hints(state,p,now,ctx)];}
+function featureHints(state,p,now){
+ if(!isBeacon(state)||!p?.alive||state.phase!=='roam'||state.systems.transit?.[p.id])return [];
+ const ctx=context(),hints=[...systemsModule.systemActionHints(state,p,now,ctx),...investigationModule.investigationActionHints(state,p,now,ctx),...abilityService.hints(state,p,now,ctx)];
+ const add=(type,fields,label,position)=>{if(!denial(state,p,{id:'hint',type,...fields},now))hints.push({id:type+':'+Object.values(fields).join(':'),type,fields,label,enabled:true,...(position?{position:clone(position)}:{})});};
+ for(const task of p.tasks)add('task',{taskId:task.id},task.label,runtime(state).station(task.roomId));
+ for(const target of state.players)add('eliminate',{targetId:target.id},'Eliminate '+target.name,target.position);
+ for(const body of state.bodies)add('report',{bodyId:body.id},'Report fallen keeper',body.position);
+ add('meeting',{},'Emergency bell',runtime(state).bell);return hints;
+}
 
 
 const MAX_REQUESTS = 2048;

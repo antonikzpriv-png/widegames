@@ -17,14 +17,20 @@ const attemptedJoins=new Set();
 let featurePanels=null;
 let worldExperience=null,worldSession=null,lastInputFailure=0,worldActionGeneration=0;
 
+function beaconContextKey(game){
+ if(game?.beaconVersion!==1)return null;
+ const self=game.self;
+ return JSON.stringify([self?.position,self?.roomId,self?.alive,self?.transit,game.systems?.selfTransit,game.investigation?.session,game.vision?.radius,self?.tasks?.map(t=>[t.id,t.completed,t.progress]),game.interactions?.map(h=>[h.id,h.type,h.fields,h.enabled])]);
+}
 function captureActionContext(body){
  const game=room?.game,self=game?.self;if(!game?.worldVersion||!body.type)return null;
- return {generation:worldActionGeneration,matchId:game.matchId,phase:game.phase,type:body.type,actor:self?.id,location:self?.roomId,position:self?.position?{...self.position}:null,taskId:body.taskId,knownTask:self?.tasks?.some(task=>task.id===body.taskId)};
+ return {generation:worldActionGeneration,matchId:game.matchId,phase:game.phase,type:body.type,actor:self?.id,location:self?.roomId,position:self?.position?{...self.position}:null,taskId:body.taskId,knownTask:self?.tasks?.some(task=>task.id===body.taskId),beacon:beaconContextKey(game)};
 }
 function actionContextCurrent(context){
  if(!context)return true;const game=room?.game,self=game?.self;
  if(context.generation!==worldActionGeneration||game?.matchId!==context.matchId||game.phase!==context.phase||self?.id!==context.actor||!self?.alive)return false;
- if(context.type==='task'){
+ if(context.beacon!==null&&context.beacon!==beaconContextKey(game))return false;
+ if(['task','taskInteract'].includes(context.type)){
   if(self.roomId!==context.location)return false;
   if(context.position&&self.position&&Math.hypot(self.position.x-context.position.x,self.position.y-context.position.y)>.1)return false;
   if(context.knownTask&&!self.tasks?.some(task=>task.id===context.taskId&&!task.completed))return false;
@@ -145,7 +151,7 @@ function accept(data){
  if(roomId&&next.roomId!==roomId)return;
  if(room?.game&&!next.game)return;
  if(room?.game&&next.game&&(next.game.version<room.game.version||(next.game.version===room.game.version&&next.game.serverNow<room.game.serverNow)))return;
- if(room?.game?.matchId!==next.game?.matchId||room?.game?.phase!==next.game?.phase||room?.game?.self?.id!==next.game?.self?.id)worldActionGeneration++;
+ if(room?.game?.matchId!==next.game?.matchId||room?.game?.phase!==next.game?.phase||room?.game?.self?.id!==next.game?.self?.id||beaconContextKey(room?.game)!==beaconContextKey(next.game))worldActionGeneration++;
  room=next;
  networkReady=true;
  if(retryContext&&!actionContextCurrent(retryContext)){retry=null;retryContext=null;tell('Current watch state synchronized.');}
@@ -240,7 +246,9 @@ async function mutation(suffix,body,onSuccess){
   try{
    const data=await request(roomPath(id,suffix),{method:'POST',body,signal:controller.signal});
    if(current!==epoch)return {ok:false,error:'The room changed.'};
-   retry=null;retryContext=null;accept(data);if(onSuccess)onSuccess();else tell('Action confirmed.');
+   const stillCurrent=!context||actionContextCurrent(context);
+   retry=null;retryContext=null;accept(data);if(!stillCurrent)return {ok:true,stale:true,data};
+   if(onSuccess)onSuccess();else tell('Action confirmed.');
    return {ok:true,data};
   }catch(error){
    if(current!==epoch||error.name==='AbortError')return;
