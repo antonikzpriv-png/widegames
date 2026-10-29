@@ -90,3 +90,47 @@ test('world snapshot validator rejects damaged schema/motion/coordinates and qua
 test('missing geometry is a setup error and preserves a valid world checkpoint',async t=>{
  const dataDir=await directory(t,'missing-geometry'),good=snapshot(),file=path.join(dataDir,`room-${good.id}.json`);await writeFile(file,JSON.stringify(good));const original=await readFile(file,'utf8');const store=await createRoomStore(dataDir,{worldGeometry:{}});try{await assert.rejects(store.load(),/World geometry is unavailable/);assert.equal(await readFile(file,'utf8'),original);assert(!(await readdir(dataDir)).some(name=>name.includes('quarantine')));}finally{await store.close();assert(path.resolve(dataDir).startsWith(path.resolve(temporary)+path.sep));await rm(dataDir,{recursive:true,force:true});}
 });
+
+test('actual Core denial receipt: discussion retry stays denied after restart and roaming, fresh sequence moves without spend',async t=>{
+ const f=await service(t,{rules:{meetingCooldownMs:1,discussionMs:1000,votingMs:1000}});
+ assert.equal(p1(f).motion.error,null);
+ assert.equal((await f.request(f.route+'/input',{seq:1,dx:1,dy:0},f.host.cookie)).status,200);
+ assert.equal(p1(f).motion.error,null);
+ await f.game.close();
+ const privateContext={privateDenialFixture:'preexisting-reservation',reservedCalls:1};
+ const backing=await createRoomStore(f.dataDir,{worldGeometry:geometry});try{const [room]=await backing.load();room.aiContext=privateContext;await backing.save(room);}finally{await backing.close();}
+ const daily=await createDailyBudget({directory:f.dataDir,maxCostUsd:5,now:()=>f.now});await daily.reserve({id:f.id+':denial-existing-reservation',amount:.0123});
+ const ledgerBefore=await readFile(path.join(f.dataDir,'ai-daily-budget.json'),'utf8');await f.restart();
+ f.advance(2);assert.equal((await f.request(f.route+'/action',{id:'denial-receipt-council',type:'meeting'},f.host.cookie)).status,200);
+ const input={seq:2,dx:-1,dy:1},denied=await f.request(f.route+'/input',input,f.host.cookie);
+ assert.equal(denied.status,409);assert.equal(denied.body.error.code,'WRONG_PHASE');assert.deepEqual(p1(f).motion.error,denied.body.error);assert.equal(p1(f).motion.seq,2);
+ const saved=JSON.parse(await readFile(path.join(f.dataDir,'room-'+f.id+'.json'),'utf8'));assert.deepEqual(saved.state.players[0].motion.error,denied.body.error);await validateRoomSnapshot(saved,{worldGeometry:geometry});
+ await f.restart();assert.deepEqual(p1(f).motion.error,denied.body.error);
+ const version=f.game.rooms.get(f.id).data.state.version,retry=await f.request(f.route+'/input',input,f.host.cookie);assert.deepEqual(retry, {status:409,body:denied.body,cookie:undefined});assert.equal(f.game.rooms.get(f.id).data.state.version,version);
+ const observer=await f.request(f.route+'/join',{});
+ const socket=new WebSocket(f.base.replace('http:','ws:')+f.route+'/socket',{headers:{Origin:origin,Cookie:observer.cookie}});t.after(()=>socket.terminate());
+ const [raw]=await once(socket,'message'),socketView=JSON.parse(raw.toString());socket.terminate();
+ for(const view of [(await f.request(f.route,undefined,f.host.cookie)).body,(await f.request(f.route,undefined,observer.cookie)).body,socketView.room]){
+  assert(!JSON.stringify(view).includes('WRONG_PHASE'));assert(!JSON.stringify(view).includes('privateDenialFixture'));
+  for(const player of view.game.players){assert(!Object.hasOwn(player,'motion'));assert(!Object.hasOwn(player,'error'));if(player.id!=='p1')assert(!Object.hasOwn(player,'inputSeq'));}
+  if(view.seatId===null)assert.equal(view.game.self,null);else assert(!Object.hasOwn(view.game.self,'error'));
+ }
+ f.advance(2001);await until(()=>f.game.rooms.get(f.id).data.state.phase==='roam','council with no votes resumes roaming');
+ const position={...p1(f).position},resumedVersion=f.game.rooms.get(f.id).data.state.version;
+ assert.deepEqual((await f.request(f.route+'/input',input,f.host.cookie)).body,denied.body);assert.equal(f.game.rooms.get(f.id).data.state.version,resumedVersion);assert.equal(p1(f).motion.manual,false);
+ assert.equal((await f.request(f.route+'/input',{...input,dx:1},f.host.cookie)).body.error.code,'INPUT_CONFLICT');
+ assert.equal((await f.request(f.route+'/input',{seq:3,dx:1,dy:0},f.host.cookie)).status,200);assert.equal(p1(f).motion.error,null);f.advance(200);await until(()=>p1(f).motion.at===f.now,'fresh sequence moves after retained denial');assert(distance(position,p1(f).position)>0);
+ assert.deepEqual(f.game.rooms.get(f.id).data.aiContext,privateContext);await f.game.close();assert.equal(await readFile(path.join(f.dataDir,'ai-daily-budget.json'),'utf8'),ledgerBefore);
+});
+
+test('motion error snapshot shape: initial, old missing and restored denial valid; malformed errors rejected and quarantined',async t=>{
+ const dataDir=await directory(t,'motion-error'),store=await createRoomStore(dataDir,{worldGeometry:geometry});t.after(async()=>{await store.close();assert(path.resolve(dataDir).startsWith(path.resolve(temporary)+path.sep));await rm(dataDir,{recursive:true,force:true});});
+ const good=snapshot();assert.equal(good.state.players[0].motion.error,null);await store.save(good);
+ const old=structuredClone(good);for(const p of old.state.players)delete p.motion.error;await validateRoomSnapshot(old,{worldGeometry:geometry});await store.save(old);assert(!Object.hasOwn((await store.load())[0].state.players[0].motion,'error'));
+ const denied=structuredClone(good);Object.assign(denied.state.players[0].motion,{seq:1,dx:1,error:{code:'WRONG_PHASE',message:'Movement requires roaming.'}});await store.save(denied);assert.deepEqual((await store.load())[0],denied);
+ const backup=await store.backup(denied.id);assert.deepEqual(JSON.parse(await readFile(backup.file,'utf8')),denied);
+ const badErrors=[false,0,'WRONG_PHASE',[],{}, {code:'WRONG_PHASE'},{message:'Movement requires roaming.'},{code:1,message:'denied'},{code:'wrong_phase',message:'denied'},{code:'A'.repeat(65),message:'denied'},{code:'WRONG_PHASE',message:''},{code:'WRONG_PHASE',message:9},{code:'WRONG_PHASE',message:'x'.repeat(241)},{code:'WRONG_PHASE',message:'denied',private:'not permitted'}];
+ for(const error of badErrors){const bad=structuredClone(denied);bad.state.players[0].motion.error=error;await assert.rejects(validateRoomSnapshot(bad,{worldGeometry:geometry}),/Invalid world motion error/,JSON.stringify(error));}
+ const invalid=structuredClone(denied);invalid.state.players[0].motion.error={code:'WRONG_PHASE',message:'denied',private:'not permitted'};
+ const file=path.join(dataDir,'room-'+invalid.id+'.json');await writeFile(file,JSON.stringify(invalid));assert.deepEqual(await store.load(),[]);assert((await readdir(dataDir)).some(name=>name.includes('.quarantine-')));assert.deepEqual(JSON.parse(await readFile(backup.file,'utf8')),denied);
+});
