@@ -42,8 +42,9 @@ export function createRooms({store,engine,ai,now=Date.now,maxActiveRooms=12,room
     const data=room.data;
     const summary=ai.describe(data.aiContext);
     // Explicit allowlist: private AI memory and provider errors never cross transport.
-    const safeAi={};for(const key of ['mode','provider','model','calls','tokens','costUsd','limitReason'])if(['string','number'].includes(typeof summary?.[key]))safeAi[key]=summary[key];
+    const safeAi={};for(const key of ['mode','provider','model','calls','tokens','costUsd','limitReason','strategy','navigation','council'])if(['string','number'].includes(typeof summary?.[key]))safeAi[key]=summary[key];
     const notices=Array.isArray(data.aiContext.notices)?data.aiContext.notices.filter(x=>typeof x==='string').slice(-10).map(x=>x.slice(0,240)):[];
+    if(safeAi.mode==='live')notices.push('Hybrid AI: live model council; navigation and deck actions use local policy.');
     if(room.aiBlocked)notices.push('AI paused because durable storage or budget reservation failed.');
     return {roomId:data.id,mode:data.mode,isHost:identity.host,seatId:identity.seatId,phase:data.state?.phase||'lobby',connection:'connected',game:data.state?engine.getPlayerView(data.state,identity.seatId,now()):null,ai:safeAi,notices,createdAt:data.createdAt};
   }
