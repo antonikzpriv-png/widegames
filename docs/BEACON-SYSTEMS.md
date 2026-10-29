@@ -56,3 +56,20 @@ node --test tests/beacon-systems-integration-review.test.mjs
 ```
 
 This exits1 at the three BS-R1 assertions on the pinned source. Syntax and git diff --check pass. Only this document and the uniquely owned integration-review test are changed by the audit.
+
+## BS-R1 exact-pin closure at 6a97c798
+
+Independent coordinator review pin: 6a97c7980ca91fdef67838febdb79a5f4d1d67fe, archived read-only from shared Git objects into this worktree's ignored _artifacts/beacon-integration-review-6a97c79/source (server/shared/public). The exact commit adds ownEntry guards to root hint/action/input/transit projection reads and own-property-safe ability lookup/creation. The prior canonical replay correction keeps generated schema3 event id/type/at/eventVersion authoritative over contributor data. No runtime from this owner branch is substituted into the archive.
+
+BS-R1 is closed for the SAME three admitted human IDs: toString, valueOf and hasOwnProperty. Their original intended real HTTP create/start/input assertions are unchanged and all pass. The original nine controls pass9/9 at the exact pin (original-nine-results.txt). Historical cb00e33 red evidence and the prior finding above remain intact; _artifacts/beacon-integration-review-cb00e33/final-review-results.txt still has SHA256 95433B87A1897DE33121082DCD1388C08A88CCD77DECB0F18168133F0373F5E0. The manager's separately retained _artifacts/custom-id-review-red.txt was not edited.
+
+Three added positive groups each exercise one special ID through actual HTTP, engine, disk storage and restart: private self-targeted field-note creation; an own enumerable ability entry without modifying Object.prototype; original room cookies/seat identities, ability state and accepted request receipt restored; duplicate input/action accepted without a second note and fresh input sequence accepted; a fresh note denied during cooldown; another human denied cross-actor targeting and spectator action denied. Before and after restart, the other human and spectator receive no note payload/ID or private field-note event, and HTTP replay remains unavailable. Advancing the controlled clock to the actual seeded critical deadline ends the match through the runtime; all three authorized identities then receive ended replay with unique canonical r<number> IDs, exactly one attributed field-note event, the nested note ID intact, and the intended actor-only visibleTo evidence. Existing private AI context and durable $0.0123 budget reservation are byte/value unchanged as applicable. The second configured human is still a labelled trusted offline fixture, not a claim that public join assigns seats.
+
+Final focused result:12 registered,12 pass,0 fail/skip (closure-results.txt). The identical test was copied into the exact archive's tests directory with BEACON_SYSTEMS_REVIEW_ROOT cleared and passed12/12 again (default-source-results.txt), proving default current-checkout source resolution. The explicit override remains optional; the owner branch's foundation runtime is not the integrated runtime. Syntax and git diff --check pass. Reproduce the pinned run with:
+
+```powershell
+$env:BEACON_SYSTEMS_REVIEW_ROOT=(Resolve-Path '_artifacts/beacon-integration-review-6a97c79/source').Path
+node --test tests/beacon-systems-integration-review.test.mjs
+```
+
+Scope remains bounded to coordinator identity/ability/receipt/replay integration and the retained six controls. This pin also caps observationLimit at64 in root/store, wires validateSpatialState into schema3 snapshot validation, and retains the sanitized critical-site projection; the retained restart/privacy controls pass with those actual implementations. This is not exhaustive qualification of spatial observation behavior or an independent approval of this worker's systems code. No new exploratory audit, Chrome, broad suite, live provider, installs, runtime/shared edits, push/main/deployment or manager-worktree edits occurred. Only the owned integration-review test and this document change.
