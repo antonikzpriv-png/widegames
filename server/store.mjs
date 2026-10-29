@@ -1,6 +1,7 @@
 import {mkdir, readdir, lstat, readFile, open, rename, unlink} from 'node:fs/promises';
 import path from 'node:path';
 import {randomUUID} from 'node:crypto';
+import {validateReplayHistory,REPLAY_LIMITS} from '../shared/replay.mjs';
 import {ROOM_LAYOUT} from '../shared/contracts.mjs';
 
 export const ROOM_ID = /^[A-Za-z0-9_-]{20,40}$/;
@@ -22,6 +23,12 @@ export function validateRoom(room) {
   if (room.state === null && room.startId !== null) throw new Error('Invalid lobby');
   if(room.state!==null){
     const state=room.state;
+    if(state.replayHistory!==undefined){
+      if(state.schemaVersion!==2)throw new Error('Mixed legacy/world replay history');
+      validateReplayHistory(state.replayHistory);
+      if(state.replayHistory.checkpoints.some(a=>a.at<state.startedAt||a.at>state.updatedAt||a.sequence>state.replaySequence))throw new Error('Replay checkpoint exceeds match history');
+    }
+    if(state.replayBytes!==undefined&&(!Number.isSafeInteger(state.replayBytes)||state.replayBytes<0||state.replayBytes>REPLAY_LIMITS.bytes||!Array.isArray(state.replay)||state.replay.length>REPLAY_LIMITS.events||state.replayBytes!==state.replay.reduce((n,e)=>n+Buffer.byteLength(JSON.stringify(e)),0)))throw new Error('Invalid replay byte accounting');
     if(![1,2].includes(state.schemaVersion)||state.mode!==room.mode||state.version<1)throw new Error('Unsupported match schema');
     if(state.schemaVersion===1){
       if(Object.hasOwn(state,'worldVersion')||state.players.some(p=>Object.hasOwn(p,'position')||Object.hasOwn(p,'motion')))throw new Error('Mixed legacy/world match');
@@ -66,6 +73,9 @@ export async function validateRoomSnapshot(room,{worldGeometry:provided}={}){
       if(!validPoint(player.position)||m.path.some(p=>!validPoint(p))||(m.destination!==null&&!validPoint(m.destination))||m.leaseUntil>m.at+WORLD.inputLeaseMs+1e-6)throw new Error('Invalid world position or input lease');
     }
     for(const body of room.state.bodies)if(!validPoint(body.position))throw new Error('Invalid world body position');
+    for(const a of room.state.replayHistory?.checkpoints||[]){
+      if(a.players.some(p=>!validPoint(p.position)||p.route.some(q=>!validPoint(q)))||a.bodies.some(b=>!validPoint(b.position)))throw new Error('Invalid replay checkpoint geometry');
+    }
   }
   return room;
 }

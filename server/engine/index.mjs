@@ -1,6 +1,7 @@
 import { randomBytes, createHash } from 'node:crypto';
 import { CHARACTERS, ROOM_LAYOUT, DEFAULT_RULES, ACTION_TYPES } from '../../shared/contracts.mjs';
 import {worldRuntime} from './world-runtime.mjs';
+import {checkpointReplay,replayMetadata} from './replay-history.mjs';
 const worldEngine=worldRuntime(await import(process.env.WORLD_ENGINE_GEOMETRY_MODULE||'../../shared/world.mjs'));
 const isWorld=state=>state.schemaVersion===2&&state.worldVersion===1;
 
@@ -19,7 +20,8 @@ function publicEvent(state,type,at,data={}) {
 }
 function record(state,type,at,data={}) {
   state.replay.push({id:`r${++state.replaySequence}`,type,at,...data});
-  if (state.replay.length>MAX_REPLAY) state.replay.shift();
+  state.replayBytes=(state.replayBytes??state.replay.slice(0,-1).reduce((n,e)=>n+Buffer.byteLength(JSON.stringify(e)),0))+Buffer.byteLength(JSON.stringify(state.replay.at(-1)));
+  while(state.replay.length>MAX_REPLAY||state.replayBytes>2*1024*1024)state.replayBytes-=Buffer.byteLength(JSON.stringify(state.replay.shift()));
 }
 function end(state,winner,reason,at) {
   if(isWorld(state))worldEngine.stopAll(state,at,'ended',record);
@@ -119,6 +121,7 @@ export function createMatch({id,mode='human',humanPlayerId='p1',now=Date.now(),s
   const state={schemaVersion:1,id,mode,version:1,phase:'roam',startedAt:now,updatedAt:now,deadlineAt:now+rules.roamDeadlineMs,rules,players,bodies:[],sabotage:null,meeting:null,meetingCount:0,outcome:null,sequence:0,events:[],replaySequence:0,replay:[],requests:Object.fromEntries(players.map(p=>[p.id,[]]))};
   if(world)worldEngine.initialize(state,now);
   publicEvent(state,'started',now); record(state,'started',now,{...(world?{worldVersion:1,positions:players.map(p=>({id:p.id,position:clone(p.position)}))}:{}),roles:players.map(p=>({id:p.id,role:p.role})),tasks:players.map(p=>({id:p.id,tasks:clone(p.tasks)}))});
+  checkpointReplay(state);
   return state;
 }
 
@@ -179,6 +182,7 @@ export function tick(input,now=Date.now()) {
   const state=clone(input),seq=state.sequence;
   if (!advance(state,now)) return {state:input,events:[]};
   state.version++;
+  checkpointReplay(state);
   return {state,events:clone(state.events.filter(e=>Number(e.id.slice(1))>seq))};
 }
 
@@ -245,8 +249,9 @@ export function applyAction(input,playerId,action,now=Date.now()) {
     state.meeting.messages.push(message);publicEvent(state,'said',now,message);
   }
   if (action.type==='vote') state.meeting.votes.push({playerId:p.id,targetId:action.targetId});
-  record(state,'action',now,{playerId:p.id,action:clone(action),...(isWorld(state)?{position:clone(p.position)}:{})});
+  record(state,'action',now,{playerId:p.id,action:clone(action),...(isWorld(state)?{position:clone(p.position),...(['navigate','move'].includes(action.type)&&path.length<=128?{route:clone(path),speed:worldEngine.WORLD.speed}:{})}:{})});
   victory(state,now);
+  checkpointReplay(state);
   return {state,events:[...timed.events,...clone(state.events.filter(e=>Number(e.id.slice(1))>seq))],accepted:true};
 }
 
@@ -283,6 +288,8 @@ export function getPlayerView(state,playerIdOrNull,now=Date.now()) {
     outcome:clone(state.outcome),events:events.sort((a,b)=>a.at-b.at).slice(-MAX_EVENTS),availableActions:hints};
 }
 
+export const getReplayMetadata=replayMetadata;
+
 export function getReplay(state) {
   // Settle may append an earlier arrival after another keeper's later sample.
   // Stable numeric sorting preserves causal append order for equal timestamps.
@@ -308,5 +315,6 @@ export function applyInput(input,playerId,request,now=Date.now()) {
   if(error){p.motion.seq=request.seq;p.motion.dx=request.dx;p.motion.dy=request.dy;p.motion.error=error;state.version++;state.updatedAt=now;return {state,events:timed.events,accepted:false,error:clone(error)};}
   if(worldEngine.input(p,request,now))record(state,'direction',now,{playerId:p.id,dx:request.dx,dy:request.dy,position:clone(p.position)});
   state.version++;state.updatedAt=now;
+  checkpointReplay(state);
   return {state,events:timed.events,accepted:true};
 }
