@@ -82,3 +82,38 @@ Final targeted run: **20 total / 18 pass / 2 fail / 0 skip / 0 todo**, actual te
 Actual `docker version` process launch returned **ENOENT**: Docker is unavailable on PATH. Dockerfile, production dependency grouping, unprivileged `USER node`, demo defaults, health command and documented build/run commands were inspected. No Docker image build, daemon health check, Linux user/volume ownership, proxy, live provider, hosted CI or deployment result is claimed. The CLI cleanup fixture invokes the SIGTERM handler through synthetic IPC; OS signal delivery inside a container was not qualified. The workflow's artifact allowlist excludes private state/browser profiles, but hosted Actions were not run.
 
 `git diff` against the saved revision for runtime, shared/public assets, config/package files, Docker files, workflow, scripts and README was empty. Only the two uniquely owned `tests/audit-boundaries-20261029*.test.mjs` files and this report are committed. Coordinator correction and independent verification remain pending.
+
+## Bounded correction — shared origin validation, 2026-10-29
+
+The user explicitly granted implementation ownership of `server/config.mjs`, new `server/origin.mjs`, transport origin initialization and the owned audit tests/docs. The original audit above, its genuinely failing evidence at `0842a00`, and commit `d6aa36b50d0dbe240874375e7b860af8ae67ad4e` remain preserved. In particular, the original D: raw log still records 18 passes / two failures; this section does not relabel that invocation as passing. The correction below has owner checks and awaits Core's independent review.
+
+`validatePublicOrigin` now supplies one shared policy to `loadConfig` and direct `createGameServer` calls. It accepts explicit absolute HTTP(S) origins, canonicalizing host/scheme casing, trailing root slash and default ports using the URL parser. It rejects opaque/non-HTTP(S) schemes, literal/actual null, credentials including empty userinfo, query/fragment delimiters (including empty ones), non-root paths, controls/whitespace and backslashes. Supplied paths are checked before URL normalization can collapse a forbidden `path/..`, dot segment or encoded dot into `/`. Invalid host/port input is rejected with a setup error.
+
+Every error names `PUBLIC_ORIGIN`, explains the failed setup requirement and supplies safe localhost HTTP / public HTTPS examples. It never interpolates the supplied value or attaches the native parser error/input as a cause. Config loading returns only the validated canonical value, so the existing `main.mjs` startup log cannot receive raw userinfo and needs no source edit. Transport separately validates at initialization, before engine/controller/storage dependencies or locks/budget access, covering callers that bypass `loadConfig`. Unset/empty environment values keep the established localhost default; an absent/empty direct-server origin is rejected. Budget amounts, bounds and unrelated transport behavior are unchanged.
+
+Added `tests/audit-boundaries-20261029-origin.test.mjs`:
+
+- 35 invalid helper/direct-start inputs; 33 invalid environment values, with undefined/empty environment default behavior checked separately. Cases include opaque URLs, userinfo, empty query/fragment, non-root paths that URL normalization would otherwise erase, invalid ports, whitespace and backslashes.
+- Useful, non-secret setup-error checks, with no attached native error cause.
+- Direct-start dependency traps and a nonexistent data directory prove rejection precedes dependencies and storage. Separate labelled existing service/recovery locks and private budget evidence remain byte-for-byte intact.
+- Eight valid localhost, loopback, HTTPS proxy and IPv6 forms canonicalize correctly. Config call/token/cost/daily/room limits retain their configured values.
+- Actual direct-server HTTP requests use the canonical origin successfully, reject `Origin: null` and another origin, and issue Secure cookies for HTTPS proxy configuration only.
+
+The original B01 assertion now passes because setup rejects the opaque URL. The strengthened B02 CLI assertion verifies nonzero setup exit, no listener, no created private data directory, a useful setup message, and no synthetic origin credential in either stdout or stderr. The production-only CLI fixture additionally verifies canonical logging for `HTTP://LOCALHOST:3000/`.
+
+Validation after the bounded correction:
+
+```powershell
+$env:TEMP='D:/Widegames-work/temp'
+$env:TMP='D:/Widegames-work/temp'
+$env:npm_config_cache='D:/Widegames-work/npm-cache'
+node --test --test-concurrency=2 tests/audit-boundaries-20261029-config-static.test.mjs tests/audit-boundaries-20261029-origin.test.mjs tests/audit-boundaries-20261029-provider.test.mjs
+node --check server/origin.mjs
+node --check server/config.mjs
+node --check server/transport.mjs
+node --check tests/audit-boundaries-20261029-origin.test.mjs
+node --check tests/audit-boundaries-20261029-config-static.test.mjs
+git diff --check
+```
+
+Observed: **25/25 passed, zero failures/skips/todos**, actual test exit **0**, 5.094 seconds. Both previously failing assertions pass; the existing independent provider/mock budget/cancellation checks and explicitly labelled transport self-checks still pass. Syntax/diff checks pass. Reviewed diff scope: the shared helper, config wiring, transport import/origin initialization only, owned tests and this appended report. `server/main.mjs`, budget/provider/engine/static/public/root files are untouched. No deployment, paid/live provider call, browser or main-branch change occurred. Docker availability remains unqualified/unavailable as recorded above. Core must independently assess the exact correction commit; these are owner results, not worker self-approval.
