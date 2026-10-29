@@ -1,5 +1,6 @@
 import {randomBytes,createHash} from 'node:crypto';
 import {ROOM_ID,validateRoom} from './store.mjs';
+import {normalizeRoster,publicRoster} from './features/lobbies/index.mjs';
 
 export class ServiceError extends Error {
   constructor(status,code,message){super(message);this.status=status;this.code=code;}
@@ -18,18 +19,19 @@ export function identityFor(room,header='') {
 export function issueIdentity(room,host=false) {
   if(room.identities.length>=128)fail(429,'ROOM_FULL','This room has reached its visitor limit.');
   const token=randomBytes(32).toString('hex');
-  const identity={hash:hash(token),host,seatId:host && room.mode==='human'?'p1':null};
+  const identity={hash:hash(token),host,seatId:host&&room.mode==='human'?(room.lobby?.humanPlayerIds[0]??'p1'):null};
   room.identities.push(identity);return {token,identity};
 }
 export function cookie(roomId,token,secure) {
   return `${cookieName(roomId)}=${token}; Path=/api/rooms/${roomId}; HttpOnly; SameSite=Strict; Max-Age=604800${secure?'; Secure':''}`;
 }
-export function createRoom(mode,now) {
+export function createRoom(mode,now,lobbyConfig) {
   const id=randomBytes(18).toString('base64url');
-  return {schema:1,id,mode,createdAt:now,updatedAt:now,identities:[],state:null,startId:null,aiContext:{}};
+  const setup=lobbyConfig?normalizeRoster({...lobbyConfig,mode}):null;
+  return {schema:setup?2:1,...(setup?{lobby:{roster:setup.players,saboteurCount:setup.saboteurCount,humanPlayerIds:setup.humanPlayerIds}}:{}),id,mode,createdAt:now,updatedAt:now,identities:[],state:null,startId:null,aiContext:{}};
 }
 
-export function createRooms({store,engine,ai,now=Date.now,maxActiveRooms=12,roomTtlMs=3600000}) {
+export function createRooms({store,engine,ai,now=Date.now,maxActiveRooms=12,roomTtlMs=3600000,lobbyConfig}) {
   const rooms=new Map();let creationQueue=Promise.resolve();
   const entry=data=>({data,queue:Promise.resolve(),sockets:new Set(),aiBusy:false,aiBlocked:false,nextDecision:new Map(),abort:new AbortController(),removed:false});
   const get=id=>{if(!ROOM_ID.test(id)||!rooms.has(id))fail(404,'ROOM_NOT_FOUND','Room not found.');return rooms.get(id);};
@@ -46,7 +48,7 @@ export function createRooms({store,engine,ai,now=Date.now,maxActiveRooms=12,room
     const notices=Array.isArray(data.aiContext.notices)?data.aiContext.notices.filter(x=>typeof x==='string').slice(-10).map(x=>x.slice(0,240)):[];
     if(safeAi.mode==='live')notices.push('Hybrid AI: live model council; navigation and deck actions use local policy.');
     if(room.aiBlocked)notices.push('AI paused because durable storage or budget reservation failed.');
-    return {roomId:data.id,mode:data.mode,isHost:identity.host,seatId:identity.seatId,phase:data.state?.phase||'lobby',connection:'connected',game:data.state?engine.getPlayerView(data.state,identity.seatId,now()):null,ai:safeAi,notices,createdAt:data.createdAt};
+    return {...(data.schema===2?{roster:data.lobby.roster.map(({id,name,color,persona})=>({id,name,color,persona}))}:{}),roomId:data.id,mode:data.mode,isHost:identity.host,seatId:identity.seatId,phase:data.state?.phase||'lobby',connection:'connected',game:data.state?engine.getPlayerView(data.state,identity.seatId,now()):null,ai:safeAi,notices,createdAt:data.createdAt};
   }
   async function restore() {
     for(const data of await store.load()) {
@@ -63,7 +65,7 @@ export function createRooms({store,engine,ai,now=Date.now,maxActiveRooms=12,room
   async function create(mode) {
     const work=creationQueue.catch(()=>{}).then(async()=>{
       if(rooms.size>=maxActiveRooms)fail(429,'ROOM_LIMIT','All room slots are in use.');
-      const data=createRoom(mode,now()), issued=issueIdentity(data,true);await store.save(data);
+      const data=createRoom(mode,now(),lobbyConfig), issued=issueIdentity(data,true);await store.save(data);
       const room=entry(data);rooms.set(data.id,room);return {room,...issued};
     });creationQueue=work;return work;
   }

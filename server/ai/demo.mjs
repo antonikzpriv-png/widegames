@@ -34,7 +34,7 @@ function visibleBodies(view) {
   for (const event of view.events ?? []) {
     if (event.bodyId && event.roomId === view.self.roomId && !event.reported) found.set(event.bodyId, event.bodyId);
   }
-  return [...found.values()].slice(0, 6);
+  return [...found.values()].slice(0, 12);
 }
 
 function suspect(view, memory) {
@@ -59,10 +59,10 @@ const VOICES = Object.freeze({
 
 function dialogue(view, memory) {
   const target = suspect(view, memory);
-  const name = CHARACTERS.find(p => p.id === target)?.name;
+  const name = (view.players??CHARACTERS).find(p => p.id === target)?.name;
   const room = rooms.get(view.self.roomId)?.name ?? 'my station';
   const number = Math.min(memory.discussionCount ?? 0, 2);
-  const voice = VOICES[view.self.id] ?? VOICES.p1;
+  const voice=VOICES[view.self.id]??Object.values(VOICES)[[...view.self.id].reduce((n,c)=>n+c.charCodeAt(0),0)%Object.keys(VOICES).length];
   if (view.self.role === 'saboteur') return [
     voice[0] + ' I was checking the relays near ' + room + '. Who can account for the last crossing?',
     voice[1] + (name ? ' ' + name + ', tell us your route. We need a consistent account.' : ' Keep the repair teams together.'),
@@ -70,7 +70,7 @@ function dialogue(view, memory) {
   ][number];
   const witness = memory.witnesses?.[target];
   if (witness && number < 2) {
-    const victim = CHARACTERS.find(p => p.id === witness.targetId)?.name;
+    const victim = (view.players??CHARACTERS).find(p => p.id === witness.targetId)?.name;
     const where = rooms.get(witness.roomId)?.name;
     return voice[number] + ' I saw ' + name + ' attack ' + victim + ' in ' + where + '. That is firsthand; I will vote for ' + name + '.';
   }
@@ -90,7 +90,7 @@ export function observe(view, memory) {
     memory.discussionCount = 0;
   }
   for (const event of view.events ?? []) {
-    if (event.type === 'witness' && event.playerId !== view.self.id && event.playerId !== event.targetId && CHARACTERS.some(p => p.id === event.playerId) && CHARACTERS.some(p => p.id === event.targetId) && rooms.has(event.roomId)) {
+    if (event.type === 'witness' && event.playerId !== view.self.id && event.playerId !== event.targetId && (view.players??CHARACTERS).some(p => p.id === event.playerId) && (view.players??CHARACTERS).some(p => p.id === event.targetId) && rooms.has(event.roomId)) {
       memory.witnesses ??= {};
       memory.witnesses[event.playerId] = { targetId: event.targetId, roomId: event.roomId, at: Number.isFinite(event.at) ? event.at : view.serverNow };
     }
@@ -107,8 +107,8 @@ export function observe(view, memory) {
   }
   memory.observation = {
     roomId: view.self.roomId,
-    nearby: (view.players ?? []).filter(p => p.id !== view.self.id && p.alive && (view.worldVersion === 1 ? visibleWorldPlayer(view, p) : p.roomId === view.self.roomId)).map(p => p.id).slice(0, 6),
-    dead: [...dead].slice(0, 6)
+    nearby: (view.players ?? []).filter(p => p.id !== view.self.id && p.alive && (view.worldVersion === 1 ? visibleWorldPlayer(view, p) : p.roomId === view.self.roomId)).map(p => p.id).slice(0, 12),
+    dead: [...dead].slice(0, 12)
   };
 }
 

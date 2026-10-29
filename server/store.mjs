@@ -2,30 +2,37 @@ import {mkdir, readdir, lstat, readFile, open, rename, unlink} from 'node:fs/pro
 import path from 'node:path';
 import {randomUUID} from 'node:crypto';
 import {ROOM_LAYOUT} from '../shared/contracts.mjs';
+import {normalizeRoster,PLAYER_ID} from './features/lobbies/index.mjs';
+import {DEFAULT_BEACON_RULES} from '../shared/beacon.mjs';
+import {validateSystemsState} from './engine/systems/index.mjs';
+import {validateInvestigationState} from './engine/investigation/index.mjs';
 
 export const ROOM_ID = /^[A-Za-z0-9_-]{20,40}$/;
 const phases = new Set(['roam','discussion','voting','ended','paused']);
 const object = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 export function validateRoom(room) {
-  if (!object(room) || room.schema !== 1 || !ROOM_ID.test(room.id) || !['human','spectator'].includes(room.mode)) throw new Error('Invalid room');
+  if (!object(room) || ![1,2].includes(room.schema) || !ROOM_ID.test(room.id) || !['human','spectator'].includes(room.mode)) throw new Error('Invalid room');
   if (![room.createdAt,room.updatedAt].every(n => Number.isSafeInteger(n) && n >= 0) || room.updatedAt < room.createdAt) throw new Error('Invalid room time');
   if (!Array.isArray(room.identities) || !room.identities.length || room.identities.length > 128) throw new Error('Invalid identities');
-  const seen = new Set();
+  const setup=room.schema===2?normalizeRoster({...room.lobby,mode:room.mode}):null;
+  const seatIds=setup?setup.humanPlayerIds:room.mode==='human'?['p1']:[];
+  const seen = new Set(),seenSeats=new Set();
   for (const identity of room.identities) {
-    if (!object(identity) || !/^[a-f0-9]{64}$/.test(identity.hash) || seen.has(identity.hash) || typeof identity.host !== 'boolean' || ![null,'p1'].includes(identity.seatId)) throw new Error('Invalid identity');
-    if (identity.seatId && (!identity.host || room.mode !== 'human')) throw new Error('Invalid seat');
+    if (!object(identity) || !/^[a-f0-9]{64}$/.test(identity.hash) || seen.has(identity.hash) || typeof identity.host !== 'boolean' || !(identity.seatId===null||seatIds.includes(identity.seatId))) throw new Error('Invalid identity');
+    if(identity.seatId){if(room.mode!=='human'||seenSeats.has(identity.seatId)||(room.schema===1&&!identity.host))throw new Error('Invalid seat');seenSeats.add(identity.seatId);}
     seen.add(identity.hash);
   }
-  if (room.identities.filter(i=>i.host).length !== 1 || room.identities.filter(i=>i.seatId).length !== (room.mode === 'human' ? 1 : 0)) throw new Error('Invalid host');
+  if (room.identities.filter(i=>i.host).length !== 1 || (room.schema===1?room.identities.filter(i=>i.seatId).length !== (room.mode === 'human' ? 1 : 0):room.identities.filter(i=>i.seatId).length>seatIds.length)) throw new Error('Invalid host');
   if (!object(room.aiContext) || (room.startId !== null && (typeof room.startId !== 'string' || !/^[A-Za-z0-9:_-]{1,100}$/.test(room.startId)))) throw new Error('Invalid metadata');
-  if (room.state !== null && (!object(room.state) || room.state.id !== room.id || !phases.has(room.state.phase) || !Number.isSafeInteger(room.state.version) || !Array.isArray(room.state.players) || room.state.players.length !== 6 || room.startId === null)) throw new Error('Invalid match');
+  if (room.state !== null && (!object(room.state) || room.state.id !== room.id || !phases.has(room.state.phase) || !Number.isSafeInteger(room.state.version) || !Array.isArray(room.state.players) || (room.schema===1?room.state.players.length!==6:room.state.players.length!==setup.players.length) || room.startId === null)) throw new Error('Invalid match');
   if (room.state === null && room.startId !== null) throw new Error('Invalid lobby');
   if(room.state!==null){
     const state=room.state;
-    if(![1,2].includes(state.schemaVersion)||state.mode!==room.mode||state.version<1)throw new Error('Unsupported match schema');
+    if(![1,2,3].includes(state.schemaVersion)||state.mode!==room.mode||state.version<1)throw new Error('Unsupported match schema');
     if(state.schemaVersion===1){
       if(Object.hasOwn(state,'worldVersion')||state.players.some(p=>Object.hasOwn(p,'position')||Object.hasOwn(p,'motion')))throw new Error('Mixed legacy/world match');
     }else validateWorldStructure(state);
+    if(state.schemaVersion===3){if(room.schema!==2)throw new Error('Beacon match requires versioned lobby');validateBeaconStructure(state,setup);}
   }
   return room;
 }
@@ -37,7 +44,7 @@ function validateWorldStructure(state){
   if(state.worldVersion!==1||!finiteTime(state.startedAt)||!finiteTime(state.updatedAt)||state.updatedAt<state.startedAt||!Array.isArray(state.bodies))throw new Error('Invalid world match');
   const ids=new Set();
   for(const player of state.players){
-    if(!object(player)||!/^p[1-6]$/.test(player.id)||ids.has(player.id)||!['crew','saboteur'].includes(player.role)||typeof player.alive!=='boolean'||!roomIds.has(player.roomId)||player.human!==(state.mode==='human'&&player.id==='p1')||!point(player.position))throw new Error('Invalid world player');
+    if(!object(player)||!(state.schemaVersion===3?PLAYER_ID.test(player.id):/^p[1-6]$/.test(player.id))||ids.has(player.id)||!['crew','saboteur'].includes(player.role)||typeof player.alive!=='boolean'||!roomIds.has(player.roomId)||player.human!==(state.schemaVersion===3?state.configuration.humanPlayerIds.includes(player.id):state.mode==='human'&&player.id==='p1')||!point(player.position))throw new Error('Invalid world player');
     ids.add(player.id);const motion=player.motion;
     if(!object(motion)||!Number.isSafeInteger(motion.seq)||motion.seq<0||![motion.dx,motion.dy].every(n=>Number.isInteger(n)&&n>=-1&&n<=1)||typeof motion.manual!=='boolean'||![motion.at,motion.leaseUntil,motion.recordedAt].every(finiteTime)||motion.at>state.updatedAt+1e-6||motion.recordedAt>state.updatedAt+1e-6||!Array.isArray(motion.path)||motion.path.length>4096||motion.path.some(p=>!point(p))||(motion.destination!==null&&!point(motion.destination)))throw new Error('Invalid world motion');
     // Early schema-2 checkpoints lack error; new Core persists null or a bounded receipt.
@@ -47,8 +54,27 @@ function validateWorldStructure(state){
     }
     if((motion.manual&&(!(motion.dx||motion.dy)||motion.path.length||motion.destination!==null))||(motion.path.length===0)!==(motion.destination===null)||((!player.alive||state.phase!=='roam')&&(motion.manual||motion.path.length||motion.destination!==null)))throw new Error('Inconsistent world motion');
   }
-  if(state.players.filter(player=>player.role==='saboteur').length!==1)throw new Error('Invalid world role assignment');
-  for(const body of state.bodies)if(!object(body)||!/^body-p[1-6]$/.test(body.id)||!ids.has(body.playerId)||!roomIds.has(body.roomId)||typeof body.reported!=='boolean'||!point(body.position)||!finiteTime(body.at)||body.at>state.updatedAt)throw new Error('Invalid world body');
+  if(state.players.filter(player=>player.role==='saboteur').length!==(state.schemaVersion===3?state.configuration.saboteurCount:1))throw new Error('Invalid world role assignment');
+  for(const body of state.bodies)if(!object(body)||!(state.schemaVersion===3?body.id==='body-'+body.playerId:/^body-p[1-6]$/.test(body.id))||!ids.has(body.playerId)||!roomIds.has(body.roomId)||typeof body.reported!=='boolean'||!point(body.position)||!finiteTime(body.at)||body.at>state.updatedAt)throw new Error('Invalid world body');
+}
+function validateBeaconStructure(state,setup){
+ if(state.beaconVersion!==1||!object(state.configuration)||!object(state.beaconRules)||state.deathPolicy!=='redistribute-at-muster'||!object(state.abilities)||!Array.isArray(state.replaySnapshots)||state.replaySnapshots.length>256)throw new Error('Invalid beacon state');
+ const stored=normalizeRoster({...state.configuration,roster:state.configuration.players,mode:state.mode});
+ if(JSON.stringify(stored)!==JSON.stringify(setup)||state.players.some(p=>!setup.players.some(q=>q.id===p.id&&q.name===p.name&&q.color===p.color)))throw new Error('Beacon roster mismatch');
+ for(const key of Object.keys(DEFAULT_BEACON_RULES))if(!Number.isSafeInteger(state.beaconRules[key])||state.beaconRules[key]<1||state.beaconRules[key]>86400000)throw new Error('Invalid beacon rule');
+ if(Object.keys(state.beaconRules).length!==Object.keys(DEFAULT_BEACON_RULES).length||state.beaconRules.visionRadius<80||state.beaconRules.visionRadius>900||state.beaconRules.saboteurVisionRadius<80||state.beaconRules.saboteurVisionRadius>900||state.beaconRules.lightsVisionRadius>state.beaconRules.visionRadius||state.beaconRules.observationLimit>128)throw new Error('Invalid beacon vision');
+ validateSystemsState(state);validateInvestigationState(state);
+ const ids=new Set(state.players.map(p=>p.id));
+ if(!object(state.requests)||Object.keys(state.requests).length!==ids.size||Object.keys(state.requests).some(id=>!ids.has(id)))throw new Error('Invalid request ledger');
+ for(const p of state.players){
+  if(!Array.isArray(p.tasks)||p.tasks.length>240||typeof p.human!=='boolean'||!object(p.cooldowns)||!Number.isSafeInteger(p.meetingsRemaining)||p.meetingsRemaining<0||p.meetingsRemaining>10)throw new Error('Invalid keeper state');
+  for(const t of p.tasks)if(!object(t)||typeof t.id!=='string'||t.id.length>100||!roomIds.has(t.roomId)||typeof t.label!=='string'||t.label.length>200||typeof t.completed!=='boolean')throw new Error('Invalid task state');
+  for(const key of ['moveAt','taskAt','killAt','sabotageAt','meetingAt'])if(!finiteTime(p.cooldowns[key]))throw new Error('Invalid cooldown');
+  const requests=state.requests[p.id];if(!Array.isArray(requests)||requests.length>2048||new Set(requests.map(r=>r.id)).size!==requests.length||requests.some(r=>!object(r)||typeof r.id!=='string'||!/^[A-Za-z0-9:_-]{1,100}$/.test(r.id)||typeof r.fingerprint!=='string'||r.fingerprint.length>10000||typeof r.accepted!=='boolean'))throw new Error('Invalid accepted request history');
+ }
+ for(const [id,entry]of Object.entries(state.abilities)){if(!ids.has(id)||!object(entry)||!finiteTime(entry.nextAt)||!Array.isArray(entry.notes)||entry.notes.length>32||entry.notes.some(n=>!object(n)||!finiteTime(n.at)||n.at>state.updatedAt||!roomIds.has(n.roomId)||!point(n.position)))throw new Error('Invalid ability state');}
+ if(!Array.isArray(state.replay)||state.replay.length>12000||!Array.isArray(state.events)||state.events.length>256)throw new Error('Invalid event history');
+ let previous=-1;for(const snap of state.replaySnapshots){if(!object(snap)||snap.version!==1||!finiteTime(snap.at)||snap.at<previous||snap.at>state.updatedAt||!phases.has(snap.phase)||!Array.isArray(snap.players)||snap.players.length!==ids.size||snap.players.some(p=>!ids.has(p.id)||!point(p.position)||typeof p.alive!=='boolean'))throw new Error('Invalid replay snapshot');previous=snap.at;}
 }
 async function worldGeometry(supplied){
   const geometry=supplied??await import('../shared/world.mjs');
@@ -58,7 +84,7 @@ async function worldGeometry(supplied){
 /** Read-only candidate validation, usable before an explicit offline migration. */
 export async function validateRoomSnapshot(room,{worldGeometry:provided}={}){
   validateRoom(room);
-  if(room.state?.schemaVersion===2){
+  if([2,3].includes(room.state?.schemaVersion)){
     const geometry=await worldGeometry(provided),{WORLD,isWalkable}=geometry;
     const validPoint=p=>point(p)&&p.x>=0&&p.y>=0&&p.x<=WORLD.width&&p.y<=WORLD.height&&isWalkable(p);
     for(const player of room.state.players){
@@ -132,7 +158,7 @@ export async function createRoomStore(directory,{worldGeometry:providedGeometry}
           room=validateRoom(JSON.parse(await readFile(file,'utf8')));if(room.id!==match[1])throw new Error('Room ID mismatch');
         } catch {await rename(file,`${file}.quarantine-${randomUUID()}`);continue;}
         // Missing deployment geometry is a setup error, not corrupt user data.
-        const geometry=room.state?.schemaVersion===2?await worldGeometry(providedGeometry):undefined;
+        const geometry=[2,3].includes(room.state?.schemaVersion)?await worldGeometry(providedGeometry):undefined;
         try{await validateRoomSnapshot(room,{worldGeometry:geometry});rooms.push(room);}catch{await rename(file,`${file}.quarantine-${randomUUID()}`);}
       }
       return rooms;

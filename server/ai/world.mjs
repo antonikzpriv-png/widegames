@@ -1,6 +1,8 @@
 import { CHARACTERS, ROOM_LAYOUT } from '../../shared/contracts.mjs';
 import { WORLD, WORLD_STATIONS, WORLD_BELL, distance, findWorldPath, canSeeWorldPoint } from '../../shared/world.mjs';
 
+import {localGoals,localNavigationIntent} from '../features/strategy/index.mjs';
+
 const ordered = values => [...values].sort((a, b) => a.id.localeCompare(b.id));
 const point = value => value && Number.isFinite(value.x) && Number.isFinite(value.y);
 const ready = (view, key) => (view.self.cooldowns?.[key] ?? 0) <= view.serverNow;
@@ -21,6 +23,7 @@ function pathLength(start, target) {
 
 /** World proposals use public geometry and the actor's safe view, never state. */
 export function worldCandidates(view, memory, suspect) {
+  if(view.beaconVersion===1)return beaconCandidates(view,memory,suspect);
   const allowed = new Set(view.availableActions ?? []);
   const wait = () => allowed.has('wait') ? [{ type: 'wait' }] : [];
   const self = view.self;
@@ -102,4 +105,34 @@ export function worldCandidates(view, memory, suspect) {
     return navigate(station);
   }
   return wait();
+}
+
+/** Group1 adaptation: local goals consume only server-permitted observations. */
+function beaconCandidates(view,memory,suspect){
+ const self=view.self,allowed=new Set(view.availableActions??[]),wait=()=>allowed.has('wait')?[{type:'wait'}]:[];
+ if(!point(self?.position)||self.transit)return wait();
+ const controls=(view.interactions??[]).filter(a=>a.enabled),proposal=d=>({type:d.type,...d.fields});
+ const navigate=target=>{const a=localNavigationIntent(view,target);return a.type==='wait'?wait():[a];};
+ const bodies=(view.events??[]).filter(e=>e.type==='body'&&point(e.position));
+ for(const body of bodies){if(allowed.has('report')&&distance(self.position,body.position)<=WORLD.reportRadius)return [{type:'report',bodyId:body.bodyId}];if(distance(self.position,body.position)>WORLD.reportRadius)return navigate(body.position);}
+ if(self.role==='crew'){
+  const repair=controls.find(a=>a.type==='systemRepair');if(repair)return [proposal(repair)];
+  const goal=localGoals.select(view,memory);
+  if(goal?.goalId==='repair'){memory.goal={id:goal.goalId,at:view.serverNow};return navigate(goal.target);}
+  if(allowed.has('task')&&ready(view,'taskAt')){const task=self.tasks.find(t=>!t.completed&&at(view,WORLD_STATIONS[t.roomId],WORLD.interactionRadius));if(task)return [{type:'task',taskId:task.id}];}
+  if(!view.sabotage?.active&&suspect!=='skip'&&ready(view,'meetingAt')&&self.meetingsRemaining>0){if(allowed.has('meeting'))return [{type:'meeting'}];return navigate(WORLD_BELL);}
+  if(goal){memory.goal={id:goal.goalId,at:view.serverNow};return navigate(goal.target);}
+ }else{
+  const targets=ordered((view.players??[]).filter(p=>p.id!==self.id&&p.alive&&point(p.position)));
+  if(allowed.has('eliminate')&&ready(view,'killAt')){const target=targets.find(p=>distance(self.position,p.position)<=WORLD.killRadius);if(target)return [{type:'eliminate',targetId:target.id}];}
+  const sabotage=controls.filter(a=>a.type==='systemSabotage');
+  if(sabotage.length){const order=['lights','communications','door','flood','power'],kind=order[(memory.beaconSabotages??0)%order.length],chosen=sabotage.find(a=>a.fields.kind===kind)??sabotage[0];memory.beaconSabotages=(memory.beaconSabotages??0)+1;return [proposal(chosen)];}
+  if(ready(view,'killAt')&&targets.length){targets.sort((a,b)=>distance(self.position,a.position)-distance(self.position,b.position));return navigate(targets[0].position);}
+ }
+ if(self.moving)return wait();
+ const terminal=controls.find(a=>a.type==='investigate');if(terminal&&view.serverNow-(memory.lastTerminalAt??-Infinity)>30000){memory.lastTerminalAt=view.serverNow;return [proposal(terminal)];}
+ if(view.investigation?.session)return wait();
+ const doors=controls.find(a=>a.type==='systemRepair'&&a.fields.systemId==='door');if(doors)return [proposal(doors)];
+ const offset=(view.players??[]).findIndex(p=>p.id===self.id);for(let step=0;step<ROOM_LAYOUT.length;step++){const station=WORLD_STATIONS[ROOM_LAYOUT[((memory.patrol??0)+Math.max(0,offset)+step)%ROOM_LAYOUT.length].id];if(point(station)&&!at(view,station,WORLD.interactionRadius))return navigate(station);}
+ return wait();
 }
