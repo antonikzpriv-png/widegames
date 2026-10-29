@@ -16,7 +16,7 @@ const isBeacon=state=>state.schemaVersion===3&&state.beaconVersion===1;
 const ownEntry=(map,id)=>map&&Object.hasOwn(map,id)?map[id]:undefined;
 const runtime=state=>isBeacon(state)?spatialEngine:worldEngine;
 const nearby=(state,p,target,range=geometry.WORLD.interactionRadius)=>runtime(state).nearby(p.position,target,range,state,p.id);
-const sees=(state,p,target)=>runtime(state).sees(p.position,target,state,p.id);
+const sees=(state,p,target)=>runtime(state).sees(p.position,target,state,state.players.includes(p)?p.id:null);
 const context=()=>({record,publicEvent,nearby,sees,geometry,stop:(s,p,at,reason)=>runtime(s).stop(s,p,at,reason,record)});
 function refreshKnowledge(state,at){if(!isBeacon(state))return false;return spatialEngine.observe(state,at,record)||false;}
 function featureHints(state,p,now){
