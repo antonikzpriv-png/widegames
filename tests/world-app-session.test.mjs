@@ -20,13 +20,13 @@ async function fixture(){
 }
 
 test('actual root world callbacks cannot send after another room owns the scene',async()=>{
- const f=await fixture(),old=await f.open('A'),next=await f.open('B');assert(old.disposed);assert(!next.disposed);
+ const f=await fixture(),old=await f.open('A'),next=await f.open('B');assert(old.disposed);assert(!next.disposed);const count=f.requests.length;
  for(const call of [()=>old.callbacks.input({seq:1,dx:1,dy:0}),()=>old.callbacks.action('task',{taskId:'old'}),()=>old.callbacks.start(),()=>old.callbacks.loadReplay()])await assert.rejects(call(),error=>error.name==='AbortError');
- assert.equal(f.requests.length,0);assert.equal(f.api.getRoom().roomId,'B');
+ assert.equal(f.requests.length,count);assert(f.requests.every(r=>r.path==='/api/rooms/A/input'&&!r.options.body.dx&&!r.options.body.dy));assert.equal(f.api.getRoom().roomId,'B');
 });
 
 test('late old input response is discarded and each request retains its original controller',async()=>{
- const f=await fixture(),old=await f.open('A');const pending=old.callbacks.input({seq:1,dx:Math.SQRT1_2,dy:Math.SQRT1_2}),request=f.requests[0];assert.deepEqual(request.options.body,{seq:1,dx:1,dy:1});
+ const f=await fixture(),old=await f.open('A');const pending=old.callbacks.input({seq:1,dx:Math.SQRT1_2,dy:Math.SQRT1_2}),request=f.requests[0];assert.deepEqual(JSON.parse(JSON.stringify(request.options.body)),{seq:1,dx:1,dy:1});
  await f.open('B');assert(request.options.signal.aborted);request.resolve(state('A',999));await assert.rejects(pending,error=>error.name==='AbortError');assert.equal(f.api.getRoom().roomId,'B');
 });
 
@@ -34,7 +34,7 @@ test('reconnect preserves the same scene but replaces its network ownership',asy
  const f=await fixture(),scene=await f.open('A');const pending=scene.callbacks.input({seq:1,dx:1,dy:0}),old=f.requests[0];
  await f.open('A',2);assert(!scene.disposed);assert.equal(f.instances.length,1);assert(old.options.signal.aborted);
  old.resolve(state('A',999));await assert.rejects(pending,error=>error.name==='AbortError');assert.equal(f.api.getRoom().game.version,2);
- const fresh=scene.callbacks.input({seq:2,dx:0,dy:1}),request=f.requests[1];assert(!request.options.signal.aborted);assert.notEqual(request.options.signal,old.options.signal);request.resolve(state('A',3));await fresh;assert.equal(f.api.getRoom().game.version,3);
+ const fresh=scene.callbacks.input({seq:2,dx:0,dy:1}),request=f.requests.at(-1);assert.equal(request.options.body.seq,3,'Fresh control must follow the independently allocated lifecycle stop');assert(!request.options.signal.aborted);assert.notEqual(request.options.signal,old.options.signal);request.resolve(state('A',3));await fresh;assert.equal(f.api.getRoom().game.version,3);
 });
 
 test('lobbies, meetings and an already stopped actor do not emit redundant movement packets',async()=>{
@@ -52,7 +52,7 @@ test('ambiguous world action exposes the same-ID retry and acknowledgement clear
 
 test('a retained old retry control cannot run its action in a new room',async()=>{
  const f=await fixture(),scene=await f.open('A');const action=scene.callbacks.action('task',{taskId:'task-A'});f.requests[0].reject(new Error('Lost reply'));await assert.rejects(action);const retry=f.feedback.children.find(node=>node.text==='Retry same request');
- await f.open('B');retry.click();assert.equal(f.requests.length,1);assert.equal(f.api.getRoom().roomId,'B');
+ await f.open('B');const count=f.requests.length;retry.click();assert.equal(f.requests.length,count);assert.equal(f.requests.filter(request=>request.path.endsWith('/action')).length,1);assert.equal(f.api.getRoom().roomId,'B');
 });
 
 test('a failed movement connection revokes readiness until resync, while stop remains best effort',async()=>{
@@ -65,4 +65,16 @@ test('a failed movement connection revokes readiness until resync, while stop re
 
 test('ordinary rule rejection does not masquerade as lost connectivity',async()=>{
  const f=await fixture(),scene=await f.open('A');const pending=scene.callbacks.input({seq:1,dx:1,dy:0});f.requests[0].reject(Object.assign(new Error('Stale sequence'),{status:409,code:'STALE_INPUT'}));await assert.rejects(pending,/Stale sequence/);f.api.mount();assert.equal(scene.updates.at(-1)[1].connected,true);
+});
+
+test('hidden or closed world sends a bounded old-room stop before aborting normal requests',async()=>{
+ const f=await fixture(),scene=await f.open('A');const moving=scene.callbacks.input({seq:1,dx:1,dy:0}),old=f.requests[0];f.context.document.hidden=true;f.api.stop();
+ const stop=f.requests.at(-1);assert.equal(stop.path,'/api/rooms/A/input');assert.equal(stop.options.keepalive,true);assert.equal(stop.options.timeoutMs,1500);assert.equal(stop.options.signal,undefined);assert.equal(stop.options.body.seq,2);assert.equal(stop.options.body.dx,0);assert.equal(stop.options.body.dy,0);assert(old.options.signal.aborted);
+ old.resolve(state('A',999));await assert.rejects(moving,error=>error.name==='AbortError');stop.resolve(state('A',1000));await new Promise(resolve=>setImmediate(resolve));assert.equal(f.api.getRoom().game.version,1,'Final stop acknowledgements cannot revive hidden views');
+});
+
+test('fresh controls allocate after lifecycle stops while duplicate/stale client intents stay inert',async()=>{
+ const f=await fixture(),scene=await f.open('A');const first=scene.callbacks.input({seq:5,dx:1,dy:0});f.requests[0].resolve(state('A',2));await first;
+ const duplicate=scene.callbacks.input({seq:5,dx:1,dy:0});assert.equal(f.requests[1].options.body.seq,5);f.requests[1].resolve(state('A',2));await duplicate;
+ await assert.rejects(scene.callbacks.input({seq:4,dx:0,dy:1}),error=>error.name==='AbortError');await assert.rejects(scene.callbacks.input({seq:5,dx:0,dy:1}),/sequence already used/i);
 });

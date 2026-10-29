@@ -15,20 +15,39 @@ let draft='',draftMeeting=null,confirmTarget=null,replay=null,replayIndex=0,retr
 const attemptedJoins=new Set();
 let worldExperience=null,worldSession=null,lastInputFailure=0;
 
+function stopWorldMovement(){
+ const owner=worldSession,game=room?.game;
+ if(!owner||owner.id!==roomId||!game?.worldVersion||!game.self?.alive||game.phase!=='roam')return;
+ const seq=Math.max(owner.wireSeq||0,game.self.inputSeq||0)+1;if(!Number.isSafeInteger(seq))return;
+ owner.wireSeq=seq;owner.lastVector={dx:0,dy:0};
+ // This final stop must outlive the controller we are about to abort. It is
+ // scoped to the old room cookie, bounded, and never accepts a stale response.
+ request(roomPath(owner.id,'/input'),{method:'POST',body:{seq,dx:0,dy:0},keepalive:true,timeoutMs:1500}).catch(()=>{});
+}
 function releaseWorld(){
+ stopWorldMovement();
  const instance=worldExperience,owner=worldSession;worldExperience=null;
  try{instance?.dispose();}finally{if(worldSession===owner)worldSession=null;}
 }
 function ownsWorld(owner){return worldSession===owner&&roomId===owner.id&&!document.hidden&&controller&&!controller.signal.aborted;}
 async function worldInput(owner,input){
  if(!ownsWorld(owner))throw new DOMException('The room changed.','AbortError');
- const packet=worldInputEnvelope(input),game=room?.game;
+ let packet=worldInputEnvelope(input);const game=room?.game;
  if(!game?.self?.alive||game.phase!=='roam'){
   if(!packet.dx&&!packet.dy)return room; // The authority already freezes non-roam motion.
   throw new DOMException('Movement requires an active watch.','AbortError');
  }
  if((packet.dx||packet.dy)&&!networkReady)throw new DOMException('Resynchronizing the connection before moving.','AbortError');
  if(!packet.dx&&!packet.dy&&!owner.lastVector?.dx&&!owner.lastVector?.dy&&!game.self.moving)return room;
+ if(packet.seq<(owner.clientSeq||0))throw new DOMException('A newer control intent exists.','AbortError');
+ if(packet.seq===owner.clientSeq){
+  if(packet.dx!==owner.lastPacket.dx||packet.dy!==owner.lastPacket.dy)throw new TypeError('Movement sequence already used.');
+  packet=owner.lastPacket;
+ }else{
+  const clientSeq=packet.seq;packet={...packet,seq:Math.max(clientSeq,(owner.wireSeq||0)+1,(game.self.inputSeq||0)+1)};
+  if(!Number.isSafeInteger(packet.seq))throw new TypeError('Movement sequence exhausted. Start a new watch.');
+  owner.clientSeq=clientSeq;owner.wireSeq=packet.seq;owner.lastPacket=packet;
+ }
  owner.lastVector={dx:packet.dx,dy:packet.dy};
  const current=epoch,id=roomId,opened=controller;
  try{
@@ -83,6 +102,7 @@ function persistId(id){
  try{if(id)sessionStorage.setItem('lantern-room',id);else sessionStorage.removeItem('lantern-room');}catch{}
 }
 function stop(){
+ stopWorldMovement();
  const uncertain=Boolean(retry);
  epoch++;
  controller?.abort();controller=null;
