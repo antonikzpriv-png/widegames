@@ -51,6 +51,7 @@ export async function createGameServer(config,dependencies={}) {
   }
   function authenticate(room,req){const identity=identityFor(room.data,req.headers.cookie);if(!identity)fail(401,'ROOM_AUTH_REQUIRED','Join this room to continue.');return identity;}
   function broadcast(room) {
+    if(['ended','paused'].includes(room.data.state?.phase))room.abort.abort();
     for(const ws of room.sockets){if(ws.readyState!==WebSocket.OPEN)continue;if(ws.bufferedAmount>256*1024){ws.close(1013,'Client too slow');continue;}try{ws.send(JSON.stringify({type:'state',room:view(room,ws.identity)}));}catch{ws.terminate();}}
   }
   const server=http.createServer((req,res)=>track(handle(req,res)));
@@ -135,7 +136,7 @@ export async function createGameServer(config,dependencies={}) {
       const context=structuredClone(room.data.aiContext),snapshot=engine.getPlayerView(room.data.state,player.id,now());
       try {
         const commitReservation=async({id,amountUsd})=>{
-          if(closing||room.abort.signal.aborted)throw new Error('AI stopped');
+          if(closing||room.abort.signal.aborted||['ended','paused'].includes(room.data.state?.phase))throw new Error('AI stopped');
           if(typeof id!=='string'||!/^[A-Za-z0-9:._-]{1,150}$/.test(id)||!Number.isFinite(amountUsd)||amountUsd<0)throw new Error('Invalid AI reservation');
           await run(room,async data=>{const next=structuredClone(data);next.aiContext=structuredClone(context);await commit(room,next);});
           // Ordering is essential: match reservation, then deployment reservation, then send.
