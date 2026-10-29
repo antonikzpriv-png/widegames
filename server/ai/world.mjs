@@ -1,4 +1,4 @@
-import { CHARACTERS, ROOM_LAYOUT } from '../../shared/contracts.mjs';
+import { ROOM_LAYOUT } from '../../shared/contracts.mjs';
 import { WORLD, WORLD_STATIONS, WORLD_BELL, distance, findWorldPath, canSeeWorldPoint } from '../../shared/world.mjs';
 
 const ordered = values => [...values].sort((a, b) => a.id.localeCompare(b.id));
@@ -8,7 +8,7 @@ const at = (view, target, radius) => point(target) && distance(view.self.positio
 
 /** Only coordinates already visible in this actor's safe view are usable. */
 export function visibleWorldPlayer(view, player) {
-  return player.id !== view.self.id && player.alive && point(player.position) && canSeeWorldPoint(view.self.position, player.position);
+  return player.id !== view.self.id && !view.self.teammates?.includes(player.id) && player.alive && point(player.position) && canSeeWorldPoint(view.self.position, player.position,view.settings?.vision);
 }
 
 function pathLength(start, target) {
@@ -41,7 +41,7 @@ export function worldCandidates(view, memory, suspect) {
   };
 
   // A current local body sighting may interrupt a less urgent walking route.
-  const bodies = ordered((view.events ?? []).filter(event => event.type === 'body' && typeof event.bodyId === 'string' && !event.reported && point(event.position) && canSeeWorldPoint(self.position, event.position)).map(event => ({ ...event, id: event.bodyId })));
+  const bodies = ordered((view.events ?? []).filter(event => event.type === 'body' && typeof event.bodyId === 'string' && !event.reported && point(event.position) && canSeeWorldPoint(self.position, event.position,view.settings?.vision)).map(event => ({ ...event, id: event.bodyId })));
   for (const body of bodies) {
     if (allowed.has('report') && at(view, body.position, WORLD.reportRadius)) return [{ type: 'report', bodyId: body.bodyId }];
     if (!at(view, body.position, WORLD.reportRadius)) return navigate(body.position);
@@ -93,7 +93,7 @@ export function worldCandidates(view, memory, suspect) {
   }
 
   // Patrol only public station points, with distinct deterministic offsets.
-  const offset = Math.max(0, CHARACTERS.findIndex(player => player.id === self.id));
+  const offset = Math.max(0, (view.players??[]).findIndex(player => player.id === self.id));
   for (let step = 0; step < ROOM_LAYOUT.length; step++) {
     const index = ((memory.patrol ?? 0) + offset + step) % ROOM_LAYOUT.length;
     const station = WORLD_STATIONS[ROOM_LAYOUT[index].id];

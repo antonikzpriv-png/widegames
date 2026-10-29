@@ -1,31 +1,34 @@
 import {mkdir, readdir, lstat, readFile, open, rename, unlink} from 'node:fs/promises';
 import path from 'node:path';
 import {randomUUID} from 'node:crypto';
-import {ROOM_LAYOUT} from '../shared/contracts.mjs';
+import {validateSettings,ACTOR_ID,PERSONAS,playerName} from '../shared/lobby.mjs';
+import {ROOM_LAYOUT,DEFAULT_RULES} from '../shared/contracts.mjs';
 
 export const ROOM_ID = /^[A-Za-z0-9_-]{20,40}$/;
 const phases = new Set(['roam','discussion','voting','ended','paused']);
 const object = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 export function validateRoom(room) {
-  if (!object(room) || room.schema !== 1 || !ROOM_ID.test(room.id) || !['human','spectator'].includes(room.mode)) throw new Error('Invalid room');
+  if (!object(room) || ![1,2].includes(room.schema) || !ROOM_ID.test(room.id) || !['human','spectator'].includes(room.mode)) throw new Error('Invalid room');
   if (![room.createdAt,room.updatedAt].every(n => Number.isSafeInteger(n) && n >= 0) || room.updatedAt < room.createdAt) throw new Error('Invalid room time');
   if (!Array.isArray(room.identities) || !room.identities.length || room.identities.length > 128) throw new Error('Invalid identities');
   const seen = new Set();
   for (const identity of room.identities) {
-    if (!object(identity) || !/^[a-f0-9]{64}$/.test(identity.hash) || seen.has(identity.hash) || typeof identity.host !== 'boolean' || ![null,'p1'].includes(identity.seatId)) throw new Error('Invalid identity');
-    if (identity.seatId && (!identity.host || room.mode !== 'human')) throw new Error('Invalid seat');
+    if (!object(identity) || !/^[a-f0-9]{64}$/.test(identity.hash) || seen.has(identity.hash) || typeof identity.host !== 'boolean' || !(identity.seatId===null||(room.schema===2?ACTOR_ID.test(identity.seatId):identity.seatId==='p1'))) throw new Error('Invalid identity');
+    if (room.schema===1&&identity.seatId && (!identity.host || room.mode !== 'human')) throw new Error('Invalid seat');
     seen.add(identity.hash);
   }
-  if (room.identities.filter(i=>i.host).length !== 1 || room.identities.filter(i=>i.seatId).length !== (room.mode === 'human' ? 1 : 0)) throw new Error('Invalid host');
+  if (room.identities.filter(i=>i.host).length !== 1 || (room.schema===1&&room.identities.filter(i=>i.seatId).length !== (room.mode === 'human' ? 1 : 0))) throw new Error('Invalid host');
   if (!object(room.aiContext) || (room.startId !== null && (typeof room.startId !== 'string' || !/^[A-Za-z0-9:_-]{1,100}$/.test(room.startId)))) throw new Error('Invalid metadata');
-  if (room.state !== null && (!object(room.state) || room.state.id !== room.id || !phases.has(room.state.phase) || !Number.isSafeInteger(room.state.version) || !Array.isArray(room.state.players) || room.state.players.length !== 6 || room.startId === null)) throw new Error('Invalid match');
+  if (room.state !== null && (!object(room.state) || room.state.id !== (room.schema===2&&room.generation>1?`${room.id}_g${room.generation}`:room.id) || !phases.has(room.state.phase) || !Number.isSafeInteger(room.state.version) || !Array.isArray(room.state.players) || room.state.players.length !== (room.schema===2?room.settings.capacity:6) || room.startId === null)) throw new Error('Invalid match');
   if (room.state === null && room.startId !== null) throw new Error('Invalid lobby');
+  if(room.schema===2)validateLobby(room);
   if(room.state!==null){
     const state=room.state;
+    if(room.schema===1&&Object.hasOwn(state,'lobbySettings'))throw Error('Dynamic settings require room container schema2');
     if(![1,2].includes(state.schemaVersion)||state.mode!==room.mode||state.version<1)throw new Error('Unsupported match schema');
     if(state.schemaVersion===1){
       if(Object.hasOwn(state,'worldVersion')||state.players.some(p=>Object.hasOwn(p,'position')||Object.hasOwn(p,'motion')))throw new Error('Mixed legacy/world match');
-    }else validateWorldStructure(state);
+    }else validateWorldStructure(state,room.schema===2);
   }
   return room;
 }
@@ -33,11 +36,11 @@ export function validateRoom(room) {
 const roomIds=new Set(ROOM_LAYOUT.map(room=>room.id));
 const finiteTime=value=>Number.isFinite(value)&&value>=0&&value<=Number.MAX_SAFE_INTEGER;
 const point=value=>object(value)&&Number.isFinite(value.x)&&Number.isFinite(value.y);
-function validateWorldStructure(state){
+function validateWorldStructure(state,dynamic=false){
   if(state.worldVersion!==1||!finiteTime(state.startedAt)||!finiteTime(state.updatedAt)||state.updatedAt<state.startedAt||!Array.isArray(state.bodies))throw new Error('Invalid world match');
   const ids=new Set();
   for(const player of state.players){
-    if(!object(player)||!/^p[1-6]$/.test(player.id)||ids.has(player.id)||!['crew','saboteur'].includes(player.role)||typeof player.alive!=='boolean'||!roomIds.has(player.roomId)||player.human!==(state.mode==='human'&&player.id==='p1')||!point(player.position))throw new Error('Invalid world player');
+    if(!object(player)||!(dynamic?ACTOR_ID.test(player.id):/^p[1-6]$/.test(player.id))||ids.has(player.id)||!['crew','saboteur'].includes(player.role)||typeof player.alive!=='boolean'||!roomIds.has(player.roomId)||(dynamic?typeof player.human!=='boolean':player.human!==(state.mode==='human'&&player.id==='p1'))||!point(player.position))throw new Error('Invalid world player');
     ids.add(player.id);const motion=player.motion;
     if(!object(motion)||!Number.isSafeInteger(motion.seq)||motion.seq<0||![motion.dx,motion.dy].every(n=>Number.isInteger(n)&&n>=-1&&n<=1)||typeof motion.manual!=='boolean'||![motion.at,motion.leaseUntil,motion.recordedAt].every(finiteTime)||motion.at>state.updatedAt+1e-6||motion.recordedAt>state.updatedAt+1e-6||!Array.isArray(motion.path)||motion.path.length>4096||motion.path.some(p=>!point(p))||(motion.destination!==null&&!point(motion.destination)))throw new Error('Invalid world motion');
     // Early schema-2 checkpoints lack error; new Core persists null or a bounded receipt.
@@ -47,9 +50,44 @@ function validateWorldStructure(state){
     }
     if((motion.manual&&(!(motion.dx||motion.dy)||motion.path.length||motion.destination!==null))||(motion.path.length===0)!==(motion.destination===null)||((!player.alive||state.phase!=='roam')&&(motion.manual||motion.path.length||motion.destination!==null)))throw new Error('Inconsistent world motion');
   }
-  if(state.players.filter(player=>player.role==='saboteur').length!==1)throw new Error('Invalid world role assignment');
-  for(const body of state.bodies)if(!object(body)||!/^body-p[1-6]$/.test(body.id)||!ids.has(body.playerId)||!roomIds.has(body.roomId)||typeof body.reported!=='boolean'||!point(body.position)||!finiteTime(body.at)||body.at>state.updatedAt)throw new Error('Invalid world body');
+  if(state.players.filter(player=>player.role==='saboteur').length!==(dynamic?state.lobbySettings.saboteurs:1))throw new Error('Invalid world role assignment');
+  for(const body of state.bodies)if(!object(body)||body.id!==`body-${body.playerId}`||!ACTOR_ID.test(body.playerId)||!ids.has(body.playerId)||!roomIds.has(body.roomId)||typeof body.reported!=='boolean'||!point(body.position)||!finiteTime(body.at)||body.at>state.updatedAt)throw new Error('Invalid world body');
 }
+
+function validateLobby(room){
+ validateSettings(room.settings);
+ if(!Number.isSafeInteger(room.generation)||room.generation<1||room.generation>1000000||!Number.isSafeInteger(room.revision)||room.revision<0||!/^[A-F0-9]{12}$/.test(room.inviteCode))throw Error('Invalid lobby generation');
+ if(!Array.isArray(room.roster)||room.roster.length!==room.settings.capacity)throw Error('Invalid lobby roster');
+ for(const [i,p]of room.roster.entries())if(!object(p)||p.id!==`p${i+1}`||playerName(p.name)!==p.name||!PERSONAS.some(q=>q.color===p.color)||p.persona!==PERSONAS[i].persona||p.badge!==String(i+1))throw Error('Invalid roster profile');
+ const occupied=new Set();
+ for(const identity of room.identities){
+  if(typeof identity.ready!=='boolean'||typeof identity.revoked!=='boolean')throw Error('Invalid readiness');
+  if(identity.revoked&&(identity.host||(!room.state&&identity.seatId)||identity.ready))throw Error('Invalid revocation');
+  if(identity.seatId){if(!room.roster.some(p=>p.id===identity.seatId)||occupied.has(identity.seatId))throw Error('Duplicate seat ownership');occupied.add(identity.seatId);}
+  else if(identity.ready)throw Error('Spectator ready');
+ }
+ if(!Array.isArray(room.archives)||room.archives.length>3||Buffer.byteLength(JSON.stringify(room.archives))>2000000)throw Error('Invalid replay archive');
+ const archived=new Set();for(const a of room.archives){
+  if(!object(a)||typeof a.matchId!=='string'||!Number.isSafeInteger(a.generation)||a.generation>=room.generation||a.generation<0||a.matchId!==(a.generation<=1?room.id:`${room.id}_g${a.generation}`)||archived.has(a.generation)||!Array.isArray(a.replay)||a.replay.length>2000||a.replay.some(e=>!object(e)||!finiteTime(e.at)||typeof e.type!=='string')||!Array.isArray(a.players)||a.players.length<4||a.players.length>15||a.players.some(p=>!ACTOR_ID.test(p.id)||!['crew','saboteur'].includes(p.role)))throw Error('Invalid archived replay');archived.add(a.generation);
+ }
+ if(room.state){
+  const state=room.state;validateSettings(state.lobbySettings);
+  if(JSON.stringify(state.lobbySettings)!==JSON.stringify(room.settings)||state.players.length!==room.roster.length||state.players.filter(p=>p.role==='saboteur').length!==room.settings.saboteurs)throw Error('Invalid locked settings');
+  if(!object(state.rules)||Object.keys(state.rules).length!==Object.keys(DEFAULT_RULES).length||Object.keys(DEFAULT_RULES).some(k=>!Number.isSafeInteger(state.rules[k])||state.rules[k]<1||state.rules[k]>86400000)||state.rules.tasksPerCrew>20||state.rules.meetingsPerPlayer>10||state.rules.messagesPerDiscussion>20||state.rules.messageMaxLength>2000)throw Error('Invalid match rules');
+  const taskIds=new Set();
+  for(const [i,p]of state.players.entries()){
+   if(!object(p)||p.id!==room.roster[i].id||p.name!==room.roster[i].name||p.color!==room.roster[i].color||typeof p.alive!=='boolean'||!['crew','saboteur'].includes(p.role)||p.human!==occupied.has(p.id)||!Array.isArray(p.tasks)||p.tasks.length>280||(p.role==='saboteur'&&p.tasks.length!==0)||!object(p.cooldowns)||Object.values(p.cooldowns).some(n=>!finiteTime(n))||!Number.isSafeInteger(p.meetingsRemaining)||p.meetingsRemaining<0||!roomIds.has(p.roomId))throw Error('Invalid dynamic player');
+   for(const t of p.tasks){if(!object(t)||typeof t.id!=='string'||taskIds.has(t.id)||!roomIds.has(t.roomId)||typeof t.label!=='string'||typeof t.completed!=='boolean')throw Error('Invalid task');taskIds.add(t.id);}
+  }
+  if(taskIds.size!==(room.settings.capacity-room.settings.saboteurs)*state.rules.tasksPerCrew)throw Error('Invalid task accounting');
+  const bodies=new Set();if(!Array.isArray(state.bodies))throw Error('Invalid bodies');
+  for(const body of state.bodies){if(!object(body)||bodies.has(body.id)||body.id!==`body-${body.playerId}`||!state.players.some(p=>p.id===body.playerId&&!p.alive)||!roomIds.has(body.roomId)||typeof body.reported!=='boolean')throw Error('Invalid body ownership');bodies.add(body.id);}
+  if(state.meeting){const m=state.meeting,ids=state.players.map(p=>p.id);if(!object(m)||!Array.isArray(m.eligibleVoters)||new Set(m.eligibleVoters).size!==m.eligibleVoters.length||m.eligibleVoters.some(id=>!ids.includes(id))||!Array.isArray(m.votes)||new Set(m.votes.map(v=>v.playerId)).size!==m.votes.length||m.votes.some(v=>!m.eligibleVoters.includes(v.playerId)||(v.targetId!=='skip'&&!m.eligibleVoters.includes(v.targetId)))||!Array.isArray(m.messages)||m.messages.length>15*state.rules.messagesPerDiscussion||m.messages.some(message=>!ids.includes(message.playerId)||typeof message.text!=='string'||message.text.length>state.rules.messageMaxLength))throw Error('Invalid council');}
+  if(!object(state.requests)||Object.keys(state.requests).length!==room.roster.length||state.players.some(p=>!Array.isArray(state.requests[p.id])||state.requests[p.id].length>2048||state.requests[p.id].some(r=>!object(r)||typeof r.id!=='string'||typeof r.fingerprint!=='string'||typeof r.accepted!=='boolean')))throw Error('Invalid receipts');
+  if(!Array.isArray(state.events)||state.events.length>256||!Array.isArray(state.replay)||state.replay.length>12000||!finiteTime(state.startedAt)||!finiteTime(state.updatedAt))throw Error('Invalid dynamic timeline');
+ }
+}
+
 async function worldGeometry(supplied){
   const geometry=supplied??await import('../shared/world.mjs');
   if(!geometry?.WORLD||![geometry.WORLD.width,geometry.WORLD.height,geometry.WORLD.inputLeaseMs].every(n=>Number.isFinite(n)&&n>0)||typeof geometry.isWalkable!=='function')throw new Error('World geometry is unavailable');

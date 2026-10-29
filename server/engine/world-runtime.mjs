@@ -8,7 +8,7 @@ export function worldRuntime(geometry) {
     const value=Array.isArray(WORLD_STATIONS)?WORLD_STATIONS.find(s=>s.roomId===roomId||s.id===roomId):WORLD_STATIONS[roomId];
     return value?.position??value;
   };
-  const sees=(from,to)=>!!from&&!!to&&distance(from,to)<=vision&&canSeeWorldPoint(from,to);
+  const sees=(from,to,radius=vision)=>!!from&&!!to&&distance(from,to)<=radius&&canSeeWorldPoint(from,to,radius);
   const nearby=(from,to,range)=>!!from&&!!to&&distance(from,to)<=range&&canSeeWorldPoint(from,to);
   function initialize(state,now) {
     state.schemaVersion=2;state.worldVersion=1;
@@ -33,7 +33,8 @@ export function worldRuntime(geometry) {
       const m=p.motion;if(!p.alive||!m||until<=m.at)continue;
       const active=m.manual||m.path.length>0;if(!active)continue;
       const start=m.at,end=m.manual?Math.min(until,m.leaseUntil):until;
-      const initial=point(p.position);let budget=Math.max(0,end-start)*speed/1000,used=0,finishedAt=end,reason=null;
+      const actorSpeed=state.lobbySettings?.speed??speed;
+      const initial=point(p.position);let budget=Math.max(0,end-start)*actorSpeed/1000,used=0,finishedAt=end,reason=null;
       if(m.manual&&budget>0){
         const norm=Math.hypot(m.dx,m.dy);if(norm)p.position=point(moveWorldPoint(p.position,m.dx/norm,m.dy/norm,budget));
       }else if(m.path.length&&budget>0){
@@ -45,7 +46,7 @@ export function worldRuntime(geometry) {
           if(distance(p.position,target)<1e-5){p.position=point(target);m.path.shift();}
           else if(actual<amount-1e-5){reason='blocked';m.path=[];m.destination=null;break;}
         }
-        if(!m.path.length){reason??='arrived';m.destination=null;finishedAt=start+used/speed*1000;}
+        if(!m.path.length){reason??='arrived';m.destination=null;finishedAt=start+used/actorSpeed*1000;}
       }
       m.at=until;changed=true;
       const room=worldRoomAt(p.position);if(room)p.roomId=typeof room==='string'?room:room.id;

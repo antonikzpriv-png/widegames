@@ -1,4 +1,4 @@
-import { ROOM_LAYOUT, CHARACTERS } from '../../shared/contracts.mjs';
+import { ROOM_LAYOUT } from '../../shared/contracts.mjs';
 import { worldCandidates, visibleWorldPlayer } from './world.mjs';
 
 const rooms = new Map(ROOM_LAYOUT.map(room => [room.id, room]));
@@ -34,11 +34,11 @@ function visibleBodies(view) {
   for (const event of view.events ?? []) {
     if (event.bodyId && event.roomId === view.self.roomId && !event.reported) found.set(event.bodyId, event.bodyId);
   }
-  return [...found.values()].slice(0, 6);
+  return [...found.values()].slice(0, 15);
 }
 
 function suspect(view, memory) {
-  const living = ordered((view.players ?? []).filter(p => p.alive && p.id !== view.self.id));
+  const living = ordered((view.players ?? []).filter(p => p.alive && p.id !== view.self.id && !view.self.teammates?.includes(p.id)));
   const witnessed = living.filter(p => memory.witnesses?.[p.id]);
   if (witnessed.length) return witnessed.sort((a, b) => memory.witnesses[b.id].at - memory.witnesses[a.id].at || a.id.localeCompare(b.id))[0].id;
   const ranked = living.filter(p => (memory.suspicion?.[p.id] ?? 0) > 0)
@@ -59,7 +59,7 @@ const VOICES = Object.freeze({
 
 function dialogue(view, memory) {
   const target = suspect(view, memory);
-  const name = CHARACTERS.find(p => p.id === target)?.name;
+  const name = (view.players??[]).find(p => p.id === target)?.name;
   const room = rooms.get(view.self.roomId)?.name ?? 'my station';
   const number = Math.min(memory.discussionCount ?? 0, 2);
   const voice = VOICES[view.self.id] ?? VOICES.p1;
@@ -70,7 +70,7 @@ function dialogue(view, memory) {
   ][number];
   const witness = memory.witnesses?.[target];
   if (witness && number < 2) {
-    const victim = CHARACTERS.find(p => p.id === witness.targetId)?.name;
+    const victim = (view.players??[]).find(p => p.id === witness.targetId)?.name;
     const where = rooms.get(witness.roomId)?.name;
     return voice[number] + ' I saw ' + name + ' attack ' + victim + ' in ' + where + '. That is firsthand; I will vote for ' + name + '.';
   }
@@ -90,7 +90,7 @@ export function observe(view, memory) {
     memory.discussionCount = 0;
   }
   for (const event of view.events ?? []) {
-    if (event.type === 'witness' && event.playerId !== view.self.id && event.playerId !== event.targetId && CHARACTERS.some(p => p.id === event.playerId) && CHARACTERS.some(p => p.id === event.targetId) && rooms.has(event.roomId)) {
+    if (event.type === 'witness' && event.playerId !== view.self.id && event.playerId !== event.targetId && (view.players??[]).some(p => p.id === event.playerId) && (view.players??[]).some(p => p.id === event.targetId) && rooms.has(event.roomId)) {
       memory.witnesses ??= {};
       memory.witnesses[event.playerId] = { targetId: event.targetId, roomId: event.roomId, at: Number.isFinite(event.at) ? event.at : view.serverNow };
     }
@@ -107,8 +107,8 @@ export function observe(view, memory) {
   }
   memory.observation = {
     roomId: view.self.roomId,
-    nearby: (view.players ?? []).filter(p => p.id !== view.self.id && p.alive && (view.worldVersion === 1 ? visibleWorldPlayer(view, p) : p.roomId === view.self.roomId)).map(p => p.id).slice(0, 6),
-    dead: [...dead].slice(0, 6)
+    nearby: (view.players ?? []).filter(p => p.id !== view.self.id && p.alive && (view.worldVersion === 1 ? visibleWorldPlayer(view, p) : p.roomId === view.self.roomId)).map(p => p.id).slice(0, 15),
+    dead: [...dead].slice(0, 15)
   };
 }
 
@@ -127,7 +127,7 @@ export function candidates(view, memory) {
     if (can('vote') && !votes.some(v => v.playerId === view.self.id)) {
       const preferred = suspect(view, memory);
       actions.push({ type: 'vote', targetId: preferred });
-      for (const p of ordered((view.players ?? []).filter(p => p.alive && p.id !== view.self.id))) {
+      for (const p of ordered((view.players ?? []).filter(p => p.alive && p.id !== view.self.id && !view.self.teammates?.includes(p.id)))) {
         if (p.id !== preferred) actions.push({ type: 'vote', targetId: p.id });
       }
       if (preferred !== 'skip') actions.push({ type: 'vote', targetId: 'skip' });
@@ -140,7 +140,7 @@ export function candidates(view, memory) {
   if (can('repair') && view.sabotage?.active && view.sabotage.roomId === view.self.roomId) actions.push({ type: 'repair' });
   if (view.self.role === 'saboteur') {
     if (can('eliminate') && ready(view, 'killAt')) {
-      for (const p of ordered((view.players ?? []).filter(p => p.alive && p.id !== view.self.id && p.roomId === view.self.roomId))) {
+      for (const p of ordered((view.players ?? []).filter(p => p.alive && p.id !== view.self.id && !view.self.teammates?.includes(p.id) && p.roomId === view.self.roomId))) {
         actions.push({ type: 'eliminate', targetId: p.id });
       }
     }
@@ -158,7 +158,7 @@ export function candidates(view, memory) {
       goal = tasks[0]?.roomId;
     }
     // Patrol deterministically after work; different keepers follow different offsets.
-    const offset = Math.max(0, CHARACTERS.findIndex(p => p.id === view.self.id));
+    const offset = Math.max(0, (view.players??[]).findIndex(p => p.id === view.self.id));
     if (!goal) {
       const index = ((memory.patrol ?? 0) + offset) % ROOM_LAYOUT.length;
       goal = ROOM_LAYOUT[index].id;

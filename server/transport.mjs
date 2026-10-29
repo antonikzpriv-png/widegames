@@ -1,11 +1,13 @@
 import http from 'node:http';
+import {randomBytes} from 'node:crypto';
+const cryptoRandomCode=()=>randomBytes(6).toString('hex').toUpperCase();
 import {WebSocketServer,WebSocket} from 'ws';
 import {serveStatic} from './static.mjs';
 import {validatePublicOrigin} from './origin.mjs';
 import {createRoomStore} from './store.mjs';
 import {createDailyBudget} from './budget.mjs';
 import {createRooms,ServiceError,fail,identityFor,issueIdentity,cookie,requestId} from './rooms.mjs';
-import {CHARACTERS} from '../shared/contracts.mjs';
+import {PERSONAS,changeSettings,playerName,rosterFor,LOBBY_DEFAULTS,matchRules} from '../shared/lobby.mjs';
 
 const object=value=>value!==null&&typeof value==='object'&&!Array.isArray(value);
 function safeError(error) {
@@ -42,7 +44,7 @@ export async function createGameServer(config,dependencies={}) {
   let daily,service;
   try {
     daily=dependencies.dailyBudget||await createDailyBudget({directory:config.dataDir,maxCostUsd:config.ai?.maxDailyCostUsd??5,now});
-    service=createRooms({store,engine,ai,now,maxActiveRooms:config.maxActiveRooms??12,roomTtlMs:config.roomTtlMs??3600000});await service.restore();
+    service=createRooms({store,engine,ai,now,maxActiveRooms:config.maxActiveRooms??12,roomTtlMs:config.roomTtlMs??3600000,configurable:config.worldMode===true});await service.restore();
   } catch(error){await store.close();throw error;}
   const {rooms,get,run,commit,view}=service;
   const limit=limiter(now),tasks=new Set();let closing=false,maintenance=null,closePromise;
@@ -53,7 +55,29 @@ export async function createGameServer(config,dependencies={}) {
   function authenticate(room,req){const identity=identityFor(room.data,req.headers.cookie);if(!identity)fail(401,'ROOM_AUTH_REQUIRED','Join this room to continue.');return identity;}
   function broadcast(room) {
     if(['ended','paused'].includes(room.data.state?.phase))room.abort.abort();
-    for(const ws of room.sockets){if(ws.readyState!==WebSocket.OPEN)continue;if(ws.bufferedAmount>256*1024){ws.close(1013,'Client too slow');continue;}try{ws.send(JSON.stringify({type:'state',room:view(room,ws.identity)}));}catch{ws.terminate();}}
+    for(const ws of room.sockets){if(ws.readyState!==WebSocket.OPEN)continue;if(ws.bufferedAmount>256*1024){ws.close(1013,'Client too slow');continue;}try{const current=room.data.identities.find(i=>i.hash===ws.identity.hash&&!i.revoked);if(!current){ws.close(1008,'Identity revoked');continue;}ws.send(JSON.stringify({type:'state',room:view(room,current)}));}catch{ws.terminate();}}
+  }
+  const nameInput=value=>{try{return playerName(value);}catch(error){fail(400,'INVALID_NAME',error.message);}};
+  function generation(data,input){
+    if((input.generation!==undefined&&input.generation!==(data.generation??0))||((data.generation??0)>1&&input.generation!==data.generation))fail(409,'STALE_MATCH','This request belongs to an older watch. Resynchronize.');
+    if(input.matchId!==undefined&&input.matchId!==data.state?.id)fail(409,'STALE_MATCH','This action belongs to an older match.');
+  }
+  const coreInput=input=>Object.fromEntries(Object.entries(input).filter(([k])=>!['generation','matchId'].includes(k)));
+  function hostOnly(identity){if(!identity.host)fail(403,'HOST_REQUIRED','Only the host can change this room.');}
+  function lobbyOnly(data){if(data.state)fail(409,'SETTINGS_LOCKED','Seats and gameplay settings lock when the watch begins.');}
+  function promote(data){
+    if(data.schema===2)return;
+    Object.assign(data,{schema:2,generation:1,revision:0,settings:{...LOBBY_DEFAULTS},roster:rosterFor(6),inviteCode:cryptoRandomCode(),archives:[]});
+    for(const identity of data.identities)Object.assign(identity,{ready:!!identity.seatId,revoked:false});
+  }
+  function claim(data,identity,seatId,name){
+    lobbyOnly(data);
+    if(seatId!==null){
+      const chosen=seatId==='auto'?data.roster.find(p=>!data.identities.some(i=>i.seatId===p.id))?.id:seatId;
+      if(!data.roster.some(p=>p.id===chosen)||data.identities.some(i=>i.hash!==identity.hash&&i.seatId===chosen))fail(409,'SEAT_UNAVAILABLE','Choose an unclaimed seat.');
+      if(identity.seatId!==chosen)identity.ready=false;
+      identity.seatId=chosen;if(name!==undefined)data.roster.find(p=>p.id===chosen).name=nameInput(name);
+    }else{identity.seatId=null;identity.ready=false;}
   }
   const server=http.createServer((req,res)=>track(handle(req,res)));
   server.requestTimeout=10000;server.headersTimeout=10000;server.keepAliveTimeout=5000;server.maxHeadersCount=64;
@@ -70,31 +94,88 @@ export async function createGameServer(config,dependencies={}) {
       if(req.method==='POST'&&url.pathname==='/api/rooms') {
         limit(`create:${ip}`,8);const input=await body(req,Math.min(config.maxBodyBytes??8192,8192));
         if(!['human','spectator'].includes(input.mode)||Object.keys(input).some(k=>!['mode','name'].includes(k))||(input.name!==undefined&&(typeof input.name!=='string'||input.name.length>40)))fail(400,'INVALID_ROOM','Choose human or spectator mode.');
-        const {room,token,identity}=await service.create(input.mode);json(res,201,view(room,identity),{'Set-Cookie':cookie(room.data.id,token,secure)});return;
+        const {room,token,identity}=await service.create(input.mode,input.name===undefined?undefined:nameInput(input.name));json(res,201,view(room,identity),{'Set-Cookie':cookie(room.data.id,token,secure)});return;
       }
-      const match=/^\/api\/rooms\/([A-Za-z0-9_-]+)(?:\/(join|start|action|input|replay|socket))?$/.exec(url.pathname);
+      if(req.method==='POST'&&url.pathname==='/api/invitations'){
+        limit(`join:${ip}`,40);const input=await body(req,8192);if(Object.keys(input).some(k=>k!=='code')||typeof input.code!=='string')fail(400,'INVALID_CODE','Enter an invitation code.');
+        const invited=[...rooms.values()].find(r=>r.data.inviteCode===input.code.trim().toUpperCase());if(!invited)fail(404,'INVITATION_NOT_FOUND','Invitation not found.');json(res,200,{roomId:invited.data.id});return;
+      }
+      const match=/^\/api\/rooms\/([A-Za-z0-9_-]+)(?:\/(join|start|action|input|replay|socket|seat|ready|profile|settings|members|rematch))?$/.exec(url.pathname);
       if(!match)fail(404,'NOT_FOUND','Route not found.');
       const room=get(match[1]),route=match[2]||'';
       if(route==='join'&&req.method==='POST') {
-        limit(`join:${ip}`,40);const input=await body(req,Math.min(config.maxBodyBytes??8192,8192));if(Object.keys(input).length)fail(400,'INVALID_JOIN','Join requires an empty object.');
+        limit(`join:${ip}`,40);const input=await body(req,Math.min(config.maxBodyBytes??8192,8192));if(Object.keys(input).some(k=>!['intent','name'].includes(k))||(input.intent!==undefined&&!['play','spectate'].includes(input.intent)))fail(400,'INVALID_JOIN','Choose play or spectate.');if(input.name!==undefined)nameInput(input.name);
         const result=await run(room,async data=>{
           const existing=identityFor(data,req.headers.cookie);if(existing)return {identity:existing};
-          const next=structuredClone(data),issued=issueIdentity(next);await commit(room,next);return issued;
+          const next=structuredClone(data),issued=issueIdentity(next);if(input.intent==='play'&&!next.state){promote(next);claim(next,issued.identity,'auto',input.name);}await commit(room,next);return issued;
         });
         json(res,200,view(room,result.identity),result.token?{'Set-Cookie':cookie(room.data.id,result.token,secure)}:{});return;
       }
-      const identity=authenticate(room,req);
+      let identity=authenticate(room,req);
       if(route===''&&req.method==='GET'){json(res,200,view(room,identity));return;}
       if(route==='replay'&&req.method==='GET') {
+        const archived=req.headers['x-match-id']?room.data.archives?.find(a=>a.matchId===req.headers['x-match-id']):null;
+        if(archived){json(res,200,{roomId:room.data.id,matchId:archived.matchId,generation:archived.generation,replay:archived.replay,players:archived.players});return;}
+        if(req.headers['x-match-id']&&req.headers['x-match-id']!==room.data.state?.id)fail(404,'REPLAY_UNAVAILABLE','Archived replay unavailable.');
         if(room.data.state?.phase!=='ended')fail(409,'REPLAY_UNAVAILABLE','Replay is available after the match ends.');
-        json(res,200,{roomId:room.data.id,replay:engine.getReplay(room.data.state)});return;
+        json(res,200,{roomId:room.data.id,matchId:room.data.state.id,generation:room.data.generation??0,replay:engine.getReplay(room.data.state)});return;
+      }
+      if(['seat','ready','profile','settings','members','rematch'].includes(route)&&req.method==='POST'){
+        limit(`write:${ip}`,180);limit(`actor:${room.data.id}:${identity.hash}`,60);
+        const input=await body(req,8192);
+        const allowed={seat:['seatId','name'],ready:['ready'],profile:['name','color'],settings:['settings'],members:['seatId','operation'],rematch:['id']}[route];
+        if(Object.keys(input).some(k=>!allowed.includes(k)&&k!=='generation'))fail(400,'INVALID_LOBBY_REQUEST','Unknown lobby fields.');
+        await run(room,async data=>{
+          identity=authenticate(room,req);
+          if(route==='rematch'&&data.lastRematch?.id===input.id&&data.lastRematch?.from===(input.generation??0))return;
+          generation(data,input);const next=structuredClone(data);
+          if(route==='rematch'){
+            hostOnly(identity);if(!requestId(input.id))fail(400,'INVALID_ID','A request ID is required.');
+            if(!data.state||!['ended','paused'].includes(data.state.phase))fail(409,'MATCH_ACTIVE','Finish the current watch before a rematch.');
+            const from=data.generation??0;promote(next);
+            if(data.state.phase==='ended'){
+              const replay=engine.getReplay(data.state).slice(-2000);while(Buffer.byteLength(JSON.stringify(replay))>1000000)replay.shift();
+              next.archives.push({matchId:data.state.id,generation:from,replay,players:engine.getPlayerView(data.state,null,now()).players});
+              while(next.archives.length>3||Buffer.byteLength(JSON.stringify(next.archives))>2000000)next.archives.shift();
+            }
+            next.generation++;next.lastRematch={id:input.id,from};next.state=null;next.startId=null;next.aiContext={};
+            for(const member of next.identities){if(member.revoked)member.seatId=null;member.ready=member.host&&!!member.seatId;}
+            await commit(room,next);
+            room.abort.abort();room.abort=new AbortController();room.nextDecision.clear();room.aiBusy=false;room.aiBlocked=false;room.aiWork=null;
+            return;
+          }
+          if(route==='members'){
+            hostOnly(identity);if(!['release','revoke'].includes(input.operation)||!next.roster?.some(p=>p.id===input.seatId))fail(400,'INVALID_MEMBER','Choose a seated player.');
+            const member=next.identities.find(i=>i.seatId===input.seatId);if(!member||member.host)fail(409,'INVALID_MEMBER','The host seat cannot be removed.');
+            if(input.operation==='release'){lobbyOnly(next);member.seatId=null;member.ready=false;}
+            else{member.revoked=true;member.ready=false;if(!next.state)member.seatId=null;}
+          }else{
+            lobbyOnly(next);promote(next);const member=next.identities.find(i=>i.hash===identity.hash);
+            if(route==='seat')claim(next,member,input.seatId,input.name);
+            if(route==='ready'){if(!member.seatId||typeof input.ready!=='boolean')fail(400,'INVALID_READY','Claim a seat before readying.');member.ready=input.ready;}
+            if(route==='profile'){
+              if(!member.seatId)fail(403,'SEAT_REQUIRED','Claim a seat first.');const profile=next.roster.find(p=>p.id===member.seatId);
+              if(input.name!==undefined)profile.name=nameInput(input.name);
+              if(input.color!==undefined){if(!PERSONAS.some(p=>p.color===input.color))fail(400,'INVALID_COLOR','Choose a keeper color.');profile.color=input.color;}
+              member.ready=false;
+            }
+            if(route==='settings'){
+              hostOnly(identity);try{next.settings=changeSettings(next.settings,input.settings);}catch(error){fail(400,'INVALID_SETTINGS',error.message);}
+              if(next.identities.some(i=>i.seatId&&Number(i.seatId.slice(1))>next.settings.capacity))fail(409,'SEAT_OCCUPIED','Release occupied seats before reducing capacity.');
+              next.roster=rosterFor(next.settings.capacity,next.roster);
+              for(const member of next.identities)member.ready=member.host&&!!member.seatId;
+            }
+          }
+          await commit(room,next);
+        });broadcast(room);json(res,200,view(room,authenticate(room,req)));return;
       }
       if(route==='input'&&req.method==='POST') {
         limit(`input-ip:${ip}`,600);limit(`input-actor:${room.data.id}:${identity.hash}`,600);
-        if(identity.seatId!=='p1'||room.data.mode!=='human')fail(403,'SPECTATOR','Only this room\'s human seat can send movement input.');
-        const input=await body(req,Math.min(config.maxBodyBytes??8192,8192));
+        if(!identity.seatId)fail(403,'SPECTATOR','Only a seated player can send movement input.');
+        const envelope=await body(req,Math.min(config.maxBodyBytes??8192,8192)),input=coreInput(envelope);
         if(Object.keys(input).length!==3||!['seq','dx','dy'].every(key=>Object.hasOwn(input,key))||!Number.isSafeInteger(input.seq)||input.seq<=0||!['dx','dy'].every(key=>Number.isInteger(input[key])&&input[key]>=-1&&input[key]<=1))fail(400,'INVALID_INPUT','Movement requires exactly {seq,dx,dy}: a positive safe sequence and integer directions from -1 to 1.');
         await run(room,async data=>{
+          identity=authenticate(room,req);generation(data,envelope);if(!identity.seatId)fail(403,'SPECTATOR','Only a seated player can move.');
           if(!data.state)fail(409,'NOT_STARTED','Start the match first.');
           if(typeof engine.applyInput!=='function')fail(409,'INPUT_UNAVAILABLE','Continuous movement is not available for this match.');
           const result=engine.applyInput(structuredClone(data.state),identity.seatId,input,now());
@@ -110,15 +191,19 @@ export async function createGameServer(config,dependencies={}) {
       }
       if((route==='start'||route==='action')&&req.method==='POST') {
         limit(`write:${ip}`,180);limit(`actor:${room.data.id}:${identity.hash}`,60);
-        const input=await body(req,Math.min(config.maxBodyBytes??8192,8192));
+        const envelope=await body(req,Math.min(config.maxBodyBytes??8192,8192)),input=coreInput(envelope);
         if(!requestId(input.id))fail(400,'INVALID_ID','A bounded unique request ID is required.');
         await run(room,async data=>{
+          identity=authenticate(room,req);generation(data,envelope);
           if(route==='start') {
             if(!identity.host)fail(403,'HOST_REQUIRED','Only the host can start this room.');
             if(Object.keys(input).some(k=>k!=='id'))fail(400,'INVALID_START','Start accepts only a request ID.');
             if(data.startId===input.id)return;
             if(data.state)fail(409,'ALREADY_STARTED','This match has already started.');
-            const next=structuredClone(data);next.startId=input.id;next.state=engine.createMatch({id:data.id,mode:data.mode,humanPlayerId:'p1',now:now(),config:config.rules||{},world:config.worldMode===true});await commit(room,next);
+            if(data.schema===2&&data.identities.some(i=>i.seatId&&(!i.ready||i.revoked)))fail(409,'NOT_READY','Every seated human must be ready.');
+            const next=structuredClone(data);next.startId=input.id;
+            const configured=data.schema===2;
+            next.state=engine.createMatch({id:configured&&data.generation>1?`${data.id}_g${data.generation}`:data.id,mode:data.mode,humanPlayerId:'p1',now:now(),config:{...(configured?matchRules(data.settings):{}),...config.rules},world:config.worldMode===true,...(configured?{settings:data.settings,roster:data.roster,humanPlayerIds:data.identities.filter(i=>i.seatId).map(i=>i.seatId)}:{})});await commit(room,next);
           } else {
             if(!identity.seatId)fail(403,'SPECTATOR','Spectators cannot act.');
             if(!data.state)fail(409,'NOT_STARTED','Start the match first.');
@@ -140,39 +225,43 @@ export async function createGameServer(config,dependencies={}) {
       limit(`ws:${req.socket.remoteAddress}`,30);const room=get(match[1]),identity=authenticate(room,req);
       if(wss.clients.size>=100||[...room.sockets].filter(ws=>ws.identity.hash===identity.hash).length>=4)fail(429,'SOCKET_LIMIT','Too many connections.');
       wss.handleUpgrade(req,socket,head,ws=>{
-        ws.identity=identity;ws.alive=true;room.sockets.add(ws);
+        ws.identity={hash:identity.hash};ws.alive=true;room.sockets.add(ws);
         ws.on('error',()=>{});ws.on('pong',()=>{ws.alive=true;});ws.on('message',()=>ws.close(1008,'Use HTTP actions'));
         ws.on('close',()=>room.sockets.delete(ws));
-        ws.send(JSON.stringify({type:'state',room:view(room,identity)}));
+        ws.send(JSON.stringify({type:'state',room:view(room,authenticate(room,req))}));
       });
     }catch(error){const safe=safeError(error),payload=JSON.stringify({error:safe.error});socket.end(`HTTP/1.1 ${safe.status} Rejected\r\nContent-Type: application/json\r\nConnection: close\r\nContent-Length: ${Buffer.byteLength(payload)}\r\n\r\n${payload}`);}
   });
   function scheduleAi(room) {
     if(closing||room.aiBusy||room.aiBlocked||room.removed||!room.data.state||['ended','paused'].includes(room.data.state.phase))return;
-    const player=CHARACTERS.filter(p=>(room.data.mode==='spectator'||p.id!=='p1')&&(room.nextDecision.get(p.id)||0)<=now()&&engine.getPlayerView(room.data.state,p.id,now()).self?.alive).sort((a,b)=>(room.nextDecision.get(a.id)||0)-(room.nextDecision.get(b.id)||0))[0];
+    const player=room.data.state.players.filter(p=>!p.human&&(room.nextDecision.get(p.id)||0)<=now()&&engine.getPlayerView(room.data.state,p.id,now()).self?.alive).sort((a,b)=>(room.nextDecision.get(a.id)||0)-(room.nextDecision.get(b.id)||0))[0];
     if(!player)return;
-    room.nextDecision.set(player.id,now()+Math.max(100,config.ai?.decisionIntervalMs??1800));room.aiBusy=true;
+    room.nextDecision.set(player.id,now()+Math.max(100,config.ai?.decisionIntervalMs??1800));room.aiBusy=true;const work=Symbol(),matchId=room.data.state.id,abort=room.abort;room.aiWork=work;
+    const current=()=>room.data.state?.id===matchId&&room.abort===abort&&!abort.signal.aborted&&!closing;
     track((async()=>{
       const context=structuredClone(room.data.aiContext),snapshot=engine.getPlayerView(room.data.state,player.id,now());
       try {
         const commitReservation=async({id,amountUsd})=>{
-          if(closing||room.abort.signal.aborted||['ended','paused'].includes(room.data.state?.phase))throw new Error('AI stopped');
+          if(!current()||['ended','paused'].includes(room.data.state?.phase))throw new Error('AI stopped');
           if(typeof id!=='string'||!/^[A-Za-z0-9:._-]{1,150}$/.test(id)||!Number.isFinite(amountUsd)||amountUsd<0)throw new Error('Invalid AI reservation');
-          await run(room,async data=>{const next=structuredClone(data);next.aiContext=structuredClone(context);await commit(room,next);});
+          await run(room,async data=>{if(!current())throw Error('Stale AI reservation');const next=structuredClone(data);next.aiContext=structuredClone(context);await commit(room,next);});
+          if(!current())throw Error('Stale AI reservation');
           // Ordering is essential: match reservation, then deployment reservation, then send.
-          await daily.reserve({id:`${room.data.id}:${id}`,amount:amountUsd});
+          await daily.reserve({id:`${matchId}:${id}`,amount:amountUsd});
+          if(!current())throw Error('AI match changed during reservation');
         };
-        const proposal=await ai.decide({view:snapshot,player,context,signal:room.abort.signal,commitReservation});
-        if(closing||room.abort.signal.aborted)return;
+        const proposal=await ai.decide({view:snapshot,player:{id:player.id,name:player.name,color:player.color,persona:PERSONAS.find(p=>p.id===player.id)?.persona},context,signal:abort.signal,commitReservation});
+        if(!current())return;
         await run(room,async data=>{
+          if(!current())return;
           const next=structuredClone(data);next.aiContext=structuredClone(context);
           if(proposal&&!['ended','paused'].includes(next.state.phase)) {
             const result=engine.applyAction(next.state,player.id,proposal,now());next.state=result.state;
           }
           await commit(room,next);
         });broadcast(room);
-      }catch {room.aiBlocked=true;if(!closing)broadcast(room);}
-      finally {room.aiBusy=false;}
+      }catch {if(current()){room.aiBlocked=true;if(!closing)broadcast(room);}}
+      finally {if(room.aiWork===work){room.aiBusy=false;room.aiWork=null;}}
     })());
   }
   const interval=setInterval(()=>{

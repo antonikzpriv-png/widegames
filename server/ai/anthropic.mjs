@@ -17,8 +17,8 @@ export function makeRequest(view, player, memory, choices) {
   if (!['discussion', 'voting'].includes(view.phase)) throw new AiFailure('provider_response');
   const safe = {
     matchId: bounded(view.matchId, 100), phase: view.phase, serverNow: view.serverNow,
-    self: { id: view.self.id, role: view.self.role, roomId: view.self.roomId, tasks: (view.self.tasks ?? []).slice(0, 20).map(t => ({ id: t.id, roomId: t.roomId, completed: !!t.completed })) },
-    players: (view.players ?? []).slice(0, 6).map(p => ({ id: p.id, alive: !!p.alive, roomId: p.roomId })),
+    self: { id: view.self.id, role: view.self.role, ...(view.self.teammates?{teammates:view.self.teammates}:{}), roomId: view.self.roomId, tasks: (view.self.tasks ?? []).slice(0, 20).map(t => ({ id: t.id, roomId: t.roomId, completed: !!t.completed })) },
+    players: (view.players ?? []).slice(0, 15).map(p => ({ id: p.id, alive: !!p.alive, roomId: p.roomId })),
     tasks: view.tasks, sabotage: view.sabotage,
     meeting: view.meeting ? { id: view.meeting.id, reason: bounded(view.meeting.reason), messages: (view.meeting.messages ?? []).slice(-12).map(m => ({ playerId: m.playerId, text: bounded(m.text) })), votes: (view.meeting.votes ?? []).map(v => ({ playerId: v.playerId })) } : null,
     observations: memory.observation, firsthandWitnesses: memory.witnesses ?? {}, proximitySuspicions: memory.suspicion ?? {}, choices

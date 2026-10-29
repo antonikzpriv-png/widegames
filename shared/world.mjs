@@ -1,5 +1,5 @@
 /** Original Lantern Wake geometry shared by drawing, navigation and authority. */
-import {CHARACTERS} from './contracts.mjs';
+const ACTOR_ID=/^p(?:[1-9]|1[0-5])$/;
 
 export const WORLD=Object.freeze({version:1,width:1600,height:1200,speed:180,bodyRadius:14,visibilityRadius:360,interactionRadius:92,killRadius:70,reportRadius:130,inputLeaseMs:600,grid:28});
 const rect=(id,x,y,width,height,center)=>Object.freeze({id,x,y,width,height,...(center?{center:Object.freeze(center)}:{})});
@@ -30,8 +30,10 @@ const gridSafety=new Map(),gridEdges=new Map();
 export function distance(a,b){return point(a)&&point(b)?Math.hypot(a.x-b.x,a.y-b.y):Infinity;}
 export function worldRoomAt(position){return WORLD_ROOMS.find(room=>point(position)&&inside(position,room))?.id??null;}
 export function worldSpawn(playerId){
- const index=Math.max(0,CHARACTERS.findIndex(p=>p.id===playerId));
- return {x:728+(index%3)*72,y:272+Math.floor(index/3)*55};
+ if(!ACTOR_ID.test(playerId))throw new TypeError('Invalid spawn actor');
+ const index=Number(playerId.slice(1))-1;
+ if(index<6)return {x:728+(index%3)*72,y:272+Math.floor(index/3)*55};
+ return {x:[640,680,920][(index-6)%3],y:260+Math.floor((index-6)/3)*38};
 }
 export function isWalkable(position,radius=WORLD.bodyRadius){
  if(!point(position)||!Number.isFinite(radius)||radius<0||radius>100)return false;
@@ -50,8 +52,8 @@ function clearSegment(from,to,radius=WORLD.bodyRadius){
  for(let i=0;i<=steps;i++)if(!isWalkable({x:from.x+(to.x-from.x)*i/steps,y:from.y+(to.y-from.y)*i/steps},radius))return false;
  return true;
 }
-export function canSeeWorldPoint(from,to){
- if(distance(from,to)>WORLD.visibilityRadius||!floor(from)||!floor(to))return false;
+export function canSeeWorldPoint(from,to,radius=WORLD.visibilityRadius){
+ if(distance(from,to)>radius||!floor(from)||!floor(to))return false;
  const steps=Math.max(1,Math.ceil(distance(from,to)/7));
  for(let i=0;i<=steps;i++)if(!floor({x:from.x+(to.x-from.x)*i/steps,y:from.y+(to.y-from.y)*i/steps}))return false;
  return true;

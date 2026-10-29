@@ -1,5 +1,5 @@
 import { randomUUID, createHash } from 'node:crypto';
-import { CHARACTERS } from '../../shared/contracts.mjs';
+import { PERSONAS } from '../../shared/lobby.mjs';
 import { candidates, observe } from './demo.mjs';
 import { AiFailure, MODEL, makeRequest, send } from './anthropic.mjs';
 
@@ -77,7 +77,8 @@ export function createAiController({ config = {} } = {}) {
   return {
     async decide({ view, player, context, signal, commitReservation } = {}) {
       if (signal?.aborted || !record(context) || !view?.self || !view.self.alive || typeof view.matchId !== 'string' || !Number.isFinite(view.serverNow) || !['roam', 'discussion', 'voting'].includes(view.phase)) return null;
-      const actor = CHARACTERS.find(p => p.id === player?.id);
+      const persona=PERSONAS.find(p=>p.id===player?.id),publicActor=view.players?.find(p=>p.id===player?.id);
+      const actor=persona&&publicActor?{...persona,name:publicActor.name,color:publicActor.color}:null;
       if (!actor || actor.id !== view.self.id) return null;
       const state = getState(context, view.matchId);
       const actorKey = `actor:${actor.id}`;

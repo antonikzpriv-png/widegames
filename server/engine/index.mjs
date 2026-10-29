@@ -1,5 +1,6 @@
 import { randomBytes, createHash } from 'node:crypto';
 import { CHARACTERS, ROOM_LAYOUT, DEFAULT_RULES, ACTION_TYPES } from '../../shared/contracts.mjs';
+import {PERSONAS,validateSettings,ACTOR_ID,matchRules} from '../../shared/lobby.mjs';
 import {worldRuntime} from './world-runtime.mjs';
 const worldEngine=worldRuntime(await import(process.env.WORLD_ENGINE_GEOMETRY_MODULE||'../../shared/world.mjs'));
 const isWorld=state=>state.schemaVersion===2&&state.worldVersion===1;
@@ -97,11 +98,12 @@ function advance(state,now) {
   return changed;
 }
 
-export function createMatch({id,mode='human',humanPlayerId='p1',now=Date.now(),seed,config={},world=false}={}) {
+export function createMatch({id,mode='human',humanPlayerId='p1',now=Date.now(),seed,config={},world=false,roster=CHARACTERS,humanPlayerIds,settings}={}) {
   if (typeof world!=='boolean')throw new TypeError('Invalid world option');
   if (typeof id!=='string' || !/^[A-Za-z0-9_-]{1,100}$/.test(id) || !['human','spectator'].includes(mode) || !finiteTime(now) || humanPlayerId!=='p1') throw new TypeError('Invalid match options');
   if (!config || typeof config!=='object' || Array.isArray(config)) throw new TypeError('Invalid rules');
-  const rules={...DEFAULT_RULES};
+  if(settings)validateSettings(settings);
+  const rules={...DEFAULT_RULES,...(settings?matchRules(settings):{})};
   for (const [key,value] of Object.entries(config)) {
     if (!Object.hasOwn(rules,key) || !Number.isSafeInteger(value) || value<1 || value>86400000) throw new TypeError('Invalid rules');
     rules[key]=value;
@@ -111,12 +113,17 @@ export function createMatch({id,mode='human',humanPlayerId='p1',now=Date.now(),s
   const secret=seed===undefined?randomBytes(32).toString('hex'):String(seed);
   let counter=0;
   const random=n=>createHash('sha256').update(`${secret}:${counter++}`).digest().readUInt32BE(0)%n;
-  const saboteurIndex=random(6);
+  if(settings&&settings.capacity!==roster.length)throw new TypeError('Settings and roster capacity differ');
+  if(!Array.isArray(roster)||roster.length<4||roster.length>15||new Set(roster.map(p=>p.id)).size!==roster.length||roster.some((p,i)=>p.id!==`p${i+1}`||!ACTOR_ID.test(p.id)||typeof p.name!=='string'||typeof p.color!=='string'))throw new TypeError('Invalid roster');
+  const humans=humanPlayerIds??(mode==='human'?[humanPlayerId]:[]);
+  if(!Array.isArray(humans)||new Set(humans).size!==humans.length||humans.some(id=>!roster.some(p=>p.id===id)))throw new TypeError('Invalid human roster');
+  const saboteurs=new Set();while(saboteurs.size<(settings?.saboteurs??1))saboteurs.add(random(roster.length));
 
-  const players=CHARACTERS.map((p,i)=>({id:p.id,name:p.name,color:p.color,role:i===saboteurIndex?'saboteur':'crew',alive:true,roomId:'bridge',human:mode==='human'&&p.id===humanPlayerId,
-    tasks:i===saboteurIndex?[]:Array.from({length:rules.tasksPerCrew},(_,j)=>{const roomId=roomIds[random(roomIds.length)];return {id:`t${createHash('sha256').update(`${secret}:task:${i}:${j}`).digest('hex').slice(0,20)}`,label:`Service ${ROOM_LAYOUT.find(r=>r.id===roomId).name} relay`,roomId,completed:false};}),
+  const players=roster.map((p,i)=>({id:p.id,name:p.name,color:p.color,role:saboteurs.has(i)?'saboteur':'crew',alive:true,roomId:'bridge',human:humans.includes(p.id),...(settings?{badge:p.id.slice(1),persona:PERSONAS.find(q=>q.id===p.id).persona}:{}),
+    tasks:saboteurs.has(i)?[]:Array.from({length:rules.tasksPerCrew},(_,j)=>{const roomId=roomIds[random(roomIds.length)];return {id:`t${createHash('sha256').update(`${secret}:task:${i}:${j}`).digest('hex').slice(0,20)}`,label:`Service ${ROOM_LAYOUT.find(r=>r.id===roomId).name} relay`,roomId,completed:false};}),
     cooldowns:{moveAt:now,taskAt:now,killAt:now+rules.initialKillCooldownMs,sabotageAt:now+rules.sabotageCooldownMs,meetingAt:now+rules.meetingCooldownMs},meetingsRemaining:rules.meetingsPerPlayer}));
   const state={schemaVersion:1,id,mode,version:1,phase:'roam',startedAt:now,updatedAt:now,deadlineAt:now+rules.roamDeadlineMs,rules,players,bodies:[],sabotage:null,meeting:null,meetingCount:0,outcome:null,sequence:0,events:[],replaySequence:0,replay:[],requests:Object.fromEntries(players.map(p=>[p.id,[]]))};
+  if(settings)state.lobbySettings=clone(settings);
   if(world)worldEngine.initialize(state,now);
   publicEvent(state,'started',now); record(state,'started',now,{...(world?{worldVersion:1,positions:players.map(p=>({id:p.id,position:clone(p.position)}))}:{}),roles:players.map(p=>({id:p.id,role:p.role})),tasks:players.map(p=>({id:p.id,tasks:clone(p.tasks)}))});
   return state;
@@ -161,14 +168,14 @@ function denial(state,p,a,now) {
     if (p.role!=='saboteur' || !target || !target.alive || target.role!=='crew' || (isWorld(state)?!worldEngine.nearby(p.position,target.position,worldEngine.WORLD.killRadius):target.roomId!==p.roomId)) return fail('INVALID_TARGET','No valid target here.');
     if (now<p.cooldowns.killAt) return fail('COOLDOWN','Elimination is cooling down.');
   } else if (a.type==='sabotage') {
-    if (p.role!=='saboteur' || state.sabotage?.active) return fail('UNAVAILABLE','Sabotage is unavailable.');
+    if (state.lobbySettings?.sabotageEnabled===false || p.role!=='saboteur' || state.sabotage?.active) return fail('UNAVAILABLE','Sabotage is unavailable.');
     if (now<p.cooldowns.sabotageAt) return fail('COOLDOWN','Sabotage is cooling down.');
   } else if (a.type==='repair') {
     if (p.role!=='crew' || !state.sabotage?.active || (isWorld(state)?!worldEngine.nearby(p.position,worldEngine.station(state.sabotage.roomId),worldEngine.WORLD.interactionRadius):p.roomId!==state.sabotage.roomId) || state.sabotage.repairers.includes(p.id)) return fail('UNAVAILABLE','No repair available here.');
   } else if (a.type==='report') {
-    if (!state.bodies.some(b=>b.id===a.bodyId && !b.reported && (isWorld(state)?worldEngine.nearby(p.position,b.position,worldEngine.WORLD.reportRadius):b.roomId===p.roomId))) return fail('INVALID_BODY','No reportable body here.');
+    if (!state.bodies.some(b=>b.id===a.bodyId && !b.reported && (isWorld(state)?worldEngine.nearby(p.position,b.position,Math.min(worldEngine.WORLD.reportRadius,state.lobbySettings?.vision??worldEngine.WORLD.visibilityRadius)):b.roomId===p.roomId))) return fail('INVALID_BODY','No reportable body here.');
   } else if (a.type==='meeting') {
-    if ((isWorld(state)?!worldEngine.nearby(p.position,worldEngine.bell,worldEngine.WORLD.interactionRadius):p.roomId!=='bridge') || p.meetingsRemaining<1 || state.sabotage?.active) return fail('UNAVAILABLE','Emergency bell unavailable.');
+    if (state.lobbySettings?.emergencyMeetingsEnabled===false || (isWorld(state)?!worldEngine.nearby(p.position,worldEngine.bell,worldEngine.WORLD.interactionRadius):p.roomId!=='bridge') || p.meetingsRemaining<1 || state.sabotage?.active) return fail('UNAVAILABLE','Emergency bell unavailable.');
     if (now<p.cooldowns.meetingAt) return fail('COOLDOWN','Emergency bell is cooling down.');
   }
   return null;
@@ -231,7 +238,7 @@ export function applyAction(input,playerId,action,now=Date.now()) {
     state.bodies.push({id:`body-${target.id}`,playerId:target.id,roomId:target.roomId,reported:false,...(isWorld(state)?{position:clone(target.position),at:now}:{})});
     transferTasks(state,target,now);
     // Attribution is private to actual eyewitnesses; never enters the public timeline.
-    record(state,'witness',now,{playerId:p.id,targetId:target.id,roomId:p.roomId,...(isWorld(state)?{position:clone(target.position)}:{}),visibleTo:state.players.filter(w=>w.alive&&(isWorld(state)?worldEngine.sees(w.position,p.position)&&worldEngine.sees(w.position,target.position):w.roomId===p.roomId)).map(w=>w.id)});
+    record(state,'witness',now,{playerId:p.id,targetId:target.id,roomId:p.roomId,...(isWorld(state)?{position:clone(target.position)}:{}),visibleTo:state.players.filter(w=>w.alive&&(isWorld(state)?worldEngine.sees(w.position,p.position,state.lobbySettings?.vision)&&worldEngine.sees(w.position,target.position,state.lobbySettings?.vision):w.roomId===p.roomId)).map(w=>w.id)});
     publicEvent(state,'eliminated',now,{playerId:target.id});
   }
   if (action.type==='report') {
@@ -253,8 +260,8 @@ export function applyAction(input,playerId,action,now=Date.now()) {
 export function getPlayerView(state,playerIdOrNull,now=Date.now()) {
   const p=state.players.find(p=>p.id===playerIdOrNull);
   const ended=state.phase==='ended';
-  const visible=q=>!p || q.id===p.id || ended || (isWorld(state)?worldEngine.sees(p.position,q.position):q.roomId===p.roomId);
-  const bodyVisible=b=>!p||(isWorld(state)?worldEngine.sees(p.position,b.position):b.roomId===p.roomId);
+  const visible=q=>!p || q.id===p.id || ended || (isWorld(state)?worldEngine.sees(p.position,q.position,state.lobbySettings?.vision):q.roomId===p.roomId);
+  const bodyVisible=b=>!p||(isWorld(state)?worldEngine.sees(p.position,b.position,state.lobbySettings?.vision):b.roomId===p.roomId);
   const bodyEvent=b=>({id:b.id,type:'body',bodyId:b.id,playerId:b.playerId,roomId:b.roomId,at:isWorld(state)?b.at:state.updatedAt,...(isWorld(state)?{position:clone(b.position)}:{})});
   const events=clone(state.events);
   if (p) {
@@ -274,9 +281,9 @@ export function getPlayerView(state,playerIdOrNull,now=Date.now()) {
     if (type==='vote') candidates=[{id:'hint',type,targetId:'skip'}];
     if (candidates.some(a=>!denial(state,p,a,now))) hints.push(type);
   }
-  return {matchId:state.id,...(isWorld(state)?{worldVersion:1}:{}),version:state.version,phase:state.phase,serverNow:now,deadlineAt:state.deadlineAt,
-    rooms:clone(ROOM_LAYOUT),players:state.players.map(q=>({id:q.id,name:q.name,color:q.color,alive:q.alive,roomId:visible(q)?q.roomId:null,...(isWorld(state)?{position:visible(q)?clone(q.position):null}:{}),...(ended?{role:q.role}:{})})),
-    self:p?{id:p.id,role:p.role,alive:p.alive,roomId:p.roomId,...(isWorld(state)?{position:clone(p.position),inputSeq:p.motion.seq,moving:worldEngine.moving(state,p,now),destination:clone(p.motion.destination)}:{}),tasks:clone(p.tasks),cooldowns:clone(p.cooldowns),meetingsRemaining:p.meetingsRemaining}:null,
+  return {matchId:state.id,...(state.lobbySettings?{settings:clone(state.lobbySettings)}:{}),...(isWorld(state)?{worldVersion:1}:{}),version:state.version,phase:state.phase,serverNow:now,deadlineAt:state.deadlineAt,
+    rooms:clone(ROOM_LAYOUT),players:state.players.map(q=>({id:q.id,name:q.name,color:q.color,...(q.badge?{badge:q.badge}:{}),alive:q.alive,roomId:visible(q)?q.roomId:null,...(isWorld(state)?{position:visible(q)?clone(q.position):null}:{}),...(ended?{role:q.role}:{})})),
+    self:p?{id:p.id,role:p.role,...(state.lobbySettings&&p.role==='saboteur'?{teammates:state.players.filter(q=>q.id!==p.id&&q.role==='saboteur').map(q=>q.id)}:{}),alive:p.alive,roomId:p.roomId,...(isWorld(state)?{position:clone(p.position),inputSeq:p.motion.seq,moving:worldEngine.moving(state,p,now),destination:clone(p.motion.destination)}:{}),tasks:clone(p.tasks),cooldowns:clone(p.cooldowns),meetingsRemaining:p.meetingsRemaining}:null,
     tasks:{completed:state.players.flatMap(q=>q.tasks).filter(t=>t.completed).length,total:state.players.flatMap(q=>q.tasks).length},
     sabotage:state.sabotage?{active:state.sabotage.active,roomId:state.sabotage.roomId,deadlineAt:state.sabotage.deadlineAt,repairsCompleted:state.sabotage.repairsCompleted,repairsRequired:state.sabotage.repairsRequired}:null,
     meeting:state.meeting?{id:state.meeting.id,calledBy:state.meeting.calledBy,reason:state.meeting.reason,bodyId:state.meeting.bodyId,deadlineAt:state.meeting.deadlineAt,messages:clone(state.meeting.messages),votes:state.meeting.votes.map(v=>state.meeting.tallied?clone(v):{playerId:v.playerId}),eligibleVoters:clone(state.meeting.eligibleVoters)}:null,
