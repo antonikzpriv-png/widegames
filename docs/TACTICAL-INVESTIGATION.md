@@ -106,3 +106,79 @@ git diff --check
 ```
 
 Both source-selection modes yield6/6 and exit0. Evidence _artifacts/tactical-investigation-independent-initial.txt SHA256 **C1A380AFB45B9C8B5A151CD7414BC6FBE213C68DF054A359CE9FFC4D3D1FC78D**, and _artifacts/tactical-investigation-independent-default.txt SHA256 **44306BB6EEB66DF06F2E0FF3FF214C4330DE87F145DDE052177D4DBAACCEC6B5**. Authored investigation45/45 remains a separate qualification, not independent self-approval. Manager owns integration/browser/full-suite qualification. No additional feature work is introduced by this audit.
+
+## Independent coordinator integration audit: exact dfdcea4
+
+Reviewed actual manager integration **dfdcea4348711986e430eeab0c17bb4112936b0e**, with historical control **3c064af50043435f17b35b112cc62b6c9e1f50d6**. Own changes only tests/tactical-coordinator-review-ai.test.mjs, tests/tactical-coordinator-review-http.test.mjs and this appended receipt. No runtime/root/other-owner edits. Result: **14 new boundary cases,14 passed, zero failure/skip/todo/cancelled** at the fixed source. No remaining concrete coordinator defect surfaced in the tested scope; this is bounded acceptance, not approval of all game/browser/deployment behavior or this worker's authored investigation module.
+
+### Historical actual eyewitness failure and exact fix
+
+A new eight-custom-keeper Annex fixture (seed independent-eyewitness, explicit offline clock) uses accepted navigation to position a crew witness and saboteur next to another crew member, then actual eliminate and report actions. No position, replay, role or outcome is forged. The harness reads roles only to stage actors; actual AI observe/candidates/makeRequest receives the real owner's safe view. The engine supplies a witness event in room muster at2645 and transitions to discussion after the lawful report.
+
+At **3c064af50043435f17b35b112cc62b6c9e1f50d6**, the exact same positive test fails: observe leaves the actual attacker's memory.witnesses entry undefined. This is the real legacy rooms.has gate defect, not an expected-red wrapper or skipped assertion. Preserved _artifacts/tactical-coordinator-eyewitness-old-red.txt SHA256 **46B086C04EB2CF8474F042B2300AC6F7BD5669FA25A83CB93D6FCF62E08B42BB**; one selected case, zero pass/one failure, exit1.
+
+At **dfdcea4348711986e430eeab0c17bb4112936b0e**, all three new AI cases pass: the actual witness remains attributed to the correct attacker/victim/time; candidates describes the attack in **Muster Hall** as firsthand; makeRequest carries that owner-authorized witness and public Annex identity/names. Only server/ai/demo.mjs and server/ai/anthropic.mjs differ between the two pins under server/shared, so the same actual engine/map sources stage the historical and fixed gameplay. No provider send occurs: any fetch in these three cases throws immediately. makeRequest is the actual request serializer, not a fabricated replacement.
+
+A real timed Annex occupancy read produces exactly eight map-room count rows. deviceFacts retains every row, source ID, original timestamp and exact map identity; another keeper and spectator receive no facts. Injected private-marker fields/hiddenIds are stripped rather than forwarded. After a real emergency meeting, the actual provider request retains all eight dated rooms and map, with no attack-witness claim inferred from occupancy. Thus the previously reported six-room projection gap is closed at this pin.
+
+Provider whitelist control uses the actual witness view plus labeled adversarial extra fields: map privateRoute, room geometry/privateRoute, other-player role/knowledge, self knowledge, configuration/replay/AI memory. makeRequest emits map id/version and eight room id/name pairs only; all injected private sentinels disappear. Other-player rows omit roles/knowledge; own self.role remains correctly permitted. No secret recipients, global replay, raw configuration or geometry is added to council context.
+
+### Eleven new HTTP/store boundaries
+
+Tests start the actual native transport and actual durable store on loopback with explicit config **tacticalMode:true**, worldMode/systemsMode enabled, seeded engine construction and a clearly labeled idle demo AI dependency (no provider actions). This does not claim the production default flag is enabled. Field-note tests exercise the existing Group2 ability baseline only, not a merged ghost/death implementation or new seat allocation.
+
+- Room-scoped ownership: absent credentials, spectator cookie, another room's host cookie, a foreign token renamed to the target room cookie, and duplicate same-name cookies cannot change settings. The same settings ID remains independently usable by each rightful room host.
+- Malformed/foreign requests: map objects, string/fractional revisions, extra version/actor fields, unknown prototype-like IDs and foreign origins cannot silently select a map or reserve a settings ID. The same ID is then usable for a valid request; settings success does not replace the human cookie.
+- Concurrent identical retries charge one revision/receipt; same-ID conflicting bodies produce one success and REQUEST_CONFLICT, with persisted map/revision matching the winner.
+- Accepted Annex -> Beacon reversal followed by retry of the old accepted request does not roll back the newer selection. A denied stale request remains denied after a later successful selection and restart. Receipt arrays and identity hashes remain unchanged on those retries.
+- A real settings/start race may legally resolve in either order; the created schema4 match must use the selected map of that serialized ordering. Fresh changes after start fail. Retained accepted retries cannot change the running map, including after restart.
+- Actual HTTP human/spectator views after map selection, start, a private field-note and restart preserve the original human seat/cookie identity. Spectator self/session/history/notes remain empty. Public room/game map identities agree; catalog entries contain metadata only. Recursive private-key checks exclude identity hashes, settings request fingerprints, AI memory, full configuration/knowledge/replay and faction ledgers. API responses use no-store/nosniff; private server/data paths return404; active replay remains409.
+- A deliberate failure immediately before delegated store.save makes settings return generic503, with no success acknowledgement, private error text, bytes or memory mutation. The same-ID retry succeeds once and survives restart. This is a pre-persistence fault boundary, not an OS crash/after-rename/power-loss durability claim.
+- Actual HTTP ledger exhaustion records64 requests/revisions, rejects a new ID without evicting old IDs, retains the first accepted ID across restart, returns the current map on its retry, and still permits a playable schema4 start. The fixture advances its clock at request50 to stay within the real per-minute actor limiter; it does not disable rate limiting.
+- Three mixed-directory cases combine a current valid room with a future map version, room schema or match schema. load fails explicitly MAP_UNAVAILABLE/VERSION_UNAVAILABLE while preserving both original files byte-for-byte and creating no quarantine file. This tests preservation amid ordinary current data, not only an isolated future file.
+
+### Exact source and qualification receipts
+
+Both ignored archives contain71 tracked files from their exact committed server/shared/public/package trees, with no runtime overlay. All71 fixed files were byte-reverified against git show PIN:path before final default-mode qualification. Manifest SHA256: fixed _artifacts/tactical-coordinator-review-dfdcea4/source-manifest.json **AE974CDB67E47F4AC49B28D0C228DCE18C06B6625C52300F367FA55DF07446CA**; historical _artifacts/tactical-coordinator-review-3c064af/source-manifest.json **D143C4F40C289E0D8A2C57E8C51A9D38EF952694273686D49295D2B54B2877CA**. Existing installed ws8.22.0 (the lockfile version) was copied read-only from manager's dependency directory into the ignored fixed archive; no dependency install/network occurred. This is not an npm-ci/package-integrity qualification.
+
+| Fixed source file | Exact Git blob |
+| --- | --- |
+| server/ai/demo.mjs | fffa0f19328003b45eccd68291333eab8ce2f51e |
+| server/ai/anthropic.mjs | 5e0762b64f836b714fe907765f34ad90321d46a8 |
+| server/features/strategy/index.mjs | 7d8050132f832da86dcd3634db5711c4b12cbe31 |
+| server/map-settings.mjs | 95cf9c1b09585efb301669481b1bc235669a1bbc |
+| server/rooms.mjs | 67e55fbc50b218c3c45ca2c09131fecf4e948097 |
+| server/store.mjs | 145439c279dccaabc8e0e65b87ed32cf5108ec7b |
+| server/transport.mjs | 6be634297bfc3b777ed35d8838b6a887a08beb96 |
+
+Node24.20.0, source/temp/cache on assigned D: storage. Tests use paths relative to their checkout, ignored _artifacts temp directories and optional explicit TACTICAL_COORDINATOR_REVIEW_ROOT; no machine-specific path appears in either committed test. Default imports always exercise the current checkout, never silently choose the old/fixed archive or skip unavailable schema4. Reproduction, after preparing committed archives:
+
+```powershell
+$env:TEMP='D:/Widegames-work/temp'
+$env:TMP=$env:TEMP
+$env:npm_config_cache='D:/Widegames-work/npm-cache'
+Remove-Item Env:WORLD_ENGINE_GEOMETRY_MODULE -ErrorAction SilentlyContinue
+$env:TACTICAL_COORDINATOR_REVIEW_ROOT=(Join-Path (Get-Location) '_artifacts/tactical-coordinator-review-3c064af')
+node --test --test-name-pattern='actual Annex eyewitness' tests/tactical-coordinator-review-ai.test.mjs
+# Expected old source: exit1 at the real missing-witness assertion.
+$env:TACTICAL_COORDINATOR_REVIEW_ROOT=(Join-Path (Get-Location) '_artifacts/tactical-coordinator-review-dfdcea4')
+node --test tests/tactical-coordinator-review-ai.test.mjs
+node --test tests/tactical-coordinator-review-http.test.mjs
+# Fixed source:3/3 and11/11, both exit0.
+Remove-Item Env:TACTICAL_COORDINATOR_REVIEW_ROOT
+node --test _artifacts/tactical-coordinator-review-dfdcea4/tests/tactical-coordinator-review-ai.test.mjs _artifacts/tactical-coordinator-review-dfdcea4/tests/tactical-coordinator-review-http.test.mjs
+# Owned tests copied unchanged there: default imports14/14, exit0.
+node --check tests/tactical-coordinator-review-ai.test.mjs
+node --check tests/tactical-coordinator-review-http.test.mjs
+git diff --check
+```
+
+| Local evidence | SHA256 |
+| --- | --- |
+| tactical-coordinator-ai-fixed.txt | 7B5007A6A089559885429563C1882735CAEBE9A1D2481BDDCE97A64F3728C47F |
+| tactical-coordinator-http-fixed.txt | 974FA8BDC17965983D2BE7D4F9EBF285FAC3E51834C9B84BA6B81610053429F8 |
+| tactical-coordinator-review-default.txt | 33729634C11BF0561BBAB980D2933CCA8FD621271F7DBE87B6CEB6479081E06D |
+
+Preparation failures remain separate evidence, not product findings. First eyewitness staging did not place a reporter close enough; that failed identically at both pins before reaching AI, so the fixture now legally navigates a witness to the scene before attack. Logs tactical-coordinator-eyewitness-preparation.txt **A8D7B337BAAD4EB55360C88E8EB1D427601084E828D621C1E4327E858FF7D595** and tactical-coordinator-ai-preparation.txt **3BAD838172B0472CDE01FC4EA9B5EEEAB7F37933259AB8A64A97B7D7EC201666**. Initial HTTP run3/11 had8 teardown failures because directory cleanup ran before server/store lock release; only fixture teardown ordering was corrected, then11/11 passed. Its preserved tactical-coordinator-http-initial.txt SHA256 **11BE0888A095EC74D0C616A7B4ECCFC21619FDCB1971C62E72857E805D0B6776**. No test assertion was skipped/inverted to turn an unresolved defect green.
+
+Current audit covers coordinator-authored tactical AI/root integration. Earlier legacy AI/investigation authored by this worker is a dependency/self-check, not independently self-approved. Unintegrated Core62498 and Systems81e7353/d685 heads are outside this exact-pin receipt; no claim about their closure is made. No planner/role/seat-allocation extension, ghost implementation, full suite, Chrome/browser, paid/live provider, hosted CI, main/push/deployment or OS power-loss approval. Manager retains broader integration and publication responsibility. Bounded requested work is complete.
