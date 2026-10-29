@@ -119,3 +119,14 @@ for(const settleAs of ['failure','success'])test('a revoked submission releases 
 test('a still-current task failure keeps solved equipment and useful retry feedback',async()=>{
  const f=fixture();try{const r=room();r.game.self.tasks=[{id:'retry-task',label:'Relay wiring',roomId:'bridge',completed:false}];r.game.interactions=[{id:'retry-task',type:'task',fields:{taskId:'retry-task'},label:'Relay wiring',enabled:true}];f.enter(r);f.win.emit('keydown',{key:'e',target:f.find('.lw-world-canvas')});for(const n of [1,2,3]){f.click(f.host.querySelectorAll('button').find(b=>b.getAttribute('aria-label')?.startsWith(`Left cable ${n}`)));f.click(f.host.querySelectorAll('button').find(b=>b.getAttribute('aria-label')?.startsWith(`Right socket ${n}`)));}const submit=f.button('Send completed task'),modal=f.find('.lw-task-modal');f.setAction(async()=>{throw Error('Station response unavailable; try again');});f.click(submit);await settle();assert.equal(f.find('.lw-task-modal'),modal);assert(modal.visible);assert(!submit.disabled);assert.match(f.find('.lw-feedback').textContent,/Station response unavailable/);assert.equal(f.host.querySelectorAll('.lw-connected-wire').length,3);}finally{f.dispose();}
 });
+
+
+test('enabled sound mutes synchronously during council without disturbing the chat draft',async()=>{
+ AudioFixture.instances=[];const f=fixture();try{
+  f.win.AudioContext=AudioFixture;const r=room();f.enter(r);const toggle=f.find('.lw-sound-toggle');f.click(toggle);await settle();assert.equal(toggle.getAttribute('aria-pressed'),'true');
+  r.game.phase='discussion';r.game.meeting={id:'mute-council',messages:[],votes:[],eligibleVoters:[]};r.game.availableActions=['say'];f.update(r);
+  const chat=f.find('textarea');chat.value='Keep my council draft';chat.focus();const audio=AudioFixture.instances[0],before=audio.stops;
+  f.click(toggle);assert.equal(toggle.getAttribute('aria-pressed'),'false');assert.equal(audio.state,'suspended');assert(audio.stops>before);assert.equal(chat.value,'Keep my council draft');assert.equal(f.document.activeElement,chat);
+  f.update(r);assert.equal(toggle.getAttribute('aria-pressed'),'false');assert.equal(chat.value,'Keep my council draft');
+ }finally{f.dispose();}
+});

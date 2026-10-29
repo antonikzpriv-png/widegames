@@ -43,7 +43,11 @@ export function cooldownText(game,now){
  const c=game.systems?.cooldowns;if(!c)return '';
  return [['auxiliaryAt',game.tacticalVersion===1?'Faction auxiliary sabotage':'Auxiliary sabotage'],['criticalAt',game.tacticalVersion===1?'Faction critical sabotage':'Critical sabotage'],['ventAt','Hatch travel']].filter(([key])=>seconds(c[key],now)>0).map(([key,label])=>`${label}: ${seconds(c[key],now)}s cooldown`).join('. ');
 }
-export function interactionLabel(h,game,map=getMap(game?.map)){
+export function interactionLabel(h,game,map){
+ // Array.map supplies (value,index,array). Only actual map descriptors may
+ // override geometry; preserve direct one-argument callback use as well.
+ const isMap=value=>!!value?.geometry&&!!value?.fixtures&&Array.isArray(value?.roomLayout);
+ map=isMap(map)?map:isMap(game)?game:getMap(game&&typeof game==='object'&&!Array.isArray(game)?game.map:undefined);
  if(map.id!=='beacon'&&h.type==='vent'&&/^Hatch to /.test(h.label||'')){const hatch=map.fixtures.vents.find(v=>v.id===h.fields.exitId);if(hatch)return `Hatch to ${mapRoomName(map,hatch.roomId)}`;}
  if(h.type==='systemSabotage'&&h.fields.kind==='door'){const door=map.fixtures.doors.find(d=>d.id===h.fields.targetId);return `${h.label||'Disrupt door'}: ${h.fields.targetId}${door?' ('+door.roomId+')':''}`;}
  if(h.type==='systemRepair'&&h.fields.systemId==='door')return `${h.label||'Reopen door'}: ${h.fields.siteId}`;
