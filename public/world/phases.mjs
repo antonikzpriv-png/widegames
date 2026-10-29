@@ -1,4 +1,5 @@
-﻿import {dom,control,setText} from './dom.mjs';
+﻿import {knowledge} from './beacon-model.mjs';
+import {dom,control,setText} from './dom.mjs';
 import {drawKeeper} from './scene.mjs';
 import {clock} from './model.mjs';
 import {replayEvents,outcomeText} from '../presentation.mjs';
@@ -26,8 +27,10 @@ export function createCouncil({id,action,feedback,pending}){
   setText(heading,discussion?'WHO CAN WE TRUST?':'MAKE YOUR CALL.');setText(timer,clock(game.deadlineAt||meeting.deadlineAt,now));setText(reason,meeting.reason==='report'?`${nameOf(game,meeting.calledBy)} reported a fallen keeper.`:meeting.reason==='timeout'?'The watch deadline brought everyone to council.':`${nameOf(game,meeting.calledBy)} rang the emergency bell.`);
   const ids=new Set(game.players.map(p=>p.id));for(const [id,entry]of players)if(!ids.has(id)){entry.node.remove();players.delete(id);}
   for(const player of game.players){
-   let entry=players.get(player.id);if(!entry){const row=dom('div','lw-council-keeper'),icon=avatar(player),name=dom('strong','',player.name),state=dom('span','lw-vote-cast'),voteButton=control('Vote',()=>vote(player.id),'lw-vote-button'),info=dom('div','lw-roster-name');info.append(name,state);row.append(icon,info,voteButton);roster.append(row);entry={node:row,name,state,voteButton};players.set(player.id,entry);}
-   entry.node.dataset.alive=String(player.alive);setText(entry.name,`${player.name}${player.id===game.self?.id?' (you)':''}`);setText(entry.state,!player.alive?'Fallen':votes.some(v=>v.playerId===player.id)?'Vote recorded':discussion?'On watch':'Choosing…');entry.voteButton.hidden=discussion;entry.voteButton.disabled=!canVote||!eligible.includes(player.id);entry.voteButton.setAttribute('aria-label',`Vote to eject ${player.name}`);
+   let entry=players.get(player.id);if(!entry){const row=dom('div','lw-council-keeper'),icon=avatar(game.beaconVersion===1?{...player,alive:knowledge(game,player)!=='dead'}:player),name=dom('strong','',player.name),state=dom('span','lw-vote-cast'),voteButton=control('Vote',()=>vote(player.id),'lw-vote-button'),info=dom('div','lw-roster-name');info.append(name,state);row.append(icon,info,voteButton);roster.append(row);entry={node:row,icon,name,state,voteButton};players.set(player.id,entry);}
+   const known=game.beaconVersion===1?knowledge(game,player):(player.alive?'alive':'dead');
+   if(entry.known!==known){entry.icon.getContext('2d').clearRect(0,0,64,64);drawKeeper(entry.icon.getContext('2d'),player,32,64*.72,{scale:64/90,label:false,ghost:known==='dead'});entry.known=known;}
+   entry.node.dataset.alive=known==='unknown'?'unknown':String(known==='alive');setText(entry.name,`${player.name}${player.id===game.self?.id?' (you)':''}`);setText(entry.state,known==='unknown'?'Status unknown':known==='dead'?'Fallen':votes.some(v=>v.playerId===player.id)?'Vote recorded':discussion?'On watch':'Choosing…');entry.voteButton.hidden=discussion;entry.voteButton.disabled=!canVote||!eligible.includes(player.id);entry.voteButton.setAttribute('aria-label',`Vote to eject ${player.name}`);
   }
   const atEnd=messages.scrollHeight-messages.scrollTop-messages.clientHeight<55;
   for(const message of meeting.messages||[]){if(messageNodes.has(message.id))continue;const row=dom('li'),name=dom('strong','',nameOf(game,message.playerId)),body=dom('p','',message.text);row.append(name,body);messages.append(row);messageNodes.set(message.id,row);if(message.playerId===game.self?.id&&lastSubmitted&&message.text===lastSubmitted.trim()&&chat.value===lastSubmitted&&!composing){chat.value='';lastSubmitted=null;}}
