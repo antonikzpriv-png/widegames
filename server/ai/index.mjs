@@ -80,7 +80,8 @@ export function createAiController({ config = {} } = {}) {
     async decide({ view, player, context, signal, commitReservation, getCurrentView } = {}) {
       if (signal?.aborted || !record(context) || !view?.self || !view.self.alive || typeof view.matchId !== 'string' || !Number.isFinite(view.serverNow) || !['roam', 'discussion', 'voting'].includes(view.phase)) return null;
       const publicEntry = (view.players ?? []).slice(0, 24).find(p => p.id === player?.id);
-      const actor = CHARACTERS.find(p => p.id === player?.id) ?? (publicEntry && /^[A-Za-z0-9_-]{1,40}$/.test(publicEntry.id) && typeof publicEntry.name === 'string' && publicEntry.name.length <= 80 ? { id: publicEntry.id, name: publicEntry.name, persona: 'A keeper aboard the beacon.' } : null);
+      const validPublicName = typeof publicEntry?.name === 'string' && publicEntry.name.trim().length > 0 && publicEntry.name.length <= 80 && !/[\u0000-\u001f\u007f]/u.test(publicEntry.name);
+      const actor = CHARACTERS.find(p => p.id === player?.id) ?? (publicEntry && /^[A-Za-z0-9_-]{1,40}$/.test(publicEntry.id) && validPublicName ? { id: publicEntry.id, name: publicEntry.name, persona: 'A keeper aboard the beacon.' } : null);
       if (!actor || actor.id !== view.self.id) return null;
       const state = getState(context, view.matchId);
       const actorKey = `actor:${actor.id}`;
@@ -103,7 +104,7 @@ export function createAiController({ config = {} } = {}) {
           if (continued) return envelope(continued, view, memory);
           delete memory.intention;
           // A failed/completed plan cannot buy repeated replans on each tick.
-          if (memory.plannedSituation === situation(view) && view.serverNow < memory.replanAt) return envelope(localChoices[0], view, memory);
+          if (memory.plannedSituation === situation(view, memory) && view.serverNow < memory.replanAt) return envelope(localChoices[0], view, memory);
         }
         const choices = strategic ? intentions(view, memory) : localChoices;
         if (!choices.length) return null;
@@ -113,9 +114,9 @@ export function createAiController({ config = {} } = {}) {
         if (state.mode === 'live' && view.phase === 'discussion' && (memory.discussionCount ?? 0) >= 2) return null;
         if (state.mode !== 'live') return demo();
         if (typeof commitReservation !== 'function') { fallback(context, state, 'reservation_required'); return demo(); }
-        if (strategic) { memory.plannedSituation = situation(view); memory.replanAt = view.serverNow + 30000; }
+        if (strategic) { memory.plannedSituation = situation(view, memory); memory.replanAt = view.serverNow + 30000; }
         const current = () => getCurrentView ? getCurrentView() : view;
-        const valid = () => { const fresh = current(); return fresh?.matchId === view.matchId && fresh.phase === view.phase && fresh.self?.alive && fresh.meeting?.id === view.meeting?.id && (!strategic || situation(fresh) === situation(view)); };
+        const valid = () => { const fresh = current(); return fresh?.matchId === view.matchId && fresh.phase === view.phase && fresh.self?.alive && fresh.meeting?.id === view.meeting?.id && (!strategic || situation(fresh, memory) === situation(view, memory)); };
         let request;
         try { request = makeRequest(view, actor, memory, choices); }
         catch (error) { fallback(context, state, error.code); return demo(); }
@@ -151,7 +152,7 @@ export function createAiController({ config = {} } = {}) {
             if (strategic) { install(memory, action, current()); return envelope(execute(current(), memory), current(), memory); }
             return envelope(action, current(), memory);
           } catch (error) {
-            if (signal?.aborted) return null;
+            if (signal?.aborted || !valid()) return null;
             const code = !persisted ? 'reservation_failed' : timeout.signal.aborted ? 'timeout' : error.code;
             if (persisted && attempt === 0 && (error.retryable || code === 'timeout')) continue;
             fallback(context, state, code);

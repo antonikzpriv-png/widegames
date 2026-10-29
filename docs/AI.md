@@ -90,22 +90,30 @@ labeled demo for that match. The same pinned adapter, wallet, reservation callba
 per-match limits and daily ledger apply. No budget defaults were increased.
 
 The model chooses a structured offered intention, not engine commands or arbitrary
-targets. Crew can select different task routes, repair, reporting, following,
+targets. Crew can select different tasks or ordered itineraries of up to three
+jobs, repair, reporting, following,
 avoidance, alibi positioning and investigation of past permitted sightings.
 Saboteurs can select fake work, deceptive positioning, isolation of a currently
 visible target, and sabotage timing. Isolation waits for no visible nearby witness
 and a ready cooldown; sabotage timing waits for at most one visible keeper. These
 are fallible local observations, never claims about hidden players. Fake work only
 navigates/waits and cannot complete any crew task. No unimplemented capability is
-required or advertised. Plans last at most 30 seconds; new deaths, meetings,
-completed tasks, critical events and body/witness evidence can invalidate them.
-Three non-progress steps bound failed routes. Unchanged conditions cannot buy
+required or advertised. Plans last at most 30 seconds. Meetings, changed task
+assignments, critical events
+and new body/witness evidence can invalidate them. Dead or unseen targets cannot
+be followed or attacked. Unaffected routes continue after unrelated deaths.
+Three stationary samples, at least one second apart, bound failed routes.
+Unchanged conditions cannot buy
 another plan until the 30-second replan window, even if its target disappears.
 
 Private actor memory keeps at most 12 timestamped observation snapshots (24 visible
 players each), 16 heard claims, bounded suspicions, one intention and progress.
-The adapter supplies only the last four snapshots and safe-view fields. Historical
-positions stay timestamped; following and isolation require current visibility.
+The adapter supplies at most the last two significant roaming snapshots and
+safe-view fields. Unchanged council positions do not erase roaming history.
+Older optional observations and dialogue are shed deterministically to fit the
+existing 12,000-byte cap; the public roster and offered choices are retained.
+Historical positions stay timestamped; investigation visits a fixed past sighting,
+while following and isolation require current visibility.
 Dynamic public roster entries are bounded to 24 and their public names are
 validated; unknown characters get a generic persona. Caller-supplied private
 personas are ignored. No raw state, spectator view or provider reasoning enters

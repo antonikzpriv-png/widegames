@@ -216,3 +216,10 @@ allowances, privacy, dynamic profiles, stale results and persistent routes;
 real engine, restores JSON context mid-route, and reaches actual rules outcomes
 through explicitly budget-limited fallback. These are author checks, not an
 independent review or live-provider qualification.
+
+The follow-up strategic audit extends this with real wall-detour regressions,
+ordered task itineraries, fixed historical-point investigation, dynamic witness
+names, compact prompts, actual HTTP stale-result and durable restart tests, and
+four complete matches that forbid demo fallback. The current requirement matrix,
+corrected findings and exact fixture budget limits are recorded in
+[AI-STRATEGIC-VERIFICATION.md](AI-STRATEGIC-VERIFICATION.md).

@@ -59,3 +59,58 @@ for (const mode of ['spectator', 'human']) test(`strategic offline engine: seede
   }
   assert(fetch.mock.callCount() > 0); t.diagnostic(JSON.stringify(receipts));
 });
+
+// Sustained strategic qualification: the mock sees only the serialized provider
+// prompt and public geometry, not state/roles outside that actor's permitted view.
+for (const mode of ['spectator', 'human']) test(`strategic sustained ${mode}: complete matches without demo fallback`,{timeout:180000},async t=>{
+ const {WORLD_STATIONS,findWorldPath}=await import('../shared/world.mjs');
+ const pathCost=(from,to)=>{const path=findWorldPath(from,to);if(!path)return Infinity;let cost=0;for(const p of path){cost+=distance(from,p);from=p;}return cost;};
+ let requests=0;
+ t.mock.method(globalThis,'fetch',async(_url,options)=>{
+  requests++;const body=JSON.parse(options.body),input=JSON.parse(body.messages[0].content),choices=input.choices;
+  assert(input.self.id);assert(input.players.every(p=>!Object.hasOwn(p,'role')));
+  let choice=0;
+  if(input.phase==='roam'){
+   const repairs=choices.findIndex(c=>c.goal==='repair');
+   const reports=choices.findIndex(c=>c.goal==='report');
+   if(reports>=0)choice=reports;
+   else if(repairs>=0)choice=repairs;
+   else if(input.self.role==='crew'){
+    const tasks=choices.map((c,i)=>({c,i})).filter(({c})=>c.goal==='task');
+    tasks.sort((a,b)=>pathCost(input.self.position,WORLD_STATIONS[a.c.roomId])-pathCost(input.self.position,WORLD_STATIONS[b.c.roomId]));
+    const routes=choices.map((c,i)=>({c,i})).filter(({c})=>c.goal==='task_route');
+    const routeCost=entry=>{let position=input.self.position,cost=0;for(const id of entry.c.taskIds){const task=input.self.tasks.find(t=>t.id===id),target=WORLD_STATIONS[task.roomId];cost+=pathCost(position,target);position=target;}return cost;};
+    routes.sort((a,b)=>routeCost(a)-routeCost(b));
+    choice=routes[0]?.i??tasks[0]?.i??choices.findLastIndex(c=>c.goal==='position');
+    if(choice<0)choice=0;
+   }else{
+    const isolate=choices.findIndex(c=>c.goal==='isolate');
+    const sabotage=choices.findIndex(c=>c.goal==='sabotage');
+    const fake=choices.findIndex(c=>c.goal==='fake_work'&&c.roomId==='bridge');
+    choice=isolate>=0?isolate:
+     sabotage>=0&&(input.self.cooldowns.sabotageAt??0)<=input.serverNow&&input.players.filter(p=>p.id!==input.self.id&&p.position).length<=1?sabotage:fake>=0?fake:0;
+   }
+  }
+  return new Response(JSON.stringify({stop_reason:'tool_use',content:[{type:'tool_use',name:'pick_action',input:{choice}}],usage:{input_tokens:100,output_tokens:20}}));
+ });
+ for(const seed of [1,7]){
+  const settings={provider:'anthropic',apiKey:'offline',strategy:'strategic',maxCalls:48,maxTokens:mode==='human'?250000:120000,maxCostUsd:.5,decisionIntervalMs:1800};
+  let controller=createAiController({config:settings}),context={},state=engine.createMatch({id:`sustained-${mode}-${seed}`,mode,seed,now:1000,world:true,config:{discussionMs:6000,votingMs:4000}}),restarted=false;
+  const types=new Set();let intentions=0,lastCalls=0;
+  for(let now=1000;now<=901000&&!['ended','paused'].includes(state.phase);now+=250){
+   state=engine.tick(state,now).state;
+   for(const player of CHARACTERS.filter(p=>mode!=='human'||p.id!=='p1')){
+    const view=engine.getPlayerView(state,player.id,now),before=structuredClone(view);
+    const action=await controller.decide({view,player,context,commitReservation:async()=>{}});assert.deepEqual(view,before);
+    const summary=controller.describe(context);assert.equal(summary.mode,'live',`${mode} seed ${seed}: unexpected fallback ${JSON.stringify(summary)} at ${now}`);
+    if(summary.calls>lastCalls&&view.phase==='roam')intentions++;lastCalls=summary.calls;
+    if(!action)continue;assert.notEqual(action.type,'intend','internal intentions cannot reach engine');
+    const result=engine.applyAction(state,player.id,action,now);assert(result.accepted,`${player.id} ${JSON.stringify(action)} ${JSON.stringify(result.error)}`);state=result.state;types.add(action.type);
+   }
+   if(!restarted&&now>=6000){state=JSON.parse(JSON.stringify(state));context=JSON.parse(JSON.stringify(context));controller=createAiController({config:settings});restarted=true;}
+  }
+  assert(restarted);assert.equal(state.phase,'ended');assert(intentions>6,'must execute more than opening strategic plans');assert.equal(controller.describe(context).mode,'live');assert(engine.getReplay(state));
+  t.diagnostic(JSON.stringify({mode,seed,outcome:state.outcome,reservations:controller.describe(context),intentions,types:[...types]}));
+ }
+ assert(requests>0);
+});
