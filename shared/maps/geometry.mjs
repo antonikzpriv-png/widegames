@@ -30,6 +30,8 @@ function clearSegment(from,to,radius=WORLD.bodyRadius){
 }
 function canSeeWorldPoint(from,to){
  if(distance(from,to)>WORLD.visibilityRadius||!floor(from)||!floor(to))return false;
+ // Static props are opaque on Annex; dynamic doors belong to authoritative spatial state.
+ for(const r of WORLD_OBSTACLES){let low=0,high=1,hit=true;for(const axis of ['x','y']){const size=axis==='x'?'width':'height',delta=to[axis]-from[axis];if(Math.abs(delta)<1e-12){if(from[axis]<r[axis]||from[axis]>r[axis]+r[size]){hit=false;break;}}else{let a=(r[axis]-from[axis])/delta,b=(r[axis]+r[size]-from[axis])/delta;if(a>b)[a,b]=[b,a];low=Math.max(low,a);high=Math.min(high,b);if(low>high){hit=false;break;}}}if(hit)return false;}
  const steps=Math.max(1,Math.ceil(distance(from,to)/7));
  for(let i=0;i<=steps;i++)if(!floor({x:from.x+(to.x-from.x)*i/steps,y:from.y+(to.y-from.y)*i/steps}))return false;
  return true;

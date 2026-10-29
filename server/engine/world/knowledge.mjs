@@ -1,4 +1,3 @@
-import {BEACON_DEVICES,BEACON_VENTS} from '../../../shared/beacon.mjs';
 const clone=value=>structuredClone(value);
 const time=value=>Number.isFinite(value)&&value>=0;
 const object=value=>value!==null&&typeof value==='object'&&!Array.isArray(value);
@@ -8,7 +7,7 @@ export function spatialKnowledge(g){
   const blank=players=>({version:1,roster:players.map(p=>({id:p.id,status:'unknown',alive:null,at:null,source:null})),events:[],bodies:[],sequence:0,witnessCursor:0,traceCursor:0,musterId:null});
   function initialize(state){for(const p of state.players)p.knowledge=blank(state.players);state.spatial.spectator.knowledge=blank(state.players);}
   function remember(k,id,alive,at,source){const row=k.roster.find(p=>p.id===id);if(!row||!time(at)||(row.at!==null&&at<row.at)||row.status==='dead'&&alive)return false;const status=alive?'alive':'dead';if(row.status===status)return false;Object.assign(row,{status,alive,at,source});return true;}
-  function append(state,k,viewerId,event,record){const local={...event,id:'o:'+String(viewerId??'bridge')+':'+ ++k.sequence};k.events.push(local);if(k.events.length>limit(state))k.events.splice(0,k.events.length-limit(state));if(record)record(state,'observation',event.observedAt??event.at,{playerId:viewerId,observation:clone(local),visibleTo:viewerId===null?[]:[viewerId]});}
+  function append(state,k,viewerId,event,record){const local={...event,id:'o:'+String(viewerId??g.spawnRoom.id)+':'+ ++k.sequence};k.events.push(local);if(k.events.length>limit(state))k.events.splice(0,k.events.length-limit(state));if(record)record(state,'observation',event.observedAt??event.at,{playerId:viewerId,observation:clone(local),visibleTo:viewerId===null?[]:[viewerId]});}
   function visibleBody(state,b,origin,viewerId){return b.id==='body-'+b.playerId&&!b.reported&&g.rooms.some(r=>r.id===b.roomId)&&g.valid(b.position)&&time(b.at)&&state.players.some(p=>p.id===b.playerId&&!p.alive)&&!hasTransit(state,b.playerId)&&g.sees(origin,b.position,state,viewerId);}
   function adoptVitals(state,viewerId,sample,now,record){
     // Root/Investigation normalizes one owner's validated terminal sample here.
@@ -44,7 +43,7 @@ export function spatialKnowledge(g){
         const observations=state.investigation?.observations;
         const samples=observations&&Object.hasOwn(observations,id)?observations[id]:[];
         if(Array.isArray(samples))for(const sample of samples.slice(-64)){
-          if(!sample||sample.kind!=='vitals'||!BEACON_DEVICES.some(d=>d.id===sample.deviceId&&d.kind==='vitals')||sample.id!=='obs:'+id+':'+sample.deviceId+':'+sample.at||!time(sample.at)||sample.at>now||!Array.isArray(sample.data?.players)||sample.data.players.length!==state.players.length||sample.data.players.some(row=>!row||!['alive','dead'].includes(row.status)||Object.keys(row).some(k=>!['id','status'].includes(k))))continue;
+          if(!sample||sample.kind!=='vitals'||!g.fixtures.devices.some(d=>d.id===sample.deviceId&&d.kind==='vitals')||sample.id!=='obs:'+id+':'+sample.deviceId+':'+sample.at||!time(sample.at)||sample.at>now||!Array.isArray(sample.data?.players)||sample.data.players.length!==state.players.length||sample.data.players.some(row=>!row||!['alive','dead'].includes(row.status)||Object.keys(row).some(k=>!['id','status'].includes(k))))continue;
           changed=adoptVitals(state,id,{at:sample.at,players:sample.data.players.map(row=>({id:row.id,alive:row.status==='alive'}))},now,record)||changed;
         }
         for(const event of witnesses){const sequence=Number(event.id.slice(1));if(sequence<=k.witnessCursor||event.playerId===event.targetId||!g.rooms.some(r=>r.id===event.roomId)||!Array.isArray(event.visibleTo)||!event.visibleTo.includes(id)||!time(event.at)||event.at>now||!state.players.some(p=>p.id===event.playerId)||!state.players.some(p=>p.id===event.targetId))continue;
@@ -54,7 +53,7 @@ export function spatialKnowledge(g){
         // hides the actor. Keep only that observed hatch, never the other end.
         for(const event of traces){
           if(Number(event.id.slice(1))<=(k.traceCursor??0)||!Array.isArray(event.visibleTo)||!event.visibleTo.includes(id)||!state.players.some(p=>p.id===event.playerId))continue;
-          const field=event.type==='vent_enter'?'entryId':'exitId',other=field==='entryId'?'exitId':'entryId',hatch=BEACON_VENTS.find(v=>v.id===event[field]);
+          const field=event.type==='vent_enter'?'entryId':'exitId',other=field==='entryId'?'exitId':'entryId',hatch=g.fixtures.vents.find(v=>v.id===event[field]);
           if(Object.hasOwn(event,other)||!hatch||event.roomId!==hatch.roomId||!g.valid(event.position)||g.distance(event.position,hatch.position)>1e-7)continue;
           changed=remember(k,event.playerId,true,event.at,'sight')||changed;
           append(state,k,id,{type:event.type,at:event.at,observedAt:now,playerId:event.playerId,roomId:hatch.roomId,position:g.point(hatch.position),[field]:hatch.id},record);changed=true;
@@ -74,7 +73,7 @@ export function spatialKnowledge(g){
       const position=ended?player.position:visible?(body?.position??player.position):null,roomId=position?(body?.roomId??player.roomId):null;
       return {id:player.id,name:player.name,color:player.color,status,alive,roomId,position:position?g.point(position):null,...(ended?{role:player.role}:{})};
     });
-    return {players,localEvents:clone(k?.events??[]).slice(-limit(state)),vision:{radius:g.radius(state,viewerId),origin:g.point(origin),mode:ended?'reveal':self?'player':'bridge',lights:!!state.systems?.lights?.active}};
+    return {players,localEvents:clone(k?.events??[]).slice(-limit(state)),vision:{radius:g.radius(state,viewerId),origin:g.point(origin),mode:ended?'reveal':self?'player':g.viewpointMode,lights:!!state.systems?.lights?.active}};
   }
   function validate(state){
     if(!time(state.updatedAt))throw new TypeError('Invalid spatial checkpoint');
@@ -88,7 +87,7 @@ export function spatialKnowledge(g){
         const fields={body:['bodyId','playerId','roomId','position','reported'],witness:['playerId','targetId','roomId','position'],muster:['players'],vitals:['players'],vent_enter:['playerId','roomId','position','entryId'],vent_exit:['playerId','roomId','position','exitId']};
         if(!object(e)||!Object.hasOwn(fields,e.type)||!keys(e,['id','type','at','observedAt',...fields[e.type]])||typeof e.id!=='string'||e.id.length>180||!time(e.at)||e.at>checkpoint||Object.hasOwn(e,'observedAt')&&(!time(e.observedAt)||e.observedAt<e.at||e.observedAt>checkpoint))throw new TypeError('Invalid spatial observation');
         if(e.type==='vent_enter'||e.type==='vent_exit'){
-          const field=e.type==='vent_enter'?'entryId':'exitId',hatch=BEACON_VENTS.find(v=>v.id===e[field]);
+          const field=e.type==='vent_enter'?'entryId':'exitId',hatch=g.fixtures.vents.find(v=>v.id===e[field]);
           if(!Number.isSafeInteger(k.traceCursor)||!ids.includes(e.playerId)||!hatch||e.roomId!==hatch.roomId||!g.valid(e.position)||Object.keys(e.position).some(key=>!['x','y'].includes(key))||g.distance(e.position,hatch.position)>1e-7||!time(e.observedAt))throw new TypeError('Invalid spatial hatch trace');
         }else if(e.type==='body'||e.type==='witness'){
           if(!ids.includes(e.playerId)||!g.rooms.some(r=>r.id===e.roomId)||e.position!==undefined&&(!g.valid(e.position)||!g.staticWalkable(e.position)))throw new TypeError('Invalid spatial observation');

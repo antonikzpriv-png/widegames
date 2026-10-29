@@ -7,7 +7,7 @@ export function createSpatialWorld(geometry){
   function initialize(state,now){
     if(!Number.isSafeInteger(now)||now<0||!Array.isArray(state.players)||!state.players.length||state.players.length>32||state.players.some(p=>!p||typeof p.id!=='string'||!/^[A-Za-z0-9_-]{1,64}$/.test(p.id))||new Set(state.players.map(p=>p.id)).size!==state.players.length)throw new TypeError('Invalid spatial initialization');
     const used=[];for(const p of state.players){let position=g.worldSpawn(p.id);if(!g.staticWalkable(position)||used.some(q=>g.distance(q,position)<g.WORLD.bodyRadius*2)){
-      const bridge=g.rooms.find(r=>r.id==='bridge'),candidates=[];for(let y=bridge.y+bridge.height-g.WORLD.bodyRadius-5;y>=bridge.y+g.WORLD.bodyRadius;y-=32)for(let x=bridge.x+g.WORLD.bodyRadius+5;x<=bridge.x+bridge.width-g.WORLD.bodyRadius;x+=32)candidates.push({x,y});position=candidates.find(q=>g.staticWalkable(q)&&used.every(other=>g.distance(other,q)>=g.WORLD.bodyRadius*2));}
+      const room=g.spawnRoom,candidates=[];for(let y=room.y+room.height-g.WORLD.bodyRadius-5;y>=room.y+g.WORLD.bodyRadius;y-=32)for(let x=room.x+g.WORLD.bodyRadius+5;x<=room.x+room.width-g.WORLD.bodyRadius;x+=32)candidates.push({x,y});position=candidates.find(q=>g.staticWalkable(q)&&used.every(other=>g.distance(other,q)>=g.WORLD.bodyRadius*2));}
       if(!position)throw new TypeError('No safe roster spawn');p.position=g.point(position);used.push(p.position);p.motion={seq:0,dx:0,dy:0,leaseUntil:now,at:now,manual:false,path:[],destination:null,recordedAt:now,error:null};const room=g.worldRoomAt(position);if(room)p.roomId=typeof room==='string'?room:room.id;
     }
     state.spatial={version:1,spectator:{position:g.point(g.viewpoint)}};knowledge.initialize(state);

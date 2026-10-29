@@ -1,4 +1,4 @@
-import {BEACON_DOORS,DEFAULT_BEACON_RULES} from '../../../shared/beacon.mjs';
+import {BEACON_DOORS,BEACON_VENTS,BEACON_DEVICES,DEFAULT_BEACON_RULES} from '../../../shared/beacon.mjs';
 const valid=p=>p&&Number.isFinite(p.x)&&Number.isFinite(p.y);
 const inside=(p,r)=>p.x>=r.x&&p.x<=r.x+r.width&&p.y>=r.y&&p.y<=r.y+r.height;
 const point=p=>({x:p.x,y:p.y});
@@ -10,9 +10,11 @@ function intersects(a,b,r){
 export function spatialGeometry(geometry){
   const {WORLD,WORLD_FLOORS,WORLD_OBSTACLES,WORLD_ROOMS,isWalkable,worldRoomAt,worldSpawn,distance,WORLD_STATIONS,WORLD_BELL}=geometry;
   if(!WORLD||!Array.isArray(WORLD_FLOORS)||!Array.isArray(WORLD_OBSTACLES)||!Array.isArray(WORLD_ROOMS)||![WORLD.width,WORLD.height,WORLD.speed,WORLD.bodyRadius,WORLD.grid,WORLD.inputLeaseMs].every(n=>Number.isFinite(n)&&n>0)||typeof isWalkable!=='function'||typeof distance!=='function')throw new TypeError('Invalid spatial geometry');
+  const fixtures=geometry.fixtures??{doors:BEACON_DOORS,vents:BEACON_VENTS,devices:BEACON_DEVICES};
+  if(!['doors','vents','devices'].every(key=>Array.isArray(fixtures[key])))throw new TypeError('Invalid spatial fixtures');
   const floor=p=>valid(p)&&WORLD_FLOORS.some(r=>inside(p,r));
   const inTransit=(state,id)=>!!state?.systems?.transit&&Object.hasOwn(state.systems.transit,id)&&!!state.systems.transit[id];
-  const closed=state=>BEACON_DOORS.filter(d=>state?.systems?.doors?.some(s=>s.id===d.id&&s.closed===true));
+  const closed=state=>fixtures.doors.filter(d=>state?.systems?.doors?.some(s=>s.id===d.id&&s.closed===true));
   const checker=state=>{const doors=closed(state);return p=>valid(p)&&isWalkable(p)&&!doors.some(r=>{const x=Math.max(r.x,Math.min(p.x,r.x+r.width)),y=Math.max(r.y,Math.min(p.y,r.y+r.height));return Math.hypot(p.x-x,p.y-y)<WORLD.bodyRadius||inside(p,r);});};
   const walkable=(p,state)=>checker(state)(p);
   const segment=(a,b,walk)=>{if(!valid(a)||!valid(b))return false;const n=Math.max(1,Math.ceil(distance(a,b)/4));for(let i=0;i<=n;i++)if(!walk({x:a.x+(b.x-a.x)*i/n,y:a.y+(b.y-a.y)*i/n}))return false;return true;};
@@ -58,6 +60,8 @@ export function spatialGeometry(geometry){
     return result.length<=4096?result:null;
   }
   const station=id=>{const value=Array.isArray(WORLD_STATIONS)?WORLD_STATIONS.find(s=>s.roomId===id||s.id===id):WORLD_STATIONS[id];return value?.position??value;};
-  const bridge=WORLD_ROOMS.find(r=>r.id==='bridge');const viewpoint=point(bridge?.center??worldSpawn('p2'));if(!isWalkable(viewpoint))throw new TypeError('Bridge viewpoint must be walkable');
-  return {WORLD,point,valid,floor,inTransit,walkable,move,path,sees,nearby,radius,station,bell:WORLD_BELL?.position??WORLD_BELL,worldRoomAt,worldSpawn,distance,viewpoint,staticWalkable:isWalkable,rooms:WORLD_ROOMS};
+  const spawnRoomId=geometry.WORLD_SPAWN_ROOM??(WORLD_ROOMS.some(r=>r.id==='bridge')?'bridge':geometry.ROOM_LAYOUT?.[0]?.id??WORLD_ROOMS[0]?.id);
+  const spawnRoom=WORLD_ROOMS.find(r=>r.id===spawnRoomId);if(!spawnRoom)throw new TypeError('Invalid spatial spawn room');
+  const viewpoint=point(geometry.WORLD_VIEWPOINT??spawnRoom.center??worldSpawn('p2'));if(!isWalkable(viewpoint))throw new TypeError('Spatial viewpoint must be walkable');
+  return {WORLD,point,valid,floor,inTransit,walkable,move,path,sees,nearby,radius,station,bell:WORLD_BELL?.position??WORLD_BELL,worldRoomAt,worldSpawn,distance,viewpoint,staticWalkable:isWalkable,rooms:WORLD_ROOMS,spawnRoom,fixtures,viewpointMode:spawnRoom.id==='bridge'?'bridge':'viewpoint'};
 }
