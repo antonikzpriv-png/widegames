@@ -93,7 +93,9 @@ export function createAiController({ config = {} } = {}) {
         const choices = candidates(view, memory);
         if (!choices.length) return null;
         const demo = () => envelope(choices[0], view, memory);
-        if (choices.length === 1 && choices[0].type === 'wait') return demo();
+        // Local policy owns every roam action; only council decisions spend.
+        if (view.phase === 'roam' || (choices.length === 1 && choices[0].type === 'wait')) return demo();
+        if (state.mode === 'live' && view.phase === 'discussion' && (memory.discussionCount ?? 0) >= 2) return null;
         if (state.mode !== 'live') return demo();
         if (typeof commitReservation !== 'function') { fallback(context, state, 'reservation_required'); return demo(); }
         let request;
@@ -143,8 +145,10 @@ export function createAiController({ config = {} } = {}) {
     describe(context = {}) {
       const state = context.matches?.[matchKey(context.activeMatchId)];
       const reason = initialReason ?? (REASONS.has(state?.limitReason) ? state.limitReason : undefined);
+      const mode = initialReason ? 'demo' : state?.mode === 'demo' ? 'demo' : 'live';
       return {
-        mode: initialReason ? 'demo' : state?.mode === 'demo' ? 'demo' : 'live',
+        mode, strategy: mode === 'live' ? 'hybrid' : 'demo',
+        navigation: 'local', council: mode === 'live' ? 'model' : 'demo',
         provider: settings.provider === 'anthropic' ? 'anthropic' : 'demo',
         model: settings.provider === 'anthropic' && settings.model === MODEL ? MODEL : null,
         calls: Number.isFinite(state?.calls) ? state.calls : 0,
