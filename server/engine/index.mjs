@@ -283,7 +283,11 @@ export function getPlayerView(state,playerIdOrNull,now=Date.now()) {
     outcome:clone(state.outcome),events:events.sort((a,b)=>a.at-b.at).slice(-MAX_EVENTS),availableActions:hints};
 }
 
-export function getReplay(state) {return state.phase==='ended'?clone(state.replay):null;}
+export function getReplay(state) {
+  // Settle may append an earlier arrival after another keeper's later sample.
+  // Stable numeric sorting preserves causal append order for equal timestamps.
+  return state.phase==='ended'?clone(state.replay).sort((a,b)=>a.at-b.at):null;
+}
 
 /** Steer only the authenticated actor; sequence state is separate from action IDs. */
 export function applyInput(input,playerId,request,now=Date.now()) {
