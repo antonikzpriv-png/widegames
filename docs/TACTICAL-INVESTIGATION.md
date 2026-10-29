@@ -73,3 +73,36 @@ node --test _artifacts/tactical-investigation-engine-58497fe/tests/tactical-inve
 Second invocation copies the two owned tests unchanged into the ignored committed-source layout, proving default relative imports exercise its actual runtime. Both45/45 and exit0. Explicit-root log _artifacts/tactical-investigation-engine-initial.txt SHA256 **9638C1CA275F9C76EC947633057D4157D84CE9C3F9CB88A827BBB2DC96F0026D**; default log _artifacts/tactical-investigation-engine-default.txt SHA256 **B0397E3F779ACAB9E02F3A69CC6592FD3BE2951DB5BBFA096DB18D374E589E75**. Syntax checks for both runtime files and both tactical tests plus git diff --check pass. The assigned tracked foundation still has the older engine until manager integration; default new engine tests correctly require schema4 there instead of skipping. Manager must integrate the root/Core/Systems dependencies before its ordinary suite.
 
 Implementation is ready for manager/Core independent review. This worker's investigation implementation is never self-approved. No Chrome, full repository suite, HTTP durability, paid/live model, broad match ensemble, main/push/deployment or another worktree mutation is claimed. The requested independent review of another owner follows separately, within the owned test/doc namespace.
+
+## Separate independent Systems/Core follow-up
+
+After completing the authored investigation milestone and real-engine checks, performed the requested independent other-owner review. Owned tests/tactical-investigation-review-systems.test.mjs adds six new controls (three on each actual map). Source remains the exact documented composite: Systems **b99d5327cdc5d45f2df907c45cabbd8b52e92c66**, Core **6f61f58e0ef8a1d30131b275fdcf7796dd2af37c**, coordinator **58497fe0415d9c0654f4f9dc3debeab8ac03cd40**. No other owner's file was edited, and investigation approval is excluded.
+
+Inspected actual system action validation/hints, faction reservation restoration, pending/jammed/closed door transitions, threshold contact, public projection and Core movement segment collision. Exact reviewed blobs:
+
+| Source | Git blob |
+| --- | --- |
+| server/engine/systems/index.mjs | f55cd4dbcacded735617b830cc83780e81fd1ce9 |
+| server/engine/systems/model.mjs | c12bec383a414ac362a9872562b074d0db70d2f0 |
+| server/engine/systems/tactical-doors.mjs | e42ea29f0ec9a4aed688344e16a5ce55826aaa06 |
+| server/engine/world/geometry.mjs | b74139683158cb29f417114041be79580ec692d6 |
+| server/engine/world/motion.mjs | 95ad5c02e8f986af1a3bae7dfd4567116dc98046 |
+
+New independent controls, all6/6 passing with zero failure/skip/todo/cancelled:
+
+1. Twelve custom keepers/two saboteurs: one accepted lights sabotage reserves the faction cooldown. JSON restart does not allow the other saboteur to immediately disrupt communications; exact cooldown boundary allows it. Both saboteurs see the same charged auxiliary deadline, crew gets only its personal passage cooldown, spectator gets none. Lowering a retained active-effect reservation to zero is rejected by the actual validator.
+2. Labeled authoritative hidden-position counterfactual: identical clocks/permissions, but one hidden crew member occupies the future door threshold. Actual system action hints are identical before warning. Both actual actions create the same1s pending grace; at closure, the occupied case jams open without displacing/naming the keeper and the empty case closes. Public system records contain no playerId/occupantId/position/visibleTo, and the remote saboteur sees no hidden keeper coordinates. A JSON-restored jam reopens at its scheduled expiry without moving the occupant. Public jam status itself is intended operational information, not asserted absent.
+3. Labeled Core starting-position boundary fixture followed entirely by real engine actions/ticks: accept a finite route crossing a currently open doorway, issue warning, close after1s before arrival, then advance movement. The actor stops outside the collider with route cleared rather than tunneling through the newly closed door. At expiry a fresh accepted route reaches the original target. No fabricated arrival, teleport or forced outcome is used.
+
+The position counterfactuals are isolated authoritative fixtures, not claims of reaching those initial coordinates through played routes. Subsequent permissions/warnings/closures/movement/expiry use the actual engine. These cases are novel boundary checks, not a rerun of the other owner's full suite. No concrete Systems/Core defect surfaced in this bounded scope; this does not approve all door combinations, critical repairs, passage abuse, browser lifecycle or hosted deployment.
+
+```powershell
+$env:TACTICAL_INVESTIGATION_ROOT=(Join-Path (Get-Location) '_artifacts/tactical-investigation-engine-58497fe')
+node --test tests/tactical-investigation-review-systems.test.mjs
+Remove-Item Env:TACTICAL_INVESTIGATION_ROOT
+node --test _artifacts/tactical-investigation-engine-58497fe/tests/tactical-investigation-review-systems.test.mjs
+node --check tests/tactical-investigation-review-systems.test.mjs
+git diff --check
+```
+
+Both source-selection modes yield6/6 and exit0. Evidence _artifacts/tactical-investigation-independent-initial.txt SHA256 **C1A380AFB45B9C8B5A151CD7414BC6FBE213C68DF054A359CE9FFC4D3D1FC78D**, and _artifacts/tactical-investigation-independent-default.txt SHA256 **44306BB6EEB66DF06F2E0FF3FF214C4330DE87F145DDE052177D4DBAACCEC6B5**. Authored investigation45/45 remains a separate qualification, not independent self-approval. Manager owns integration/browser/full-suite qualification. No additional feature work is introduced by this audit.
