@@ -1,6 +1,7 @@
 import http from 'node:http';
 import {WebSocketServer,WebSocket} from 'ws';
 import {serveStatic} from './static.mjs';
+import {validatePublicOrigin} from './origin.mjs';
 import {createRoomStore} from './store.mjs';
 import {createDailyBudget} from './budget.mjs';
 import {createRooms,ServiceError,fail,identityFor,issueIdentity,cookie,requestId} from './rooms.mjs';
@@ -34,7 +35,7 @@ function limiter(now) {
 // Optional dependencies let transport tests exercise faults without provider calls.
 export async function createGameServer(config,dependencies={}) {
   const now=config.now||Date.now;
-  const origin=new URL(config.publicOrigin).origin,secure=origin.startsWith('https:');
+  const origin=validatePublicOrigin(config.publicOrigin),secure=origin.startsWith('https:');
   const engine=dependencies.engine||await import('./engine/index.mjs');
   const ai=dependencies.aiController||(await import('./ai/index.mjs')).createAiController({config:config.ai});
   const store=dependencies.store||await createRoomStore(config.dataDir);

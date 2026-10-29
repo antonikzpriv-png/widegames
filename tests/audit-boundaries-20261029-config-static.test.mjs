@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import http from 'node:http';
 import {spawn,spawnSync} from 'node:child_process';
-import {mkdtemp,mkdir,readFile,writeFile,readdir,rm,cp} from 'node:fs/promises';
+import {mkdtemp,mkdir,readFile,writeFile,readdir,rm,cp,lstat} from 'node:fs/promises';
 import path from 'node:path';
 import {fileURLToPath,pathToFileURL} from 'node:url';
 import {createRequire} from 'node:module';
@@ -52,6 +52,7 @@ test('FINDING B02: CLI must not log credentials embedded in PUBLIC_ORIGIN',async
   assert(!cli.stdout.includes('audit-provider-key-never-log'));assert(!cli.stderr.includes('audit-provider-key-never-log'));
   t.diagnostic(`Synthetic userinfo accepted: ${Boolean(cli.port)}; userinfo secret in stdout: ${cli.stdout.includes('origin-userinfo-fixture-secret')}`);
   assert(!cli.stdout.includes('origin-userinfo-fixture-secret'),'Reject credential-bearing PUBLIC_ORIGIN or log only its validated origin');
+  assert(!cli.stderr.includes('origin-userinfo-fixture-secret'));assert.equal(cli.port,null);assert.equal((await cli.exited).code,1);assert.match(cli.stderr,/PUBLIC_ORIGIN/);await assert.rejects(lstat(cli.dataDir),error=>error.code==='ENOENT');
 });
 
 test('documented env-file CLI boots with production-only dependencies and excludes provider keys from health/static/logs',async t=>{
@@ -59,7 +60,7 @@ test('documented env-file CLI boots with production-only dependencies and exclud
   for(const entry of ['server','shared','public','package.json','package-lock.json'])await cp(path.join(root,entry),path.join(production,entry),{recursive:true});
   const npmCli=path.join(path.dirname(process.execPath),'node_modules/npm/bin/npm-cli.js');
   const install=spawnSync(process.execPath,[npmCli,'ci','--omit=dev','--offline','--ignore-scripts','--no-audit','--no-fund'],{cwd:production,env:environment(),encoding:'utf8',windowsHide:true,timeout:30000});assert.equal(install.status,0,install.stderr||install.error?.message);
-  const cli=await launch(t,directory,'http://localhost:3000',production);assert(cli.port,cli.stderr);
+  const cli=await launch(t,directory,'HTTP://LOCALHOST:3000/',production);assert(cli.port,cli.stderr);assert(cli.stdout.includes('open http://localhost:3000'));assert(!cli.stdout.includes('HTTP://LOCALHOST:3000/'));
   const health=await request(cli.port,'/api/health',{Origin:'http://localhost:3000'});assert.equal(health.status,200);
   const home=await request(cli.port,'/',{Origin:'http://localhost:3000'});assert.equal(home.status,200);
   for(const text of [health.text,home.text,cli.stdout,cli.stderr])assert(!text.includes('audit-provider-key-never-log'));
@@ -102,7 +103,7 @@ test('self-check: 600-request cap and streaming 8KiB cap agree with advertised b
 
 test('self-check: invalid origin and corrupt budget startup failures preserve data and release acquired locks',async t=>{
   const directory=await fixture(t,'startup-fail'),ledger=path.join(directory,'ai-daily-budget.json');await writeFile(ledger,'audit-labelled-corrupt-ledger');
-  await assert.rejects(createGameServer(loadConfig({DATA_DIR:directory,PUBLIC_ORIGIN:'not-a-valid-url'}),{aiController:stub}),/URL/);
+  await assert.rejects(async()=>createGameServer(loadConfig({DATA_DIR:directory,PUBLIC_ORIGIN:'not-a-valid-url'}),{aiController:stub}),/PUBLIC_ORIGIN/);
   assert.deepEqual((await readdir(directory)).sort(),['ai-daily-budget.json']);
   await assert.rejects(createGameServer(loadConfig({DATA_DIR:directory,PUBLIC_ORIGIN:origin}),{aiController:stub}),/cannot be restored safely/);
   assert.equal(await readFile(ledger,'utf8'),'audit-labelled-corrupt-ledger');assert.deepEqual((await readdir(directory)).sort(),['ai-daily-budget.json']);
