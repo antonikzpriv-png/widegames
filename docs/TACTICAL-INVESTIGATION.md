@@ -192,3 +192,50 @@ Exact read-only manager source **b9c1a442b88024f659ea05e40b00737b6562413f**. New
 Source: server/store.mjs blob **145439c279dccaabc8e0e65b87ed32cf5108ec7b**. validateBeaconStructure only requires finite point values for notes/snapshot players; notes check a room ID but snapshots do not. validateRoomSnapshot applies bounds/walkability only to current players/routes/destinations and bodies, omitting historical notes and snapshots. These admitted records can be returned through the existing owner note view / ended-only raw snapshot copy. The replay guard itself is not alleged bypassed. This is a persisted evidence/replay integrity defect against the tactical map-validation contract; it does not establish extra hidden-state access or paid-call risk.
 
 Preserved actual failure output _artifacts/tactical-coordinator-final-restore-red.txt SHA256 **AD69D86EE4162F932CE5C0B68A1691ED45B8D109C9381353B6930C2E5530B508**. Node24.20.0 command: set TACTICAL_COORDINATOR_FINAL_ROOT to assigned ignored _artifacts/tactical-coordinator-final-b9c1a44, then node --test tests/tactical-coordinator-review-final.test.mjs. Exit1,0 pass/2 fail. Neither assertion is skipped or inverted; runtime remains unchanged. The archive uses exact committed tracked source with no overlay, and the installed ws8.22 dependency is copied locally as in the preceding receipt. Follow-up within the same six-check bound covers live projection/phase/client/reservation boundaries separately.
+
+### Final six-check receipt at b9c1a44
+
+Completed the bounded review against **b9c1a442b88024f659ea05e40b00737b6562413f**, not a moving manager HEAD. **Exactly6 new tests:4 passed,2 failed, zero skipped/todo/cancelled**. Both explicit source override and default relative imports in the exact archive give the same exit1/result. TCF-1 remains open at this pin; no runtime fix is made or implied. Initial red finding was committed immediately as **a53da8b9c01c4c78f87a595d9c9d70754f03b61b** before completing the other four cases.
+
+The snapshot requirement now uses independent cloned corruption cases, so repairing coordinate validation alone cannot hide the room-ID defect: position-only {x:-99999,y:99999} and roomId-only bridge each independently pass current validation when they should reject. The active test aggregates both results and fails on [{field:position,rejected:false},{field:roomId,rejected:false}]. The field-note case also still fails with missing expected rejection. Time values remain unchanged; B1's future-time8 were neither rerun nor duplicated.
+
+Four new positives, separate from the prior14:
+
+1. **Real live HTTP/WebSocket versus ended replay:** prepare a valid saved schema4 Annex match entirely through real engine navigation/actions/ticks. A victim starts a real console read and is killed at the same authoritative time; its read fails dead without a sample. The human reader physically reaches vitals, completes its timed read and records an actual private field-note. Start the actual transport/store from that valid checkpoint and attach two authenticated native ws clients for owner/spectator. Owner sees its vitals/notes and learned death; spectator keeps last-known alive with null remote position and empty private histories. Initial HTTP replay and engine snapshots stay locked. Human HTTP navigation/report produces actual muster, then one legitimate vote and ordinary deadlines eject the sole saboteur and end by game rules. WS frames show roster death at muster, roles only after ended, no raw replay/snapshot field, and no spectator device/note history at any phase. Ended authenticated replay then returns correctly scoped map snapshots and attributed role reveal/private device records. This is a real accelerated ejection, not a fabricated outcome or browser qualification.
+2. **Combined phase cleanup at an actual auto-council boundary:** eight custom keepers/two saboteurs on Annex. Physically stage the reader at occupancy and a saboteur at a linked passage, then start actual power failure, pending door warning, passage travel and a read500ms before the configured roam deadline. Automatic council preserves the passenger's original stance, removes transit, reopens the pending door and cancels the read with phase/no observation. The canonical critical deadline is unchanged, continues through council and eventually ends saboteur/critical at its actual deadline. This probes root hook ordering; it does not exercise invalid future checkpoint timestamps.
+3. **Client return to the same room and same revision:** actual public/app.mjs functions run in a minimal labeled VM DOM/network fixture. Create an uncertain settings retry, retain its button/old callback, leave completely and reopen the same roomId/revision. The old controller is aborted; retained retry cannot POST or borrow the new controller, and old world callback rejects AbortError. A fresh callback uses a different request ID/signal and completes. Existing root tests covered other-room/phase/newer-revision transitions; this adds same-ID/same-revision reentry ownership specifically.
+4. **Match reservation before deployment denial:** actual controller with fixture Anthropic credentials, actual transport/store, one real daily budget instance under the store process lock and deployment cap0. The daily-reserve wrapper observes that match calls/tokens/cost/reservation have already been persisted in the room file before invoking the real rejecting deployment cap. Controller falls back to labeled demo/reservation_failed while conservatively retaining its single match reservation. Deployment reservedUsd stays0 and an external-request interceptor counts0 provider sends. No provider request, account, budget raise, simulated successful model choice or billed-call claim is involved. This checks integration ordering/denial; it does not reopen previously closed ledger math/durability findings.
+
+Read-only source inspection also confirms root settings requests capture room/revision/action generation; mutation/error and retained-retry guards check epoch/context, and open-room requests retain their original controller ownership. Live transport sends service.view for each socket identity; replay routes authenticate and gate on ended. Phase hooks remain canonical and spending uses match commit, deployment reserve, then send. The root/config diff from dfdcea4 introduces tactical normal startup while the intervening runtime changes are scoped Systems/Core lifecycle/route changes and UI art. No Group2 branch was imported: field-note remains the baseline ability seam, with no merged ghost/planner/multiplayer-seat implementation claimed. This source review is not a blanket approval of other workers' outstanding fixes.
+
+Exact principal source blobs:
+
+| File | Blob |
+| --- | --- |
+| server/store.mjs | 145439c279dccaabc8e0e65b87ed32cf5108ec7b |
+| server/transport.mjs | 6be634297bfc3b777ed35d8838b6a887a08beb96 |
+| server/engine/index.mjs | 7f51bdd5fd65cd830a7b244a4dbe62747690a16a |
+| server/features/replay/index.mjs | 669a744f78f685bd22549b41047741891d313468 |
+| server/features/abilities/index.mjs | 2c4eb10987b73b14325ad1675c7635df360583dc |
+| server/ai/index.mjs | 29003704050d03ee27eb7bcc634a66a84c0640c0 |
+| server/budget.mjs | a69eb7bd30d45c58701fe93885bf1291815011fb |
+| public/app.mjs | b99d138da18d24a893766c6a453a2c624bb5b2f1 |
+
+All71 archived tracked server/shared/public/package files were byte-rechecked against git show b9c1a442b88024f659ea05e40b00737b6562413f:path; there is no runtime overlay. Ignored archive _artifacts/tactical-coordinator-final-b9c1a44/source-manifest.json SHA256 **3FB98F391BD7431E2872F86F1C2171CB338FCE6F74E10DE5F326573A9F32193F**. Existing local ws8.22 dependency is reused without an install/network. No machine-specific path is embedded in the committed test. Source override is optional; default imports exercise the containing checkout, with real schema4 requirements rather than skip/fallback.
+
+```powershell
+$env:TEMP='D:/Widegames-work/temp'
+$env:TMP=$env:TEMP
+$env:npm_config_cache='D:/Widegames-work/npm-cache'
+Remove-Item Env:WORLD_ENGINE_GEOMETRY_MODULE -ErrorAction SilentlyContinue
+$env:TACTICAL_COORDINATOR_FINAL_ROOT=(Join-Path (Get-Location) '_artifacts/tactical-coordinator-final-b9c1a44')
+node --test tests/tactical-coordinator-review-final.test.mjs
+Remove-Item Env:TACTICAL_COORDINATOR_FINAL_ROOT
+node --test _artifacts/tactical-coordinator-final-b9c1a44/tests/tactical-coordinator-review-final.test.mjs
+node --check tests/tactical-coordinator-review-final.test.mjs
+git diff --check
+```
+
+For default-mode qualification only the owned test is copied unchanged into archive/tests; no archived runtime changes. Both6 tests/4 pass/2 real restore failures, exit1. Explicit-root log _artifacts/tactical-coordinator-final-six.txt SHA256 **8B1D5043D3BE1E84F668AA7B832AAA36906B9A6D555D6D4A11FDBAE98A4872A2**. Default-mode log _artifacts/tactical-coordinator-final-default.txt SHA256 **6EE9C2A32FFBC9B833C6A786EA29BF6D4AA40E9D881BBEBE5741105E243844AE**. Syntax and whitespace checks pass. No additional preparation failure occurred in these four positive cases.
+
+Bounded review complete. Only the owned final review test and this appended receipt changed. No runtime/root/other-owner edit, prior14/full-suite rerun, B1 future-time rerun, Chrome, paid/live provider, unmerged Group2 import, main/push/deploy or OS power-loss qualification. This worker's investigation remains a dependency/self-check, never independently self-approved. Manager owns TCF-1 remediation and exact-fix verification along with the parallel workers' findings.
