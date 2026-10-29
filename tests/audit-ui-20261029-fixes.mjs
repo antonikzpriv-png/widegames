@@ -1,4 +1,4 @@
-﻿/** UI fix regressions: real 0842 backend, current owned frontend, explicit transport faults. */
+﻿/** UI fix regressions: current checkout, monitored runtime provenance, explicit transport faults. */
 import assert from 'node:assert/strict';
 import http from 'node:http';
 import path from 'node:path';
@@ -6,32 +6,92 @@ import {fileURLToPath} from 'node:url';
 import {mkdir,mkdtemp,writeFile,readFile,rm} from 'node:fs/promises';
 import {execFileSync} from 'node:child_process';
 import {createHash} from 'node:crypto';
+import {watch} from 'node:fs';
 import puppeteer from 'puppeteer-core';
-import {createGameServer} from '../server/transport.mjs';
-import * as engine from '../server/engine/index.mjs';
-import {createAiController} from '../server/ai/index.mjs';
+let createGameServer,engine,createAiController;
 
 const root=fileURLToPath(new URL('../',import.meta.url));
-const pin='0842a0090f1cfd1ec43b898f16e8191e5b9c2497';
 const git=(...args)=>execFileSync('git',args,{cwd:root,encoding:'utf8'}).trim();
-assert.equal(git('diff','--name-only',pin,'--','server','shared','package.json','package-lock.json'),'','Backend and configuration must match saved revision');
-const artifactsRoot=path.join(root,'_artifacts');await mkdir(artifactsRoot,{recursive:true});
-const output=await mkdtemp(path.join(artifactsRoot,'audit-ui-20261029-fixes-'));
-const report={sourcePin:pin,checkout:git('rev-parse','HEAD'),fixture:'Current frontend candidate with pinned real backend, seeded engine/clock, real demo AI and HTTP/WS. Failed transport/body consumption only, no fabricated API payloads.',cases:[],observations:[],runtimeErrors:[],screenshots:[],cleanupErrors:[]};
-await writeFile(path.join(output,'source-pin.txt'),pin+'\n');
-await writeFile(path.join(output,'audit-driver.mjs'),await readFile(fileURLToPath(import.meta.url)));
-const files=git('ls-files','public','server','shared').split('\n');
-report.frontendModifiedPaths=git('diff','--name-only',pin,'--','public').split('\n').filter(Boolean);
-const fingerprints=[];for(const file of files)fingerprints.push({path:file,sha256:createHash('sha256').update(await readFile(path.join(root,file))).digest('hex')});
-await writeFile(path.join(output,'source-sha256.json'),JSON.stringify(fingerprints,null,2));
+const runtimePaths=['public','server','shared','package.json','package-lock.json'];
+const backendPaths=runtimePaths.filter(file=>file!=='public');
+const pathsFrom=text=>text.split('\0').filter(Boolean).sort();
+const isBackend=file=>!file.startsWith('public/');
+function runtimeFiles(){return [...new Set(pathsFrom(git('ls-files','-z','--cached','--others','--exclude-standard','--',...runtimePaths)))].sort();}
+function modifiedPaths(paths=[]){return [...new Set([...pathsFrom(git('diff','--name-only','-z','HEAD','--',...paths)),...pathsFrom(git('ls-files','-z','--others','--exclude-standard','--',...paths))])].sort();}
+async function fingerprints(base,files){
+ const entries=[];
+ for(const file of files){
+  try{entries.push({path:file,sha256:createHash('sha256').update(await readFile(path.join(base,file))).digest('hex')});}
+  catch(error){if(error.code!=='ENOENT')throw error;entries.push({path:file,sha256:null});}
+ }
+ return entries;
+}
+function changedPaths(before,after){
+ const a=new Map(before.map(entry=>[entry.path,entry.sha256])),b=new Map(after.map(entry=>[entry.path,entry.sha256]));
+ return [...new Set([...a.keys(),...b.keys()])].filter(file=>!a.has(file)||!b.has(file)||a.get(file)!==b.get(file)).sort();
+}
+function monitorRuntime(base,events,errors){
+ const observers=[];
+ try{
+  for(const directory of ['public','server','shared']){
+   const observer=watch(path.join(base,directory),{recursive:true},(eventType,file)=>events.push({eventType,path:directory+'/'+(file?.toString()||'').replaceAll('\\','/')}));
+   observer.on('error',error=>errors.push(String(error)));observers.push(observer);
+  }
+  const configuration=watch(base,(eventType,file)=>{if(['package.json','package-lock.json'].includes(file?.toString()))events.push({eventType,path:file.toString()});});
+  configuration.on('error',error=>errors.push(String(error)));observers.push(configuration);
+ }catch(error){for(const observer of observers)observer.close();throw error;}
+ return ()=>{for(const observer of observers)observer.close();};
+}
+async function trackingSelfTest(){
+ const directory=await mkdtemp(path.join(root,'_artifacts','audit-ui-source-monitor-'));
+ for(const name of ['public','server','shared'])await mkdir(path.join(directory,name));
+ const files=['public/app.mjs','server/transport.mjs','package.json'];
+ for(const file of files)await writeFile(path.join(directory,file),'initial checkout fixture');
+ const events=[],errors=[],stop=monitorRuntime(directory,events,errors);
+ try{
+  const before=await fingerprints(directory,files);
+  assert.deepEqual(changedPaths(before,await fingerprints(directory,files)),[]);
+  console.log('PASS unchanged current-checkout fingerprints');
+  await writeFile(path.join(directory,'public/app.mjs'),'intentional frontend candidate change');
+  const frontendChanges=changedPaths(before,await fingerprints(directory,files));
+  assert.deepEqual(frontendChanges,['public/app.mjs']);assert.equal(frontendChanges.filter(isBackend).length,0);
+  console.log('PASS frontend changes fail runtime stability without marking backend changed');
+  await writeFile(path.join(directory,'public/app.mjs'),'initial checkout fixture');
+  for(let attempt=0;attempt<100&&!events.some(event=>event.path==='public/app.mjs');attempt++)await new Promise(resolve=>setTimeout(resolve,20));
+  assert.ok(events.some(event=>event.path==='public/app.mjs'),'Watcher must retain evidence of a restored source write');
+  assert.deepEqual(changedPaths(before,await fingerprints(directory,files)),[]);
+  console.log('PASS restored runtime writes remain visible to the source monitor');
+  await writeFile(path.join(directory,'server/transport.mjs'),'changed backend fixture');
+  assert.deepEqual(changedPaths(before,await fingerprints(directory,files)).filter(isBackend),['server/transport.mjs']);
+  assert.deepEqual(errors,[]);console.log('PASS backend changes are detected against run start');
+  await writeFile(path.join(directory,'selftest-report.json'),JSON.stringify({checks:4,events,errors},null,2));
+ }finally{stop();}
+ console.log('SOURCE_TRACKING_EVIDENCE '+directory);
+}
+await mkdir(path.join(root,'_artifacts'),{recursive:true});
+if(process.argv.includes('--check-source-tracking')){await trackingSelfTest();process.exit(0);}
+const sourceCommit=git('rev-parse','HEAD');
+const requestedPin=process.env.AUDIT_UI_BACKEND_PIN;
+let historicalBackendPin=null;
+if(requestedPin){
+ assert.match(requestedPin,/^[a-f0-9]{7,40}$/i,'AUDIT_UI_BACKEND_PIN must be an explicit commit hash');
+ historicalBackendPin=git('rev-parse','--verify',requestedPin+'^{commit}');
+ assert.equal(git('diff','--name-only',historicalBackendPin,'--',...backendPaths),'','Backend/configuration differs from the explicitly requested historical pin');
+ assert.equal(git('ls-files','--others','--exclude-standard','--',...backendPaths),'','Historical backend enforcement rejects untracked backend/configuration files');
+}
+const output=await mkdtemp(path.join(root,'_artifacts','audit-ui-20261029-fixes-'));
+const report={sourcePin:sourceCommit,checkout:sourceCommit,historicalBackendPin,modifiedPaths:modifiedPaths(),runtimeModifiedPaths:modifiedPaths(runtimePaths),frontendModifiedPaths:modifiedPaths(['public']),fixture:'Current checkout runtime, seeded engine/clock, real demo AI and HTTP/WS. Failed transport/body consumption only, no fabricated API payloads.',cases:[],observations:[],runtimeErrors:[],screenshots:[],cleanupErrors:[],sourceEvents:[],sourceTrackingErrors:[]};
+const stopMonitoring=monitorRuntime(root,report.sourceEvents,report.sourceTrackingErrors);
+let sourceBefore;
+try{
+ sourceBefore=await fingerprints(root,runtimeFiles());
+ await writeFile(path.join(output,'source-pin.txt'),sourceCommit+'\n');
+ await writeFile(path.join(output,'audit-driver.mjs'),await readFile(fileURLToPath(import.meta.url)));
+ await writeFile(path.join(output,'source-sha256.json'),JSON.stringify(sourceBefore,null,2));
+}catch(error){stopMonitoring();throw error;}
 const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 let browser,game,stamp=Date.now(),fixture='crew',forceAtAction=null;
 const seeds={};
-for(let i=0;!seeds.crew||!seeds.saboteur;i++){
- const candidate=engine.createMatch({id:'seed-fixture',seed:String(i)});
- if(candidate.players[0].role==='crew'&&candidate.players[1].role==='saboteur')seeds.crew??=String(i);
- if(candidate.players[0].role==='saboteur'&&candidate.players[1].tasks.some(task=>task.roomId==='bridge'))seeds.saboteur??=String(i);
-}
 function setupMatch(options){
  if(fixture!=='critical')return engine.createMatch({...options,now:options.now-1,seed:fixture==='saboteur'?seeds.saboteur:seeds.crew});
  let state=engine.createMatch({...options,now:options.now-30,seed:seeds.crew});
@@ -61,6 +121,14 @@ async function create(page,origin,kind){
 }
 async function fresh(page){await page.evaluate(()=>document.dispatchEvent(new Event('visibilitychange')));await pause(150);}
 try{
+ ({createGameServer}=await import('../server/transport.mjs'));
+ engine=await import('../server/engine/index.mjs');
+ ({createAiController}=await import('../server/ai/index.mjs'));
+ for(let i=0;!seeds.crew||!seeds.saboteur;i++){
+  const candidate=engine.createMatch({id:'seed-fixture',seed:String(i)});
+  if(candidate.players[0].role==='crew'&&candidate.players[1].role==='saboteur')seeds.crew??=String(i);
+  if(candidate.players[0].role==='saboteur'&&candidate.players[1].tasks.some(task=>task.roomId==='bridge'))seeds.saboteur??=String(i);
+ }
  const probe=http.createServer();await new Promise(resolve=>probe.listen(0,'127.0.0.1',resolve));const port=probe.address().port;await new Promise(resolve=>probe.close(resolve));
  const origin=`http://127.0.0.1:${port}`;report.origin=origin;
  const config={publicOrigin:origin,dataDir:path.join(output,'data'),now:()=>stamp,tickMs:80,ai:{provider:'demo',decisionIntervalMs:1000000,maxDailyCostUsd:0},rules:{moveCooldownMs:1,taskCooldownMs:10000,initialKillCooldownMs:1,killCooldownMs:1000000,sabotageCooldownMs:1000000,criticalDurationMs:5000,meetingCooldownMs:1,discussionMs:10000,votingMs:10000,roamDeadlineMs:300000,maxMatchMs:3600000}};
@@ -187,10 +255,21 @@ try{
 finally{
  try{await browser?.close();}catch(error){report.cleanupErrors.push(String(error));}
  try{await game?.close();}catch(error){report.cleanupErrors.push(String(error));}
- report.backendUnchanged=git('diff','--name-only',pin,'--','server','shared','package.json','package-lock.json')==='';
+ try{
+  const sourceAfter=await fingerprints(root,runtimeFiles());
+  await writeFile(path.join(output,'source-after-sha256.json'),JSON.stringify(sourceAfter,null,2));
+  await new Promise(resolve=>setImmediate(resolve));
+  report.sourceChangedPaths=changedPaths(sourceBefore,sourceAfter);
+ }catch(error){report.sourceTrackingErrors.push(String(error));report.sourceChangedPaths=[];}
+ finally{stopMonitoring();}
+ report.checkoutAfter=git('rev-parse','HEAD');
+ report.modifiedPathsAfter=modifiedPaths();
+ report.runtimeUnchanged=report.sourceChangedPaths.length===0&&report.sourceEvents.length===0&&report.sourceTrackingErrors.length===0;
+ report.backendUnchanged=report.sourceChangedPaths.filter(isBackend).length===0&&report.sourceEvents.filter(event=>isBackend(event.path)).length===0&&report.sourceTrackingErrors.length===0;
+ if(!report.runtimeUnchanged){report.sourceFailure='Runtime changed or could not be monitored during this run.';console.error(report.sourceFailure);}
  report.summary={passed:report.cases.filter(entry=>entry.passed).length,failed:report.cases.filter(entry=>entry.passed===false).length};
  await writeFile(path.join(output,'report.json'),JSON.stringify(report,null,2));console.log('AUDIT_EVIDENCE '+output);console.log(JSON.stringify(report.summary));
  // Fresh audit-owned data/profile paths remain inside this run. Preserve logs and screenshots.
  for(const name of ['profile','data']){const target=path.resolve(output,name);assert.ok(target.startsWith(path.resolve(output)+path.sep));await rm(target,{recursive:true,force:true,maxRetries:5,retryDelay:100});}
- process.exitCode=report.setupFailure||report.summary.failed||report.cleanupErrors.length?1:0;
+ process.exitCode=report.setupFailure||report.sourceFailure||report.summary.failed||report.cleanupErrors.length?1:0;
 }
