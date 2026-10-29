@@ -120,3 +120,48 @@ Raw source pins most relevant to those findings:
 Reproduce the saved counterexamples without Chrome: `node _artifacts/world-ui-shell-audit-dyfXRe/audit.mjs` (expected exit 1 with the three finding records). This runs against archived source snapshots, so subsequent manager fixes must be independently tested rather than judged from this historical receipt. No question-mark defect was filed for the root beacon/title: byte inspection confirmed the original U+25C8 diamond and U+00B7 separators; console encoding alone was not treated as product evidence.
 
 The root keepalive stop fix remains acknowledged and was not reopened. Keepalive cancellation is best effort; manual input's 600 ms lease remains the server fallback. This worker started no browser/server for this correction or audit. **Manager retains the exclusive Chrome lease.** The prior source-drifted 19 observed browser cases retain their original failure classification.
+
+## Closure of the three root counterexamples
+
+All three findings from the read-only audit at `3c250bcd21bfb760916b9e7512f37b7f89e0f9a5` are **closed for the retained source/VM/CSS checks** at exact manager fix **`44ef7bdfcaf719a8e1d341d59ba9a243fcf4b8b7`** and current source **`b919d0071498c6ce5eea05d73ab55a3f392524f7`**. This closure adds only `tests/world-ui-root-closure.test.mjs` and this report; no runtime/root edits or Chrome/server/provider calls.
+
+The new driver retains the original minimal root-handler fixture and the original stimuli, with positive expectations after the correction. It adds current-context controls so suppressing all task errors cannot pass:
+
+| Check | Exact 44ef7bd / current source |
+| --- | --- |
+| ROOT-RULES-FLOW | Open rules, enter lobby/roam/discussion: rules become hidden, `aria-expanded` resets false, the safe room mounts in world-mode, and the `100dvh`/zero-padding/short-screen min-height overrides remain present. |
+| ROOT-STALE-TASK-FEEDBACK | A late task rejection after discussion returns `AbortError`; neither a 409 nor an uncertain failure changes CURRENT COUNCIL NOTICE or creates a retry. Current scene options retain the current notice. |
+| ROOT-GLOBAL-HOVER | PLAY/WATCH and world primary/secondary controls resolve to the scoped pale hover backgrounds with dark text, overcoming the old global hover selector. |
+| Current rule error | A still-current 409 preserves its useful error and releases pending state; it is not incorrectly marked stale. |
+| Current uncertain task | The same-ID retry remains visible and resends the identical URL, request ID, type and task ID. Acknowledgement clears the retry. |
+| Completed task | A newer completion snapshot removes an obsolete uncertain retry; its retained click handler cannot dispatch another request. |
+
+Results: **6/6 passed, exit 0 at exact 44ef7bd** (386.512 ms), then **6/6 passed, exit 0 against current source** (229.7296 ms). These are the same six checks across revisions, not twelve independent workflows. The historical negative control at `3c250bcd21bfb760916b9e7512f37b7f89e0f9a5` exits 1 as expected: 2 passed / 4 failed (the original three categories plus the completed-task retry assertion). This preserves proof that the closure assertions detect the old defects. All original red audit artifacts remain untouched.
+
+The hover cascade fixture processes the unconditional desktop declarations and the selectors relevant to these four controls, including specificity, stylesheet order and `!important`. It is not a full CSS/browser engine or a pixel measurement. Resolved colors/contrast:
+
+- Primary / PLAY: background `#ffdda0`, foreground `#17384a`, **9.4664:1**.
+- Secondary / WATCH: background `#b9dfd4`, foreground `#17384a`, **8.5648:1**.
+
+The manager still owns actual hover/rules measurements under the frozen browser lease. This worker used synthetic DOM/scene/request completions for actual root-handler code, not mocked responses claimed as real game workflows. No unrelated audits were added. No remaining failure was reproduced among these six requested checks.
+
+Evidence: `D:/Widegames-work/world-frontend-20261029/_artifacts/world-ui-root-closure-I0rTTo/` contains the exact driver, `historical-negative.log`, `exact-44ef7bd.log`, `current-source.log`, `report.json`, raw source snapshots and SHA256 manifests. Driver SHA256: `3158d87a6195185f3cb204c3229447aca6581a08d608bb83c65a2c5af2affa31`.
+
+The current files stayed byte-identical throughout their run. Compared with exact 44ef7bd, current `app.mjs` adds the owner's action-generation guard; the other five inspected files match after LF/CRLF normalization. Raw working-tree versus Git-blob hashes therefore differ even for unchanged normalized text; both sets are recorded, with `composition.diff` and `normalized-comparison.json`. Important exact pins:
+
+- Exact `public/app.mjs`: `2043da512ced6d60382fc2183edbd274fb46b48ff71c4f39ca39ba3696d33cf1`; current working bytes: `3979277d0a9a8624cf1355f94396b0c0aec671de554f83760116bcf791a7e528`.
+- Exact `public/styles.css`: `335d5670e89500451202f07d60812638a49358ed0dc852af271e3272b8c5ee02`; current working bytes: `c300ec919813a9937c9adcf0eacf772bc18b20c3c685ce16b7425e1fa23257d2`.
+
+Reproduce from this worker (defaults use the current integrated checkout when the root override is omitted):
+
+```powershell
+$env:TEMP='D:/Widegames-work/temp'
+$env:TMP='D:/Widegames-work/temp'
+$env:WORLD_UI_ROOT_REVIEW_ROOT='D:/Widegames-work/world-coordinator-20261029'
+$env:WORLD_UI_ROOT_REVIEW_PIN='44ef7bdfcaf719a8e1d341d59ba9a243fcf4b8b7'
+node --test tests/world-ui-root-closure.test.mjs
+Remove-Item Env:WORLD_UI_ROOT_REVIEW_PIN -ErrorAction SilentlyContinue
+node --test tests/world-ui-root-closure.test.mjs
+```
+
+Syntax and `git diff --check` passed; ownership is limited to this uniquely named world-ui test and `docs/WORLD-UI.md`. Manager retains the exclusive Chrome lease. Earlier native transport interruptions and the source-drifted 19 observed browser cases remain historical and are not qualification passes.
