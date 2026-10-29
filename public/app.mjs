@@ -21,7 +21,7 @@ function captureActionContext(body){
 }
 function actionContextCurrent(context){
  if(!context)return true;const game=room?.game,self=game?.self;
- if(context.generation!==worldActionGeneration||game?.matchId!==context.matchId||game.phase!==context.phase||self?.id!==context.actor||!self?.alive)return false;
+ if(context.generation!==worldActionGeneration||game?.matchId!==context.matchId||game.phase!==context.phase||self?.id!==context.actor||!(self?.alive||self?.ghost))return false;
  if(context.type==='task'){
   if(self.roomId!==context.location)return false;
   if(context.position&&self.position&&Math.hypot(self.position.x-context.position.x,self.position.y-context.position.y)>.1)return false;
@@ -31,7 +31,7 @@ function actionContextCurrent(context){
 }
 function stopWorldMovement(){
  const owner=worldSession,game=room?.game;
- if(!owner||owner.id!==roomId||!game?.worldVersion||!game.self?.alive||game.phase!=='roam')return;
+ if(!owner||owner.id!==roomId||!game?.worldVersion||!(game.self?.alive||game.self?.ghost)||game.phase!=='roam')return;
  const seq=Math.max(owner.wireSeq||0,game.self.inputSeq||0)+1;if(!Number.isSafeInteger(seq))return;
  owner.wireSeq=seq;owner.lastVector={dx:0,dy:0};
  // This final stop must outlive the controller we are about to abort. It is
@@ -47,7 +47,7 @@ function ownsWorld(owner){return worldSession===owner&&roomId===owner.id&&!docum
 async function worldInput(owner,input){
  if(!ownsWorld(owner))throw new DOMException('The room changed.','AbortError');
  let packet=worldInputEnvelope(input);const game=room?.game;
- if(!game?.self?.alive||game.phase!=='roam'){
+ if(!(game?.self?.alive||game?.self?.ghost)||game.phase!=='roam'){
   if(!packet.dx&&!packet.dy)return room; // The authority already freezes non-roam motion.
   throw new DOMException('Movement requires an active watch.','AbortError');
  }
@@ -98,7 +98,7 @@ function renderWorld(){
   const host=h('div',{id:'world-host'}),owner={id:roomId};main.replaceChildren(host);worldSession=owner;
   worldExperience=createWorldExperience(host,{
    action:(type,fields={})=>worldMutation(owner,'/action',actionEnvelope(type,fields)),
-   input:input=>worldInput(owner,input),start:()=>worldMutation(owner,'/start',{id:crypto.randomUUID()}),
+   input:input=>worldInput(owner,input),start:features=>worldMutation(owner,'/start',{id:crypto.randomUUID(),...(features?{features}:{})}),
    leave:()=>{if(worldSession===owner)home();},loadReplay:()=>worldReplay(owner)
   });
  }
@@ -142,7 +142,7 @@ function accept(data){
  if(roomId&&next.roomId!==roomId)return;
  if(room?.game&&!next.game)return;
  if(room?.game&&next.game&&(next.game.version<room.game.version||(next.game.version===room.game.version&&next.game.serverNow<room.game.serverNow)))return;
- if(room?.game?.matchId!==next.game?.matchId||room?.game?.phase!==next.game?.phase||room?.game?.self?.id!==next.game?.self?.id)worldActionGeneration++;
+ if(room?.game?.matchId!==next.game?.matchId||room?.game?.phase!==next.game?.phase||room?.game?.self?.id!==next.game?.self?.id||room?.game?.self?.alive!==next.game?.self?.alive)worldActionGeneration++;
  room=next;
  networkReady=true;
  if(retryContext&&!actionContextCurrent(retryContext)){retry=null;retryContext=null;tell('Current watch state synchronized.');}
