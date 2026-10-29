@@ -78,7 +78,7 @@ export function createAiController({ config = {} } = {}) {
     async decide({ view, player, context, signal, commitReservation } = {}) {
       if (signal?.aborted || !record(context) || !view?.self || !view.self.alive || typeof view.matchId !== 'string' || !Number.isFinite(view.serverNow) || !['roam', 'discussion', 'voting'].includes(view.phase)) return null;
       const observed=(view.players??[]).find(p=>p.id===player?.id);
-      const actor=CHARACTERS.find(p=>p.id===player?.id)??(observed?{id:observed.id,name:observed.name,color:observed.color,persona:typeof player?.persona==='string'?player.persona.slice(0,500):'A storm-beacon keeper.'}:null);
+      const actor=(!view.beaconVersion?CHARACTERS.find(p=>p.id===player?.id):null)??(observed?{id:observed.id,name:observed.name,color:observed.color,persona:typeof player?.persona==='string'?player.persona.slice(0,500):'A storm-beacon keeper.'}:null);
       if (!actor || actor.id !== view.self.id) return null;
       const state = getState(context, view.matchId);
       const actorKey = `actor:${actor.id}`;

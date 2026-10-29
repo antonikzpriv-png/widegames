@@ -1,3 +1,4 @@
+import {deviceFacts} from '../features/strategy/index.mjs';
 import { ROOM_LAYOUT, CHARACTERS } from '../../shared/contracts.mjs';
 import { worldCandidates, visibleWorldPlayer } from './world.mjs';
 
@@ -74,6 +75,13 @@ function dialogue(view, memory) {
     const where = rooms.get(witness.roomId)?.name;
     return voice[number] + ' I saw ' + name + ' attack ' + victim + ' in ' + where + '. That is firsthand; I will vote for ' + name + '.';
   }
+  const sample=view.beaconVersion?deviceFacts(view).at(-1):null;
+  if(sample&&number===0){
+    const at=new Date(sample.at).toISOString(),who=id=>(view.players??[]).find(p=>p.id===id)?.name??id;
+    if(sample.kind==='vitals')return 'Vitals sampled '+at+': '+sample.players.map(p=>who(p.id)+' '+p.status).join(', ')+'. No location or attacker was identified.';
+    if(sample.kind==='occupancy')return 'Occupancy sampled '+at+': '+sample.rooms.map(r=>r.roomId+' '+r.count).join(', ')+'. Counts do not identify people.';
+    if(sample.kind==='cameras')return 'Camera sample '+at+': '+sample.frames.map(f=>f.cameraId+' saw '+(f.players.map(who).join(', ')||'no keepers')).join('; ')+'. This is a past sample, not an attack witness.';
+  }
   if (name && number < 2) return voice[number] + ' Suspicion only: ' + name + ' was nearby before a disappearance. I did not see an attack; that is a proximity inference.';
   return [
     voice[0] + ' I was at ' + room + '. ' + (view.self.tasks?.filter(t => !t.completed).length ?? 0) + ' jobs remain on my list. What did you see?',
@@ -95,7 +103,7 @@ export function observe(view, memory) {
       memory.witnesses[event.playerId] = { targetId: event.targetId, roomId: event.roomId, at: Number.isFinite(event.at) ? event.at : view.serverNow };
     }
   }
-  const dead = new Set((view.players ?? []).filter(p => !p.alive).map(p => p.id));
+  const dead = new Set((view.players ?? []).filter(p => p.alive===false).map(p => p.id));
   if (memory.observation?.roomId === view.self.roomId) {
     const newlyDead = memory.observation.nearby.filter(id => dead.has(id) && !memory.observation.dead.includes(id));
     if (newlyDead.length) {

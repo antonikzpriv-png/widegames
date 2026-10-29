@@ -35,7 +35,7 @@ function publicEvent(state,type,at,data={}) {
   if (state.events.length>MAX_EVENTS) state.events.shift();
 }
 function record(state,type,at,data={}) {
-  state.replay.push({id:`r${++state.replaySequence}`,type,at,...(isBeacon(state)?{eventVersion:1}:{}),...data});
+  const id=`r${++state.replaySequence}`;state.replay.push(isBeacon(state)?{...data,id,type,at,eventVersion:1}:{id,type,at,...data});
   if (state.replay.length>MAX_REPLAY) state.replay.shift();
 }
 function end(state,winner,reason,at) {
@@ -154,7 +154,7 @@ export function createMatch({id,mode='human',humanPlayerId,now=Date.now(),seed,c
   if(systems){
     if(!beaconRules||typeof beaconRules!=='object'||Array.isArray(beaconRules))throw new TypeError('Invalid beacon rules');
     const values={...DEFAULT_BEACON_RULES};for(const [key,value]of Object.entries(beaconRules)){if(!Object.hasOwn(values,key)||!Number.isSafeInteger(value)||value<1||value>86400000)throw new TypeError('Invalid beacon rule');values[key]=value;}
-    if(values.visionRadius<80||values.visionRadius>900||values.saboteurVisionRadius<80||values.saboteurVisionRadius>900||values.lightsVisionRadius>values.visionRadius||values.observationLimit>128)throw new TypeError('Invalid vision or observation limit');
+    if(values.visionRadius<80||values.visionRadius>900||values.saboteurVisionRadius<80||values.saboteurVisionRadius>900||values.lightsVisionRadius>values.visionRadius||values.observationLimit>64)throw new TypeError('Invalid vision or observation limit');
     state.schemaVersion=3;state.worldVersion=1;state.beaconVersion=1;state.configuration=structuredClone(setup);state.beaconRules=values;state.deathPolicy='redistribute-at-muster';state.abilities={};state.replaySnapshots=[];
     systemsModule.initializeSystems(state,now);investigationModule.initializeInvestigation(state,now);refreshKnowledge(state,now);captureReplaySnapshot(state,now);
   }
@@ -205,7 +205,7 @@ function denial(state,p,a,now) {
     if (now<p.cooldowns.taskAt) return fail('COOLDOWN','Task equipment is cooling down.');
   } else if (a.type==='eliminate') {
     const target=state.players.find(t=>t.id===a.targetId);
-    if (p.role!=='saboteur' || !target || !target.alive || target.role!=='crew' || (isWorld(state)?!nearby(state,p,target.position,runtime(state).WORLD.killRadius):target.roomId!==p.roomId)) return fail('INVALID_TARGET','No valid target here.');
+    if (p.role!=='saboteur' || !target || !target.alive || target.role!=='crew' || (isBeacon(state)&&state.systems.transit?.[target.id]) || (isWorld(state)?!nearby(state,p,target.position,runtime(state).WORLD.killRadius):target.roomId!==p.roomId)) return fail('INVALID_TARGET','No valid target here.');
     if (now<p.cooldowns.killAt) return fail('COOLDOWN','Elimination is cooling down.');
   } else if (a.type==='sabotage') {
     if (p.role!=='saboteur' || state.sabotage?.active) return fail('UNAVAILABLE','Sabotage is unavailable.');

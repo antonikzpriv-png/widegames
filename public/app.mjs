@@ -6,6 +6,7 @@ import {replayEvents,aiNotice,aiLabel} from './presentation.mjs';
 import {createWorldExperience} from './world/experience.mjs';
 import {worldInputEnvelope} from './world-input-envelope.mjs';
 import {harbor} from './harbor.mjs';
+import {createWatchPanels} from './features/watch-panels.mjs';
 
 const main=document.querySelector('#main');
 const feedback=document.querySelector('#feedback');
@@ -13,6 +14,7 @@ let room=null,roomId=null,controller=null,socket=null,poll=null;
 let epoch=0,pending=false,offset=0,connected=false,networkReady=false,connectionIssue=false;
 let draft='',draftMeeting=null,confirmTarget=null,replay=null,replayIndex=0,retry=null,retryContext=null;
 const attemptedJoins=new Set();
+let featurePanels=null;
 let worldExperience=null,worldSession=null,lastInputFailure=0,worldActionGeneration=0;
 
 function captureActionContext(body){
@@ -40,8 +42,8 @@ function stopWorldMovement(){
 }
 function releaseWorld(){
  stopWorldMovement();
- const instance=worldExperience,owner=worldSession;worldExperience=null;
- try{instance?.dispose();}finally{if(worldSession===owner)worldSession=null;}
+ const instance=worldExperience,owner=worldSession,panels=featurePanels;worldExperience=null;featurePanels=null;
+ try{panels?.dispose();instance?.dispose();}finally{if(worldSession===owner)worldSession=null;}
 }
 function ownsWorld(owner){return worldSession===owner&&roomId===owner.id&&!document.hidden&&controller&&!controller.signal.aborted;}
 async function worldInput(owner,input){
@@ -102,6 +104,7 @@ function renderWorld(){
    leave:()=>{if(worldSession===owner)home();},loadReplay:()=>worldReplay(owner)
   });
  }
+ if(room?.game?.beaconVersion===1){if(!featurePanels)featurePanels=createWatchPanels(document.querySelector('#world-host'));featurePanels.update(room);}
  worldExperience.update(room,{now:Date.now()+offset,connected:networkReady,pending,feedback:feedback.textContent});
 }
 

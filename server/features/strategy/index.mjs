@@ -8,3 +8,6 @@ export const localGoals=createGoalRegistry([
 {id:'task',select(view){if(view.self?.role!=='crew')return null;const task=view.self.tasks.filter(t=>!t.completed).sort((a,b)=>distance(view.self.position,WORLD_STATIONS[a.roomId])-distance(view.self.position,WORLD_STATIONS[b.roomId]))[0];return task?{target:WORLD_STATIONS[task.roomId],taskId:task.id}:null;}}
 ]);
 
+
+/** Whitelisted source samples for council; no global state, coordinates or inferred guilt. */
+export function deviceFacts(view){return (view.investigation?.observations??[]).slice(-3).map(o=>({id:o.id,source:o.deviceId,kind:o.kind,at:o.at,...(o.kind==='vitals'?{players:(o.data?.players??[]).slice(0,12).map(p=>({id:p.id,status:p.status}))}:o.kind==='occupancy'?{rooms:(o.data?.rooms??[]).slice(0,6).map(r=>({roomId:r.roomId,count:r.count}))}:o.kind==='cameras'?{frames:(o.data?.frames??[]).slice(0,8).map(f=>({cameraId:f.cameraId,limited:!!f.limited,players:(f.players??[]).slice(0,6).map(p=>p.id)}))}: {})}));}

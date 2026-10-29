@@ -131,7 +131,7 @@ function beaconCandidates(view,memory,suspect){
  }
  if(self.moving)return wait();
  const terminal=controls.find(a=>a.type==='investigate');if(terminal&&view.serverNow-(memory.lastTerminalAt??-Infinity)>30000){memory.lastTerminalAt=view.serverNow;return [proposal(terminal)];}
- if(view.investigation?.session)return wait();
+ if(view.investigation?.session?.status==='reading')return wait();
  const doors=controls.find(a=>a.type==='systemRepair'&&a.fields.systemId==='door');if(doors)return [proposal(doors)];
  const offset=(view.players??[]).findIndex(p=>p.id===self.id);for(let step=0;step<ROOM_LAYOUT.length;step++){const station=WORLD_STATIONS[ROOM_LAYOUT[((memory.patrol??0)+Math.max(0,offset)+step)%ROOM_LAYOUT.length].id];if(point(station)&&!at(view,station,WORLD.interactionRadius))return navigate(station);}
  return wait();

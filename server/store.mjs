@@ -6,6 +6,9 @@ import {normalizeRoster,PLAYER_ID} from './features/lobbies/index.mjs';
 import {DEFAULT_BEACON_RULES} from '../shared/beacon.mjs';
 import {validateSystemsState} from './engine/systems/index.mjs';
 import {validateInvestigationState} from './engine/investigation/index.mjs';
+import {createSpatialWorld} from './engine/world/index.mjs';
+import * as defaultGeometry from '../shared/world.mjs';
+const spatialValidator=createSpatialWorld(defaultGeometry);
 
 export const ROOM_ID = /^[A-Za-z0-9_-]{20,40}$/;
 const phases = new Set(['roam','discussion','voting','ended','paused']);
@@ -62,8 +65,8 @@ function validateBeaconStructure(state,setup){
  const stored=normalizeRoster({...state.configuration,roster:state.configuration.players,mode:state.mode});
  if(JSON.stringify(stored)!==JSON.stringify(setup)||state.players.some(p=>!setup.players.some(q=>q.id===p.id&&q.name===p.name&&q.color===p.color)))throw new Error('Beacon roster mismatch');
  for(const key of Object.keys(DEFAULT_BEACON_RULES))if(!Number.isSafeInteger(state.beaconRules[key])||state.beaconRules[key]<1||state.beaconRules[key]>86400000)throw new Error('Invalid beacon rule');
- if(Object.keys(state.beaconRules).length!==Object.keys(DEFAULT_BEACON_RULES).length||state.beaconRules.visionRadius<80||state.beaconRules.visionRadius>900||state.beaconRules.saboteurVisionRadius<80||state.beaconRules.saboteurVisionRadius>900||state.beaconRules.lightsVisionRadius>state.beaconRules.visionRadius||state.beaconRules.observationLimit>128)throw new Error('Invalid beacon vision');
- validateSystemsState(state);validateInvestigationState(state);
+ if(Object.keys(state.beaconRules).length!==Object.keys(DEFAULT_BEACON_RULES).length||state.beaconRules.visionRadius<80||state.beaconRules.visionRadius>900||state.beaconRules.saboteurVisionRadius<80||state.beaconRules.saboteurVisionRadius>900||state.beaconRules.lightsVisionRadius>state.beaconRules.visionRadius||state.beaconRules.observationLimit>64)throw new Error('Invalid beacon vision');
+ validateSystemsState(state);validateInvestigationState(state);spatialValidator.validateSpatialState(state);
  const ids=new Set(state.players.map(p=>p.id));
  if(!object(state.requests)||Object.keys(state.requests).length!==ids.size||Object.keys(state.requests).some(id=>!ids.has(id)))throw new Error('Invalid request ledger');
  for(const p of state.players){
