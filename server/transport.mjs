@@ -38,7 +38,7 @@ export async function createGameServer(config,dependencies={}) {
   const origin=validatePublicOrigin(config.publicOrigin),secure=origin.startsWith('https:');
   const engine=dependencies.engine||await import('./engine/index.mjs');
   const ai=dependencies.aiController||(await import('./ai/index.mjs')).createAiController({config:config.ai});
-  const store=dependencies.store||await createRoomStore(config.dataDir);
+  const store=dependencies.store||await createRoomStore(config.dataDir,{worldGeometry:dependencies.worldGeometry});
   let daily,service;
   try {
     daily=dependencies.dailyBudget||await createDailyBudget({directory:config.dataDir,maxCostUsd:config.ai?.maxDailyCostUsd??5,now});
@@ -98,10 +98,11 @@ export async function createGameServer(config,dependencies={}) {
           if(!data.state)fail(409,'NOT_STARTED','Start the match first.');
           if(typeof engine.applyInput!=='function')fail(409,'INPUT_UNAVAILABLE','Continuous movement is not available for this match.');
           const result=engine.applyInput(structuredClone(data.state),identity.seatId,input,now());
-          if(!object(result)||typeof result.accepted!=='boolean'||!object(result.state)||result.state.id!==data.state.id||result.state.mode!==data.state.mode||!Number.isSafeInteger(result.state.version)||result.state.version<data.state.version)throw new Error('Invalid engine input result');
+          if(!object(result)||typeof result.accepted!=='boolean'||!object(result.state)||result.state.id!==data.state.id||result.state.mode!==data.state.mode||result.state.schemaVersion!==data.state.schemaVersion||!Number.isSafeInteger(result.state.version)||result.state.version<data.state.version)throw new Error('Invalid engine input result');
           const next=structuredClone(data);next.state=result.state;
           // Validate even an inert result before considering a durable update.
           service.validate(next);
+          if(result.accepted&&result.state.schemaVersion===2&&result.state.players.find(player=>player.id===identity.seatId)?.motion.seq!==input.seq)throw new Error('Invalid engine input sequence');
           if(result.state.version!==data.state.version){await commit(room,next);broadcast(room);}
           if(!result.accepted){const error=result.error||{};fail(409,typeof error.code==='string'&&/^[A-Z][A-Z0-9_]{0,63}$/.test(error.code)?error.code:'INPUT_REJECTED',typeof error.message==='string'&&error.message.length<=240?error.message:'Movement input rejected.');}
         });
