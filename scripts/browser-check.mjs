@@ -4,6 +4,7 @@ import net from 'node:net';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {mkdir,writeFile} from 'node:fs/promises';
+import {execFileSync} from 'node:child_process';
 import puppeteer from 'puppeteer-core';
 import {createGameServer} from '../server/transport.mjs';
 import {loadConfig} from '../server/config.mjs';
@@ -13,6 +14,8 @@ import {ROOM_LAYOUT} from '../shared/contracts.mjs';
 const root=fileURLToPath(new URL('../',import.meta.url));
 const output=path.join(root,'_artifacts','browser-'+Date.now());await mkdir(output,{recursive:true});
 const report={fixture:'Seeded QA, accelerated deadlines, real demo bots; no live provider calls.',checks:[],errors:[],consoleErrors:[],privacyChecks:0,screenshots:[],outcomes:[]};
+report.sourceCommit=execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8'}).trim();
+report.modifiedTrackedPaths=execFileSync('git',['diff','--name-only','HEAD'],{cwd:root,encoding:'utf8'}).trim().split(/\r?\n/).filter(Boolean);
 const check=(condition,name)=>{report.checks.push({name,passed:!!condition});assert(condition,name);console.log('PASS '+name);};
 let browser,game,activePage,skew=0,humanCreations=0;
 const pending=new Set();
@@ -111,5 +114,6 @@ try{
 finally{
  const failures=[];try{await browser?.close();}catch(e){failures.push(String(e));}try{await game?.close();}catch(e){failures.push(String(e));}
  try{await drain();}catch(error){failures.push(String(error));}report.cleanupErrors=failures;await writeFile(path.join(output,'report.json'),JSON.stringify(report,null,2));console.log('Browser evidence: '+output);
+ if(report.errors.length&&!report.failure)throw new Error('Late browser privacy/runtime audit errors: '+report.errors.join('; '));
  if(failures.length)throw new Error('Browser qualification cleanup failed: '+failures.join('; '));
 }
