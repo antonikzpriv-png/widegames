@@ -15,7 +15,7 @@ export function watchPanel(game,{pending,act,now,confirmTarget,setConfirm}){
  if(self.role==='saboteur'){
   pane.append(h('div',{class:'control-row'},button('Trigger critical sabotage',()=>act('sabotage'),{class:'danger',disabled:!canAct(game,'sabotage',pending),'data-focus':'sabotage'}),cooldown(self.cooldowns?.sabotageAt,now,'Sabotage')));
   for(const target of localTargets(game)){
-   if(confirmTarget===target.id)pane.append(h('div',{class:'confirm'},h('p',{},`Eliminate ${target.name}? This cannot be undone.`),h('div',{class:'actions'},button('Confirm elimination',()=>{setConfirm(null);act('eliminate',{targetId:target.id});},{class:'danger',disabled:!canAct(game,'eliminate',pending),'data-focus':`eliminate-${target.id}`}),button('Cancel',()=>setConfirm(null)))));
+   if(confirmTarget===target.id)pane.append(h('div',{class:'confirm'},h('p',{},`Eliminate ${target.name}? This cannot be undone.`),h('div',{class:'actions'},button('Confirm elimination',()=>{setConfirm(null);act('eliminate',{targetId:target.id});},{class:'danger',disabled:!canAct(game,'eliminate',pending),'data-focus':`eliminate-${target.id}`}),button('Cancel',()=>setConfirm(null,target.id),{'data-focus':`cancel-eliminate-${target.id}`}))));
    else pane.append(button(`Eliminate ${target.name}…`,()=>setConfirm(target.id),{class:'danger',disabled:!canAct(game,'eliminate',pending),'data-focus':`eliminate-${target.id}`}));
   }
   pane.append(cooldown(self.cooldowns?.killAt,now,'Elimination'));
