@@ -44,7 +44,7 @@ test('independent frontend current/pinned input emits integer diagonal, stop and
     const source = await read('public/world-input-envelope.mjs');
     encode = (await import('data:text/javascript;base64,' + Buffer.from(source).toString('base64'))).worldInputEnvelope;
     const app = await read('public/app.mjs');
-    assert.match(app, /body:worldInputEnvelope\(input\)/, 'actual worldInput must use the inspected adapter');
+    assert(app.includes('body:worldInputEnvelope(input)') || (app.includes('const packet=worldInputEnvelope(input)') && app.includes('body:packet')), 'actual worldInput must use the inspected adapter');
   } catch (error) { if (error.code !== 'ENOENT') throw error; }
   const f = fixture(createWorldInput, encode);
   try {
@@ -81,4 +81,13 @@ test('historical Core 093d049 KNOWN DEFECT: shared navigate type crashes a schem
   const engine = await import(dataUrl(source));
   const state = engine.createMatch({ id: 'legacy-historical-control', now: 0, seed: 'review', world: false });
   assert.throws(() => engine.getPlayerView(state, 'p1', 0), /Cannot read properties of undefined/);
+});
+
+test('independent frontend input: hidden and dispose send a final zero lease then remove steering listeners', async () => {
+  const { createWorldInput } = await inputModule(process.env.WORLD_AI_REVIEW_UI_PIN), f = fixture(createWorldInput);
+  f.key('d'); assert(f.sent.at(-1).dx > 0);
+  f.doc.hidden = true; f.doc.fire('visibilitychange', {}); assert.equal(f.sent.at(-1).dx, 0); assert.equal(f.sent.at(-1).dy, 0);
+  f.doc.hidden = false; f.key('w'); assert(f.sent.at(-1).dy < 0); f.input.dispose();
+  assert.equal(f.sent.at(-1).dx, 0); assert.equal(f.sent.at(-1).dy, 0);
+  const count = f.sent.length; f.key('d'); f.doc.fire('visibilitychange', {}); assert.equal(f.sent.length, count);
 });
