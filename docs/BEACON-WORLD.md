@@ -140,3 +140,49 @@ git diff --check
 Actual execution: initial15/15 passed in0.59s, evidence _artifacts/beacon-world-integration-review-initial.txt. After adding the final two controls, only those two were run:2/2 passed in0.28s, evidence beacon-world-integration-review-additional.txt. Thus17 distinct checks passed across two bounded invocations, no failures/skips; no repeated full suite. The full-file command above is the ordinary reproducible invocation of the final test file. No product assertion was weakened or fixture corrected to obtain these results.
 
 Limits: real engine/module integration only; no HTTP identity/persistence process restart, browser/device UI, directional camera fixture, exhaustive roster/camera-cap/load coverage, paid/live provider or deployment qualification. Fixed radial fixtures, targeted seeded actors, supplied clocks and shortened rule values are the tested limits. Manager owns integration/browser qualification and another owner independently reviews Core's world implementation. Only the assigned review test/document changed; no runtime/other-worktree edits, installs, Chrome, push/main/deploy.
+
+
+## Production-only schema3 qualification ? exact7272556
+
+Exact coordinator source **7272556542b762e72a34450801fc762ba06d082c**. **19 checks passed on the first run**, no concrete blocker found. This independently exercises deployment/runtime boundaries; it is not a browser/full-match/live-model qualification or independent approval of Core's own spatial rules.
+
+Fresh own ignored archive: _artifacts/beacon-production-7272556.tar, Git PAX commit comment verified, SHA256 **be5b485f447fbc3cecef7b9621bc1934de9bef399f7ab962d8fcf99cf8fbf70e**. Executable snapshot _artifacts/beacon-production-7272556 was materialized from all216 canonical raw Git blobs using ls-tree/cat-file --batch, checking their Git blob IDs before writing. Manifest beacon-production-7272556-manifest.json records every SHA256. All216 source hashes verify before and after execution. No runtime patch, overlay, source edit or other checkout dependency is involved.
+
+Environment: Windows, Node24.20.0/npm11.19.0. Only production dependencies installed, offline, in that archive, with D: cache/temp. Exactly one package added: ws8.22.0. Installed package ledger contains only ws; require resolves within this archive. Puppeteer is absent on disk and cannot resolve. All60 server/public/shared files and local imports are present. Source-only package/Docker checks confirm actual main entry, systemsMode/worldMode defaults and recursive shipped groups. Docker is not executed. The new standalone tests/beacon-world-production-review.mjs is deliberately excluded from ordinary tests/*.test.mjs.
+
+Runtime uses the actual server/main.mjs twice, NODE_ENV=production, real clock, unmodified loadConfig/createGameServer, demo provider and zero call/token/cost/daily budgets. A synthetic unused credential marker tests logging/boundaries; no live credentials or account environment are inherited. Outbound server global fetch is blocked/counted in an IPC wrapper before importing main. No engine/config/store/AI dependency is injected. Data is a newly created private fixture directory under this checkout's ignored _artifacts, never original or manager data.
+
+Passed boundaries:
+
+- Health readiness and isolated child-owned service.lock; normal-config human create/start produces worldVersion1 and beaconVersion1, persisted schema3, with no custom schema-enabling flag or clock override.
+- All33 public/shared runtime assets served byte-for-byte against manifest, including public/features modules, shared/beacon.mjs and public/world/beacon.css. CSS/JS MIME, CSP and nosniff checked. Runtime source, package files, .env and private data paths return404.
+- Actual cookie-authenticated HTTP and both owner/spectator WebSocket snapshots expose own role only, explicit unknown/alive/dead statuses, no private knowledge/request/replay/AI memory/recipient/contributor payloads. Spectator retains fixed Bridge view, null self, empty own notes/session/observations/acting hints. Descriptor field names match public action contracts. Only self-target field-note hints are enabled for the acting owner.
+- Integer seq1 steering physically moves the human. Legitimate seq2 zero cleanup stops and persists. Foreign-origin and spectator input return403; unauthenticated room access401 and pre-end replay409.
+- Real registered field-note action records one actual own location, absent from spectator/other audience. Note action's accepted request-ID receipt persists; no public field_note/device-private event appears.
+- Real main's one registered SIGTERM handler is invoked through Windows IPC process.emit('SIGTERM'), then IPC disconnects. Both children exit naturally code0/signalnull within6s; first closes both authenticated WebSockets. service.lock and recovery claim disappear. No forced stop is used.
+- A second real main on the same DATA_DIR acquires a fresh lock token and restores the original human cookie/seat/role, exact stopped position/inputSeq2 and exact private note. Both duplicate inputseq2 and original note action ID stay inert after restart. Original spectator cookie remains isolated. No quarantine or temporary write residue.
+- All216 source blobs remain unchanged. Zero outbound provider fetch attempts, zero socket privacy errors, zero forced stops. Synthetic credential marker appears in neither HTTP/WS bodies nor child logs.
+
+The harness is bounded to at most two owned child mains,6s startup,6s graceful shutdown,4s HTTP/WS operations and a fresh per-run artifact DATA_DIR. First successful PIDs1348/12708 and exit receipts are recorded only in ignored evidence. End-to-end harness timing3233ms. No full match or unit suite is repeated.
+
+Exact preparation used git archive at the full pin and canonical raw blob extraction/manifest verification inside this assigned D: checkout. Install command's cwd was _artifacts/beacon-production-7272556:
+
+~~~powershell
+$env:TEMP='D:/Widegames-work/temp'
+$env:TMP=$env:TEMP
+$env:npm_config_cache='D:/Widegames-work/npm-cache'
+npm ci --omit=dev --ignore-scripts --no-audit --no-fund --offline --cache D:/Widegames-work/npm-cache
+~~~
+
+Then, from D:/Widegames-work/beacon-world-builder-20261029:
+
+~~~powershell
+$env:BEACON_PRODUCTION_REVIEW_ROOT=(Join-Path (Get-Location) '_artifacts/beacon-production-7272556')
+node --check tests/beacon-world-production-review.mjs
+node tests/beacon-world-production-review.mjs
+git diff --check
+~~~
+
+Evidence: _artifacts/beacon-production-7272556-install.txt, beacon-production-7272556-run.txt, beacon-production-7272556-result.json, raw source manifest and tar archive. Private persisted fixture is _artifacts/beacon-production-private-EEGBw7. No initial failing run or relaxed assertion was needed.
+
+Limits: real loopback Windows process/HTTP/WS/file restart, not Docker/Linux/hosted deployment, OS-delivered POSIX signal, Windows ACL or power-loss verification. This proves startup/default schema/projection/assets/receipts and normal graceful restart, not complete matches, browser rendering/input, exhaustive hint authorization or live original model adapter/provider behavior. Chrome, Docker, paid/live providers, npm updates, runtime edits, other worktrees/data, main/push/deployment were not used. Only the assigned standalone harness and this document changed.
