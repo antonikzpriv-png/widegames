@@ -2,9 +2,9 @@ import test from 'node:test';import assert from 'node:assert/strict';import * as
 const world=createSpatialWorld(geometry),clone=s=>JSON.parse(JSON.stringify(s));
 // Isolated module fixtures: positions/deaths/replay records represent engine-cloned
 // authoritative state. No provider, fabricated match outcome or client state input.
-function fixture(){const s={schemaVersion:3,worldVersion:1,beaconVersion:1,phase:'roam',beaconRules:{...DEFAULT_BEACON_RULES},players:['p1','p2','p3','p4','p5','p6'].map((id,i)=>({id,name:id,color:'red',role:i===5?'saboteur':'crew',alive:true})),systems:{doors:[],lights:{active:false},transit:{}},bodies:[],replay:[],replaySequence:0};world.initialize(s,0);for(const p of s.players){p.position={x:1430,y:960};p.roomId='engine';}s.players[0].position={x:620,y:300};s.players[0].roomId='bridge';return s;}
+function fixture(){const s={schemaVersion:3,worldVersion:1,beaconVersion:1,phase:'roam',updatedAt:0,beaconRules:{...DEFAULT_BEACON_RULES},players:['p1','p2','p3','p4','p5','p6'].map((id,i)=>({id,name:id,color:'red',role:i===5?'saboteur':'crew',alive:true})),systems:{doors:[],lights:{active:false},transit:{}},bodies:[],replay:[],replaySequence:0};world.initialize(s,0);for(const p of s.players){p.position={x:1430,y:960};p.roomId='engine';}s.players[0].position={x:620,y:300};s.players[0].roomId='bridge';return s;}
 const record=(s,type,at,data)=>s.replay.push({id:'r'+ ++s.replaySequence,type,at,...data});
-const observe=(s,now)=>world.observe(s,now,record);
+const observe=(s,now)=>{const changed=world.observe(s,now,record);if(changed)s.updatedAt=now;return changed;};
 const row=(s,viewer,target)=>world.projectWorld(s,viewer,10000).players.find(p=>p.id===target);
 function death(s,id,at){const p=s.players.find(p=>p.id===id);p.alive=false;s.bodies.push({id:'body-'+id,playerId:id,position:{...p.position},roomId:p.roomId,at,reported:false});}
 function freeze(value){if(value&&typeof value==='object'&&!Object.isFrozen(value)){Object.freeze(value);for(const item of Object.values(value))freeze(item);}return value;}
