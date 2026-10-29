@@ -74,7 +74,7 @@ test('actual crew route: frozen safe view, arrival, JSON controller restart, sam
   const waiting=await g.decide(fresh,restoredContext,'p1');assert.equal(waiting.type,'wait');accept(g.apply('p1',waiting));assert.equal(await g.decide(fresh,restoredContext,'p1'),null,'restored decision throttle must dedupe same-time requests');
   let routeCost=0,last=g.p('p1').position;for(const next of g.p('p1').motion.path){routeCost+=distance(last,next);last=next;}
   g.tick(Math.ceil(routeCost/WORLD.speed*1000)+1);assert.equal(g.view('p1').self.moving,false);assert.ok(distance(g.p('p1').position,destination)<.01);
-  const task=await g.decide(fresh,restoredContext,'p1');assert.equal(task.type,'task');accept(g.apply('p1',task));assert.equal(g.p('p1').tasks.find(t=>t.id===task.taskId).completed,true);
+  let task=await g.decide(fresh,restoredContext,'p1');assert.equal(task.type,'taskStep');for(let i=0;i<10;i++){accept(g.apply('p1',task));if(task.type==='task')break;g.tick(1600);task=await g.decide(fresh,restoredContext,'p1');}assert.equal(g.p('p1').tasks.find(t=>t.id===task.taskId).completed,true);
   assert.equal(fresh.describe(restoredContext).calls,0);
 });
 

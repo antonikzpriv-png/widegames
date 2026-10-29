@@ -1,0 +1,24 @@
+# Interactive tasks verification — 2026-10-29
+
+Cloud checkout `/workspace/widegames`, existing `codex/lantern-world-frontend-20261029` branch, main incorporated by ordinary merge. Remote main rechecked before delivery: `90bb6e8` (audited baseline), already incorporated. No reset, schema bump, paid provider call or deployment.
+
+## Commands and results
+
+- `npm ci --cache /tmp/widegames-npm-cache`: exit 0, 25 packages installed. Initial plain `npm ci` failed because the default `/home/agent/.npm/_cacache` was unwritable; retry used an authorized writable cache, without changing lockfile/dependencies.
+- `npm run check`: exit 0, 93 JavaScript modules syntax checked. This is not the test suite.
+- `npm test`: exit 0, 441 tests, 435 passed, 0 failed, 6 existing opt-in skips. These historical/integration/browser opt-in tests were not relabeled as passes. The standard browser command below separately exercises native Chromium and actual production world-mode routing.
+- `node --test tests/world-ai-ui-review.test.mjs tests/world-tasks.test.mjs`: 27 passed, 0 failed/skipped before the final additional TASK_READY assertion; that assertion is included in the final full-suite pass above.
+- `CHROME_PATH=/usr/bin/chromium npm run test:browser`: **exit 0, 26/26 checks passed**, see committed `task-browser-report.json` for final exact receipt. Real native HTTP/WS, cookies, persisted room store, physical navigation, worldMode true, labeled local demo AI, accelerated server time and deterministic generated assignments. No fabricated outcome, forged role or paid model calls.
+- `git diff --check`: exit 0.
+
+The task tests exercise direct completion rejection (including request ID `hint`), invalid solved flags, wrong input, actor/location/phase denials, expected-stage checks, duplicate receipts, changed-request conflicts, JSON and actual disk restart, absent optional metadata, metadata rejection, precise 1,499/1,500ms timing, excess steps after readiness, movement/meeting interruption, death transfer with unchanged total, former-owner denial, owner-only progress, reconnect views, and final-task victory for each of the five types. Additional frontend tests retain deferred resolutions/rejections after task replacement; the global pending guard prevents opening replacement controls while an old step is outstanding, and stale completions remain inert after ownership changes. Existing modal/disposal/council tests remain passing.
+
+The updated world lifecycle regressions submit legal semantic steps before successful equipment completion; denied-at-distance checks remain unchanged. Restored-navigation checks now require arrival followed by TASK_INCOMPLETE, proving arrival itself cannot grant completion. Transport qualification completes three actual Bridge wire steps before its successful completion POST. Actual controller integration now exercises legal step proposals through completion. Existing seeded AI integration finishes eight human/spectator world simulations, including task/ejection/parity victories, with safe-view and serialized-restart checks.
+
+Browser qualification uses five generated human task types, checks direct completion returns HTTP 409 for each, operates native controls through authoritative progress, reloads the same HttpOnly seat, exercises council and voting, and completes both human-plus-AI and all-AI matches by the task victory rule. It checks mobile widths 390 and 320, landscape, redaction over HTTP/WS, chronological replay, zero page exceptions, only the five expected direct-finish 409 console errors, and unchanged runtime source bytes during the run. Screenshots here are from that final actual run. Accelerated fixtures do not establish real-time network latency, hardware touch, screen reader, Safari/Firefox or live-provider behavior.
+
+## Retained earlier attempts
+
+Local `_artifacts/` retains earlier receipts without overwriting them: WWT9En hit a network-idle reload timeout after council; CB01kt reached repair/tuning then exposed a driver sequence-selector closure issue; NACVCA completed both task victories but its console gate incorrectly rejected the five intentional HTTP 409s. ddI2Zj passed all 26 browser checks before the final TASK_READY engine guard; the final receipt requalifies that guard's bytes. Driver changes use DOM readiness plus explicit authoritative predicates, a concrete sequence-tile selector, and exact expected-error accounting. Unexpected console errors still fail.
+
+Early full-suite failures reflected immediate-world-task assumptions and were corrected with legal inputs or explicit TASK_INCOMPLETE expectations. Two new stale-step fixture attempts initially tried opening new controls while the global pending guard was active; the corrected regression asserts that safety guard before settling the old response and opening replacement equipment. None of those failed runs are counted as final passes.

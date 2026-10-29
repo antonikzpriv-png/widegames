@@ -184,3 +184,10 @@ for (const change of ['room', 'position', 'disabled', 'death', 'dispose']) test(
     pending.reject(); await flush(); assert.equal(f.calls.length, 1); assert.doesNotMatch(f.host.querySelector('.lw-feedback')?.textContent ?? '', /OLD TASK FAILURE/); assert(!f.host.querySelector('.lw-task-modal')?.visible);
   } finally { f.experience.dispose(); }
 });
+
+for(const result of ['resolve','reject'])test(`authoritative task step: stale ${result} cannot affect replacement task`,async()=>{
+ const f=fixture(),view=room();view.game.self.tasks[0].progress={v:1,kind:'wires',index:0,total:3,readyAt:0};
+ try{f.open(view);f.click(f.button('Left cable 1'));const pending=f.defer();f.click(f.button('Right socket 1'));assert.equal(f.calls[0].type,'taskStep');assert.equal(f.calls[0].fields.step,0);
+ const next=JSON.parse(JSON.stringify(view));next.game.self.tasks[0].id='replacement-task';f.update(next);assert(!f.host.querySelector('.lw-task-modal')?.visible);pending[result]();await flush();f.open(next);assert(f.host.querySelector('.lw-task-modal')?.visible);assert.doesNotMatch(f.host.querySelector('.lw-feedback').textContent,/OLD TASK FAILURE|Task submitted/);assert.equal(f.calls.length,1);
+ }finally{f.experience.dispose();}
+});
