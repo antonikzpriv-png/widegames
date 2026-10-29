@@ -103,3 +103,40 @@ test('strict restored-state validation rejects malformed timers, cooldowns, priv
  for(const change of [s=>{s.systems.private=true;},s=>{s.systems.lights.active='yes';},s=>{s.systems.cooldowns[f.sab.id].ventAt=Infinity;},s=>{s.systems.cooldowns[f.sab.id].private=true;},s=>{s.systems.doors.pop();},s=>{s.systems.doors[0].deadlineAt=100001;},s=>{s.sabotage.kind='unknown';},s=>{s.sabotage.sites[0].position.x++;},s=>{s.sabotage.sites[0].progress=2;},s=>{s.sabotage.repairers=[f.sab.id];},s=>{s.systems.transit.foreign={};}]){const bad=structuredClone(f.state);change(bad);const before=structuredClone(bad);assert.throws(()=>systems.validateSystemsState(bad));assert.deepEqual(bad,before);}
  const g=fixture();place(g.sab,BEACON_VENTS[0]);apply(g,g.sab,{type:'vent',entryId:BEACON_VENTS[0].id,exitId:BEACON_VENTS[1].id});for(const change of [s=>{s.systems.transit[g.sab.id].exitId='foreign';},s=>{s.systems.transit[g.sab.id].deadlineAt++;},s=>{s.systems.transit[g.sab.id].origin.x++;},s=>{s.phase='discussion';},s=>{s.players.find(p=>p.id===g.sab.id).motion.manual=true;}]){const bad=json(g.state);change(bad);assert.throws(()=>systems.validateSystemsState(bad));}
 });
+test('due effects are chronological and critical-deadline hatch ties cancel rather than reveal an exit',()=>{
+ const f=fixture({lightsDurationMs:100,communicationsDurationMs:100,doorDurationMs:100,ventTravelMs:99,ventCooldownMs:10,auxiliaryCooldownMs:1});f.state.rules.criticalDurationMs=100;
+ apply(f,f.sab,{type:'systemSabotage',kind:'lights',targetId:'beacon'});apply(f,f.sab,{type:'systemSabotage',kind:'communications',targetId:'beacon'},100001);apply(f,f.sab,{type:'systemSabotage',kind:'door',targetId:BEACON_DOORS[0].id},100002);apply(f,f.sab,{type:'systemSabotage',kind:'power',targetId:'beacon'},100003);place(f.sab,BEACON_VENTS[0]);const origin={...f.sab.position};apply(f,f.sab,{type:'vent',entryId:BEACON_VENTS[0].id,exitId:BEACON_VENTS[1].id},100004);
+ assert.equal(f.state.sabotage.deadlineAt,100103);assert.equal(f.state.systems.transit[f.sab.id].deadlineAt,100103);assert.equal(systems.systemsDeadline(f.state),100100);
+ systems.advanceSystems(f.state,100103,f.ctx);assert.deepEqual(f.events.slice(-3).map(e=>e.at),[100100,100101,100102]);assert.deepEqual(f.sab.position,origin);assert.equal(f.records.at(-1).type,'vent_cancelled');assert(!f.records.some(e=>e.type==='vent_exit'));assert.equal(systems.systemsDeadline(f.state),Infinity);assert.equal(f.state.sabotage.active,true);assert.equal(f.state.outcome,null,'only coordinator declares critical victory');assert.equal(systems.validateSystemsState(f.state),true);
+});
+
+test('death cancels transit at the observed boundary without a destination teleport or cooldown refund',()=>{
+ const f=fixture();place(f.sab,BEACON_VENTS[0]);const origin={...f.sab.position};apply(f,f.sab,{type:'vent',entryId:BEACON_VENTS[0].id,exitId:BEACON_VENTS[1].id});const cooldown=f.state.systems.cooldowns[f.sab.id].ventAt;f.sab.alive=false;assert(systems.advanceSystems(f.state,100050,f.ctx));assert.deepEqual(f.sab.position,origin);assert.equal(f.records.at(-1).at,100050);assert.deepEqual(f.records.at(-1).visibleTo,[f.sab.id]);assert.equal(f.state.systems.cooldowns[f.sab.id].ventAt,cooldown);assert.equal(systems.validateSystemsState(f.state),true);
+});
+
+test('every repair and physical door opening requires the same visibility/proximity gates as its hint',()=>{
+ for(const kind of ['lights','communications','power','flood']){
+  const f=fixture(),site=BEACON_REPAIRS[kind][0];apply(f,f.sab,{type:'systemSabotage',kind,targetId:'beacon'});place(f.crew[0],site);const a={type:'systemRepair',systemId:kind,siteId:site.id};
+  for(const ctx of [{...f.ctx,sees:()=>false},{...f.ctx,nearby:()=>false}]){assert(systems.validateSystemAction(f.state,f.crew[0],a,100000,ctx));assert(!systems.systemActionHints(f.state,f.crew[0],100000,ctx).some(h=>h.type===a.type&&h.fields.siteId===site.id));}
+ }
+ for(const d of BEACON_DOORS){
+  const f=fixture();apply(f,f.sab,{type:'systemSabotage',kind:'door',targetId:d.id});const pad=geometry.WORLD.bodyRadius+4;f.crew[0].position=d.width<d.height?{x:d.x-pad,y:d.y+d.height/2}:{x:d.x+d.width/2,y:d.y-pad};const a={type:'systemRepair',systemId:'door',siteId:d.id};assert.equal(systems.validateSystemAction(f.state,f.crew[0],a,100000,f.ctx),null);assert(systems.systemActionHints(f.state,f.crew[0],100000,f.ctx).some(h=>h.type===a.type&&h.fields.siteId===d.id));assert(systems.validateSystemAction(f.state,f.crew[0],a,100000,{...f.ctx,sees:()=>false}));assert(systems.validateSystemAction(f.state,f.crew[0],a,112000,f.ctx));
+ }
+});
+
+test('initial legacy critical cooldown is retained; auxiliary, critical and hatch cooldowns remain independent and bounded',()=>{
+ const f=fixture(),s=createMatch({id:'cooldown-fixture',seed:'beacon-systems',world:true,now:100000});s.schemaVersion=3;s.beaconVersion=1;s.beaconRules={...DEFAULT_BEACON_RULES};systems.initializeSystems(s,100000);f.state=s;f.sab=s.players.find(p=>p.role==='saboteur');
+ assert.equal(s.systems.cooldowns[f.sab.id].criticalAt,165000);apply(f,f.sab,{type:'systemSabotage',kind:'lights',targetId:'beacon'});assert.equal(s.systems.cooldowns[f.sab.id].criticalAt,165000);assert.equal(systems.validateSystemAction(s,f.sab,{type:'systemSabotage',kind:'communications',targetId:'beacon'},119999,f.ctx).code,'COOLDOWN');
+ assert.equal(systems.validateSystemAction(s,f.sab,{type:'systemSabotage',kind:'power',targetId:'beacon'},164999,f.ctx).code,'COOLDOWN');systems.advanceSystems(s,165000,f.ctx);apply(f,f.sab,{type:'systemSabotage',kind:'power',targetId:'beacon'},165000);apply(f,f.sab,{type:'systemSabotage',kind:'communications',targetId:'beacon'},165000);assert(s.sabotage.active&&s.systems.communications.active);place(f.sab,BEACON_VENTS[0]);apply(f,f.sab,{type:'vent',entryId:BEACON_VENTS[0].id,exitId:BEACON_VENTS[1].id},165000);
+});
+
+test('validation and hints work on frozen state and reject clock overflow, inherited fields and accessors inertly',()=>{
+ const f=fixture();const freeze=value=>{if(value&&typeof value==='object'){for(const child of Object.values(value))freeze(child);Object.freeze(value);}return value;};freeze(f.state);const before=json(f.state);assert(systems.systemActionHints(f.state,f.sab,100000,f.ctx).length);assert.equal(systems.validateSystemsState(f.state),true);assert.deepEqual(json(f.state),before);
+ let reads=0;const accessor={get type(){reads++;return 'sabotage';}};assert(systems.validateSystemAction(f.state,f.sab,accessor,100000,f.ctx));assert.equal(reads,0);
+ assert(systems.validateSystemAction(f.state,f.sab,Object.create({type:'sabotage'}),100000,f.ctx));for(const at of [NaN,Infinity,-1,100000.5,Number.MAX_SAFE_INTEGER])assert(systems.validateSystemAction(f.state,f.sab,{type:'sabotage'},at,f.ctx));
+});
+
+test('network fixture room labels must match physical hatch locations; repairs/transit persist without private projection aliases',()=>{
+ const network=json(BEACON_VENTS);network[0].roomId='engine';assert.throws(()=>validateHatchNetwork(network));
+ const f=fixture();apply(f,f.sab,{type:'systemSabotage',kind:'flood',targetId:'beacon'});place(f.crew[0],BEACON_REPAIRS.flood[0]);apply(f,f.crew[0],{type:'systemRepair',systemId:'flood',siteId:BEACON_REPAIRS.flood[0].id},100001);const restored=json(f.state);assert.equal(systems.validateSystemsState(restored),true);const own=systems.getSystemsView(restored,f.crew[0].id),other=systems.getSystemsView(restored,f.crew[1].id);assert.deepEqual(own.critical,other.critical);assert.equal(own.critical.repairsCompleted,1);own.critical.sites[0].position.x=0;own.critical.sites[0].progress=0;assert.equal(restored.sabotage.sites[0].progress,1);assert.notEqual(restored.sabotage.sites[0].position.x,0);assert(!JSON.stringify(other).includes(f.crew[0].id));
+});

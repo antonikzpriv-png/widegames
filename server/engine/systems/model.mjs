@@ -9,7 +9,7 @@ export const vents=new Map(BEACON_VENTS.map(v=>[v.id,v]));
 export const own=(value,key)=>Object.hasOwn(value,key)?value[key]:undefined;
 export const object=value=>value!==null&&typeof value==='object'&&!Array.isArray(value)&&[Object.prototype,null].includes(Object.getPrototypeOf(value));
 export const time=value=>Number.isSafeInteger(value)&&value>=0;
-export const point=value=>object(value)&&Reflect.ownKeys(value).length===2&&Object.hasOwn(value,'x')&&Object.hasOwn(value,'y')&&Number.isFinite(value.x)&&Number.isFinite(value.y);
+export const point=value=>exact(value,['x','y'])&&Number.isFinite(value.x)&&Number.isFinite(value.y);
 export const id=value=>typeof value==='string'&&/^[A-Za-z][A-Za-z0-9_-]{0,63}$/.test(value)&&!['constructor','prototype'].includes(value);
 export function exact(value,keys){return object(value)&&Reflect.ownKeys(value).length===keys.length&&keys.every(key=>Object.hasOwn(value,key)&&Object.hasOwn(Object.getOwnPropertyDescriptor(value,key),'value'));}
 export function rulesFor(state){
