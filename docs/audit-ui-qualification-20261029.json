@@ -1,0 +1,455 @@
+{
+  "sourcePin": "2948666aae020e2872dabd4f98092e6678b7d4bc",
+  "checkout": "2948666aae020e2872dabd4f98092e6678b7d4bc",
+  "historicalBackendPin": null,
+  "modifiedPaths": [],
+  "runtimeModifiedPaths": [],
+  "frontendModifiedPaths": [],
+  "fixture": "Current checkout runtime, seeded engine/clock, real demo AI and HTTP/WS. Failed transport/body consumption only, no fabricated API payloads.",
+  "cases": [
+    {
+      "name": "new boundary: unavailable room inspection sends no action and preserves native focus",
+      "feedback": "Galley: Provisions and freshwater filters. Move only to a connected room when your movement cooldown is ready.",
+      "active": "galley",
+      "passed": true
+    },
+    {
+      "name": "new boundary: map room labels remain opaque/readable at 320, 390, 768 and desktop",
+      "widths": [
+        {
+          "width": 320,
+          "overflow": false,
+          "rooms": [
+            {
+              "name": "Bridge",
+              "opacity": "1",
+              "bounds": {
+                "width": 69.4375,
+                "height": 105
+              },
+              "color": "rgb(238, 240, 233)",
+              "background": "rgb(59, 58, 48)",
+              "labelContrast": 9.965899313573216,
+              "occupantContrast": 5.928374235263565
+            },
+            {
+              "name": "Archive",
+              "opacity": "1",
+              "bounds": {
+                "width": 69.4375,
+                "height": 60
+              },
+              "color": "rgb(238, 240, 233)",
+              "background": "rgb(28, 48, 59)",
+              "labelContrast": 11.903854565404146,
+              "occupantContrast": 7.081197841297862
+            },
+            {
+              "name": "Lantern",
+              "opacity": "1",
+              "bounds": {
+                "width": 69.4375,
+                "height": 60
+              },
+              "color": "rgb(238, 240, 233)",
+              "background": "rgb(28, 48, 59)",
+              "labelContrast": 11.903854565404146,
+              "occupantContrast": 7.081197841297862
+            },
+            {
+              "name": "Galley",
+              "opacity": "1",
+              "bounds": {
+                "width": 69.4375,
+                "height": 60
+              },
+              "color": "rgb(238, 240, 233)",
+              "background": "rgb(28, 48, 59)",
+              "labelContrast": 11.903854565404146,
+              "occupantContrast": 7.081197841297862
+            },
+            {
+              "name": "Engine",
+              "opacity": "1",
+              "bounds": {
+                "width": 69.4375,
+                "height": 60
+              },
+              "color": "rgb(238, 240, 233)",
+              "background": "rgb(28, 48, 59)",
+              "labelContrast": 11.903854565404146,
+              "occupantContrast": 7.081197841297862
+            },
+            {
+              "name": "Workshop",
+              "opacity": "1",
+              "bounds": {
+                "width": 69.4375,
+                "height": 60
+              },
+              "color": "rgb(238, 240, 233)",
+              "background": "rgb(28, 48, 59)",
+              "labelContrast": 11.903854565404146,
+              "occupantContrast": 7.081197841297862
+            }
+          ]
+        },
+        {
+          "width": 390,
+          "overflow": false,
+          "rooms": [
+            {
+              "name": "Bridge",
+              "opacity": "1",
+              "bounds": {
+                "width": 89.03125,
+                "height": 91
+              },
+              "color": "rgb(238, 240, 233)",
+              "background": "rgb(59, 58, 48)",
+              "labelContrast": 9.965899313573216,
+              "occupantContrast": 5.928374235263565
+            },
+            {
+              "name": "Archive",
+              "opacity": "1",
+              "bounds": {
+                "width": 89.03125,
+                "height": 60
+              },
+              "color": "rgb(238, 240, 233)",
+              "background": "rgb(28, 48, 59)",
+              "labelContrast": 11.903854565404146,
+              "occupantContrast": 7.081197841297862
+            },
+            {
+              "name": "Lantern",
+              "opacity": "1",
+              "bounds": {
+                "width": 89.03125,
+                "height": 60
+              },
+              "color": "rgb(238, 240, 233)",
+              "background": "rgb(28, 48, 59)",
+              "labelContrast": 11.903854565404146,
+              "occupantContrast": 7.081197841297862
+            },
+            {
+              "name": "Galley",
+              "opacity": "1",
+              "bounds": {
+                "width": 89.03125,
+                "height": 60
+              },
+              "color": "rgb(238, 240, 233)",
+              "background": "rgb(28, 48, 59)",
+              "labelContrast": 11.903854565404146,
+              "occupantContrast": 7.081197841297862
+            },
+            {
+              "name": "Engine",
+              "opacity": "1",
+              "bounds": {
+                "width": 89.03125,
+                "height": 60
+              },
+              "color": "rgb(238, 240, 233)",
+              "background": "rgb(28, 48, 59)",
+              "labelContrast": 11.903854565404146,
+              "occupantContrast": 7.081197841297862
+            },
+            {
+              "name": "Workshop",
+              "opacity": "1",
+              "bounds": {
+                "width": 89.03125,
+                "height": 60
+              },
+              "color": "rgb(238, 240, 233)",
+              "background": "rgb(28, 48, 59)",
+              "labelContrast": 11.903854565404146,
+              "occupantContrast": 7.081197841297862
+            }
+          ]
+        },
+        {
+          "width": 768,
+          "overflow": false,
+          "rooms": [
+            {
+              "name": "Bridge",
+              "opacity": "1",
+              "bounds": {
+                "width": 115.546875,
+                "height": 93
+              },
+              "color": "rgb(238, 240, 233)",
+              "background": "rgb(59, 58, 48)",
+              "labelContrast": 9.965899313573216,
+              "occupantContrast": 5.928374235263565
+            },
+            {
+              "name": "Archive",
+              "opacity": "1",
+              "bounds": {
+                "width": 115.546875,
+                "height": 65
+              },
+              "color": "rgb(238, 240, 233)",
+              "background": "rgb(28, 48, 59)",
+              "labelContrast": 11.903854565404146,
+              "occupantContrast": 7.081197841297862
+            },
+            {
+              "name": "Lantern",
+              "opacity": "1",
+              "bounds": {
+                "width": 115.546875,
+                "height": 65
+              },
+              "color": "rgb(238, 240, 233)",
+              "background": "rgb(28, 48, 59)",
+              "labelContrast": 11.903854565404146,
+              "occupantContrast": 7.081197841297862
+            },
+            {
+              "name": "Galley",
+              "opacity": "1",
+              "bounds": {
+                "width": 115.546875,
+                "height": 65
+              },
+              "color": "rgb(238, 240, 233)",
+              "background": "rgb(28, 48, 59)",
+              "labelContrast": 11.903854565404146,
+              "occupantContrast": 7.081197841297862
+            },
+            {
+              "name": "Engine",
+              "opacity": "1",
+              "bounds": {
+                "width": 115.546875,
+                "height": 65
+              },
+              "color": "rgb(238, 240, 233)",
+              "background": "rgb(28, 48, 59)",
+              "labelContrast": 11.903854565404146,
+              "occupantContrast": 7.081197841297862
+            },
+            {
+              "name": "Workshop",
+              "opacity": "1",
+              "bounds": {
+                "width": 115.546875,
+                "height": 65
+              },
+              "color": "rgb(238, 240, 233)",
+              "background": "rgb(28, 48, 59)",
+              "labelContrast": 11.903854565404146,
+              "occupantContrast": 7.081197841297862
+            }
+          ]
+        },
+        {
+          "width": 1440,
+          "overflow": false,
+          "rooms": [
+            {
+              "name": "Bridge",
+              "opacity": "1",
+              "bounds": {
+                "width": 169.546875,
+                "height": 79
+              },
+              "color": "rgb(238, 240, 233)",
+              "background": "rgb(59, 58, 48)",
+              "labelContrast": 9.965899313573216,
+              "occupantContrast": 5.928374235263565
+            },
+            {
+              "name": "Archive",
+              "opacity": "1",
+              "bounds": {
+                "width": 169.546875,
+                "height": 65
+              },
+              "color": "rgb(238, 240, 233)",
+              "background": "rgb(28, 48, 59)",
+              "labelContrast": 11.903854565404146,
+              "occupantContrast": 7.081197841297862
+            },
+            {
+              "name": "Lantern",
+              "opacity": "1",
+              "bounds": {
+                "width": 169.546875,
+                "height": 65
+              },
+              "color": "rgb(238, 240, 233)",
+              "background": "rgb(28, 48, 59)",
+              "labelContrast": 11.903854565404146,
+              "occupantContrast": 7.081197841297862
+            },
+            {
+              "name": "Galley",
+              "opacity": "1",
+              "bounds": {
+                "width": 169.546875,
+                "height": 65
+              },
+              "color": "rgb(238, 240, 233)",
+              "background": "rgb(28, 48, 59)",
+              "labelContrast": 11.903854565404146,
+              "occupantContrast": 7.081197841297862
+            },
+            {
+              "name": "Engine",
+              "opacity": "1",
+              "bounds": {
+                "width": 169.546875,
+                "height": 65
+              },
+              "color": "rgb(238, 240, 233)",
+              "background": "rgb(28, 48, 59)",
+              "labelContrast": 11.903854565404146,
+              "occupantContrast": 7.081197841297862
+            },
+            {
+              "name": "Workshop",
+              "opacity": "1",
+              "bounds": {
+                "width": 169.546875,
+                "height": 65
+              },
+              "color": "rgb(238, 240, 233)",
+              "background": "rgb(28, 48, 59)",
+              "labelContrast": 11.903854565404146,
+              "occupantContrast": 7.081197841297862
+            }
+          ]
+        }
+      ],
+      "passed": true
+    },
+    {
+      "name": "new counterexample: interrupted first spectator join can recover using the visible retry",
+      "afterVisibleRetry": {
+        "joinAttempts": 2,
+        "feedback": "Connection restored.",
+        "stillFinding": false
+      },
+      "reloadControl": {
+        "joinAttempts": 2,
+        "seatId": null
+      },
+      "passed": true
+    },
+    {
+      "name": "regression: uncertain successful join reuses its real cookie without issuing another POST",
+      "cookieViewBeforeRetry": {
+        "roomId": "O3BcDJeB1ZX0fuwNa-lnAezN",
+        "mode": "human",
+        "isHost": false,
+        "seatId": null,
+        "phase": "roam",
+        "connection": "connected",
+        "ai": {
+          "mode": "demo",
+          "provider": "demo",
+          "calls": 0,
+          "tokens": 0,
+          "costUsd": 0,
+          "limitReason": "demo_configured",
+          "strategy": "demo",
+          "navigation": "local",
+          "council": "demo"
+        },
+        "notices": [
+          "Demo AI active: demo configured."
+        ],
+        "createdAt": 1793293725396
+      },
+      "joins": 1,
+      "identitiesAdded": 1,
+      "passed": true
+    },
+    {
+      "name": "regression: existing human cookie is restored without a spectator join",
+      "joinRequests": 0,
+      "passed": true
+    },
+    {
+      "name": "new boundary: one human browser switches crew/saboteur rooms without stale controls or lost seats",
+      "saboteurRoom": "y-sFgYaBFmZvtfO8zUwfgneq",
+      "backPhase": "roam",
+      "forwardRole": "saboteur",
+      "passed": true
+    },
+    {
+      "name": "regression: departing a pending real room GET cannot join that obsolete room",
+      "oldReadRelease": "continued",
+      "joins": [
+        "/api/rooms/y-sFgYaBFmZvtfO8zUwfgneq/join"
+      ],
+      "passed": true
+    },
+    {
+      "name": "new counterexample: canceling elimination returns keyboard focus to its trigger",
+      "confirmFocus": "Confirm elimination",
+      "afterCancel": {
+        "tag": "BUTTON",
+        "key": "eliminate-p2"
+      },
+      "passed": true
+    },
+    {
+      "name": "new boundary: hidden critical deadline rejects late speech, ends by rules, and keeps a true role-revealed replay",
+      "criticalDeadline": 1793293870374,
+      "status": 409,
+      "outcome": {
+        "winner": "saboteur",
+        "reason": "critical",
+        "at": 1793293870374
+      },
+      "passed": true
+    },
+    {
+      "name": "browser runtime exceptions absent in tested boundaries",
+      "passed": true
+    }
+  ],
+  "observations": [],
+  "runtimeErrors": [],
+  "screenshots": [
+    "map-320.png",
+    "map-390.png",
+    "map-768.png",
+    "map-1440.png",
+    "join-interrupted-visible-retry.png",
+    "uncertain-join-cookie-recovery.png",
+    "pending-old-room-switch.png",
+    "elimination-cancel-focus.png",
+    "critical-deadline-replay-390.png"
+  ],
+  "cleanupErrors": [],
+  "sourceEvents": [],
+  "sourceTrackingErrors": [],
+  "origin": "http://127.0.0.1:57385",
+  "browser": "Chrome/156.0.8078.73",
+  "node": "v24.20.0",
+  "seeds": {
+    "crew": "1",
+    "saboteur": "12"
+  },
+  "crewRoom": "O3BcDJeB1ZX0fuwNa-lnAezN",
+  "saboteurRoom": "y-sFgYaBFmZvtfO8zUwfgneq",
+  "sourceChangedPaths": [],
+  "checkoutAfter": "2948666aae020e2872dabd4f98092e6678b7d4bc",
+  "modifiedPathsAfter": [],
+  "runtimeUnchanged": true,
+  "backendUnchanged": true,
+  "summary": {
+    "passed": 10,
+    "failed": 0
+  }
+}

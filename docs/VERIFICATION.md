@@ -2,7 +2,15 @@
 
 The integrated application is playable in human-plus-AI and six-AI spectator modes. Qualification used Node24.20.0 and Chrome156.0.8078.73 on Windows, with source, fixtures and artifacts on D:. No paid/live provider request or deployment was performed.
 
-## Final results
+## Follow-up audit and combined qualification
+
+The five-agent follow-up closed three UI lifecycle/focus findings and two malformed-origin configuration findings, with separate author and independent controls. The final combined runtime was browser-qualified from clean commit **`2948666aae020e2872dabd4f98092e6678b7d4bc`**. The complete offline run passed **233 tests, five explicit opt-in skips, zero failures** (238 registered); normal preparation checks 52 modules.
+
+The actual Chrome run completed human-plus-AI and all-AI matches with victory/replay, passed 17 scenario assertions and inspected 471 returned views for privacy. A separate current-runtime browser run passed ten recovery, cookie/seat, room-switch, keyboard-focus and critical-deadline scenarios. Both had zero runtime/cleanup errors; the primary-page console gate passed, and the targeted run recorded no runtime source writes. These overlapping controls are not summed into a unique test total. Fixtures remain explicitly seeded/accelerated and use labeled local demo bots.
+
+See [follow-up closure](AUDIT-CLOSURE-20261029.md), [complete-match report](audit-browser-qualification-20261029.json), [targeted browser report](audit-ui-qualification-20261029.json) and the refreshed [screenshots](screenshots/). The original qualification below remains historical evidence; the follow-up supersedes its old open findings and test counts.
+
+## Original qualification
 
 | Check | Observed result |
 | --- | --- |

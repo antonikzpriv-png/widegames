@@ -1,0 +1,117 @@
+{
+  "fixture": "Seeded QA, accelerated deadlines, real demo bots; no live provider calls.",
+  "checks": [
+    {
+      "name": "Original game shell loads",
+      "passed": true
+    },
+    {
+      "name": "Human receives exactly its own private role",
+      "passed": true
+    },
+    {
+      "name": "Seat cookie is not readable by browser JavaScript",
+      "passed": true
+    },
+    {
+      "name": "Human moves, performs a real task and returns to Bridge",
+      "passed": true
+    },
+    {
+      "name": "Discussion draft and focus survive realtime updates while typing",
+      "passed": true
+    },
+    {
+      "name": "Player dialogue is text, never executable markup",
+      "passed": true
+    },
+    {
+      "name": "Shared room link joins an independent public spectator",
+      "passed": true
+    },
+    {
+      "name": "Spectator cannot act as a keeper",
+      "passed": true
+    },
+    {
+      "name": "Reload restores the original human seat and permitted state",
+      "passed": true
+    },
+    {
+      "name": "Human can skip voting; ballot targets remain hidden until tally",
+      "passed": true
+    },
+    {
+      "name": "Human-plus-AI match reaches victory and loads attributed replay",
+      "passed": true
+    },
+    {
+      "name": "All-AI mode uses the same engine with no human private view",
+      "passed": true
+    },
+    {
+      "name": "Mobile game fits 390px without horizontal overflow",
+      "passed": true
+    },
+    {
+      "name": "Mobile game fits 320px without horizontal overflow",
+      "passed": true
+    },
+    {
+      "name": "Roles reveal after the all-AI match, not before",
+      "passed": true
+    },
+    {
+      "name": "No browser runtime or payload privacy failures",
+      "passed": true
+    },
+    {
+      "name": "No primary-page browser console errors",
+      "passed": true
+    }
+  ],
+  "errors": [],
+  "consoleErrors": [],
+  "privacyChecks": 471,
+  "screenshots": [
+    "01-harbor-desktop.png",
+    "02-human-lobby.png",
+    "02b-human-deck.png",
+    "03-discussion-desktop.png",
+    "04-spectator-mobile.png",
+    "05-voting.png",
+    "06-human-results-replay.png",
+    "07-all-ai-mobile.png",
+    "08-all-ai-results-mobile.png"
+  ],
+  "outcomes": [
+    {
+      "winner": "saboteur",
+      "reason": "parity",
+      "at": 1793293768579
+    },
+    {
+      "winner": "crew",
+      "reason": "tasks",
+      "at": 1793293862250
+    }
+  ],
+  "sourceCommit": "2948666aae020e2872dabd4f98092e6678b7d4bc",
+  "modifiedTrackedPaths": [],
+  "browser": "Chrome/156.0.8078.73",
+  "rules": {
+    "tasksPerCrew": 4,
+    "moveCooldownMs": 600,
+    "taskCooldownMs": 8000,
+    "initialKillCooldownMs": 45000,
+    "killCooldownMs": 12000,
+    "sabotageCooldownMs": 50000,
+    "criticalDurationMs": 40000,
+    "discussionMs": 18000,
+    "votingMs": 10000,
+    "meetingCooldownMs": 1000,
+    "roamDeadlineMs": 180000,
+    "maxMatchMs": 900000
+  },
+  "cleanupErrors": []
+}
