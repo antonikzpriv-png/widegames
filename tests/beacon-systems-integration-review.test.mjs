@@ -32,8 +32,8 @@ function safeView(view){
  if(view.game?.systems){assert.equal(view.game.systems.transit,undefined);if(view.seatId===null){assert.equal(view.game.self,null);assert.equal(view.game.systems.selfTransit,null);assert.equal(view.game.systems.cooldowns,null);}}
 }
 async function seeded(f,{roles=()=>true,critical}={}){
- const room=rooms.createRoom('human',f.now,f.config.lobbyConfig),host=rooms.issueIdentity(room,true),second=rooms.issueIdentity(room);second.identity.seatId='captain';let state;
- for(let i=0;i<200;i++){state=engine.createMatch({id:room.id,mode:'human',world:true,systems:true,roster,humanPlayerIds:['signal','captain'],saboteurCount:2,seed:'boundary-'+i,now:f.now,config:f.config.rules});if(roles(state))break;state=null;}assert(state,'seed predicate must be satisfied');
+ const setup=f.config.lobbyConfig,room=rooms.createRoom('human',f.now,setup),host=rooms.issueIdentity(room,true),second=rooms.issueIdentity(room);second.identity.seatId='captain';let state;
+ for(let i=0;i<200;i++){state=engine.createMatch({id:room.id,mode:'human',world:true,systems:true,roster:setup.roster,humanPlayerIds:setup.humanPlayerIds,saboteurCount:setup.saboteurCount,seed:'boundary-'+i,now:f.now,config:f.config.rules});if(roles(state))break;state=null;}assert(state,'seed predicate must be satisfied');
  if(critical){const actor=state.players.find(p=>p.role==='saboteur');f.advance(1);const result=engine.applyAction(state,actor.id,{id:'fixture-critical',type:'systemSabotage',kind:critical,targetId:'beacon'},f.now);assert(result.accepted);state=result.state;}
  room.startId='seed-start';room.state=state;room.updatedAt=f.now;room.aiContext={privateReview:marker,reservedCalls:1};
  const store=await storage.createRoomStore(f.directory);try{await store.save(room);}finally{await store.close();}
@@ -57,6 +57,30 @@ test('coordinator schema3 HTTP binds custom primary identity, rejects cross-room
 for(const id of ['toString','valueOf','hasOwnProperty'])test('coordinator admitted custom human ID '+id+' is not inherited transit',async t=>{
  const custom=roster.map((p,i)=>i? p:{...p,id}),f=await fixture(t,{config:{lobbyConfig:{roster:custom,saboteurCount:2,humanPlayerIds:[id]}}}),host=await started(f);assert.equal(host.start.game.self.id,id);const moved=await f.request(host.route+'/input',{seq:1,dx:0,dy:0},host.cookie);assert.equal(moved.status,200,'admitted custom actor '+id+' must not be falsely IN_TRANSIT: '+JSON.stringify(moved.body));
 });
+for(const id of ['toString','valueOf','hasOwnProperty'])test('coordinator admitted special actor '+id+' owns private ability notes, restored receipts and canonical ended replay',async t=>{
+ // Trusted offline second-seat fixture; all subsequent ability/input/view/replay requests use real HTTP.
+ const custom=roster.map(p=>p.id==='signal'?{...p,id}:p),f=await fixture(t,{config:{lobbyConfig:{roster:custom,saboteurCount:2,humanPlayerIds:[id,'captain']}},seed:f=>seeded(f,{critical:'power'})}),s=f.seed;
+ const observer=await f.request(s.route+'/join',{}),action={id:'special-private-note',type:'ability',abilityId:'field-note',targetId:id};
+ assert.equal((await f.request(s.route+'/input',{seq:1,dx:0,dy:0},s.host)).status,200);
+ const result=await f.request(s.route+'/action',action,s.host);assert.equal(result.status,200,JSON.stringify(result.body));assert.equal(result.body.seatId,id);assert.equal(result.body.game.self.transit,null);assert.equal(result.body.game.abilities.notes.length,1);safeView(result.body);
+ const before=structuredClone(f.game.rooms.get(s.id).data),note=before.state.abilities[id].notes[0];assert(Object.hasOwn(before.state.abilities,id));assert.equal(Object.prototype[id].notes,undefined);assert.equal(note.id,'note-'+id+'-'+f.now);
+ const assertCanonical=state=>{assert(state.replay.every(e=>/^r[1-9]\d*$/.test(e.id)));assert.equal(new Set(state.replay.map(e=>e.id)).size,state.replay.length);const event=state.replay.find(e=>e.type==='field_note'&&e.playerId===id);assert(event);assert.notEqual(event.id,note.id);assert.equal(event.note.id,note.id);assert.deepEqual(event.visibleTo,[id]);};assertCanonical(before.state);
+ async function checkPrivate(){
+  const own=(await f.request(s.route,undefined,s.host)).body;safeView(own);assert.equal(own.seatId,id);assert.equal(own.game.self.id,id);assert.deepEqual(own.game.abilities.notes,[note]);
+  for(const cookie of [s.second,observer.cookie]){const response=await f.request(s.route,undefined,cookie);assert.equal(response.status,200);safeView(response.body);assert.deepEqual(response.body.game.abilities.notes,[]);assert(!JSON.stringify(response.body).includes(note.id));assert(!response.body.game.events.some(e=>e.type==='field_note'&&e.playerId===id));}
+  assert.equal((await f.request(s.route+'/replay',undefined,s.host)).status,409);
+ }
+ await checkPrivate();await f.restart();assert.deepEqual(f.game.rooms.get(s.id).data.identities,before.identities);assert.deepEqual(f.game.rooms.get(s.id).data.state.abilities,before.state.abilities);await checkPrivate();
+ assert.equal((await f.request(s.route+'/input',{seq:1,dx:0,dy:0},s.host)).status,200);assert.equal((await f.request(s.route+'/input',{seq:2,dx:0,dy:0},s.host)).status,200);
+ const retry=await f.request(s.route+'/action',action,s.host);assert.equal(retry.status,200);assert.deepEqual(retry.body.game.abilities.notes,[note]);assert.equal(f.game.rooms.get(s.id).data.state.requests[id].filter(r=>r.id===action.id).length,1);
+ const cooldown=await f.request(s.route+'/action',{...action,id:'fresh-note-during-cooldown'},s.host);assert.equal(cooldown.status,409);assert.equal(cooldown.body.error.code,'COOLDOWN');
+ const foreign=await f.request(s.route+'/action',{...action,id:'foreign-note'},s.second);assert.equal(foreign.status,409);assert.equal(foreign.body.error.code,'INVALID_TARGET');assert.equal((await f.request(s.route+'/action',action,observer.cookie)).status,403);
+ const state=f.game.rooms.get(s.id).data.state;assertCanonical(state);f.setNow(state.sabotage.deadlineAt);
+ const ended=await f.request(s.route+'/input',{seq:3,dx:0,dy:0},s.host);assert.equal(ended.status,409);assert.equal(ended.body.error.code,'MATCH_INACTIVE');assert.equal(f.game.rooms.get(s.id).data.state.phase,'ended');
+ for(const cookie of [s.host,s.second,observer.cookie]){const replay=await f.request(s.route+'/replay',undefined,cookie);assert.equal(replay.status,200);assertCanonical({replay:replay.body.replay});assert.equal(replay.body.replay.filter(e=>e.type==='field_note'&&e.playerId===id).length,1);}
+ assert.deepEqual(f.game.rooms.get(s.id).data.aiContext,before.aiContext);assert.equal(await readFile(path.join(f.directory,'ai-daily-budget.json'),'utf8'),s.ledger);assert.equal(Object.prototype[id].notes,undefined);
+});
+
 test('trusted two-human fixture: HTTP actor receipts and private field notes remain seat-bound across restart with unchanged budget',async t=>{
  const f=await fixture(t,{seed:f=>seeded(f)}),s=f.seed,a={id:'same-per-actor-id',type:'ability',abilityId:'field-note',targetId:'signal'},b={...a,targetId:'captain'};
  const results=await Promise.all([f.request(s.route+'/action',a,s.host),f.request(s.route+'/action',b,s.second)]);assert(results.every(r=>r.status===200));assert.equal(results[0].body.game.self.id,'signal');assert.equal(results[1].body.game.self.id,'captain');assert.equal(results[0].body.game.abilities.notes.length,1);assert.equal(results[1].body.game.abilities.notes.length,1);
