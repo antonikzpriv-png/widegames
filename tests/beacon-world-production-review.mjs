@@ -8,18 +8,18 @@ import {spawn} from 'node:child_process';
 import {createRequire} from 'node:module';
 import {createHash} from 'node:crypto';
 import {fileURLToPath,pathToFileURL} from 'node:url';
-const pin='7272556542b762e72a34450801fc762ba06d082c';
+const pin='afc6b1a94d201a943e84b955fcb492fc2ed031bc';
 const artifact=fileURLToPath(new URL('../_artifacts/',import.meta.url));
-const root=path.resolve(process.env.BEACON_PRODUCTION_REVIEW_ROOT||path.join(artifact,'beacon-production-7272556'));
+const root=path.resolve(process.env.BEACON_PRODUCTION_REVIEW_ROOT||path.join(artifact,'beacon-production-afc6b1a'));
 assert.ok(root.startsWith(path.resolve(artifact)+path.sep),'Snapshot must stay inside own ignored artifacts');
-const output=path.join(artifact,'beacon-production-7272556-result.json');
+const output=path.join(artifact,'beacon-production-afc6b1a-result.json');
 const report={pin,node:process.version,checks:[],children:[],providerFetchAttempts:0,forcedStops:0,socketErrors:[],startedAt:new Date().toISOString()};
 const check=(condition,label)=>{assert.ok(condition,label);report.checks.push(label);console.log('PASS '+label);};
 const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 const hash=bytes=>createHash('sha256').update(bytes).digest('hex');
 const manifest=JSON.parse(await readFile(root+'-manifest.json','utf8'));assert.equal(manifest.pin,pin);
 async function sourceUnchanged(){for(const entry of manifest.files)assert.equal(hash(await readFile(path.join(root,entry.file))),entry.sha256,entry.file);}
-await sourceUnchanged();check(manifest.files.length===216,'All216 raw committed source blobs match the exact manifest');
+await sourceUnchanged();check(manifest.files.length===220,'All220 raw committed source blobs match the exact manifest');
 const require=createRequire(path.join(root,'package.json')),installed=JSON.parse(await readFile(path.join(root,'node_modules/.package-lock.json'),'utf8'));
 assert.deepEqual(Object.keys(installed.packages),['node_modules/ws']);assert.equal(require('ws/package.json').version,'8.22.0');assert.ok(require.resolve('ws').startsWith(path.join(root,'node_modules')+path.sep));
 await assert.rejects(access(path.join(root,'node_modules/puppeteer-core'),constants.F_OK),{code:'ENOENT'});assert.throws(()=>require.resolve('puppeteer-core'),{code:'MODULE_NOT_FOUND'});check(true,'Production graph is isolated ws8.22.0 only; Puppeteer is absent');
@@ -91,7 +91,7 @@ try{
  const second=await launch(),lock2=JSON.parse(await readFile(path.join(data,'service.lock'),'utf8'));assert.equal(lock2.pid,second.child.pid);assert.notEqual(lock2.token,lock.token);const restored=await request(second,'/api/rooms/'+roomId,{cookie});assert.equal(restored.response.status,200);safe(restored.value);assert.equal(restored.value.seatId,seat);assert.equal(restored.value.game.self.role,role);assert.equal(restored.value.game.self.inputSeq,2);assert.deepEqual(restored.value.game.self.position,stopped);assert.deepEqual(restored.value.game.abilities.notes,[note]);check(true,'Fresh real main restores original cookie/seat/role and exact stopped input/note checkpoint');
  const duplicateInput=await request(second,'/api/rooms/'+roomId+'/input',{method:'POST',body:{seq:2,dx:0,dy:0},cookie});assert.equal(duplicateInput.response.status,200);safe(duplicateInput.value);assert.deepEqual(duplicateInput.value.game.self.position,stopped);const duplicateNote=await request(second,'/api/rooms/'+roomId+'/action',{method:'POST',body:noteAction,cookie});assert.equal(duplicateNote.response.status,200);safe(duplicateNote.value);assert.deepEqual(duplicateNote.value.game.abilities.notes,[note]);const spectatorRestored=await request(second,'/api/rooms/'+roomId,{cookie:spectatorCookie});assert.equal(spectatorRestored.response.status,200);safe(spectatorRestored.value);check(true,'Restored duplicate input/note remain inert; original spectator remains isolated');
  await stop(second);check(true,'Restarted main independently acquires and gracefully releases its new lock');
- await sourceUnchanged();assert.deepEqual(report.socketErrors,[]);check(report.providerFetchAttempts===0&&report.forcedStops===0,'All216 source blobs unchanged; no provider fetch attempts, socket privacy errors or forced stops');report.status='passed';
+ await sourceUnchanged();assert.deepEqual(report.socketErrors,[]);check(report.providerFetchAttempts===0&&report.forcedStops===0,'All220 source blobs unchanged; no provider fetch attempts, socket privacy errors or forced stops');report.status='passed';
 }catch(error){report.status='failed';report.error=String(error.stack||error);throw error;}
 finally{
  for(const socket of sockets)if(socket.ws.readyState!==3)socket.ws.terminate();if(active){try{await stop(active);}catch(error){report.cleanupError=String(error);if(active?.child.exitCode===null)active.child.kill();}}
