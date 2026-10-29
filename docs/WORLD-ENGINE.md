@@ -1,0 +1,17 @@
+﻿# Authoritative world engine
+
+Milestone: schema-2 world state, continuous movement, input sequencing and physical navigation are implemented in server/engine/index.mjs and world-runtime.mjs. createMatch defaults world:false for schema-1 fixtures. Production passes world:true. The existing five exports remain and applyInput is added. Navigation is a discrete action {id,type:'navigate',x,y}; move {roomId} in a world starts a physical route to that adjacent room's station. WASD input overrides the route.
+
+Dependency: coordinator shared geometry commit 6f6f7c023ed3727b9849cdf27040a0ca88ddb46e. Production imports shared/world.mjs. This isolated owner checkout may qualify against that read-only module with WORLD_ENGINE_GEOMETRY_MODULE=file:///D:/Widegames-work/world-coordinator-20261029/shared/world.mjs; no shared or other-owner source is copied or changed.
+
+Schema 2 adds worldVersion:1 and player.position. Private player.motion contains seq, dx, dy, leaseUntil, at, manual, path, destination and recordedAt. All state is JSON-safe. Input {seq,dx,dy} validates a positive safe integer and integer axes -1..1. Speed is server-owned 180 units/second, diagonal magnitude is normalized, and input leases last 600 ms. Same-sequence/same-direction input is inert; changed contents conflict; older sequences reject. Steering does not consume discrete request IDs.
+
+Movement settles before each chronological phase, critical or maximum deadline, and before actions/input. Meetings, death and terminal transitions stop navigation and manual movement. Input lease expiry stops steering even after a delayed tick or JSON restoration. Navigation persists to arrival unless overridden or stopped by lifecycle. While crossing corridors, roomId retains the last valid room.
+
+World interaction checks use shared authoritative geometry: task at own room station within92; repair at Engine station within92; emergency bell within92; elimination within70 plus visibility; report within130 plus visibility. Navigation targets must be walkable and server-pathfindable. No caller supplies authoritative position, speed, clock or path.
+
+Views add worldVersion:1, self.position/inputSeq/moving/destination. Other player positions are null unless currently visible; spectators may observe public positions but no private role before ended. No other actor's motion, input sequence, route or destination is exposed. Bodies are generated as safe local events with the real death position/time. Eyewitness attribution remains restricted to actual observers at the kill. Public repair progress has no actor identity. View/replay copies remain defensive.
+
+Replay records validated navigation actions, direction changes, movement stop/arrival and samples at most once per second per moving keeper. Repeated same-direction heartbeats do not produce per-frame replay records. Existing replay bound12,000 and public timeline bound256 remain. Replay stays locked until ended.
+
+Initial validation: node --test tests/world-engine.test.mjs tests/engine.test.mjs tests/engine-rules.test.mjs with the geometry module above: 36 pass, zero fail/skip. This includes all30 legacy engine controls and six world controls for opt-in, speed/diagonal/lease, persisted sequences, physical routing, input validation/override and private coordinates. Further world-specific collision/proximity/deadline/lifecycle controls follow this early milestone. No paid provider, browser, publication or runtime changes outside the owned engine paths were used.
