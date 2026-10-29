@@ -1,0 +1,11 @@
+# Running Lantern Wake
+
+Use Node24 LTS (minimum22.13), a writable private data directory and one server process per data directory. There is no build step or browser-side API key. Install with `npm ci`, run offline checks with `npm test` and `npm run check`, start with `npm start`, then visit http://localhost:3000. Copy `.env.example` to `.env` and use `node --env-file=.env server/main.mjs` to load explicit configuration. Windows PowerShell and POSIX shells use the same commands.
+
+For a container, build `docker build -t lantern-wake .` then run `docker run --rm -p 3000:3000 -e PUBLIC_ORIGIN=http://localhost:3000 -v lantern-wake-data:/app/data lantern-wake`. The image runs as the unprivileged Node user. Docker commands are deployment instructions until actually qualified, not evidence of deployment.
+
+For public hosting bind HOST=0.0.0.0, set PUBLIC_ORIGIN to the exact HTTPS browser origin, terminate TLS at your reverse proxy and proxy WebSocket upgrades. Keep DATA_DIR on a persistent local volume; do not expose it as static files, run multiple replicas against it, or put it in a public bucket. Set a small MAX_ACTIVE_ROOMS for the host. The built-in request limits supplement an upstream rate limit. Stop gracefully using SIGTERM before backing up the whole data directory. Room identity and hidden roles in backups are sensitive; preserve file access controls. Restarts resume persisted deadlines, not suspended browser clocks.
+
+Demo bots run without credentials and are visibly labeled. Live mode requires AI_PROVIDER=anthropic and a server-side ANTHROPIC_API_KEY with provider billing enabled. The adapter docs specify supported model and conservative prices. MAX_AI_CALLS, MAX_AI_TOKENS and MAX_AI_COST_USD bound each match; MAX_DAILY_AI_COST_USD bounds conservative deployment-wide UTC-day reservations. Reservations persist before sends and are not refunded automatically after ambiguous failures. Exhaustion must explicitly fall back to demo or pause, and is recorded. Never mount .env in the browser/static directory. No live-provider qualification or spending is implied by passing mocked adapter tests.
+
+The repository was empty at task start, so origin/main had no base revision. The integration branch is the reviewable implementation; creating a main branch or publishing the app is separate from local qualification.
