@@ -188,6 +188,7 @@ export function applyAction(input,playerId,action,now=Date.now()) {
   if (!finiteTime(now) || now<input.updatedAt) return reject(fail('INVALID_TIME','Invalid server time.'));
   if (typeof playerId!=='string' || !state.players.some(p=>p.id===playerId)) return reject(fail('INVALID_PLAYER','Unknown keeper.'));
   const invalid=validateEnvelope(action); if (invalid) return reject(invalid);
+  if(action.type==='navigate'&&!isWorld(state))return reject(fail('INVALID_ACTION','Invalid action envelope.'));
   const fingerprint=JSON.stringify(Object.fromEntries(['type',...fields[action.type]].map(k=>[k,action[k]])));
   const prior=state.requests[playerId].find(r=>r.id===action.id);
   if (prior) {
@@ -262,7 +263,7 @@ export function getPlayerView(state,playerIdOrNull,now=Date.now()) {
     for (const b of state.bodies.filter(b=>!b.reported&&bodyVisible(b))) events.push(bodyEvent(b));
   } else for (const b of state.bodies.filter(b=>!b.reported)) events.push(bodyEvent(b));
   const hints=[];
-  if (p) for (const type of [...new Set([...ACTION_TYPES,...(isWorld(state)?['navigate']:[])])]) {
+  if (p) for (const type of [...new Set([...ACTION_TYPES.filter(type=>type!=='navigate'),...(isWorld(state)?['navigate']:[])])]) {
     let candidates=[{id:'hint',type}];
     if(type==='navigate')candidates=[{id:'hint',type,x:p.position.x,y:p.position.y}];
     if (type==='move') candidates=roomIds.map(roomId=>({id:'hint',type,roomId}));
@@ -296,12 +297,11 @@ export function applyInput(input,playerId,request,now=Date.now()) {
   if(request.seq<motion.seq)return reject(fail('STALE_INPUT','A newer movement input is already recorded.'));
   if(request.seq===motion.seq){
     if(request.dx!==motion.dx||request.dy!==motion.dy)return reject(fail('INPUT_CONFLICT','Sequence already used for a different direction.'));
-    return {state,events:timed.events,accepted:true,duplicate:true};
+    return {state,events:timed.events,accepted:!motion.error,...(motion.error?{error:clone(motion.error)}:{}),duplicate:true};
   }
-  if(['ended','paused'].includes(state.phase))return reject(fail('MATCH_INACTIVE','This match is not active.'));
-  if(!actor.alive)return reject(fail('PLAYER_DEAD','Eliminated keepers cannot move.'));
-  if(state.phase!=='roam')return reject(fail('WRONG_PHASE','Movement requires roaming.'));
+  const error=['ended','paused'].includes(state.phase)?fail('MATCH_INACTIVE','This match is not active.'):!actor.alive?fail('PLAYER_DEAD','Eliminated keepers cannot move.'):state.phase!=='roam'?fail('WRONG_PHASE','Movement requires roaming.'):null;
   state=clone(state);const p=state.players.find(p=>p.id===playerId);
+  if(error){p.motion.seq=request.seq;p.motion.dx=request.dx;p.motion.dy=request.dy;p.motion.error=error;state.version++;state.updatedAt=now;return {state,events:timed.events,accepted:false,error:clone(error)};}
   if(worldEngine.input(p,request,now))record(state,'direction',now,{playerId:p.id,dx:request.dx,dy:request.dy,position:clone(p.position)});
   state.version++;state.updatedAt=now;
   return {state,events:timed.events,accepted:true};
