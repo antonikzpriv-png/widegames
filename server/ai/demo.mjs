@@ -38,6 +38,8 @@ function visibleBodies(view) {
 
 function suspect(view, memory) {
   const living = ordered((view.players ?? []).filter(p => p.alive && p.id !== view.self.id));
+  const witnessed = living.filter(p => memory.witnesses?.[p.id]);
+  if (witnessed.length) return witnessed.sort((a, b) => memory.witnesses[b.id].at - memory.witnesses[a.id].at || a.id.localeCompare(b.id))[0].id;
   const ranked = living.filter(p => (memory.suspicion?.[p.id] ?? 0) > 0)
     .sort((a, b) => memory.suspicion[b.id] - memory.suspicion[a.id] || a.id.localeCompare(b.id));
   if (ranked.length) return ranked[0].id;
@@ -45,21 +47,38 @@ function suspect(view, memory) {
   return 'skip';
 }
 
+const VOICES = Object.freeze({
+  p1: ['Keep it practical.', 'Give me a concrete route.', 'Jobs first; keep the beacon working.'],
+  p2: ['Marking my route.', 'Which crossing did you take?', 'Let us compare the map before we split up.'],
+  p3: ['Everyone take a breath.', 'Tell us what you actually saw.', 'Stay together; we need every keeper.'],
+  p4: ['For the record.', 'That account needs checking.', 'Separate the record from a guess.'],
+  p5: ['Plain speaking.', 'No excuses: where were you?', 'Pair up and get the jobs done.'],
+  p6: ['Storm has a sense of humor.', 'Any signals clearer than rumors?', 'Less static, more working relays.']
+});
+
 function dialogue(view, memory) {
   const target = suspect(view, memory);
   const name = CHARACTERS.find(p => p.id === target)?.name;
   const room = rooms.get(view.self.roomId)?.name ?? 'my station';
-  const number = memory.discussionCount ?? 0;
+  const number = Math.min(memory.discussionCount ?? 0, 2);
+  const voice = VOICES[view.self.id] ?? VOICES.p1;
   if (view.self.role === 'saboteur') return [
-    `I was checking the relays near ${room}. Who can account for the last crossing?`,
-    name ? `${name}, tell us your route. We need a consistent account.` : 'Keep the repair teams together. Splitting up makes this easier for the saboteur.',
-    'I am voting on the accounts we have heard. Keep the beacon running.'
-  ][Math.min(number, 2)];
+    voice[0] + ' I was checking the relays near ' + room + '. Who can account for the last crossing?',
+    voice[1] + (name ? ' ' + name + ', tell us your route. We need a consistent account.' : ' Keep the repair teams together.'),
+    voice[2] + ' I am voting on the accounts we have heard.'
+  ][number];
+  const witness = memory.witnesses?.[target];
+  if (witness && number < 2) {
+    const victim = CHARACTERS.find(p => p.id === witness.targetId)?.name;
+    const where = rooms.get(witness.roomId)?.name;
+    return voice[number] + ' I saw ' + name + ' attack ' + victim + ' in ' + where + '. That is firsthand; I will vote for ' + name + '.';
+  }
+  if (name && number < 2) return voice[number] + ' Suspicion only: ' + name + ' was nearby before a disappearance. I did not see an attack; that is a proximity inference.';
   return [
-    `I was at ${room}. ${view.self.tasks?.filter(t => !t.completed).length ?? 0} jobs remain on my list. What did you see?`,
-    name ? `I am concerned about ${name}: they were nearby before someone disappeared. That is a suspicion, not proof.` : 'I have no firsthand evidence to accuse anyone. I favor skipping unless someone saw the attack.',
-    'After the vote, pair up for repairs and finish the remaining jobs.'
-  ][Math.min(number, 2)];
+    voice[0] + ' I was at ' + room + '. ' + (view.self.tasks?.filter(t => !t.completed).length ?? 0) + ' jobs remain on my list. What did you see?',
+    voice[1] + ' I have no firsthand evidence to accuse anyone. I favor skipping unless someone saw the attack.',
+    voice[2] + ' After the vote, pair up for repairs and finish the remaining jobs.'
+  ][number];
 }
 
 /** Memory records observations from this actor's safe view, never engine state. */
@@ -70,9 +89,9 @@ export function observe(view, memory) {
     memory.discussionCount = 0;
   }
   for (const event of view.events ?? []) {
-    if (event.type === 'witness' && event.playerId !== view.self.id && CHARACTERS.some(p => p.id === event.playerId)) {
-      memory.suspicion ??= {};
-      memory.suspicion[event.playerId] = 3;
+    if (event.type === 'witness' && event.playerId !== view.self.id && event.playerId !== event.targetId && CHARACTERS.some(p => p.id === event.playerId) && CHARACTERS.some(p => p.id === event.targetId) && rooms.has(event.roomId)) {
+      memory.witnesses ??= {};
+      memory.witnesses[event.playerId] = { targetId: event.targetId, roomId: event.roomId, at: Number.isFinite(event.at) ? event.at : view.serverNow };
     }
   }
   const dead = new Set((view.players ?? []).filter(p => !p.alive).map(p => p.id));
