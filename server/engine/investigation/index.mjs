@@ -80,7 +80,10 @@ export function validateInvestigationAction(state, player, action, now, ctx) {
   if (state.phase !== 'roam') return fail('WRONG_PHASE', 'Consoles require an active watch.');
   if (now < state.updatedAt) return fail('INVALID_TIME', 'Terminal time is stale.');
   const session = own(state.investigation.sessions, actor.id);
-  if (action.type === 'deviceCancel') return active(session) ? null : fail('UNAVAILABLE', 'No terminal read is in progress.');
+  if (action.type === 'deviceCancel') {
+    if (!time(now + rules(state).deviceCooldownMs)) return fail('INVALID_TIME', 'Terminal time limit reached.');
+    return active(session) ? null : fail('UNAVAILABLE', 'No terminal read is in progress.');
+  }
   const device = deviceFor(action.deviceId);
   if (!device) return fail('INVALID_DEVICE', 'Choose a known investigation console.');
   if (state.systems?.communications?.active) return fail('COMMUNICATIONS_DOWN', 'Communications are disabled; consoles are unavailable.');
