@@ -1,1 +1,19 @@
-<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Lantern Wake</title><main><h1>Lantern Wake</h1><p>A storm beacon. Six keepers. One hidden saboteur.</p><p>The game foundation is running. The playable room service is being integrated.</p></main></html>
+﻿<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#101f29">
+<title>Lantern Wake · Keep the light</title>
+<link rel="stylesheet" href="/styles.css">
+<script type="module" src="/app.mjs"></script>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to game</a>
+<header class="masthead"><a class="wordmark" href="/" aria-label="Lantern Wake home"><span class="beacon-mark" aria-hidden="true">◈</span> LANTERN WAKE</a><span class="edition">A SOCIAL DEDUCTION GAME</span><button id="rules-toggle" class="quiet" aria-expanded="false" aria-controls="rules">How to play</button></header>
+<aside id="rules" class="rules" hidden><h2>Keep the light. Find the lie.</h2><p>Six keepers tend a storm beacon. Five crew must finish their tasks or vote out the hidden saboteur. The saboteur wins by reaching parity with the crew or letting a critical sabotage expire.</p><p>Move between connected rooms. You only see nearby keepers. Report a fallen keeper or ring the emergency bell to discuss your observations, then vote for a keeper or skip. Server timers keep the match moving while you are away.</p><p>In spectator mode, six AI keepers play. Roles remain hidden until the match ends. Demo bots use local rules; live mode uses a configured model. Provider fallbacks are always labeled.</p><button id="rules-close" class="quiet">Close rules</button></aside>
+<div id="feedback" class="feedback" role="status" aria-live="polite" aria-atomic="true"></div>
+<main id="main" tabindex="-1"></main>
+<footer>STORM BEACON 06 <span>Trust is a fragile light.</span><span>No account needed · Sessions stay in this browser</span></footer>
+</body>
+</html>
