@@ -1,14 +1,15 @@
-﻿import test,{after} from 'node:test';
+import test,{after} from 'node:test';
 import assert from 'node:assert/strict';
 import {mkdir,mkdtemp,writeFile,readFile,open,rename,rm} from 'node:fs/promises';
 import path from 'node:path';
+import {fileURLToPath} from 'node:url';
 import {loadConfig} from '../server/config.mjs';
 import {createAiController} from '../server/ai/index.mjs';
 import {MODEL,OUTPUT_TOKENS,MAX_RESPONSE_BYTES,MAX_REQUEST_BYTES,makeRequest,send} from '../server/ai/anthropic.mjs';
 import {createDailyBudget} from '../server/budget.mjs';
 import * as engine from '../server/engine/index.mjs';
 import {CHARACTERS} from '../shared/contracts.mjs';
-const temporary='D:/Widegames-work/temp',key='audit-synthetic-provider-key-only';
+const temporary=fileURLToPath(new URL('../_artifacts/test-temp/',import.meta.url)),key='audit-synthetic-provider-key-only';
 const originalFetch=globalThis.fetch;globalThis.fetch=()=>{throw new Error('AUDIT: real provider network forbidden');};after(()=>{globalThis.fetch=originalFetch;});
 const delay=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 function council(){const state=engine.createMatch({id:'boundary_council_fixture',mode:'human',seed:'boundary-council',now:100000,config:{meetingCooldownMs:1}});const meeting=engine.applyAction(state,'p1',{id:'meeting',type:'meeting'},100002);assert(meeting.accepted);return engine.getPlayerView(meeting.state,'p1',100002);}

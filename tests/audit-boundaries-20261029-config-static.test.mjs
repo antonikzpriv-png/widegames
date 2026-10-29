@@ -5,12 +5,11 @@ import {spawn,spawnSync} from 'node:child_process';
 import {mkdtemp,mkdir,readFile,writeFile,readdir,rm,cp,lstat} from 'node:fs/promises';
 import path from 'node:path';
 import {fileURLToPath,pathToFileURL} from 'node:url';
-import {createRequire} from 'node:module';
 import {loadConfig} from '../server/config.mjs';
 import {serveStatic} from '../server/static.mjs';
 import {createGameServer} from '../server/transport.mjs';
 
-const root=fileURLToPath(new URL('../',import.meta.url)),temporary='D:/Widegames-work/temp',cache='D:/Widegames-work/npm-cache';
+const root=fileURLToPath(new URL('../',import.meta.url)),temporary=path.join(root,'_artifacts','test-temp');
 const origin='http://boundary-audit.test';
 const resources=new WeakMap();
 const stub={describe:()=>({mode:'demo',provider:'boundary-stub'}),decide:async()=>null};
@@ -20,10 +19,25 @@ function request(port,url,{method='GET',body,Origin=origin,chunked=false,headers
   const data=body===undefined?undefined:typeof body==='string'?body:JSON.stringify(body);
   const req=http.request({host:'127.0.0.1',port,path:url,method,headers:{Origin,...headers,...(data===undefined?{}:{'content-type':'application/json',...(chunked?{'transfer-encoding':'chunked'}:{'content-length':Buffer.byteLength(data)})})}},res=>{const chunks=[];res.on('data',chunk=>chunks.push(chunk));res.on('end',()=>resolve({status:res.statusCode,headers:res.headers,text:Buffer.concat(chunks).toString()}));});req.on('error',reject);req.end(data);
 });}
-function environment(){return Object.fromEntries(Object.entries({PATH:process.env.PATH,SystemRoot:process.env.SystemRoot,WINDIR:process.env.WINDIR,COMSPEC:process.env.COMSPEC,PATHEXT:process.env.PATHEXT,TEMP:temporary,TMP:temporary,npm_config_cache:cache}).filter(([,value])=>value!==undefined));}
+function environment(){
+  // Preserve platform/CI requirements, including HOME, USERPROFILE, PATH and loader settings.
+  // Remove app settings so inherited credentials cannot override the synthetic env file.
+  const env={...process.env};
+  for(const name of Object.keys(env))if(/^(HOST|PORT|DATA_DIR|PUBLIC_ORIGIN|AI_PROVIDER|ANTHROPIC_API_KEY|ANTHROPIC_MODEL|MAX_ACTIVE_ROOMS|MAX_AI_CALLS|MAX_AI_TOKENS|MAX_AI_COST_USD|MAX_DAILY_AI_COST_USD|TEMP|TMP|TMPDIR)$/i.test(name))delete env[name];
+  if(process.env.AUDIT_NPM_CACHE){for(const name of Object.keys(env))if(/^npm_config_cache$/i.test(name))delete env[name];env.npm_config_cache=path.resolve(process.env.AUDIT_NPM_CACHE);}
+  return {...env,TEMP:temporary,TMP:temporary,TMPDIR:temporary};
+}
+async function npmCliPath(){
+  const executableDir=path.dirname(process.execPath);
+  for(const candidate of [process.env.AUDIT_NPM_CLI,process.env.npm_execpath,path.join(executableDir,'node_modules/npm/bin/npm-cli.js'),path.resolve(executableDir,'../lib/node_modules/npm/bin/npm-cli.js'),path.resolve(executableDir,'../share/nodejs/npm/bin/npm-cli.js')]){
+    if(!candidate)continue;
+    try{if((await lstat(candidate)).isFile())return candidate;}catch(error){if(error.code!=='ENOENT'&&error.code!=='ENOTDIR')throw error;}
+  }
+  throw new Error('Cannot find npm CLI: run through npm or set AUDIT_NPM_CLI to npm-cli.js.');
+}
 async function launch(t,directory,publicOrigin,runtimeRoot=root){
   const dataDir=path.join(directory,'private-data'),envFile=path.join(directory,'synthetic.env');
-  await writeFile(envFile,`HOST=127.0.0.1\nPORT=0\nDATA_DIR=${dataDir.replaceAll('\\','/')}\nPUBLIC_ORIGIN=${publicOrigin}\nAI_PROVIDER=demo\nANTHROPIC_API_KEY=audit-provider-key-never-log\n`,{mode:0o600});
+  await writeFile(envFile,`HOST=127.0.0.1\nPORT=0\nDATA_DIR=${JSON.stringify(dataDir.replaceAll('\\','/'))}\nPUBLIC_ORIGIN=${publicOrigin}\nAI_PROVIDER=demo\nANTHROPIC_API_KEY=audit-provider-key-never-log\n`,{mode:0o600});
   const script=`process.on('message',message=>{if(message==='stop'){process.disconnect();process.emit('SIGTERM');}});await import(${JSON.stringify(pathToFileURL(path.join(runtimeRoot,'server/main.mjs')).href)});`;
   const child=spawn(process.execPath,[`--env-file=${envFile}`,'--input-type=module','--eval',script],{cwd:runtimeRoot,env:environment(),stdio:['ignore','pipe','pipe','ipc'],windowsHide:true});
   let stdout='',stderr='';child.stdout.on('data',chunk=>{stdout+=chunk;});child.stderr.on('data',chunk=>{stderr+=chunk;});const exited=new Promise((resolve,reject)=>{child.once('error',reject);child.once('exit',(code,signal)=>resolve({code,signal}));});
@@ -40,7 +54,7 @@ test('config counterexamples remain within numeric room/token/call/cost bounds',
 
 test('FINDING B01: an opaque PUBLIC_ORIGIN must not authorize Origin null clients',async t=>{
   const directory=await fixture(t,'opaque-origin');let config,service;
-  try{config=loadConfig({DATA_DIR:directory,PUBLIC_ORIGIN:'file:///D:/audit-origin-fixture'});service=await running(t,config);}catch(error){assert.match(error.message,/origin|URL/i);return;}
+  try{config=loadConfig({DATA_DIR:directory,PUBLIC_ORIGIN:'file:///audit-origin-fixture'});service=await running(t,config);}catch(error){assert.match(error.message,/origin|URL/i);return;}
   const result=await request(service.port,'/api/rooms',{method:'POST',body:{mode:'human'},Origin:'null'});
   t.diagnostic(`Opaque origin maps to ${new URL(config.publicOrigin).origin}; Origin:null create returned ${result.status}`);
   const crossSite=await request(service.port,'/api/rooms',{method:'POST',body:{mode:'human'},Origin:'null',headers:{'sec-fetch-site':'cross-site'}});assert.equal(crossSite.status,403,'Cross-site fetch protection remains effective');
@@ -55,19 +69,29 @@ test('FINDING B02: CLI must not log credentials embedded in PUBLIC_ORIGIN',async
   assert(!cli.stderr.includes('origin-userinfo-fixture-secret'));assert.equal(cli.port,null);assert.equal((await cli.exited).code,1);assert.match(cli.stderr,/PUBLIC_ORIGIN/);await assert.rejects(lstat(cli.dataDir),error=>error.code==='ENOENT');
 });
 
-test('documented env-file CLI boots with production-only dependencies and excludes provider keys from health/static/logs',async t=>{
-  const directory=await fixture(t,'cli-demo'),production=path.join(directory,'production-image-fixture');await mkdir(production);
-  for(const entry of ['server','shared','public','package.json','package-lock.json'])await cp(path.join(root,entry),path.join(production,entry),{recursive:true});
-  const npmCli=path.join(path.dirname(process.execPath),'node_modules/npm/bin/npm-cli.js');
-  const install=spawnSync(process.execPath,[npmCli,'ci','--omit=dev','--offline','--ignore-scripts','--no-audit','--no-fund'],{cwd:production,env:environment(),encoding:'utf8',windowsHide:true,timeout:30000});assert.equal(install.status,0,install.stderr||install.error?.message);
-  const cli=await launch(t,directory,'HTTP://LOCALHOST:3000/',production);assert(cli.port,cli.stderr);assert(cli.stdout.includes('open http://localhost:3000'));assert(!cli.stdout.includes('HTTP://LOCALHOST:3000/'));
+async function checkCli(t,directory,runtimeRoot=root){
+  const cli=await launch(t,directory,'HTTP://LOCALHOST:3000/',runtimeRoot);assert(cli.port,cli.stderr);assert(cli.stdout.includes('open http://localhost:3000'));assert(!cli.stdout.includes('HTTP://LOCALHOST:3000/'));
   const health=await request(cli.port,'/api/health',{Origin:'http://localhost:3000'});assert.equal(health.status,200);
   const home=await request(cli.port,'/',{Origin:'http://localhost:3000'});assert.equal(home.status,200);
   for(const text of [health.text,home.text,cli.stdout,cli.stderr])assert(!text.includes('audit-provider-key-never-log'));
   cli.child.send('stop');const stopped=await cli.exited;assert.equal(stopped.code,0);assert(!(await readdir(cli.dataDir)).includes('service.lock'));assert(!(await readdir(cli.dataDir)).includes('service.lock.recovery'));
+}
+
+test('documented env-file CLI canonicalizes origins and excludes provider keys from health/static/logs',async t=>{
+  const directory=await fixture(t,'cli-demo');await checkCli(t,directory);
+});
+
+test('opt-in production-only offline npm install excludes browser dependencies and boots the CLI',{
+  skip:process.env.AUDIT_PRODUCTION_ONLY==='1'?false:'Set AUDIT_PRODUCTION_ONLY=1 to exercise the offline production install with a configured/prewarmed npm cache.'
+},async t=>{
+  const directory=await fixture(t,'production-install'),production=path.join(directory,'production-image-fixture');await mkdir(production);
+  for(const entry of ['server','shared','public','package.json','package-lock.json'])await cp(path.join(root,entry),path.join(production,entry),{recursive:true});
+  const npmCli=await npmCliPath();
+  const install=spawnSync(process.execPath,[npmCli,'ci','--omit=dev','--offline','--ignore-scripts','--no-audit','--no-fund'],{cwd:production,env:environment(),encoding:'utf8',windowsHide:true,timeout:30000});assert.equal(install.status,0,install.stderr||install.error?.message);
+  await checkCli(t,directory,production);
   const lock=JSON.parse(await readFile(new URL('../package-lock.json',import.meta.url),'utf8'));
   assert.deepEqual(Object.entries(lock.packages).filter(([name,value])=>name.startsWith('node_modules/')&&!value.dev).map(([name])=>name),['node_modules/ws']);
-  assert.throws(()=>createRequire(pathToFileURL(path.join(production,'package.json'))).resolve('puppeteer-core'));
+  await assert.rejects(lstat(path.join(production,'node_modules','puppeteer-core')),error=>error.code==='ENOENT');
   assert.deepEqual((await readdir(path.join(production,'node_modules'))).filter(name=>!name.startsWith('.')),['ws']);
 });
 
