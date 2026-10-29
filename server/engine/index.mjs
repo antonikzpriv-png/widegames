@@ -1,4 +1,4 @@
-﻿import { randomBytes, createHash } from 'node:crypto';
+import { randomBytes, createHash } from 'node:crypto';
 import { CHARACTERS, ROOM_LAYOUT, DEFAULT_RULES, ACTION_TYPES } from '../../shared/contracts.mjs';
 
 const MAX_REQUESTS = 256;
@@ -33,7 +33,7 @@ function victory(state,at) {
 }
 function startMeeting(state,calledBy,reason,bodyId,at) {
   state.phase='discussion'; state.deadlineAt=at+state.rules.discussionMs;
-  state.meeting={id:`m${++state.meetingCount}`,calledBy,reason,bodyId,deadlineAt:state.deadlineAt,messages:[],votes:[],eligibleVoters:state.players.filter(p=>p.alive).map(p=>p.id)};
+  state.meeting={id:`m${++state.meetingCount}`,calledBy,reason,bodyId,deadlineAt:state.deadlineAt,messages:[],votes:[],eligibleVoters:state.players.filter(p=>p.alive).map(p=>p.id),tallied:false};
   publicEvent(state,'meeting',at,{calledBy,reason,bodyId}); record(state,'meeting',at,{calledBy,reason,bodyId});
 }
 function resume(state,at) {
@@ -49,6 +49,7 @@ function transferTasks(state,victim,at) {
   record(state,'tasks_reassigned',at,{playerId:victim.id,assignments:unfinished.map(t=>({taskId:t.id,playerId:crew.find(p=>p.tasks.includes(t)).id}))});
 }
 function tally(state,at) {
+  state.meeting.tallied=true;
   const counts=new Map();
   for (const v of state.meeting.votes) counts.set(v.targetId,(counts.get(v.targetId)||0)+1);
   const sorted=[...counts].sort((a,b)=>b[1]-a[1]);
@@ -102,9 +103,9 @@ export function createMatch({id,mode='human',humanPlayerId='p1',now=Date.now(),s
   let counter=0;
   const random=n=>createHash('sha256').update(`${secret}:${counter++}`).digest().readUInt32BE(0)%n;
   const saboteurIndex=random(6);
-  let taskId=0;
+
   const players=CHARACTERS.map((p,i)=>({id:p.id,name:p.name,color:p.color,role:i===saboteurIndex?'saboteur':'crew',alive:true,roomId:'bridge',human:mode==='human'&&p.id===humanPlayerId,
-    tasks:i===saboteurIndex?[]:Array.from({length:rules.tasksPerCrew},()=>{const roomId=roomIds[random(roomIds.length)];return {id:`t${++taskId}`,label:`Service ${ROOM_LAYOUT.find(r=>r.id===roomId).name} relay`,roomId,completed:false};}),
+    tasks:i===saboteurIndex?[]:Array.from({length:rules.tasksPerCrew},(_,j)=>{const roomId=roomIds[random(roomIds.length)];return {id:`t${createHash('sha256').update(`${secret}:task:${i}:${j}`).digest('hex').slice(0,20)}`,label:`Service ${ROOM_LAYOUT.find(r=>r.id===roomId).name} relay`,roomId,completed:false};}),
     cooldowns:{moveAt:now,taskAt:now,killAt:now+rules.initialKillCooldownMs,sabotageAt:now+rules.sabotageCooldownMs,meetingAt:now+rules.meetingCooldownMs},meetingsRemaining:rules.meetingsPerPlayer}));
   const state={schemaVersion:1,id,mode,version:1,phase:'roam',startedAt:now,updatedAt:now,deadlineAt:now+rules.roamDeadlineMs,rules,players,bodies:[],sabotage:null,meeting:null,meetingCount:0,outcome:null,sequence:0,events:[],replaySequence:0,replay:[],requests:Object.fromEntries(players.map(p=>[p.id,[]]))};
   publicEvent(state,'started',now); record(state,'started',now,{roles:players.map(p=>({id:p.id,role:p.role})),tasks:players.map(p=>({id:p.id,tasks:clone(p.tasks)}))});
@@ -244,7 +245,7 @@ export function getPlayerView(state,playerIdOrNull,now=Date.now()) {
     if (type==='task') candidates=p.tasks.map(t=>({id:'hint',type,taskId:t.id}));
     if (type==='eliminate') candidates=state.players.map(q=>({id:'hint',type,targetId:q.id}));
     if (type==='report') candidates=state.bodies.map(b=>({id:'hint',type,bodyId:b.id}));
-    if (type==='say') candidates=[{id:'hint',type,text:'Ready.'}];
+    if (type==='say') candidates=[{id:'hint',type,text:'x'}];
     if (type==='vote') candidates=[{id:'hint',type,targetId:'skip'}];
     if (candidates.some(a=>!denial(state,p,a,now))) hints.push(type);
   }
@@ -253,7 +254,7 @@ export function getPlayerView(state,playerIdOrNull,now=Date.now()) {
     self:p?{id:p.id,role:p.role,alive:p.alive,roomId:p.roomId,tasks:clone(p.tasks),cooldowns:clone(p.cooldowns),meetingsRemaining:p.meetingsRemaining}:null,
     tasks:{completed:state.players.flatMap(q=>q.tasks).filter(t=>t.completed).length,total:state.players.flatMap(q=>q.tasks).length},
     sabotage:state.sabotage?{active:state.sabotage.active,roomId:state.sabotage.roomId,deadlineAt:state.sabotage.deadlineAt,repairsCompleted:state.sabotage.repairsCompleted,repairsRequired:state.sabotage.repairsRequired}:null,
-    meeting:state.meeting?{...clone(state.meeting),votes:state.meeting.votes.map(v=>state.phase==='voting'||state.phase==='discussion'?{playerId:v.playerId}:clone(v))}:null,
+    meeting:state.meeting?{id:state.meeting.id,calledBy:state.meeting.calledBy,reason:state.meeting.reason,bodyId:state.meeting.bodyId,deadlineAt:state.meeting.deadlineAt,messages:clone(state.meeting.messages),votes:state.meeting.votes.map(v=>state.meeting.tallied?clone(v):{playerId:v.playerId}),eligibleVoters:clone(state.meeting.eligibleVoters)}:null,
     outcome:clone(state.outcome),events:events.sort((a,b)=>a.at-b.at).slice(-MAX_EVENTS),availableActions:hints};
 }
 
