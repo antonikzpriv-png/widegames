@@ -46,3 +46,29 @@ An integration gap was reported without root edits: actionContextCurrent capture
 Evidence: `D:/Widegames-work/beacon-client-builder-20261029/_artifacts/beacon-client-2c5199ab` (`roster-copy-red.log`, exact pre-fix source, final client/retained logs, fixture failure logs, and `projections-sourcepins.json`).
 
 The investigation owner changed index.mjs after the passing combined run, during later evidence collection. The post-test copy check stopped rather than save mismatched source as qualified. The original manifest/log is retained; the five projection checks were repeated against the newer source and all five passed with source bytes captured before import and verified after execution inside the driver. These are the same five checks, not five extra independent workflows. `owner-sources-tested/` and `projections-sourcepins.json` identify the exact latest tested bytes; the earlier receipt and post-test drift record remain preserved. Panel CSS now reserves the top bar above its scrollable pane at portrait/landscape breakpoints; this has source checks only, with native overflow/touch/contrast measurement delegated to the manager's Chrome run.
+
+
+## Exact targets, field notes and permitted hatch traces
+
+Client base: `c75be6224b9d118afae5292db97c887f58642a57`. Resolved the manager's named feedback/target-contract fix as **`29f2602227838e48e5236a1f437fc40f0a62e5b9`** (the coordinator advanced later during work). Its featureHints supplies exact enabled base task/report/eliminate/meeting descriptors alongside the equipment/ability descriptors.
+
+Schema3 now uses exact enabled target descriptors throughout base contexts, task submission ownership and elimination confirmation. It does not pick the nearest keeper, first historical body or first unfinished task from a shared type hint. Withdrawing the selected target cannot retarget a retained confirmation. Base task descriptors stay outside generic equipment buttons so puzzles cannot be bypassed. A valid task descriptor can authorize equipment beside a room threshold without a guessed room-equality/radius check; the server still validates every proposal. Legacy schema1/2 proximity/type-hint behavior remains unchanged. Stale root AbortError completions are silent in task/general request catches, while still-current rule failures remain useful and solved equipment remains retryable.
+
+Systems & evidence accepts only the existing registered field-note ability with abilityId field-note and targetId equal to safe self.id. It shows own safe game.abilities.notes with actual timestamps and recorded coordinates; a click never manufactures a note. The native button and history rows survive frequent updates. Spectators get no own notes/control. Future ability implementations remain with the registered feature owners.
+
+Permitted vent_enter/vent_exit events appear as attributed, timestamped historical local hatch observations, with room/recorded position and only the observed entryId OR exitId. The renderer neither invents the other endpoint nor uses visibleTo to make a permission decision. It never renders recipient lists, hidden extra endpoint fields or inferred roles. Server projection remains the privacy authority; renderer whitelisting is not a repair for a server payload leak. These traces are historical evidence, not current actor positions or a complete route.
+
+The initial seven exact-target counterexamples on c75be62 produced **one pass/six failures**, including the three candidate counts (3/8/11), multiple bodies, exact task and bell. The original schema2 control passed. After the correction, the full current client suite passed **63/63, zero failures/skips**. This includes 44 retained client checks plus 19 additions, not 63 independent real workflows. The 28 older task/input/observer regressions passed separately. Two new checks invoke actual registered engine field-note actions in explicit seeded human/spectator fixtures with 8/12 custom identities, wrong-target denial, same-request idempotency, cooldown denial and private reader/spectator projections. Five existing checks consume actual investigation/systems module projections. The remaining checks use labeled safe-view DOM/canvas fixtures. No HTTP/browser/provider qualification is claimed.
+
+Run the complete focused suite from this worktree with actual integrated source:
+
+```powershell
+$env:BEACON_CLIENT_RUNTIME_ROOT='D:/Widegames-work/beacon-systems-coordinator-20261029'
+$env:BEACON_CLIENT_INVESTIGATION_ROOT=$env:BEACON_CLIENT_RUNTIME_ROOT
+$env:BEACON_CLIENT_SYSTEMS_ROOT=$env:BEACON_CLIENT_RUNTIME_ROOT
+node --test tests/beacon-client-controls.test.mjs tests/beacon-client-scene.test.mjs tests/beacon-client-experience.test.mjs tests/beacon-client-projection.test.mjs tests/beacon-client-targets.test.mjs tests/beacon-client-feature-integration.test.mjs
+```
+
+On a fully integrated checkout, omit those overrides. In the unintegrated foundation, the actual-module/registered-feature checks explicitly skip absent specialized implementations; skipped checks are not a qualification. Both integration drivers fingerprint runtime sources before import and reject during-run changes. Evidence remains under the new follow-up artifact directory recorded below, including targets-red.log, current green logs, exact runtime fingerprints and retained-regressions.log. No prior red evidence is overwritten. Syntax and ownership/diff checks passed. Chrome remains exclusively with the manager; no browser/server/provider process, root/shared/backend edit, push/main/deployment or production approval occurred. Root guard verification is a separate read-only follow-up after this client commit.
+
+Follow-up evidence: `D:/Widegames-work/beacon-client-builder-20261029/_artifacts/beacon-client-targets-401d76f9`.

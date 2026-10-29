@@ -7,7 +7,7 @@ import {createTaskPuzzle} from './puzzles.mjs';
 import {createCouncil,createResults} from './phases.mjs';
 import {restoreTrigger,trapDialog} from './dom.mjs';
 import {createBeaconPanel} from './beacon-panel.mjs';
-import {knowledge,criticalText} from './beacon-model.mjs';
+import {knowledge,criticalText,hasActionDescriptor} from './beacon-model.mjs';
 
 const roomName=id=>({bridge:'Bridge',archive:'Archive',lantern:'Lantern',workshop:'Workshop',galley:'Galley',engine:'Engine'})[id]||'At sea';
 const make=(tag,className,text)=>{const e=document.createElement(tag);if(className)e.className=className;if(text!==undefined)e.textContent=text;return e;};
@@ -66,7 +66,7 @@ export function createWorldExperience(host,callbacks){
  for(const pane of [council.node,results.node,confirmation,ejection,paused]){pane.hidden=true;overlay.append(pane);}
  roleScene.addEventListener('keydown',event=>{if(event.key==='Escape'){revealed.add(room.game.matchId);render();canvas.focus();}else trapDialog(roleScene,event);});
  confirmation.addEventListener('keydown',event=>{if(event.key==='Escape'){event.preventDefault();closeConfirmation();}else trapDialog(confirmation,event);});
- function validElimination(){const g=room?.game,target=g?.players?.find(p=>p.id===confirmTarget);return g?.phase==='roam'&&g.self?.alive&&g.self.role==='saboteur'&&target?.alive&&(g.beaconVersion!==1||knowledge(g,target)==='alive')&&point(target.position)&&distance(g.self.position,target.position)<=world.WORLD.killRadius&&g.availableActions?.includes('eliminate');}
+ function validElimination(){const g=room?.game;if(g?.beaconVersion===1)return g.phase==='roam'&&g.self?.alive&&g.self.role==='saboteur'&&!g.systems?.selfTransit&&!g.self.transit&&hasActionDescriptor(g,'eliminate',{targetId:confirmTarget});const target=g?.players?.find(p=>p.id===confirmTarget);return g?.phase==='roam'&&g.self?.alive&&g.self.role==='saboteur'&&target?.alive&&(g.beaconVersion!==1||knowledge(g,target)==='alive')&&point(target.position)&&distance(g.self.position,target.position)<=world.WORLD.killRadius&&g.availableActions?.includes('eliminate');}
  function closeConfirmation(restore=true){confirmTarget=null;render();if(restore)restoreTrigger(actionButtons.eliminate);}
  function closeTask(restore=true){const current=puzzle;puzzle=null;taskSession=null;current?.dispose();render();if(restore)restoreTrigger(actionButtons.use);}
  function openTask(task){
@@ -81,7 +81,7 @@ export function createWorldExperience(host,callbacks){
     if(ownsSubmission()){closeTask();setFeedback('Task submitted. The server confirms your progress.');}
    }catch(error){
     if(!ownsSubmission())return;
-    setFeedback(error?.message||'Task could not be sent.');current.setPending(false);
+    if(error?.name!=='AbortError')setFeedback(error?.message||'Task could not be sent.');current.setPending(false);
    }
   }});input.stop();overlay.append(puzzle.node);render();puzzle.focus();
  }
@@ -92,7 +92,7 @@ export function createWorldExperience(host,callbacks){
  function movementAllowed(){return !document.hidden&&!!room?.game?.self?.alive&&room.game.worldVersion===1&&room.game.phase==='roam'&&options.connected&&!pending()&&roleScene.hidden&&overlay.hidden&&!beaconPanel?.open&&!room.game.systems?.selfTransit&&!room.game.self?.transit;}
  function pending(){return options.pending||localPending>0;}
  function setFeedback(message){if(disposed)return;localFeedback=String(message||'');setText(feedback,localFeedback);}
- async function request(fn){if(disposed||pending())return;localPending++;render();try{return await fn();}catch(error){if(!disposed)setFeedback(error?.message||'The request failed. Try again.');}finally{if(!disposed){localPending--;render();}}}
+ async function request(fn){if(disposed||pending())return;localPending++;render();try{return await fn();}catch(error){if(!disposed&&error?.name!=='AbortError')setFeedback(error?.message||'The request failed. Try again.');}finally{if(!disposed){localPending--;render();}}}
  function toggleMap(){mapOpen=!mapOpen;mapPane.hidden=!mapOpen;mapToggle.setAttribute('aria-expanded',String(mapOpen));if(mapOpen){mini.update(room,performance.now());mini.draw(performance.now(),{overview:true});}}
  function activate(key){
   if(disposed||!room?.game||!roleScene.hidden||!overlay.hidden||beaconPanel?.open)return;
