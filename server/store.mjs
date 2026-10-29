@@ -22,23 +22,56 @@ export function validateRoom(room) {
   return room;
 }
 
+async function readLock(file) {
+  const info=await lstat(file);
+  if(!info.isFile()||info.isSymbolicLink()||info.size<1||info.size>1024)throw new Error('Unsafe data directory lock; preserve and inspect it');
+  const owner=JSON.parse(await readFile(file,'utf8'));
+  if(!object(owner)||!Number.isSafeInteger(owner.pid)||owner.pid<=0||owner.pid>2147483647||typeof owner.token!=='string'||!/^[A-Za-z0-9_-]{1,128}$/.test(owner.token))throw new Error('Invalid data directory lock; preserve and inspect it');
+  return owner;
+}
+async function writeLock(file,owner) {
+  const handle=await open(file,'wx',0o600);
+  // Failed initialization leaves evidence in place rather than guessing ownership.
+  try {await handle.writeFile(JSON.stringify(owner));await handle.sync();}finally{await handle.close();}
+}
+function sameOwner(left,right){return left.pid===right.pid&&left.token===right.token;}
+function proveDead(owner) {
+  try {process.kill(owner.pid,0);}catch(error){if(error.code==='ESRCH')return;throw error;}
+  throw new Error('Data directory already in use');
+}
+async function unlinkOwned(file,expected,dead=false) {
+  const current=await readLock(file);
+  if(!sameOwner(current,expected))throw new Error('Data directory lock ownership changed; foreign lock preserved');
+  if(dead)proveDead(current);
+  await unlink(file);
+}
+// All cooperating pathname mutations, including normal close, hold this claim.
+// An abandoned/ambiguous claim is deliberately never reclaimed automatically.
+async function withRecoveryClaim(file,operation) {
+  const owner={pid:process.pid,token:randomUUID()};
+  try {await writeLock(file,owner);}catch(error){
+    if(error.code==='EEXIST')throw new Error('Data directory already in use or lock recovery is pending; preserve and inspect the recovery claim');
+    throw error;
+  }
+  try {return await operation();}finally{await unlinkOwned(file,owner);}
+}
+
 // One writer owns both room files and the deployment budget in this directory.
 export async function createRoomStore(directory) {
   await mkdir(directory,{recursive:true,mode:0o700});
-  const lockFile=path.join(directory,'service.lock'), token=randomUUID();
-  let locked=false;
-  for (let attempt=0;attempt<2;attempt++) {
-    try { const handle=await open(lockFile,'wx',0o600); try {await handle.writeFile(JSON.stringify({pid:process.pid,token}));await handle.sync();} finally {await handle.close();} locked=true;break; }
-    catch(error) {
-      if(error.code!=='EEXIST')throw error;
-      const info=await lstat(lockFile);if(!info.isFile()||info.isSymbolicLink()||info.size>1024)throw new Error('Unsafe data directory lock');
-      const owner=JSON.parse(await readFile(lockFile,'utf8'));if(!Number.isSafeInteger(owner.pid)||owner.pid<=0)throw new Error('Invalid data directory lock');
-      try {process.kill(owner.pid,0);throw new Error('Data directory already in use');} catch(probe) {if(probe.code!=='ESRCH')throw probe;}
-      await unlink(lockFile);
+  const lockFile=path.join(directory,'service.lock'), claimFile=path.join(directory,'service.lock.recovery');
+  const owner={pid:process.pid,token:randomUUID()};
+  await withRecoveryClaim(claimFile,async()=>{
+    let previous;
+    try {previous=await readLock(lockFile);}catch(error){if(error.code!=='ENOENT')throw error;}
+    if(previous) {
+      proveDead(previous);
+      // Reread under the exclusive claim; never unlink an earlier observation.
+      await unlinkOwned(lockFile,previous,true);
     }
-  }
-  if(!locked)throw new Error('Data directory already in use');
-  let closed=false;
+    await writeLock(lockFile,owner);
+  });
+  let closed=false,released=false,closePromise;
   const fileFor=id=>{if(!ROOM_ID.test(id))throw new Error('Invalid room ID');return path.join(directory,`room-${id}.json`);};
   return {
     async load() {
@@ -61,6 +94,12 @@ export async function createRoomStore(directory) {
       catch(error){await unlink(temporary).catch(()=>{});throw error;}
     },
     async remove(id){await unlink(fileFor(id)).catch(error=>{if(error.code!=='ENOENT')throw error;});},
-    async close(){if(closed)return;closed=true;const owner=JSON.parse(await readFile(lockFile,'utf8'));if(owner.token===token)await unlink(lockFile);}
+    async close(){
+      if(released)return;
+      if(closePromise)return closePromise;
+      closed=true;
+      closePromise=withRecoveryClaim(claimFile,async()=>{await unlinkOwned(lockFile,owner);});
+      try {await closePromise;released=true;}finally{closePromise=null;}
+    }
   };
 }
