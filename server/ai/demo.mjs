@@ -34,7 +34,7 @@ function visibleBodies(view) {
   for (const event of view.events ?? []) {
     if (event.bodyId && event.roomId === view.self.roomId && !event.reported) found.set(event.bodyId, event.bodyId);
   }
-  return [...found.values()].slice(0, 6);
+  return [...found.values()].slice(0, 24);
 }
 
 function suspect(view, memory) {
@@ -107,8 +107,8 @@ export function observe(view, memory) {
   }
   memory.observation = {
     roomId: view.self.roomId,
-    nearby: (view.players ?? []).filter(p => p.id !== view.self.id && p.alive && (view.worldVersion === 1 ? visibleWorldPlayer(view, p) : p.roomId === view.self.roomId)).map(p => p.id).slice(0, 6),
-    dead: [...dead].slice(0, 6)
+    nearby: (view.players ?? []).filter(p => p.id !== view.self.id && p.alive && (view.worldVersion === 1 ? visibleWorldPlayer(view, p) : p.roomId === view.self.roomId)).map(p => p.id).slice(0, 24),
+    dead: [...dead].slice(0, 24)
   };
 }
 

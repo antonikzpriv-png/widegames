@@ -31,20 +31,23 @@ export function createRoom(mode,now) {
 
 export function createRooms({store,engine,ai,now=Date.now,maxActiveRooms=12,roomTtlMs=3600000}) {
   const rooms=new Map();let creationQueue=Promise.resolve();
-  const entry=data=>({data,queue:Promise.resolve(),sockets:new Set(),aiBusy:false,aiBlocked:false,nextDecision:new Map(),abort:new AbortController(),removed:false});
+  const entry=data=>({data,queue:Promise.resolve(),sockets:new Set(),aiBusy:false,aiGeneration:0,aiBlocked:false,nextDecision:new Map(),abort:new AbortController(),removed:false});
   const get=id=>{if(!ROOM_ID.test(id)||!rooms.has(id))fail(404,'ROOM_NOT_FOUND','Room not found.');return rooms.get(id);};
   function run(room,fn) {
     const result=room.queue.catch(()=>{}).then(()=>{if(room.removed)fail(404,'ROOM_NOT_FOUND','Room not found.');return fn(room.data);});
     room.queue=result.catch(()=>{});return result;
   }
-  async function commit(room,next){next.updatedAt=Math.max(next.updatedAt,now());validateRoom(next);await store.save(next);room.data=next;}
+  async function commit(room,next){next.updatedAt=Math.max(next.updatedAt,now());validateRoom(next);await store.save(next);
+    const fence=state=>JSON.stringify([state?.id,state?.startedAt,state?.phase,state?.meeting?.id,state?.meetingCount,(state?.players??[]).map(p=>[p.id,p.alive])]);
+    if(fence(room.data.state)!==fence(next.state))room.aiGeneration++;
+    room.data=next;}
   function view(room,identity) {
     const data=room.data;
     const summary=ai.describe(data.aiContext);
     // Explicit allowlist: private AI memory and provider errors never cross transport.
     const safeAi={};for(const key of ['mode','provider','model','calls','tokens','costUsd','limitReason','strategy','navigation','council'])if(['string','number'].includes(typeof summary?.[key]))safeAi[key]=summary[key];
     const notices=Array.isArray(data.aiContext.notices)?data.aiContext.notices.filter(x=>typeof x==='string').slice(-10).map(x=>x.slice(0,240)):[];
-    if(safeAi.mode==='live')notices.push('Hybrid AI: live model council; navigation and deck actions use local policy.');
+    if(safeAi.mode==='live')notices.push(safeAi.strategy==='strategic'?'Strategic AI: model plans and council; local legal execution.':'Hybrid AI: live model council; navigation and deck actions use local policy.');
     if(room.aiBlocked)notices.push('AI paused because durable storage or budget reservation failed.');
     return {roomId:data.id,mode:data.mode,isHost:identity.host,seatId:identity.seatId,phase:data.state?.phase||'lobby',connection:'connected',game:data.state?engine.getPlayerView(data.state,identity.seatId,now()):null,ai:safeAi,notices,createdAt:data.createdAt};
   }

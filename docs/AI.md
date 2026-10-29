@@ -79,3 +79,41 @@ The engine advanced during qualification; the two engine integration tests were 
 ## Hybrid refinement qualification
 
 The same `npm --cache D:/Widegames-work/npm-cache test` command with `AI_ENGINE_TEST_MODULE=file:///D:/Widegames-work/engine/server/engine/index.mjs` passed 36 tests, zero failures/skips, against engine `19aa06d0199c0ee3fb752248ab4bb43d1bd68a30`; this includes all 20 complete matches. `npm --cache D:/Widegames-work/npm-cache run check` passed all 12 modules. New coverage asserts zero calls/reservations for every live roam action, actual mocked provider choice of council speech and a non-default vote, the live speech cap across restore/new meetings, six distinct crew/bluff voices, evidence versus rumor/proximity, and actor/match witness-memory isolation. No paid calls occurred. The manager budget audit is recorded separately in `docs/AI-BUDGET-REVIEW-43f300c.md`; manager files were not edited.
+
+## Optional strategic gameplay (Cloud integration)
+
+Set `AI_PROVIDER=anthropic` and `AI_STRATEGY=strategic` to enable model-selected
+world intentions as well as council. `AI_STRATEGY=hybrid` remains the default;
+`AI_PROVIDER=demo` remains credential-free regardless of strategy. Missing keys,
+invalid output, denied durable reservation, timeout, or exhausted allowance select
+labeled demo for that match. The same pinned adapter, wallet, reservation callback,
+per-match limits and daily ledger apply. No budget defaults were increased.
+
+The model chooses a structured offered intention, not engine commands or arbitrary
+targets. Crew can select different task routes, repair, reporting, following,
+avoidance, alibi positioning and investigation of past permitted sightings.
+Saboteurs can select fake work, deceptive positioning, isolation of a currently
+visible target, and sabotage timing. Isolation waits for no visible nearby witness
+and a ready cooldown; sabotage timing waits for at most one visible keeper. These
+are fallible local observations, never claims about hidden players. Fake work only
+navigates/waits and cannot complete any crew task. No unimplemented capability is
+required or advertised. Plans last at most 30 seconds; new deaths, meetings,
+completed tasks, critical events and body/witness evidence can invalidate them.
+Three non-progress steps bound failed routes. Unchanged conditions cannot buy
+another plan until the 30-second replan window, even if its target disappears.
+
+Private actor memory keeps at most 12 timestamped observation snapshots (24 visible
+players each), 16 heard claims, bounded suspicions, one intention and progress.
+The adapter supplies only the last four snapshots and safe-view fields. Historical
+positions stay timestamped; following and isolation require current visibility.
+Dynamic public roster entries are bounded to 24 and their public names are
+validated; unknown characters get a generic persona. Caller-supplied private
+personas are ignored. No raw state, spectator view or provider reasoning enters
+the planner or browser. Oversized prompts fail closed under the existing byte cap.
+
+Transport obtains a fresh actor view before sending and applying a result. A
+room-local generation changes on match/phase/meeting/life transitions; stale
+results cannot persist their context into a later generation. Each retry retains
+its own durable authorization and uncertain reservations. Valid travel proceeds
+without a model call. This implementation uses the existing engine's living-seat
+permissions; it adds no ghost abilities.

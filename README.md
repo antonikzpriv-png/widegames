@@ -44,3 +44,11 @@ The first two run offline engine, AI, authorization, persistence and presentatio
 [Deployment and environment configuration](docs/DEPLOYMENT.md) includes the Docker build/run commands, exact public origin, HTTPS/WebSocket proxy and persistent-volume setup. One server process and one budget instance must own each data directory. A lock recovery claim left by an abrupt crash fails closed; stop all writers, back up the directory and verify the recorded PID/owner before operator recovery. Ordinary restart preserves seats, deadlines, action identities and uncertain spending reservations. [Transport details](docs/TRANSPORT.md).
 
 The repository was initially empty, with no origin/main revision. The original board implementation is saved on `codex/lantern-wake-integration-20261029`; the first push made that the repository's default branch automatically. The walking-world redesign starts from its exact saved revision `d5eed65eb4737ceccab594c6dad911ff9033d2ba` and is on `codex/lantern-world-20261029`. See [world qualification](docs/WORLD-VERIFICATION.md). Main was not created or merged, and no deployment was performed.
+
+Optional strategic AI: set `AI_STRATEGY=strategic` alongside the live Anthropic
+configuration to let models choose persistent gameplay intentions (task routes,
+following, avoidance, investigation, repair, alibis and saboteur positioning).
+Navigation and actions still execute locally through the authoritative engine.
+The default `AI_STRATEGY=hybrid` keeps roaming credential-free and uses models only
+for council. Both live modes share the existing budgets and labeled demo fallback.
+See [strategic configuration and behavior](docs/AI.md#optional-strategic-gameplay-cloud-integration).

@@ -201,3 +201,18 @@ Default result35/35 pass, zero skipped. Log `_artifacts/world-ui-chronology-defa
 Preparation failures remain distinguished: the first new sequence comparison failed only because a VM-realm object was compared with a host-realm copy; comparison now checks identical JSON packet fields. The first35-case run had34 passes/one fixture failure because a source assertion required `const packet`, while the reviewed allocator correctly uses `let packet`; its binding-pattern check now permits const/let, backed by execution of the actual root encoder. The original current-manager chronology control failed with600-before100 before the Core pin was available, then passed at e16bace. Neither product assertion was removed, weakened to accept stale behavior, or skipped. Final source checks `git diff --check` pass.
 
 This is independent UI/Core/root source/VM verification. No AI runtime change or new self-approval, full duplicate suite, Chrome, paid/live provider request, hosted CI, Docker, main/push/deploy, other worktree edit or account substitution occurred. Browser, integrated end-to-end and deployment qualification remain the coordinator's separate work.
+
+## Optional strategic mode integration
+
+The historical navigation-only constraint above describes the default hybrid mode.
+The current feature adds explicit `AI_STRATEGY=strategic`; see
+[the configuration and execution contract](AI.md#optional-strategic-gameplay-cloud-integration).
+`server/ai/strategic.mjs` enumerates intentions and executes them using public world
+geometry and fresh actor views. It uses the existing Anthropic adapter and
+reservation callback. Existing world demo and hybrid policy tests remain active.
+`tests/ai-strategic.test.mjs` tests choices, bounded retries, concurrent match
+allowances, privacy, dynamic profiles, stale results and persistent routes;
+`tests/ai-strategic-matches.test.mjs` runs full mocked strategic matches through the
+real engine, restores JSON context mid-route, and reaches actual rules outcomes
+through explicitly budget-limited fallback. These are author checks, not an
+independent review or live-provider qualification.
