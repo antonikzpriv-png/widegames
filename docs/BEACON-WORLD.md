@@ -95,3 +95,48 @@ git diff --check
 ~~~
 
 Results:19/19 related/interop checks plus1/1 generated-motion checkpoint control,20 passed, zero failure/skip. Evidence: _artifacts/beacon-world-traces-focused.txt, beacon-world-traces-related.txt and beacon-world-traces-motion-checkpoint.txt. Original milestone/AI/death-knowledge evidence is preserved. This is bounded author verification, not independent approval; manager reviews/integrates. Only owned world/tests/document changed. No root/other-owner edits, Chrome, providers, installs, full repository suite, main/push/deployment.
+
+
+## Independent investigation/systems/root audit ? exact6daa2d5
+
+This section reviews other owners' investigation/systems implementations and actual root wiring. It is separate from Core's author checks above and does **not** independently approve Core's own world module.
+
+Exact coordinator: **6daa2d50e4423c691475ae388c932b92df6c277a**. Investigation owner: **35fb1e9f322062dcdeb7695a3f7b936fd2df0219**; its directory tree d80a9e58d1069c9c7d834becb5529cb5edd3a1d7 is byte-identical at6daa2d5. Systems owner: **ce479d37966d16026d735c16db5880d032ebdb12**; its directory tree afcab724a2ab054bba28981eab8ecc5f68eb89d2 is byte-identical at6daa2d5. Actual diffs, module source and root deadline/projection/restore wiring were inspected read-only. No new concrete product failure was reproduced in this bounded review.
+
+The qualification archive _artifacts/integration-review-6daa2d5 contains all30 server/shared files from raw committed Git blobs, with no overlays or runtime patches. SHA256/blob metadata is in integration-review-6daa2d5-manifest.json. Optional exact-pin test verifies all30 files. Tests default to current checkout source via ../; only BEACON_WORLD_INTEGRATION_REVIEW_ROOT selects an archive. Historical byte pinning is opt-in through BEACON_WORLD_INTEGRATION_REVIEW_PIN and does not freeze ordinary future-code regressions. This owner's foundation lacks the coordinator's schema3 orchestration, so its local run explicitly selects the archive; missing schema3 fails instead of silently skipping.
+
+Fixture provenance: real createMatch/applyAction/applyInput/tick/getPlayerView, public devices/map and native modules. Deterministic fixture seeds select p6 as saboteur so roles are controllable to the external test oracle; no hidden state is attached to AI, clients or model prompts. All staged positions are reached by accepted authoritative navigate actions and elapsed server time. No teleport, fabricated winner, hand-edited hidden state, forged observation or mock device/system implementation is used. JSON round trips are exact state restoration. Shortened test rule values: device read1000ms, device cooldown1ms, auxiliary cooldown1ms, light/door durations1000/1001ms, comms1000ms, kill/initial kill/meeting/critical cooldown1ms, long roam600000ms and maximum900000ms. Tie fixtures explicitly calculate a10000ms boundary from public travel distance and supplied rule durations. These are labeled integration fixtures, not production timing or balance claims.
+
+Independent controls (17 unique tests, all passed):
+
+- Remote console access and extra client position fields reject; walking cannot start a read. Actual stationary proximity enables it. Same-ID retry and JSON restoration preserve the original read deadline. Other actor/spectator sessions and observations remain absent.
+- Legitimate zero cleanup while stationary preserves a read. Real nonzero steering cancels immediately with movement reason; no sample appears at the former deadline. A fresh stationary read completes after its cooldown.
+- A late engine tick settles a moving camera target at the read deadline before sampling: target x330 at the1000ms sample, x420 at the later final checkpoint. Sample timestamp remains the deadline, data is a defensive copy, and serialized/uninterrupted final states match.
+- Active communications sabotage cancels the existing read immediately, rejects new reads and produces no delayed sample. Actual expiry restores matching enabled hints and successful access.
+- Both camera light and door masking have a negative before-expiry control(duration1001) and exact-tie positive(duration1000) against a1000ms read. Systems expiry is processed before device sampling at a tie. Frames expose only permitted id/position fields to the owner, not roles or another owner's observations.
+- A camera target behind the turbine is masked. A console viewer sees two remote living keepers on sampled footage, then a real remote elimination occurs. Footage is never promoted to witness/body events or death knowledge; the viewer keeps last-known alive/null current coordinates. No camera-created firsthand attribution appears.
+- Actual owner vitals read changes remote death knowledge only for that reader. Another keeper and Bridge spectator retain last-known alive; no remote coordinates, roles, session or device observations leak. Sample rows contain only id/status and private device replay recipients remain the owner.
+- A validated vent exit tied to camera completion is processed before sampling, so the frame sees the real exit position. It contains no hatch/route/role metadata, while the remote viewer's current roster position stays null and no physical hatch/witness event is invented.
+- Roam, maximum and critical deadlines each precede a tied device read. They cancel the session without a fabricated sample. Roam enters discussion, maximum truthfully pauses with no winner/replay, and critical ends at its actual deadline with no device_observation record.
+- Occupancy yields six bounded room counts totaling five living non-transit actors after an unseen remote death. There are no actor identities/positions in that sample, no camera-to-death promotion, and no observations for another actor or spectator.
+- Actual reader death and validated vent entry cancel active sessions with dead/transit reasons. New requests reject PLAYER_DEAD/IN_TRANSIT. No sample is produced for the cancelled read.
+
+Root source findings: ctx.nearby/sees are supplied to device validation and camera masking; device and systems deadlines are included in the same chronological loop. Critical, maximum and phase transitions precede systems/device work; systems expiry/transit precedes tied device work. Communications cancellation is refreshed after accepted actions. Canonical replay id/type/at are assigned after payload data. Store validation invokes systems/investigation/spatial validators on finalized checkpoint state. Safe system projections omit contributor identities. Those already-fixed boundaries were inspected, not reopened as hypothetical defects. Provider code is not entered by these engine-only tests.
+
+Exact commands in this assigned D: checkout, after preparing the immutable archive:
+
+~~~powershell
+$env:TEMP='D:/Widegames-work/temp'
+$env:TMP=$env:TEMP
+$env:BEACON_WORLD_INTEGRATION_REVIEW_ROOT=(Join-Path (Get-Location) '_artifacts/integration-review-6daa2d5')
+$env:BEACON_WORLD_INTEGRATION_REVIEW_PIN='6daa2d50e4423c691475ae388c932b92df6c277a'
+Remove-Item Env:WORLD_ENGINE_GEOMETRY_MODULE -ErrorAction SilentlyContinue
+node --test tests/beacon-world-integration-review.test.mjs
+node --test --test-name-pattern='occupancy is|actual death and' tests/beacon-world-integration-review.test.mjs
+node --check tests/beacon-world-integration-review.test.mjs
+git diff --check
+~~~
+
+Actual execution: initial15/15 passed in0.59s, evidence _artifacts/beacon-world-integration-review-initial.txt. After adding the final two controls, only those two were run:2/2 passed in0.28s, evidence beacon-world-integration-review-additional.txt. Thus17 distinct checks passed across two bounded invocations, no failures/skips; no repeated full suite. The full-file command above is the ordinary reproducible invocation of the final test file. No product assertion was weakened or fixture corrected to obtain these results.
+
+Limits: real engine/module integration only; no HTTP identity/persistence process restart, browser/device UI, directional camera fixture, exhaustive roster/camera-cap/load coverage, paid/live provider or deployment qualification. Fixed radial fixtures, targeted seeded actors, supplied clocks and shortened rule values are the tested limits. Manager owns integration/browser qualification and another owner independently reviews Core's world implementation. Only the assigned review test/document changed; no runtime/other-worktree edits, installs, Chrome, push/main/deploy.
