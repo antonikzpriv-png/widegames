@@ -69,7 +69,8 @@ export function createAiController({ config = {} } = {}) {
   function envelope(action, view, memory) {
     if (!action) return null;
     if (action.type === 'say') memory.discussionCount = (memory.discussionCount ?? 0) + 1;
-    if (action.type === 'move') memory.patrol = (memory.patrol ?? 0) + 1;
+    if (view.worldVersion === 1 && action.type === 'repair') memory.worldRepairDeadline = view.sabotage?.deadlineAt;
+    if (action.type === 'move' || action.type === 'navigate') memory.patrol = (memory.patrol ?? 0) + 1;
     const scope = createHash('sha256').update(view.matchId).digest('hex').slice(0, 12);
     return { ...action, id: `ai_${scope}_${randomUUID()}` };
   }

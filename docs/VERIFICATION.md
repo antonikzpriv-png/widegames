@@ -1,5 +1,7 @@
 # Lantern Wake verification
 
+The current top-down walking-world redesign is qualified separately in [WORLD-VERIFICATION.md](WORLD-VERIFICATION.md). The board-layout results below are historical and do not qualify the new presentation.
+
 The integrated application is playable in human-plus-AI and six-AI spectator modes. Qualification used Node24.20.0 and Chrome156.0.8078.73 on Windows, with source, fixtures and artifacts on D:. No paid/live provider request or deployment was performed.
 
 ## Follow-up audit and combined qualification
