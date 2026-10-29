@@ -109,6 +109,14 @@ export async function validateRoomSnapshot(room,{worldGeometry:provided}={}){
       if(!validPoint(player.position)||m.path.some(p=>!validPoint(p))||(m.destination!==null&&!validPoint(m.destination))||m.leaseUntil>m.at+WORLD.inputLeaseMs+1e-6)throw new Error('Invalid world position or input lease');
     }
     for(const body of room.state.bodies)if(!validPoint(body.position))throw new Error('Invalid world body position');
+    if(room.state.schemaVersion===4){
+      const roomIds=new Set(getMap(room.state.map).roomLayout.map(r=>r.id));
+      // Historical coordinates use static geometry, not today's temporary doors.
+      // A corridor retains the last entered room, as authoritative motion does.
+      const validHistorical=value=>{if(!validPoint(value.position)||!roomIds.has(value.roomId))return false;const actual=geometry.worldRoomAt(value.position);return !actual||(typeof actual==='string'?actual:actual.id)===value.roomId;};
+      for(const entry of Object.values(room.state.abilities))for(const note of entry.notes)if(!validHistorical(note))throw new Error('Invalid historical note map position');
+      for(const snapshot of room.state.replaySnapshots)for(const player of snapshot.players)if(!validHistorical(player))throw new Error('Invalid replay map position');
+    }
   }
   return room;
 }
