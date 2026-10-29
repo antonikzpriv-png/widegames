@@ -156,3 +156,34 @@ git diff --check
 ~~~
 
 Evidence: _artifacts/tactical-map-systems-closure-2c1f9d8.txt and new raw-source manifest. The specific736 finding is closed at this exact integration pin. Limits: checkpoint/module/root/store qualification of the reported invariant and tested positive cases, not exhaustive corruption authentication, reconstruction of cleared activation history or historical dynamic LOS, complete matches, browser, providers, production packaging/server or deployment. Legacy-v1 tolerance is deliberately unchanged. Only this receipt is committed for closure; no runtime/test changes, installs, Chrome, broad suite, providers, other worktree edits, main/push/deploy. Production-only qualification has not started.
+
+## Scene predicate integration-test correction: exact2015618
+
+Test-only correction, source **2015618095b9d31e608ef9a62278ffc126d93594**. Reproduced the stale final boundary test before editing: its exact !floor.center source assertion failed on B4's semantically equivalent !world.WORLD_ROOMS.some(room=>room.id===floor.id) paint predicate and matching filter predicate. Evidence _artifacts/tactical-map-scene-old-assertion-negative.txt. This was a test contract mismatch, not a renderer/geometry defect. No runtime/public/shared/spatial source changed.
+
+The existing scene-contract test now accepts either complete predicate pair after whitespace normalization. Both paint and threshold loops must use a supported pair. **All original numerical floor rectangle, room and fixture equality assertions remain unchanged**, including the explicit51b6cf4 negative fixture (all Annex floor centers present, zero !center corridors) and positive owned geometry's seven corridors. No assertion or integration check was skipped.
+
+Added exactly one meaningful actual-draw test. It imports the real selected createWorldScene and records actual canvas corridor roundRect fills and threshold fillRect primitives, comparing their exact world coordinates/counts with both immutable maps. The modern renderer is also invoked through its supported mapResolver with copies that give corridors irrelevant centers; the real draw must still paint exactly the ID-defined corridors and thresholds, excluding rooms. This catches missing paint/threshold code even if the expected source strings remain. Historical51 mode runs its real original renderer/data and explicitly asserts zero Annex corridor and threshold paint. No source rewrite, browser or renderer monkey-patch is used; the recording canvas is a test double, not pixel/raster evidence.
+
+New exact-source archive: own ignored _artifacts/tactical-scene-2015618,281 canonical raw Git blobs, Git object ID checked on extraction and SHA256 manifest checked before/after. Preserved old _artifacts/tactical-boundary-51b6cf4 contains261 original blobs and also verifies unchanged. No overlays or archive mutations.
+
+Actual results: **15/15** focused boundary/map controls passed at2015618,0 fail/skip,820ms. This includes9 boundary controls (the prior8 plus one actual-draw control) and6 registry/route/fixture controls, preserving the all56 ordered station-route check. Then **2/2** selected scene controls passed against exact historical51b6cf4cb62ac95b8ce3cd34c5fbbeef5b34aa12,0 fail/skip,375ms, proving the original negative case still executes. No broad suite, unrelated check repeat or owner runtime modification.
+
+Exact commands from this assigned D: checkout:
+
+~~~powershell
+$env:TEMP='D:/Widegames-work/temp'
+$env:TMP=$env:TEMP
+$env:TACTICAL_MAP_ENGINE_ROOT=(Join-Path (Get-Location) '_artifacts/tactical-scene-2015618')
+$env:TACTICAL_MAP_ENGINE_PIN='2015618095b9d31e608ef9a62278ffc126d93594'
+node --test --test-name-pattern='exact archived scene' tests/tactical-map-boundary.test.mjs
+# Prior command reproduced the stale assertion before this test-only change.
+node --check tests/tactical-map-boundary.test.mjs
+node --test tests/tactical-map-boundary.test.mjs tests/tactical-map-registry.test.mjs
+$env:TACTICAL_MAP_ENGINE_ROOT=(Join-Path (Get-Location) '_artifacts/tactical-boundary-51b6cf4')
+$env:TACTICAL_MAP_ENGINE_PIN='51b6cf4cb62ac95b8ce3cd34c5fbbeef5b34aa12'
+node --test --test-name-pattern='exact archived scene|actual scene draw' tests/tactical-map-boundary.test.mjs
+git diff --check
+~~~
+
+Evidence: _artifacts/tactical-map-scene-2015618-focused.txt and tactical-map-scene-51b6cf4-historical.txt, plus preserved initial assertion failure and both manifests. Limits: canvas-call geometry checks, not visual pixel/browser/Chrome qualification. Manager owns browser/full-suite integration. Only this test and receipt changed; no public/runtime/other-worktree edits, providers, installs, main/push/deploy. Production qualification remains unstarted pending its separate assignment.
