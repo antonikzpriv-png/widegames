@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {mkdtemp,rm,readFile,readdir} from 'node:fs/promises';
+import {mkdir,mkdtemp,rm,readFile,readdir} from 'node:fs/promises';
 import {once} from 'node:events';
 import {createHash,randomUUID} from 'node:crypto';
 import http from 'node:http';
@@ -20,7 +20,8 @@ async function until(check,label){const end=Date.now()+4000;while(Date.now()<end
 const inert={describe:()=>({mode:'demo',provider:'audit-fixture',calls:0,tokens:0,costUsd:0}),decide:async()=>null};
 const rules={moveCooldownMs:1,taskCooldownMs:1,killCooldownMs:1,initialKillCooldownMs:1,meetingCooldownMs:1,discussionMs:100,votingMs:100,roamDeadlineMs:100000,maxMatchMs:1000000};
 async function fixture(t,options={}){
- const parent=path.resolve('D:/Widegames-work/temp'),directory=await mkdtemp(path.join(parent,'audit-privacy-20261029-'));
+ const parent=path.join(root,'_artifacts','test-temp');await mkdir(parent,{recursive:true});
+ const directory=await mkdtemp(path.join(parent,'audit-privacy-20261029-'));
  let at=100000,game,base;
  const config={dataDir:directory,publicOrigin:origin,tickMs:60000,roomTtlMs:3600000,ai:{provider:'demo',decisionIntervalMs:60000},rules,now:()=>at,...options};
  let seed=0;while(engine.createMatch({id:'seed-search',seed,now:at}).players.find(p=>p.id==='p1').role!==(options.fixtureRole??'crew'))seed++;
