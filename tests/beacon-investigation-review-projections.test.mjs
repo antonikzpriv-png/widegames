@@ -137,7 +137,20 @@ test('real engine ended-only reveal: normal ejection ends match without leaking 
 test('REGRESSION: two-saboteur Beacon AI must choose an engine-permitted target when one is offered',async t=>{
  t.mock.method(globalThis,'fetch',()=>{throw new Error('No network permitted');});
  const f=game({roster:roster(ids),saboteurCount:2});f.tick(1);const actor=f.state.players.find(p=>p.id==='echo');assert.equal(actor.role,'saboteur');const view=f.view(actor.id);const targets=view.interactions.filter(d=>d.enabled&&d.type==='eliminate').map(d=>d.fields.targetId);assert.deepEqual(targets,['delta','foxtrot','golf']);
- const ai=createAiController({config:{provider:'demo',decisionIntervalMs:1}}),context={},receipts=[];let state=f.state;
- for(const now of [1,2]){state=engine.tick(state,now).state;const current=engine.getPlayerView(state,actor.id,now);const action=await ai.decide({view:current,player:{id:actor.id,persona:actor.persona},context});assert.equal(action.type,'eliminate');const result=engine.applyAction(state,actor.id,action,now);state=result.state;receipts.push({actor:actor.id,proposed:action.targetId,accepted:result.accepted,permitted:targets,error:result.error});}
+ const ai=createAiController({config:{provider:'demo',decisionIntervalMs:1}}),context={},receipts=[],initial=clone(f.state);
+ // Reuse private AI memory, but isolate each target-choice attempt from the
+ // same initial world. A successful kill must not create the next attempt's body.
+ for(const now of [1,2]){const state=engine.tick(clone(initial),now).state,current=engine.getPlayerView(state,actor.id,now);const permitted=current.interactions.filter(d=>d.enabled&&d.type==='eliminate').map(d=>d.fields.targetId);assert.deepEqual(permitted,targets);const action=await ai.decide({view:current,player:{id:actor.id,persona:actor.persona},context});assert.equal(action.type,'eliminate');const result=engine.applyAction(state,actor.id,action,now);receipts.push({actor:actor.id,proposed:action.targetId,accepted:result.accepted,permitted,error:result.error});assert.equal(context.matches['match:review-projections'].memories['actor:echo'].lastDecisionAt,now);}
+ assert.deepEqual(f.state,initial,'Neither accepted nor rejected attempt mutates the initial fixture');
  assert.equal(ai.describe(context).calls,0);assert(receipts.every(r=>r.accepted&&r.permitted.includes(r.proposed)),JSON.stringify(receipts));
+});
+
+// Sequential behavior is a separate control: after a real accepted kill the
+// newly visible body makes report legal. Do not force another elimination.
+test('sequential accepted AI kill is followed by a legal body report, not a forced second kill',async t=>{
+ const outbound=t.mock.method(globalThis,'fetch',()=>{throw new Error('No network permitted');});
+ const f=game({roster:roster(ids),saboteurCount:2});f.tick(1);const actor=f.state.players.find(p=>p.id==='charlie');assert.equal(actor.role,'saboteur');const ai=createAiController({config:{provider:'demo',decisionIntervalMs:1}}),context={};
+ const before=f.view(actor.id),permitted=before.interactions.filter(d=>d.enabled&&d.type==='eliminate').map(d=>d.fields.targetId);const kill=await ai.decide({view:before,player:{id:actor.id,persona:actor.persona},context});assert.equal(kill.type,'eliminate');assert(permitted.includes(kill.targetId));
+ const killed=engine.applyAction(f.state,actor.id,kill,1);assert.equal(killed.accepted,true,JSON.stringify(killed.error));const state=engine.tick(killed.state,2).state,after=engine.getPlayerView(state,actor.id,2),bodyId='body-'+kill.targetId;assert(after.events.some(e=>e.type==='body'&&e.bodyId===bodyId&&!e.reported));assert(after.interactions.some(d=>d.enabled&&d.type==='report'&&d.fields.bodyId===bodyId));
+ const report=await ai.decide({view:after,player:{id:actor.id,persona:actor.persona},context});assert.equal(report.type,'report');assert.equal(report.bodyId,bodyId);const reported=engine.applyAction(state,actor.id,report,2);assert.equal(reported.accepted,true,JSON.stringify(reported.error));assert.equal(reported.state.phase,'discussion');assert.equal(reported.state.meeting.bodyId,bodyId);assert.equal(ai.describe(context).calls,0);assert.equal(outbound.mock.callCount(),0);
 });
