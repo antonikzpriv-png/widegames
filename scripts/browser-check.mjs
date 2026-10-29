@@ -81,7 +81,7 @@ try{
  await clickText(page,'Start the watch');await page.waitForSelector('.watch-panel');
  let r=await view(page);check(r.game.self.role==='crew'&&r.seatId==='p1','Human receives exactly its own private role');
  check(await page.evaluate(()=>document.cookie===''),'Seat cookie is not readable by browser JavaScript');
- await taskAndReturn(page);check((await view(page)).game.self.tasks.some(t=>t.completed),'Human moves, performs a real task and returns to Bridge');
+ await taskAndReturn(page);check((await view(page)).game.self.tasks.some(t=>t.completed),'Human moves, performs a real task and returns to Bridge');await screenshot(page,'02b-human-deck');
  await page.locator('[data-focus=meeting]').click();await page.waitForSelector('#council-message');
  const message='I checked the relay. <img src=x onerror=alert(1)> is only a log label.';
  await page.locator('#council-message').fill('');await page.type('#council-message',message,{delay:30});
