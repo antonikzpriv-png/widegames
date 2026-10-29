@@ -233,3 +233,38 @@ git diff --check
 ~~~
 
 Limits: production-only local Windows process/HTTP/WS/file restart and source graph, not Docker execution/Linux/hosted deployment, OS-delivered POSIX signal, ACL/power-loss/crash recovery, browser visual/audio/input, complete matches/full unit suite or original live model adapter/provider qualification. Legacy samples are paused synthetic checkpoints. The existing live-provider adapter was never invoked. No Chrome, Docker, paid/provider calls, broad suite, npm updates, root/runtime/shared/public/other-worktree edits, main/push/deploy or updater work occurred. Manager owns integration/publication; this receipt does not deploy anything.
+
+## Final narrow production asset closure: exact53286ca
+
+**Same25/25 production checks passed** at frozen **53286ca1df771dbca6c4e19417d8b10bb9a929e0**, first run for this pin, no failure/skip. Compared actual full Git diff with prior qualified **aec5695236acf4e51ec87f2c27425a29573003d3**: the only deployed delta is **public/world/beacon.css**, adding a separate mobile mute rail and related positioning rules. server/shared/package.json/package-lock.json/Dockerfile are unchanged; the remaining changed paths are tests/docs/scripts. Runtime paths and imported module graph remain the same. CSS blob changes cbdcb8ceeb7acf400c79700ec8767e77d8abb9fb -> b77603635b5c6aa375637dc530a538d6c3cf6d71. No runtime/source edits were made for this closure.
+
+The owned standalone harness now accepts **TACTICAL_PRODUCTION_REVIEW_PIN** (full40-character lowercase Git hash). With no override, it preserves exactAEC as its default. Archive default derives as own _artifacts/tactical-production-<pin7>; each fresh evidence directory derives as tactical-production-<pin7>-run-<unique>. Existing optional TACTICAL_PRODUCTION_REVIEW_ROOT remains supported and constrained inside own ignored artifacts. Only pin/path default handling changed; all25 check labels and behavioral assertions are identical, verified by comparing successful report check arrays. The original AEC report/archive and initial AEC failure remain untouched.
+
+Fresh exact raw archive _artifacts/tactical-production-53286ca contains **287 source blobs**,72 runtime files and43 public/shared assets. All counts derive from its verified manifest. Canonical Git blob IDs/SHA256 checked on extraction; all287 source hashes verify unchanged after execution. Tar exact Git PAX pin verified, SHA256 **8e360a3b4b67f99996051290d51cc078e624e8e8482e1560cfadc1dbe32ece10**. Comparison JSON records actual CSS-only deployed diff. Production install was offline with D: cache/temp, ws8.22.0 only; Puppeteer remains absent. All43 assets, including changed CSS, were fetched byte-exact. Local import edges150 and extra browser references5 are unchanged from AEC.
+
+Actual runtime execution retained both maps' authenticated pre-start settings and starts, HTTP/WS privacy/source permissions, real note/input and accepted receipts, graceful actual-main shutdown and restart on the same isolated data, exact identity/map/settings/notes/reservation retention and bit-exact paused legacy1/2/3 files. Two real mains (PIDs7460/8904) both exit0/signalnull through the real SIGTERM handler invoked via Windows IPC. **0 external provider fetch attempts,0 forced stops,0 socket privacy errors**,5896ms. No new assertion or fixture correction was needed. Production-only runtime qualification applies to532; this does not independently qualify mobile layout pixels/browser behavior.
+
+Copyable evidence paths, relative to D:/Widegames-work/tactical-maps-builder-20261029:
+
+- Report: **_artifacts/tactical-production-53286ca-run-d8A2ut/report.json**
+- Manifest: **_artifacts/tactical-production-53286ca-manifest.json**
+- Source comparison: _artifacts/tactical-production-53286ca-comparison.json
+- Raw tar: _artifacts/tactical-production-53286ca.tar
+- Install/run logs: _artifacts/tactical-production-53286ca-install.txt and tactical-production-53286ca-run.txt
+
+Exact install command (cwd _artifacts/tactical-production-53286ca), then harness from assigned worktree:
+
+~~~powershell
+$env:TEMP='D:/Widegames-work/temp'
+$env:TMP=$env:TEMP
+$env:npm_config_cache='D:/Widegames-work/npm-cache'
+npm ci --omit=dev --ignore-scripts --no-audit --no-fund --offline --cache D:/Widegames-work/npm-cache
+# Return to assigned worktree root.
+$env:TACTICAL_PRODUCTION_REVIEW_PIN='53286ca1df771dbca6c4e19417d8b10bb9a929e0'
+Remove-Item Env:TACTICAL_PRODUCTION_REVIEW_ROOT -ErrorAction SilentlyContinue
+node --check tests/tactical-map-production-review.mjs
+node tests/tactical-map-production-review.mjs
+git diff --check
+~~~
+
+Limits remain those of the AEC receipt: local Windows main/process/HTTP/WS/ordinary store restart and byte-exact packaging, not Chrome/browser, Docker/Linux/hosted deployment, full matches/suite, power-loss/ACL or original live-model/provider qualification. No Chrome, providers, full suite, runtime/other-worktree edits, main/push/deploy or new features. Only harness parameterization and this receipt changed; qualification closure is finished.
