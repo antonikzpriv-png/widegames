@@ -1,4 +1,5 @@
-﻿import {getMap} from '../../shared/maps/index.mjs';
+﻿import {annexPalette,drawAnnexDecor} from './annex-art.mjs';
+import {getMap} from '../../shared/maps/index.mjs';
 import {ActorSamples,clamp,point,visibleBodies} from './model.mjs';
 import {CHARACTERS} from '../../shared/contracts.mjs';
 import {visionFrame,drawBeaconFixtures} from './beacon-scene.mjs';
@@ -46,15 +47,15 @@ function decor(ctx,room,time,reduced){
   round(ctx,1220,990,100,50,12,'#445d76');for(let i=0;i<4;i++){ctx.strokeStyle='#9aafbf';ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(1235+i*23,997);ctx.lineTo(1235+i*23,1033);ctx.stroke();}for(let i=0;i<3;i++)round(ctx,x+24+i*82,y+24,66,46,7,'#516a7c');text(ctx,'TURBINE HALL',x+w/2,y+h-23,11,'#425b70');
  }
 }
-export function createWorldScene(canvas,{reduced=false}={}){
- const ctx=canvas.getContext('2d'),samples=new ActorSamples();let map=getMap(),world=map.geometry;let room=null,lastKey=null,camera={x:800,y:400},view={width:1,height:1,zoom:1},stopped=false;
- function update(next,at){map=getMap(next?.game?.map??next?.map);world=map.geometry;const key=`${next?.roomId}:${next?.game?.matchId}:${map.id}:${map.version}`;if(key!==lastKey){samples.clear();lastKey=key;camera={...(visionFrame(next?.game,map)?.origin||next?.game?.self?.position||world.WORLD_VIEWPOINT)};}room=next;samples.update(room?.game,at);}
+export function createWorldScene(canvas,{reduced=false,mapResolver=getMap}={}){
+ const ctx=canvas.getContext('2d'),samples=new ActorSamples();let map=mapResolver(),world=map.geometry;let room=null,lastKey=null,camera={x:800,y:400},view={width:1,height:1,zoom:1},stopped=false;
+ function update(next,at){map=mapResolver(next?.game?.map??next?.map);world=map.geometry;const key=`${next?.roomId}:${next?.game?.matchId}:${map.id}:${map.version}`;if(key!==lastKey){samples.clear();lastKey=key;camera={...(visionFrame(next?.game,map)?.origin||next?.game?.self?.position||world.WORLD_VIEWPOINT)};}room=next;samples.update(room?.game,at);}
  function draw(time,{overview=false}={}){
   if(stopped)return;const rect=canvas.getBoundingClientRect();if(!rect.width||!rect.height)return;
   const dpr=Math.min(2,globalThis.devicePixelRatio||1),width=rect.width,height=rect.height;
   if(canvas.width!==Math.round(width*dpr)||canvas.height!==Math.round(height*dpr)){canvas.width=Math.round(width*dpr);canvas.height=Math.round(height*dpr);}
   ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,width,height);
-  const sea=ctx.createLinearGradient(0,0,width,height);sea.addColorStop(0,'#102f48');sea.addColorStop(1,'#244957');ctx.fillStyle=sea;ctx.fillRect(0,0,width,height);
+  const sea=ctx.createLinearGradient(0,0,width,height);sea.addColorStop(0,map.id==='beacon'?'#102f48':'#172f46');sea.addColorStop(1,map.id==='beacon'?'#244957':'#3e6067');ctx.fillStyle=sea;ctx.fillRect(0,0,width,height);
   if(!reduced){ctx.strokeStyle='#93c2d01c';ctx.lineWidth=2;for(let i=0;i<45;i++){const x=(i*137+time*.014)% (width+80)-40,y=(i*83+time*.038)%(height+80)-40;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x-12,y+27);ctx.stroke();}}
   const game=room?.game,lobby=!game;
   const vision=visionFrame(game,map),follow=vision?.origin||game?.self?.position||samples.at(game?.players?.find(p=>point(p.position)&&p.alive)?.id,time,reduced)||world.WORLD_VIEWPOINT;
@@ -65,17 +66,17 @@ export function createWorldScene(canvas,{reduced=false}={}){
   ctx.save();ctx.translate(width/2,height/2);ctx.scale(zoom,zoom);ctx.translate(-camera.x,-camera.y);
   // Structural silhouette beneath the painted floor.
   for(const floor of world.WORLD_FLOORS)round(ctx,floor.x-8,floor.y-8,floor.width+16,floor.height+16,13,'#142838','#091c2c',9);
-  for(const floor of world.WORLD_FLOORS)if(!floor.center){round(ctx,floor.x,floor.y,floor.width,floor.height,6,'#719398','#1b3545',4);ctx.strokeStyle='#c1d5c02b';ctx.lineWidth=2;for(let x=floor.x+20;x<floor.x+floor.width;x+=32){ctx.beginPath();ctx.moveTo(x,floor.y+8);ctx.lineTo(x,floor.y+floor.height-8);ctx.stroke();}}
-  for(const r of world.WORLD_ROOMS){
-   const [wall,floor]=palettes[r.id]||palettes.bridge;round(ctx,r.x,r.y,r.width,r.height,18,wall,'#102b3e',7);round(ctx,r.x+8,r.y+13,r.width-16,r.height-21,13,floor,'#ffffff55',3);
+  for(const floor of world.WORLD_FLOORS)if(!world.WORLD_ROOMS.some(room=>room.id===floor.id)){round(ctx,floor.x,floor.y,floor.width,floor.height,6,'#719398','#1b3545',4);ctx.strokeStyle='#c1d5c02b';ctx.lineWidth=2;for(let x=floor.x+20;x<floor.x+floor.width;x+=32){ctx.beginPath();ctx.moveTo(x,floor.y+8);ctx.lineTo(x,floor.y+floor.height-8);ctx.stroke();}}
+  for(const [roomIndex,r]of world.WORLD_ROOMS.entries()){
+   const [wall,floor]=map.id==='beacon'?(palettes[r.id]||palettes.bridge):annexPalette(roomIndex);round(ctx,r.x,r.y,r.width,r.height,18,wall,'#102b3e',7);round(ctx,r.x+8,r.y+13,r.width-16,r.height-21,13,floor,'#ffffff55',3);
    ctx.save();ctx.beginPath();ctx.rect(r.x+12,r.y+16,r.width-24,r.height-30);ctx.clip();ctx.strokeStyle='#19344413';ctx.lineWidth=2;for(let x=r.x+30;x<r.x+r.width;x+=36){ctx.beginPath();ctx.moveTo(x,r.y+14);ctx.lineTo(x,r.y+r.height-8);ctx.stroke();}ctx.restore();
-   text(ctx,(map.roomLayout.find(room=>room.id===r.id)?.name||names[r.id]||r.id).toUpperCase(),r.x+r.width/2,r.y+r.height-7,19,'#163346');decor(ctx,r,time,reduced);
+   text(ctx,(map.roomLayout.find(room=>room.id===r.id)?.name||names[r.id]||r.id).toUpperCase(),r.x+r.width/2,r.y+r.height-7,19,'#163346');if(map.id==='beacon')decor(ctx,r,time,reduced);else drawAnnexDecor(ctx,r,time,reduced,map);
    const station=world.WORLD_STATIONS[r.id],hasTask=game?.self?.tasks?.some(t=>!t.completed&&t.roomId===r.id),critical=game?.beaconVersion!==1&&game?.sabotage?.active&&game.sabotage.roomId===r.id;
    if(hasTask||critical){ctx.save();ctx.shadowColor=critical?'#ff6963':'#ffe895';ctx.shadowBlur=reduced?14:20+Math.sin(time/250)*7;circle(ctx,station.x,station.y,31,critical?'#e87162':'#f3d98e',undefined,4);ctx.restore();}
    round(ctx,station.x-22,station.y-24,44,48,8,'#31586a');round(ctx,station.x-14,station.y-17,28,22,4,critical?'#ff8573':hasTask?'#ffeb9e':'#9dcaba',null);text(ctx,critical?'!':hasTask?'E':'·',station.x,station.y+1,18,'#224859');
   }
   // Open thresholds exactly where shared corridor floors cross a room boundary.
-  for(const r of world.WORLD_ROOMS)for(const f of world.WORLD_FLOORS.filter(f=>!f.center)){
+  for(const r of world.WORLD_ROOMS)for(const f of world.WORLD_FLOORS.filter(f=>!world.WORLD_ROOMS.some(room=>room.id===f.id))){
    const top=Math.max(r.y,f.y),bottom=Math.min(r.y+r.height,f.y+f.height),left=Math.max(r.x,f.x),right=Math.min(r.x+r.width,f.x+f.width);
    ctx.fillStyle='#8faba5';ctx.strokeStyle='#19374a';ctx.lineWidth=5;
    for(const edge of [r.x,r.x+r.width])if(f.x<edge&&f.x+f.width>edge&&bottom-top>30){ctx.fillRect(edge-7,top+3,14,bottom-top-6);ctx.beginPath();ctx.moveTo(edge-11,top+2);ctx.lineTo(edge+11,top+2);ctx.moveTo(edge-11,bottom-2);ctx.lineTo(edge+11,bottom-2);ctx.stroke();}
