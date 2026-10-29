@@ -1,4 +1,4 @@
-﻿import {knowledge} from './beacon-model.mjs';
+﻿import {knowledge,descriptors} from './beacon-model.mjs';
 /** Pure presentation rules. Inputs are redacted views, never engine state. */
 export const point = p => p && Number.isFinite(p.x) && Number.isFinite(p.y);
 export const distance = (a,b) => point(a)&&point(b)?Math.hypot(a.x-b.x,a.y-b.y):Infinity;
@@ -32,12 +32,21 @@ export function contexts(game,world){
  const taskAction={type:'task',label:task?.label||'Task station',fields:{taskId:task?.id},task,enabled:nearby&&allowed('task'),hint:nearby?'Task equipment is unavailable or cooling down.':'Reach your glowing task station.'};
  const bellAction={type:'meeting',label:'Emergency bell',fields:{},enabled:bell&&allowed('meeting'),hint:bell?'Bell unavailable: check cooldown, remaining emergencies and critical status.':'Use the bell in the Bridge. Unavailable during critical sabotage.'};
  // A distant unfinished Bridge task must not hide a bell that is actually in reach.
- const use=repair&&repairAction.enabled?repairAction:task&&taskAction.enabled?taskAction:bellAction.enabled?bellAction:repair?repairAction:task?taskAction:bellAction;
+ let use=repair&&repairAction.enabled?repairAction:task&&taskAction.enabled?taskAction:bellAction.enabled?bellAction:repair?repairAction:task?taskAction:bellAction;
+ if(game?.beaconVersion===1){
+  const hints=descriptors(game),nearbyHints=hints.filter(h=>['systemRepair','investigate','vent'].includes(h.type));
+  const preferred=nearbyHints.find(h=>h.type==='systemRepair'&&h.enabled)||(!taskAction.enabled&&!bellAction.enabled&&nearbyHints.find(h=>h.enabled));
+  if(preferred)use={type:'beaconPanel',descriptorId:preferred.id,label:preferred.label||'Beacon equipment',enabled:true,hint:preferred.reason||'Open equipment controls.'};
+  else if(taskAction.enabled)use=taskAction;
+  else if(bellAction.enabled)use=bellAction;
+  else use={type:'beaconPanel',label:'Beacon equipment',enabled:active&&!game.systems?.selfTransit,hint:'Open Systems & evidence for server-permitted actions.'};
+ }
+
  return {
   use,
   report:{type:'report',label:'Report body',fields:{bodyId:body?.bodyId},enabled:!!body&&allowed('report'),hint:'Approach a visible fallen keeper.'},
   eliminate:{type:'eliminate',label:target?`Eliminate ${target.name}`:'Eliminate',fields:{targetId:target?.id},enabled:self?.role==='saboteur'&&!!target&&allowed('eliminate'),hint:target?'Wait for the elimination cooldown.':'Approach a visible keeper.'},
-  sabotage:{type:'sabotage',label:'Sabotage',fields:{},enabled:self?.role==='saboteur'&&allowed('sabotage'),hint:'Sabotage is unavailable or cooling down.'}
+  sabotage:game?.beaconVersion===1?{type:'beaconPanel',label:'System sabotage options',enabled:active&&self?.role==='saboteur'&&!game.systems?.selfTransit,hint:'Open Systems & evidence for sabotage choices and cooldowns.'}:{type:'sabotage',label:'Sabotage',fields:{},enabled:self?.role==='saboteur'&&allowed('sabotage'),hint:'Sabotage is unavailable or cooling down.'}
  };
 }
 /** Rendering blends only two received positions. Missing actors are removed immediately. */
@@ -58,5 +67,5 @@ export class ActorSamples{
 }
 export function validTaskSession(session,room,world){
  const game=room?.game,task=game?.self?.tasks?.find(t=>t.id===session?.taskId);
- return !!session&&room.roomId===session.roomId&&game?.matchId===session.matchId&&game.phase==='roam'&&game.self?.alive&&task&&!task.completed&&game.self.roomId===session.location&&task.roomId===session.location&&distance(game.self.position,world.WORLD_STATIONS[task.roomId])<=world.WORLD.interactionRadius&&game.availableActions?.includes('task');
+ return !!session&&room.roomId===session.roomId&&game?.matchId===session.matchId&&game.phase==='roam'&&game.self?.alive&&!game.systems?.selfTransit&&!game.self?.transit&&task&&!task.completed&&game.self.roomId===session.location&&task.roomId===session.location&&distance(game.self.position,world.WORLD_STATIONS[task.roomId])<=world.WORLD.interactionRadius&&game.availableActions?.includes('task');
 }
