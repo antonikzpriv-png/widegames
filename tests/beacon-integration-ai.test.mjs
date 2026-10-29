@@ -26,3 +26,8 @@ for(const mode of ['spectator','human'])test('actual beacon demo '+mode+' matche
  }
  assert.equal(outbound.mock.callCount(),0);t.diagnostic(JSON.stringify(receipts));
 });
+
+test('eight custom IDs and two saboteurs complete a real safe-view demo watch',{timeout:120000},async t=>{
+ const outbound=t.mock.method(globalThis,'fetch',()=>{throw Error('No providers');}),roster=Array.from({length:8},(_,i)=>({id:'crew-'+i,name:'Keeper '+i,color:'#8fc8bc',persona:'Fixture keeper '+i}));let state=engine.createMatch({id:'eight-demo',world:true,systems:true,roster,saboteurCount:2,mode:'spectator',now:1000,seed:3}),ai=createAiController({config:{provider:'demo',decisionIntervalMs:1800}}),context={},actions=0;
+ for(let now=1000;now<901000&&!['ended','paused'].includes(state.phase);now+=600){state=engine.tick(state,now).state;for(const p of state.players){const action=await ai.decide({view:engine.getPlayerView(state,p.id,now),player:{id:p.id,name:p.name,color:p.color,persona:p.persona},context});if(action){const r=engine.applyAction(state,p.id,action,now);assert(r.accepted,JSON.stringify(r.error));state=r.state;actions++;}}}assert.equal(state.phase,'ended');assert.equal(state.players.filter(p=>p.role==='saboteur').length,2);assert.equal(Object.keys(context.matches['match:'+state.id].memories).length,8);assert.equal(ai.describe(context).calls,0);assert.equal(outbound.mock.callCount(),0);t.diagnostic(JSON.stringify({actions,outcome:state.outcome}));
+});
