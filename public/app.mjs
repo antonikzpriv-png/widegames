@@ -5,6 +5,7 @@ import {watchPanel,taskPanel,criticalPanel,councilPanel,timelinePanel,resultsPan
 import {replayEvents,aiNotice,aiLabel} from './presentation.mjs';
 import {createWorldExperience} from './world/experience.mjs';
 import {worldInputEnvelope} from './world-input-envelope.mjs';
+import {harbor} from './harbor.mjs';
 
 const main=document.querySelector('#main');
 const feedback=document.querySelector('#feedback');
@@ -244,7 +245,7 @@ function modeTag(){
  return h('span',{class:`tag ${ai?.mode==='live'?'':'demo'}`},aiLabel(ai));
 }
 function landing(){
- return h('section',{class:'hero'},h('div',{},h('p',{class:'eyebrow'},'A storm beacon. Six keepers. One saboteur.'),h('h1',{},'Keep the light.',h('br'),'Question the quiet.'),h('p',{},'The storm has cut us off. Walk the decks, keep the beacon alive, and decide which familiar face is hiding a different purpose.'),h('div',{class:'actions'},button('Join the crew',()=>create('human'),{class:'primary',disabled:pending,'data-focus':'create-human'}),button('Watch the keepers',()=>create('spectator'),{disabled:pending,'data-focus':'create-spectator'})),h('p',{class:'muted'},'Play one keeper with five AI companions, or watch six AI keepers. No account needed.')),h('div',{class:'panel'},h('div',{class:'panel-title'},h('h2',{},'The drifting beacon'),h('span',{class:'tag'},'06 rooms')),deck(null),h('div',{class:'deck-caption'},h('span',{},'LANTERN WAKE'),h('span',{},'NORTH / STORMWARD'))));
+ return harbor({create,pending});
 }
 function setConfirmation(value,returnTo,current){
  if(current!==epoch)return;
