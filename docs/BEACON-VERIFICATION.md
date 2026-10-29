@@ -72,6 +72,10 @@ Remove-Item Env:LW_WORLD_BROWSER
 
 Use a full Git clone with history for retained historical-source controls, installed Chrome (or CHROME_PATH), and no concurrent browser qualification. On this machine set TEMP/TMP to D:/Widegames-work/temp and npm_config_cache to D:/Widegames-work/npm-cache. Production-only reproduction is documented in BEACON-WORLD.md: materialize the exact pinned archive/manifest, npm ci --omit=dev, then run tests/beacon-world-production-review.mjs against it.
 
+## Hosted CI readiness correction
+
+The first PR Linux run [40964995795](https://github.com/antonikzpriv-png/widegames/actions/runs/40964995795) passed syntax preparation and all655 offline tests, then timed out on Puppeteer networkidle0 after a reload. That failure and uploaded browser artifacts remain retained on GitHub. Browser drivers now wait for DOM content followed by the actual connected game view/role/scene controls. Polling/WebSocket traffic is not a readiness condition; no timeout was extended and all gameplay, identity, privacy and source-integrity assertions remain. The PR Checks tab records the rerun status independently of the earlier local receipts.
+
 ## Practical limits
 
 No known failing runtime check remains within the recorded scope. Default fifteen-minute timeout can pause a match; no invented winner is used. Device history is bounded64 samples per owner, field notes32, snapshots256 at five-second intervals plus final resolution, existing replay12,000 events. A long/high-input match may lose early replay detail; this is not frame-perfect video. A spectator's fixed Bridge view is deliberately limited. There is no new sound feature or voice control.
