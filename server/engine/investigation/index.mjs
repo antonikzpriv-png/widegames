@@ -1,5 +1,4 @@
-import { BEACON_DEVICES } from '../../../shared/beacon.mjs';
-import { MAX_ACTORS, record, own, dictionary, put, clone, time, point, actorFor, deviceFor, rules, unavailable, sessionReason, sample, validateState, validateObservation } from './data.mjs';
+import { MAX_ACTORS, mapForState, tactical, scoped, record, own, dictionary, put, clone, time, point, actorFor, deviceFor, rules, unavailable, sessionReason, sample, validateState, validateObservation } from './data.mjs';
 
 export const INVESTIGATION_ACTIONS = Object.freeze(['investigate', 'deviceCancel']);
 const fail = (code, message) => ({ code, message });
@@ -8,7 +7,7 @@ const hasState = state => record(state?.investigation);
 function atTime(at) { if (!time(at)) throw new Error('Invalid investigation time'); }
 function privateRecord(ctx, state, playerId, type, at, fields) {
   if (typeof ctx?.record !== 'function') throw new Error('Investigation replay context unavailable');
-  ctx.record(state, type, at, { ...clone(fields), playerId, visibleTo: [playerId] });
+  ctx.record(state, type, at, { ...scoped(state), ...clone(fields), playerId, visibleTo: [playerId] });
 }
 
 export function initializeInvestigation(state, now) {
@@ -49,7 +48,7 @@ export function advanceInvestigation(state, at, ctx) {
     if (at < session.deadlineAt) continue;
     // A late caller cannot label current positions/health as a past sample.
     if (at > session.deadlineAt) { finish(state, playerId, session, at, 'stale', ctx); changed = true; continue; }
-    const config = rules(state), observation = sample(state, player, deviceFor(session.deviceId), at, ctx);
+    const config = rules(state), observation = sample(state, player, deviceFor(session.deviceId, state), at, ctx);
     const cooldown = at + config.deviceCooldownMs; if (!time(cooldown)) throw new Error('Investigation time limit');
     privateRecord(ctx, state, playerId, 'device_observation', at, { observation });
     const previous = own(state.investigation.observations, playerId) ?? [];
@@ -84,10 +83,10 @@ export function validateInvestigationAction(state, player, action, now, ctx) {
     if (!time(now + rules(state).deviceCooldownMs)) return fail('INVALID_TIME', 'Terminal time limit reached.');
     return active(session) ? null : fail('UNAVAILABLE', 'No terminal read is in progress.');
   }
-  const device = deviceFor(action.deviceId);
+  const device = deviceFor(action.deviceId, state);
   if (!device) return fail('INVALID_DEVICE', 'Choose a known investigation console.');
   if (state.systems?.communications?.active) return fail('COMMUNICATIONS_DOWN', 'Communications are disabled; consoles are unavailable.');
-  if (active(session)) return fail('DEVICE_BUSY', 'Finish or cancel the current terminal read first.');
+  if (active(session)) return sessionReason(state, actor, session, now, ctx) ? fail('UNAVAILABLE', 'The current terminal read has lost access; wait for cancellation.') : fail('DEVICE_BUSY', 'Finish or cancel the current terminal read first.');
   if ((own(state.investigation.cooldowns, actor.id) ?? 0) > now) return fail('COOLDOWN', 'Your terminal equipment is cooling down.');
   const reason = unavailable(state, actor, device, now, ctx);
   if (reason) return fail('UNAVAILABLE', ({ movement: 'Stand still before starting a terminal read.', transit: 'Consoles are unavailable during transit.', out_of_range: 'Approach a visible console before reading it.' })[reason] ?? 'This console is unavailable.');
@@ -104,13 +103,13 @@ export function applyInvestigationAction(state, player, action, now, ctx) {
   if (action.type === 'deviceCancel') { finish(state, actor.id, own(state.investigation.sessions, actor.id), now, 'cancelled', ctx); return true; }
   const deadlineAt = now + rules(state).deviceReadMs;
   privateRecord(ctx, state, actor.id, 'device_session', now, { deviceId: action.deviceId, status: 'reading', deadlineAt });
-  put(state.investigation.sessions, actor.id, { deviceId: action.deviceId, startedAt: now, deadlineAt, anchor: { x: actor.position.x, y: actor.position.y }, status: 'reading', endedAt: null, reason: null });
+  put(state.investigation.sessions, actor.id, { ...scoped(state), deviceId: action.deviceId, startedAt: now, deadlineAt, anchor: { x: actor.position.x, y: actor.position.y }, status: 'reading', endedAt: null, reason: null });
   return true;
 }
 
 export function investigationActionHints(state, player, now, ctx) {
   const actor = actorFor(state, player); if (!actor || !hasState(state)) return [];
-  const hints = BEACON_DEVICES.map(device => {
+  const hints = mapForState(state).fixtures.devices.map(device => {
     const fields = { deviceId: device.id }, denial = validateInvestigationAction(state, actor, { type: 'investigate', ...fields }, now, ctx);
     return { id: `investigate:${device.id}`, type: 'investigate', fields, label: device.label, enabled: denial === null, position: { x: device.position.x, y: device.position.y }, roomId: device.roomId, ...(denial ? { reason: denial.message } : {}) };
   });
@@ -125,7 +124,7 @@ export function getInvestigationView(state, viewerId, now, ctx) {
   atTime(now);
   const actor = actorFor(state, { id: viewerId }), enabled = hasState(state);
   let status = !enabled ? 'unavailable' : state.systems?.communications?.active ? 'unavailable' : !actor ? 'spectating' : !actor.alive || state.phase !== 'roam' ? 'inactive' : 'available';
-  const output = { devices: BEACON_DEVICES.map(device => {
+  const output = { devices: mapForState(state).fixtures.devices.map(device => {
     const denial = actor && enabled ? validateInvestigationAction(state, actor, { type: 'investigate', deviceId: device.id }, now, ctx) : fail('UNAVAILABLE', !enabled ? 'Consoles are not enabled.' : state.systems?.communications?.active ? 'Communications are disabled; consoles are unavailable.' : 'Observe only; no console access.');
     return { id: device.id, kind: device.kind, label: device.label, roomId: device.roomId, position: { x: device.position.x, y: device.position.y }, available: denial === null, ...(denial ? { reason: denial.message } : {}) };
   }), session: null, observations: [], status };
@@ -133,16 +132,16 @@ export function getInvestigationView(state, viewerId, now, ctx) {
   const raw = own(state.investigation.sessions, actor.id), cooldownAt = own(state.investigation.cooldowns, actor.id) ?? 0;
   if (!time(cooldownAt)) throw new Error('Invalid investigation cooldown');
   if (raw) {
-    if (!record(raw) || !time(raw.startedAt) || !time(raw.deadlineAt) || !point(raw.anchor) || (raw.endedAt !== null && !time(raw.endedAt)) || (raw.reason !== null && !['cancelled', 'dead', 'phase', 'communications', 'transit', 'position', 'movement', 'out_of_range', 'stale'].includes(raw.reason))) throw new Error('Invalid investigation session');
-    const device = deviceFor(raw.deviceId); if (!device || !['reading', 'elapsed', 'failed'].includes(raw.status)) throw new Error('Invalid investigation session');
+    if (!record(raw) || !time(raw.startedAt) || !time(raw.deadlineAt) || !point(raw.anchor) || (raw.endedAt !== null && !time(raw.endedAt)) || (raw.reason !== null && !['cancelled', 'dead', 'phase', 'communications', 'transit', 'position', 'movement', 'out_of_range', 'stale', ...(tactical(state) ? ['map'] : [])].includes(raw.reason))) throw new Error('Invalid investigation session');
+    const device = deviceFor(raw.deviceId, state); if (!device || !['reading', 'elapsed', 'failed'].includes(raw.status)) throw new Error('Invalid investigation session');
     const reason = active(raw) ? sessionReason(state, actor, raw, now, ctx) ?? (now >= raw.deadlineAt ? 'stale' : null) : raw.reason;
-    output.session = { deviceId: device.id, startedAt: raw.startedAt, deadlineAt: raw.deadlineAt, status: active(raw) && reason ? 'stale' : raw.status, endedAt: raw.endedAt, reason, cooldownAt };
+    output.session = { ...scoped(state), deviceId: device.id, startedAt: raw.startedAt, deadlineAt: raw.deadlineAt, status: active(raw) && reason ? 'stale' : raw.status, endedAt: raw.endedAt, reason, cooldownAt };
     if (status === 'available') output.status = active(raw) ? reason ? 'stale' : 'reading' : cooldownAt > now ? 'cooldown' : raw.status;
   } else if (status === 'available' && cooldownAt > now) output.status = 'cooldown';
   const observations = own(state.investigation.observations, actor.id) ?? [];
   if (!Array.isArray(observations) || observations.length > rules(state).observationLimit) throw new Error('Invalid investigation observations');
   const actors = new Set(state.players.map(player => player.id));
-  for (const observation of observations) validateObservation(observation, actor.id, actors, state.updatedAt);
+  for (const observation of observations) validateObservation(observation, actor.id, actors, state.updatedAt, state);
   output.observations = clone(observations);
   return output;
 }
