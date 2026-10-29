@@ -1,0 +1,101 @@
+{
+  "sourceCommit": "c5583457795bb65e493f05544e124ee7d3bd05c4",
+  "modifiedPaths": "",
+  "fixture": "Actual main app, native HTTP/WS/store/engine. Seeded roles, accelerated clock and explicitly server-directed demo AI queues stage legal actions through the normal AI scheduler. No state, health, winner or HTTP response is fabricated. This targeted scenario is separate from complete autonomous demo-match qualification.",
+  "checks": [
+    {
+      "name": "normal configured startup enters schema3 with safe roster and keyboard movement",
+      "passed": true
+    },
+    {
+      "name": "camera UI produces a private dated useful sample with limited observed identities",
+      "passed": true
+    },
+    {
+      "name": "occupancy UI gives dated room counts without identities",
+      "passed": true
+    },
+    {
+      "name": "remote death stays undiscovered until owner vitals read and spectator remains limited",
+      "passed": true
+    },
+    {
+      "name": "communications cancels a real active read and preserves prior evidence",
+      "passed": true
+    },
+    {
+      "name": "actual lights shrink server-permitted vision and visible map fog until physical repair",
+      "passed": true
+    },
+    {
+      "name": "door UI matches real collision and local reopening",
+      "passed": true
+    },
+    {
+      "name": "two distinct flood repairs use real Galley and Archive sites",
+      "passed": true
+    },
+    {
+      "name": "critical countdown survives body council and resolves an actual deadline loss with replay",
+      "passed": true
+    },
+    {
+      "name": "hatch USE requires an explicit exit and records only local witnessed endpoints",
+      "passed": true
+    },
+    {
+      "name": "field-note extension is real UI with private attributed position and preserved reconnect",
+      "passed": true
+    },
+    {
+      "name": "systems evidence is keyboard/touch reachable in mobile layouts",
+      "passed": true
+    },
+    {
+      "name": "exact target confirmation, local report, council and role reveal stay playable",
+      "passed": true
+    }
+  ],
+  "privacyChecks": 632,
+  "errors": [],
+  "consoleErrors": [],
+  "screenshots": [
+    "01-beacon-world.png",
+    "02-camera-evidence.png",
+    "03-occupancy.png",
+    "04-vitals-private.png",
+    "05-comms-failure.png",
+    "06-lights.png",
+    "07-door-blocked.png",
+    "08-flood-repair.png",
+    "09-critical-council.png",
+    "10-critical-replay.png",
+    "11-hatch-transit.png",
+    "12-local-hatch-evidence.png",
+    "13-mobile-evidence.png",
+    "14-ejection-results.png"
+  ],
+  "cleanup": {
+    "browserClosed": true,
+    "serverClosed": true,
+    "ownedDataRemoved": true
+  },
+  "browser": "Chrome/156.0.8078.73",
+  "sourceUnchanged": true,
+  "rules": {
+    "initialKillCooldownMs": 1,
+    "killCooldownMs": 1000,
+    "sabotageCooldownMs": 1000,
+    "meetingCooldownMs": 1,
+    "criticalDurationMs": 60000,
+    "discussionMs": 30000,
+    "votingMs": 20000,
+    "roamDeadlineMs": 600000,
+    "maxMatchMs": 1800000
+  },
+  "providerCalls": 0,
+  "summary": {
+    "passed": 13,
+    "failed": 0
+  }
+}

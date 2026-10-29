@@ -10,7 +10,7 @@ export function createWorldInput({target,joystick,knob,getState,onInput,onClick,
   sequence=Math.max(sequence,getState().inputSeq||0)+1;
   let result;try{result=Promise.resolve(onInput({seq:sequence,dx,dy}));}catch(error){result=Promise.reject(error);}result.catch(error=>onError(error));return result;
  };
- const stop=()=>{const state=getState(),shouldSend=(state.enabled||lastVector.dx||lastVector.dy)&&state.inputAllowed!==false;keys.clear();stick=null;route=[];pointer=null;if(knob)knob.style.transform='translate(0px,0px)';if(shouldSend)return send(0,0,true);lastVector={dx:0,dy:0};return Promise.resolve();};
+ const stop=({force=false}={})=>{const state=getState(),shouldSend=(force||state.enabled||lastVector.dx||lastVector.dy)&&state.inputAllowed!==false;keys.clear();stick=null;route=[];pointer=null;if(knob)knob.style.transform='translate(0px,0px)';if(shouldSend)return send(0,0,true);lastVector={dx:0,dy:0};return Promise.resolve();};
  const vector=()=>{
   if(!moving())return {dx:0,dy:0};
   let dx=0,dy=0;

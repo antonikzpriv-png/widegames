@@ -5,7 +5,7 @@ permissions:
 jobs:
   offline:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
         with:
@@ -18,6 +18,9 @@ jobs:
       - run: npm run check
       - run: npm test
       - run: npm run test:browser
+        env:
+          CHROME_PATH: /usr/bin/google-chrome
+      - run: npm run test:beacon-browser
         env:
           CHROME_PATH: /usr/bin/google-chrome
       - run: node --test tests/world-ui-browser.test.mjs
@@ -36,3 +39,5 @@ jobs:
             _artifacts/world-browser-*/*.png
             _artifacts/world-ui-*/report.json
             _artifacts/world-ui-*/*.png
+            _artifacts/beacon-browser-*/report.json
+            _artifacts/beacon-browser-*/*.png

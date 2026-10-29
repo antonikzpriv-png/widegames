@@ -1,10 +1,11 @@
-﻿/** Pure presentation rules. Inputs are redacted views, never engine state. */
+﻿import {knowledge,descriptors,actionDescriptors,hasActionDescriptor} from './beacon-model.mjs';
+/** Pure presentation rules. Inputs are redacted views, never engine state. */
 export const point = p => p && Number.isFinite(p.x) && Number.isFinite(p.y);
 export const distance = (a,b) => point(a)&&point(b)?Math.hypot(a.x-b.x,a.y-b.y):Infinity;
 export const clamp = (n,min,max) => Math.min(max,Math.max(min,n));
 export function remaining(deadline,now){return Math.max(0,Math.ceil(((deadline||now)-now)/1000));}
 export function clock(deadline,now){const n=remaining(deadline,now);return `${Math.floor(n/60)}:${String(n%60).padStart(2,'0')}`;}
-export function visiblePlayers(game){return (game?.players||[]).filter(p=>p.alive&&point(p.position));}
+export function visiblePlayers(game){return (game?.players||[]).filter(p=>(game?.beaconVersion===1?knowledge(game,p)==='alive':p.alive)&&point(p.position));}
 export function visibleBodies(game){return (game?.events||[]).filter(e=>e.type==='body'&&e.bodyId&&point(e.position));}
 export function roleLabel(game){return !game?.self?'Spectator':game.self.role==='saboteur'?'Saboteur':'Crew';}
 export function aiLabel(ai){return ai?.mode==='live'?'HYBRID · live council / local navigation':ai?.mode==='demo'?'DEMO · local keepers':'AI mode pending';}
@@ -16,7 +17,21 @@ export function taskKind(task,index=0){
  // Engine relay tasks share a label; equipment varies by the actual station.
  return ({bridge:'wires',workshop:'wires',lantern:'tuning',engine:'tuning',archive:'sequence',galley:'sequence'})[task.roomId]||['wires','tuning','sequence'][index%3];
 }
+function beaconContexts(game){
+ const self=game.self,active=game.phase==='roam'&&!!self?.alive&&!game.systems?.selfTransit&&!self?.transit,hints=actionDescriptors(game),enabled=type=>active?hints.filter(h=>h.type===type&&h.enabled===true):[];
+ const context=(h,label,hint)=>({type:h?.type,label:h?.label||label,fields:{...h?.fields},enabled:!!h,hint});
+ const taskHint=enabled('task').find(h=>self.tasks?.some(t=>t.id===h.fields.taskId&&!t.completed)),task=taskHint&&self.tasks.find(t=>t.id===taskHint.fields.taskId),bell=enabled('meeting')[0];
+ const equipment=descriptors(game),repair=active&&equipment.find(h=>h.type==='systemRepair'&&h.enabled===true),other=active&&equipment.find(h=>['investigate','vent'].includes(h.type)&&h.enabled===true);
+ let use;
+ if(repair)use={type:'beaconPanel',descriptorId:repair.id,label:repair.label,enabled:true,hint:''};
+ else if(taskHint)use={...context(taskHint,'Task station','Approach a permitted task station.'),task};
+ else if(bell)use=context(bell,'Emergency bell','Approach the permitted bell.');
+ else if(other)use={type:'beaconPanel',descriptorId:other.id,label:other.label,enabled:true,hint:''};
+ else use={type:'beaconPanel',label:'Beacon equipment',enabled:active,hint:'Open Systems & evidence for server-permitted actions.'};
+ return {use,report:context(enabled('report')[0],'Report body','No permitted report target. Approach an observed fallen keeper.'),eliminate:context(self?.role==='saboteur'?enabled('eliminate').find(h=>h.fields.targetId!==self.id):null,'Eliminate','No permitted elimination target.'),sabotage:{type:'beaconPanel',label:'System sabotage options',enabled:active&&self?.role==='saboteur',hint:'Open Systems & evidence for sabotage choices and cooldowns.'}};
+}
 export function contexts(game,world){
+ if(game?.beaconVersion===1)return beaconContexts(game);
  const self=game?.self,pos=self?.position,available=game?.availableActions||[];
  const active=game?.phase==='roam'&&self?.alive&&point(pos)&&game.worldVersion===1;
  const station=world.WORLD_STATIONS[self?.roomId];
@@ -31,12 +46,12 @@ export function contexts(game,world){
  const taskAction={type:'task',label:task?.label||'Task station',fields:{taskId:task?.id},task,enabled:nearby&&allowed('task'),hint:nearby?'Task equipment is unavailable or cooling down.':'Reach your glowing task station.'};
  const bellAction={type:'meeting',label:'Emergency bell',fields:{},enabled:bell&&allowed('meeting'),hint:bell?'Bell unavailable: check cooldown, remaining emergencies and critical status.':'Use the bell in the Bridge. Unavailable during critical sabotage.'};
  // A distant unfinished Bridge task must not hide a bell that is actually in reach.
- const use=repair&&repairAction.enabled?repairAction:task&&taskAction.enabled?taskAction:bellAction.enabled?bellAction:repair?repairAction:task?taskAction:bellAction;
+ let use=repair&&repairAction.enabled?repairAction:task&&taskAction.enabled?taskAction:bellAction.enabled?bellAction:repair?repairAction:task?taskAction:bellAction;
  return {
   use,
   report:{type:'report',label:'Report body',fields:{bodyId:body?.bodyId},enabled:!!body&&allowed('report'),hint:'Approach a visible fallen keeper.'},
   eliminate:{type:'eliminate',label:target?`Eliminate ${target.name}`:'Eliminate',fields:{targetId:target?.id},enabled:self?.role==='saboteur'&&!!target&&allowed('eliminate'),hint:target?'Wait for the elimination cooldown.':'Approach a visible keeper.'},
-  sabotage:{type:'sabotage',label:'Sabotage',fields:{},enabled:self?.role==='saboteur'&&allowed('sabotage'),hint:'Sabotage is unavailable or cooling down.'}
+  sabotage:game?.beaconVersion===1?{type:'beaconPanel',label:'System sabotage options',enabled:active&&self?.role==='saboteur'&&!game.systems?.selfTransit,hint:'Open Systems & evidence for sabotage choices and cooldowns.'}:{type:'sabotage',label:'Sabotage',fields:{},enabled:self?.role==='saboteur'&&allowed('sabotage'),hint:'Sabotage is unavailable or cooling down.'}
  };
 }
 /** Rendering blends only two received positions. Missing actors are removed immediately. */
@@ -57,5 +72,8 @@ export class ActorSamples{
 }
 export function validTaskSession(session,room,world){
  const game=room?.game,task=game?.self?.tasks?.find(t=>t.id===session?.taskId);
- return !!session&&room.roomId===session.roomId&&game?.matchId===session.matchId&&game.phase==='roam'&&game.self?.alive&&task&&!task.completed&&game.self.roomId===session.location&&task.roomId===session.location&&distance(game.self.position,world.WORLD_STATIONS[task.roomId])<=world.WORLD.interactionRadius&&game.availableActions?.includes('task');
+ const current=!!session&&room.roomId===session.roomId&&game?.matchId===session.matchId&&game.phase==='roam'&&game.self?.alive&&!game.systems?.selfTransit&&!game.self?.transit&&task&&!task.completed&&game.self.roomId===session.location;
+ if(!current)return false;
+ if(game.beaconVersion===1)return hasActionDescriptor(game,'task',{taskId:session.taskId});
+ return task.roomId===session.location&&distance(game.self.position,world.WORLD_STATIONS[task.roomId])<=world.WORLD.interactionRadius&&game.availableActions?.includes('task');
 }

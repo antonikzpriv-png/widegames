@@ -1,0 +1,17 @@
+.lw-world .lw-beacon{position:absolute;right:16px;bottom:155px;z-index:24;max-width:calc(100% - 32px);font-size:14px}
+.lw-world .lw-beacon button{min-height:44px;color:#163448;background:#d7e8dc;border:2px solid #17384a;border-radius:12px;padding:8px 12px;font:700 14px system-ui;touch-action:manipulation}
+.lw-world .lw-beacon button:hover:not(:disabled){color:#17384a;background:#ffdda0}
+.lw-world .lw-beacon button:focus-visible{outline:4px solid #f0af38;outline-offset:2px}
+.lw-world .lw-beacon [aria-disabled="true"]{opacity:.75}
+.lw-world .lw-beacon-pane{box-sizing:border-box;width:min(380px,calc(100vw - 32px));max-height:calc(100dvh - 295px);overflow:auto;background:#f1f3db;color:#17384a;border:4px solid #17384a;border-radius:18px;padding:14px;position:absolute;right:0;bottom:52px;box-shadow:0 10px 24px #071d3080;overscroll-behavior:contain}
+.lw-world .lw-beacon-pane h2,.lw-world .lw-beacon-pane h3{font:900 18px system-ui;margin:6px 0}
+.lw-world .lw-beacon-pane p{margin:8px 0;line-height:1.4;overflow-wrap:anywhere}
+.lw-world .lw-beacon-critical{font-weight:800;color:#8b251f}
+.lw-world .lw-beacon-control{display:grid;gap:4px;margin:10px 0}.lw-world .lw-beacon-control span{font-size:13px}
+.lw-world .lw-beacon-observations{padding-left:20px;overflow-wrap:anywhere}.lw-world .lw-beacon-observations li{margin:10px 0;line-height:1.4}
+@media(max-width:600px){.lw-world .lw-beacon{bottom:130px;right:10px;max-width:calc(100% - 20px)}.lw-world .lw-beacon-pane{max-height:calc(100dvh - 258px);width:min(350px,calc(100vw - 20px))}.lw-world .lw-beacon-toggle{max-width:150px}}
+@media(max-height:500px){.lw-world .lw-beacon{bottom:105px}.lw-world .lw-beacon-pane{max-height:calc(100dvh - 217px);width:min(380px,calc(100vw - 24px))}}
+
+.lw-world .lw-lobby-roster{grid-template-columns:repeat(auto-fit,minmax(74px,1fr));max-width:760px;max-height:30dvh;overflow-y:auto;padding:4px}
+
+.lw-world .lw-beacon-notes,.lw-world .lw-beacon-traces{padding-left:20px;overflow-wrap:anywhere}.lw-world .lw-beacon-notes li,.lw-world .lw-beacon-traces li{margin:10px 0;line-height:1.4}
