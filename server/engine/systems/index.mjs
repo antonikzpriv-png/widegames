@@ -57,7 +57,7 @@ function local(state,p,position,ctx){return ctx.sees(state,p,position)&&ctx.near
 function doorPanels(d,ctx){const pad=(ctx.geometry?.WORLD?.bodyRadius??14)+4;return d.width<d.height?[{x:d.x-pad,y:d.y+d.height/2},{x:d.x+d.width+pad,y:d.y+d.height/2}]:[{x:d.x+d.width/2,y:d.y-pad},{x:d.x+d.width/2,y:d.y+d.height+pad}];}
 function doorPanel(state,p,d,ctx){return doorPanels(d,ctx).find(point=>local(state,p,point,ctx));}
 export function validateSystemAction(state,p,action,now,ctx){
- if(!object(action)||!SYSTEM_ACTIONS.includes(action.type))return fail('INVALID_ACTION','Invalid system action.');
+ if(!object(action)||!Object.hasOwn(action,'type')||!Object.hasOwn(Object.getOwnPropertyDescriptor(action,'type'),'value')||!SYSTEM_ACTIONS.includes(action.type))return fail('INVALID_ACTION','Invalid system action.');
  const fields=BEACON_ACTION_FIELDS[action.type]??[],keys=['type',...fields,...(Object.hasOwn(action,'id')?['id']:[])];
  if(!exact(action,keys)||fields.some(key=>typeof action[key]!=='string'||action[key].length>100)||(Object.hasOwn(action,'id')&&(typeof action.id!=='string'||!/^[A-Za-z0-9:_-]{1,100}$/.test(action.id))))return fail('INVALID_ACTION','Invalid system fields.');
  if(!readyContext(ctx)||!state.systems||!p||!state.players.includes(p)||!own(state.systems.cooldowns,p.id))return fail('UNAVAILABLE','System controls are unavailable.');
@@ -85,7 +85,7 @@ export function validateSystemAction(state,p,action,now,ctx){
   }
  }else if(a.type==='systemRepair'){
   if(a.systemId==='door'){
-   const d=doors.get(a.siteId);if(!d||!currentDoor(state,a.siteId).closed||!doorPanel(state,p,d,ctx))return fail('UNAVAILABLE','Approach a closed door to reopen it.');
+   const d=doors.get(a.siteId);if(!d||!currentDoor(state,a.siteId).closed||now>=currentDoor(state,a.siteId).deadlineAt||!doorPanel(state,p,d,ctx))return fail('UNAVAILABLE','Approach a closed door to reopen it.');
   }else{
    if(p.role!=='crew')return fail('UNAVAILABLE','Only crew can repair equipment.');
    if(criticalKinds.includes(a.systemId)){
