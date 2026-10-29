@@ -170,3 +170,17 @@ test('historical frontend 9e571c7 KNOWN DEFECT: deferred task failure replaces c
   try { f.open(view); f.solve(); const pending = f.defer(); f.click(f.button('Send completed task')); f.update(council(view)); pending.reject(); await flush(); assert.match(f.host.querySelector('.lw-feedback').textContent, /OLD TASK FAILURE/); }
   finally { f.experience.dispose(); }
 });
+
+for (const change of ['room', 'position', 'disabled', 'death', 'dispose']) test(`independent frontend task: obsolete rejection is ignored after ${change} closes its submitted equipment`, async () => {
+  const f = fixture(), view = room();
+  try {
+    f.open(view); f.solve(); const pending = f.defer(); f.click(f.button('Send completed task'));
+    const next = structuredClone(view);
+    if (change === 'room') { next.roomId = 'new-owner'; next.game.matchId = 'new-match'; }
+    if (change === 'position') next.game.self.position = { x: 650, y: 300 };
+    if (change === 'disabled') next.game.availableActions = ['wait'];
+    if (change === 'death') next.game.self.alive = false;
+    if (change === 'dispose') f.experience.dispose(); else f.update(next);
+    pending.reject(); await flush(); assert.equal(f.calls.length, 1); assert.doesNotMatch(f.host.querySelector('.lw-feedback')?.textContent ?? '', /OLD TASK FAILURE/); assert(!f.host.querySelector('.lw-task-modal')?.visible);
+  } finally { f.experience.dispose(); }
+});
