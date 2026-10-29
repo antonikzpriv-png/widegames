@@ -20,10 +20,13 @@ export const WORLD_OBSTACLES=Object.freeze([
  rect('chart-table',740,170,120,60),rect('turbine',1220,990,100,50)
 ]);
 export const WORLD_STATIONS=Object.freeze(Object.fromEntries(WORLD_ROOMS.map(room=>[room.id,Object.freeze({x:room.x+room.width-70,y:room.y+room.height/2,id:`station-${room.id}`} )])));
-export const WORLD_BELL=Object.freeze({x:800,y:205});
+// Usable standing point at the chart table's south edge, outside its collider.
+export const WORLD_BELL=Object.freeze({x:800,y:250});
 const point=p=>p&&Number.isFinite(p.x)&&Number.isFinite(p.y);
 const inside=(p,r)=>p.x>=r.x&&p.x<=r.x+r.width&&p.y>=r.y&&p.y<=r.y+r.height;
 const floor=p=>point(p)&&WORLD_FLOORS.some(r=>inside(p,r));
+// Static geometry caches have at most one entry per fixed grid node/edge.
+const gridSafety=new Map(),gridEdges=new Map();
 export function distance(a,b){return point(a)&&point(b)?Math.hypot(a.x-b.x,a.y-b.y):Infinity;}
 export function worldRoomAt(position){return WORLD_ROOMS.find(room=>point(position)&&inside(position,room))?.id??null;}
 export function worldSpawn(playerId){
@@ -73,31 +76,35 @@ export function findWorldPath(start,target){
  if(clearSegment(start,target))return [{x:target.x,y:target.y}];
  const size=WORLD.grid,columns=Math.ceil(WORLD.width/size),rows=Math.ceil(WORLD.height/size);
  const toPoint=id=>({x:(id%columns)*size,y:Math.floor(id/columns)*size});
+ const walkable=id=>{if(!gridSafety.has(id))gridSafety.set(id,isWalkable(toPoint(id)));return gridSafety.get(id);};
+ const edge=(a,b)=>{const key=a<b?`${a}:${b}`:`${b}:${a}`;if(!gridEdges.has(key))gridEdges.set(key,clearSegment(toPoint(a),toPoint(b)));return gridEdges.get(key);};
  const nodeFor=p=>{
   const candidates=[];const cx=Math.round(p.x/size),cy=Math.round(p.y/size);
   for(let dy=-2;dy<=2;dy++)for(let dx=-2;dx<=2;dx++){
    const x=cx+dx,y=cy+dy;if(x<0||x>=columns||y<0||y>=rows)continue;
-   const id=y*columns+x,q=toPoint(id);if(isWalkable(q)&&clearSegment(p,q))candidates.push({id,d:distance(p,q)});
+   const id=y*columns+x,q=toPoint(id);candidates.push({id,d:distance(p,q)});
   }
-  candidates.sort((a,b)=>a.d-b.d||a.id-b.id);return candidates[0]?.id;
+  candidates.sort((a,b)=>a.d-b.d||a.id-b.id);
+  return candidates.find(candidate=>walkable(candidate.id)&&clearSegment(p,toPoint(candidate.id)))?.id;
  };
  const first=nodeFor(start),last=nodeFor(target);if(first===undefined||last===undefined)return null;
- const queue=[first],parents=new Map([[first,null]]),safe=new Map();let head=0;
- const walkable=id=>{if(!safe.has(id))safe.set(id,isWalkable(toPoint(id)));return safe.get(id);};
+ const queue=[first],parents=new Map([[first,null]]);let head=0;
  while(head<queue.length&&!parents.has(last)){
   const id=queue[head++],x=id%columns,y=Math.floor(id/columns);
   for(const [dx,dy]of [[0,-1],[-1,0],[1,0],[0,1]]){
    const nx=x+dx,ny=y+dy;if(nx<0||nx>=columns||ny<0||ny>=rows)continue;
-   const next=ny*columns+nx;if(parents.has(next)||!walkable(next)||!clearSegment(toPoint(id),toPoint(next)))continue;
+   const next=ny*columns+nx;if(parents.has(next)||!walkable(next)||!edge(id,next))continue;
    parents.set(next,id);queue.push(next);
   }
  }
  if(!parents.has(last))return null;
  const raw=[];for(let id=last;id!==null;id=parents.get(id))raw.push(toPoint(id));raw.reverse();raw.push({x:target.x,y:target.y});
- // Greedy visibility compression preserves collision checks at every shortcut.
- const route=[];let origin=start,index=0;
- while(index<raw.length){let furthest=index;for(let next=index+1;next<raw.length;next++){if(clearSegment(origin,raw[next]))furthest=next;}
-  if(distance(origin,raw[furthest])>.01)route.push(raw[furthest]);origin=raw[furthest];index=furthest+1;
+ // Merge only collinear grid edges: linear work, with no new untested shortcuts.
+ const route=[];
+ for(let i=0;i<raw.length;i++){
+  const previous=i?raw[i-1]:start,next=raw[i+1],current=raw[i];
+  if(next&&(current.x-previous.x)*(next.y-current.y)===(current.y-previous.y)*(next.x-current.x))continue;
+  if(distance(route.at(-1)||start,current)>.01)route.push(current);
  }
  return route;
 }
