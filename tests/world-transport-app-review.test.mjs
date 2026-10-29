@@ -213,3 +213,32 @@ test('obsolete task rejection and callbacks cannot change another room, readines
   await assert.rejects(old.callbacks.action('task',{taskId:'task-A'}),{name:'AbortError'});assert.equal(f.requests.length,count);assert.equal(f.api.getReady(),ready);assert.equal(f.feedback.textContent,notice);assert.equal(f.api.getRoom().roomId,'B');
  }
 });
+
+test('WN3: phase-return permanently suppresses late rule/network task errors, while a fresh current task retains exact-ID retry',async()=>{
+ for(const error of [new apiModule.ApiError('PRE-COUNCIL RULE FAILURE',409,'WRONG_PHASE'),new TypeError('PRE-COUNCIL NETWORK FAILURE'),new apiModule.ApiError('PRE-COUNCIL UNAVAILABLE',503,'SERVICE_UNAVAILABLE')]){
+  const f=fixture(),scene=await f.open('A',taskState()),pending=scene.callbacks.action('task',{taskId:'task-A'}),rejected=assert.rejects(pending,{name:'AbortError'});
+  f.api.accept(taskState(2,'discussion'));const foreign=taskState(999,'roam');foreign.roomId='B';f.api.accept(foreign);f.api.accept(taskState(1,'roam'));assert.equal(f.api.getRoom().game.phase,'discussion');
+  f.api.accept(taskState(3,'voting'));f.api.accept(taskState(4,'roam'));const notice=f.feedback.textContent;f.requests[0].reject(error);await rejected;
+  assert.equal(f.feedback.textContent,notice);assert(!f.feedback.children.some(node=>node.text==='Retry same request'));assert.equal(f.api.getReady(),true);
+  const fresh=scene.callbacks.action('task',{taskId:'task-A'}),freshRejected=assert.rejects(fresh,/Current post-council reset/);f.requests[1].reject(new TypeError('Current post-council reset'));await freshRejected;
+  const retry=f.feedback.children.find(node=>node.text==='Retry same request');assert(retry);const resent=retry.click();assert.equal(f.requests[2].route,'/api/rooms/A/action');assert.deepEqual(plain(f.requests[2].options.body),plain(f.requests[1].options.body));f.requests[2].resolve(taskState(5));await resent;
+ }
+});
+
+test('WN3: ignored foreign, older or earlier-time phase views never invalidate a current pending task context',async()=>{
+ for(const error of [new apiModule.ApiError('CURRENT RULE ERROR',409,'COOLDOWN'),new TypeError('CURRENT UNCERTAIN ERROR')]){
+  const f=fixture(),scene=await f.open('A',taskState(10)),pending=scene.callbacks.action('task',{taskId:'task-A'}),rejected=assert.rejects(pending,e=>e.name==='Error'&&e.message===error.message);
+  const foreign=taskState(999,'discussion');foreign.roomId='B';foreign.game.self.id='p2';foreign.game.matchId='foreign-match';const older=taskState(9,'voting'),earlier=taskState(10,'discussion');earlier.game.serverNow--;
+  for(const ignored of [foreign,older,earlier]){f.api.accept(ignored);assert.equal(f.api.getRoom().game.version,10);assert.equal(f.api.getRoom().game.phase,'roam');}
+  f.api.accept(taskState(11));f.requests[0].reject(error);await rejected;assert.equal(f.api.getReady(),true);
+  if(error.status===409){assert(f.feedback.textContent.includes('CURRENT RULE ERROR'));assert(!f.feedback.children.some(node=>node.text==='Retry same request'));}
+  else{const retry=f.feedback.children.find(node=>node.text==='Retry same request');assert(retry);const resent=retry.click();assert.deepEqual(plain(f.requests[1].options.body),plain(f.requests[0].options.body));f.requests[1].resolve(taskState(12));await resent;}
+ }
+});
+
+test('WN3: existing retry stays invalid through council and ignored snapshots, with no resurrection on phase return',async()=>{
+ const f=fixture(),scene=await f.open('A',taskState(10)),pending=scene.callbacks.action('task',{taskId:'task-A'}),rejected=assert.rejects(pending,/Synthetic uncertain task/);f.requests[0].reject(new TypeError('Synthetic uncertain task'));await rejected;
+ const retained=f.feedback.children.find(node=>node.text==='Retry same request');assert(retained);f.api.accept(taskState(11,'discussion'));assert.equal(f.feedback.attributes['data-retry'],'false');
+ const foreign=taskState(999);foreign.roomId='B';f.api.accept(foreign);f.api.accept(taskState(10));await retained.click();assert.equal(f.requests.length,1);assert.equal(f.api.getRoom().game.phase,'discussion');
+ f.api.accept(taskState(12,'voting'));f.api.accept(taskState(13,'roam'));await retained.click();assert.equal(f.requests.length,1);assert.equal(f.feedback.attributes['data-retry'],'false');assert(!f.feedback.children.some(node=>node.text==='Retry same request'));assert.equal(f.api.getReady(),true);
+});
