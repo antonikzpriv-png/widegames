@@ -167,3 +167,49 @@ test('actual API cleanup uses same-origin cookies, independent bounded timeout a
  const result=context.reviewRequest(cleanup.route,cleanup.options),timeout=assert.rejects(result,{name:'TimeoutError'});assert.equal(calls.length,1);assert.equal(calls[0].route,'/api/rooms/A/input');assert.equal(calls[0].options.credentials,'same-origin');assert.equal(calls[0].options.keepalive,true);assert.equal(calls[0].options.cache,'no-store');assert.equal(calls[0].options.method,'POST');assert.deepEqual(JSON.parse(calls[0].options.body),plain(cleanup.options.body));assert.equal(calls[0].options.signal.aborted,false);assert.deepEqual([...timers.values()].map(timer=>timer.ms),[1500]);
  timers.values().next().value.fn();await timeout;assert.equal(calls[0].options.signal.aborted,true);assert.equal(timers.size,0);
 });
+
+// Synthetic safe-view task fixtures; these assert root callback lifetime, not engine task legality.
+function taskState(version=1,phase='roam'){
+ const snapshot=state('A',version,phase);snapshot.game.self.roomId='bridge';snapshot.game.self.tasks=[{id:'task-A',label:'Synthetic relay',roomId:'bridge',completed:false}];snapshot.game.availableActions=['task','say'];snapshot.game.meeting=phase==='roam'?null:{id:'synthetic-council'};return snapshot;
+}
+const taskChanges=[['discussion',s=>{s.phase=s.game.phase='discussion';s.game.meeting={id:'synthetic-council'};}],['same-phase position',s=>{s.game.self.position.x+=1;}],['same-phase room',s=>{s.game.self.roomId='archive';}],['task completion',s=>{s.game.self.tasks[0].completed=true;}],['actor',s=>{s.game.self.id='p2';}],['match',s=>{s.game.matchId='replacement-match';}],['dead actor',s=>{s.game.self.alive=false;}]];
+
+test('root task context suppresses late errors after discussion, movement, completion, actor or match changes',async()=>{
+ for(const [label,change]of taskChanges)for(const error of [new apiModule.ApiError('STALE TASK ERROR',409,'WRONG_PHASE'),new TypeError('STALE TASK NETWORK ERROR')]){
+  const f=fixture(),scene=await f.open('A',taskState()),pending=scene.callbacks.action('task',{taskId:'task-A'}),rejected=assert.rejects(pending,{name:'AbortError'}),request=f.requests[0],next=taskState(2);change(next);f.api.accept(next);const notice=f.feedback.textContent;
+  request.reject(error);await rejected;assert.equal(f.feedback.textContent,notice,label);assert(!f.feedback.textContent.includes('STALE TASK'),label);assert(!f.feedback.children.some(node=>node.text==='Retry same request'),label);assert.equal(f.api.getReady(),true,label);assert.equal(f.requests.length,1,label);
+ }
+});
+
+test('current task failures remain visible, and uncertain current retry preserves the exact action body and ID',async()=>{
+ for(const error of [new apiModule.ApiError('Current task cooling down',409,'COOLDOWN'),new TypeError('Current uncertain reset'),new apiModule.ApiError('Current unavailable',503,'SERVICE_UNAVAILABLE')]){
+  const f=fixture(),scene=await f.open('A',taskState()),pending=scene.callbacks.action('task',{taskId:'task-A'}),rejected=assert.rejects(pending,e=>e.name!=='AbortError'&&e.message===error.message);f.requests[0].reject(error);await rejected;assert.equal(f.api.getReady(),true);
+  const retry=f.feedback.children.find(node=>node.text==='Retry same request');
+  if(error.status===409){assert(f.feedback.textContent.includes(error.message));assert.equal(retry,undefined);}
+  else{assert(retry);assert(f.feedback.textContent.includes('could not be confirmed'));const resent=retry.click();assert.equal(f.requests[1].route,'/api/rooms/A/action');assert.deepEqual(plain(f.requests[1].options.body),plain(f.requests[0].options.body));const acknowledged=taskState(2);acknowledged.game.self.tasks[0].completed=true;f.requests[1].resolve(acknowledged);await resent;assert(!f.feedback.children.some(node=>node.text==='Retry same request'));}
+ }
+});
+
+test('accepted changed task views permanently invalidate retry, while foreign/older views cannot clear it',async()=>{
+ for(const [label,change]of taskChanges){
+  const f=fixture(),scene=await f.open('A',taskState(10)),pending=scene.callbacks.action('task',{taskId:'task-A'}),rejected=assert.rejects(pending,/Synthetic uncertain task/);f.requests[0].reject(new TypeError('Synthetic uncertain task'));await rejected;
+  const retry=f.feedback.children.find(node=>node.text==='Retry same request');assert(retry);const ignoredForeign=taskState(999);ignoredForeign.roomId='B';change(ignoredForeign);const ignoredOlder=taskState(9);change(ignoredOlder);const ignoredTime=taskState(10);ignoredTime.game.serverNow--;change(ignoredTime);
+  for(const ignored of [ignoredForeign,ignoredOlder,ignoredTime]){f.api.accept(ignored);assert.equal(f.feedback.children.find(node=>node.text==='Retry same request'),retry,label);assert.equal(f.api.getRoom().game.version,10,label);}
+  const next=taskState(11);change(next);f.api.accept(next);assert.equal(f.feedback.attributes['data-retry'],'false',label);assert(!f.feedback.children.some(node=>node.text==='Retry same request'),label);await retry.click();assert.equal(f.requests.length,1,label);
+  f.api.accept(taskState(12));await retry.click();assert.equal(f.requests.length,1,'invalidated retry cannot revive when original context returns: '+label);
+ }
+});
+
+test('ignored snapshots leave a valid task retry actionable with its original ID',async()=>{
+ const f=fixture(),scene=await f.open('A',taskState(10)),pending=scene.callbacks.action('task',{taskId:'task-A'}),rejected=assert.rejects(pending,/Synthetic uncertain task/);f.requests[0].reject(new TypeError('Synthetic uncertain task'));await rejected;const retry=f.feedback.children.find(node=>node.text==='Retry same request');
+ const foreign=taskState(999,'discussion');foreign.roomId='B';f.api.accept(foreign);f.api.accept(taskState(9,'discussion'));const resent=retry.click();assert.deepEqual(plain(f.requests[1].options.body),plain(f.requests[0].options.body));f.requests[1].resolve(taskState(11));await resent;
+});
+
+test('obsolete task rejection and callbacks cannot change another room, readiness or scoped cleanup',async()=>{
+ for(const outage of [false,true]){
+  const f=fixture(),old=await f.open('A',taskState()),pending=old.callbacks.action('task',{taskId:'task-A'}),rejected=assert.rejects(pending,{name:'AbortError'});const current=await f.open('B');for(const cleanup of f.cleanupRequests)assertCleanup(cleanup,'A');
+  if(outage)await rejectMovement(f,current,new TypeError('Synthetic B reset'));
+  const ready=f.api.getReady(),notice=f.feedback.textContent,count=f.requests.length;f.requests[0].reject(new apiModule.ApiError('OBSOLETE A TASK ERROR',409,'WRONG_PHASE'));await rejected;
+  await assert.rejects(old.callbacks.action('task',{taskId:'task-A'}),{name:'AbortError'});assert.equal(f.requests.length,count);assert.equal(f.api.getReady(),ready);assert.equal(f.feedback.textContent,notice);assert.equal(f.api.getRoom().roomId,'B');
+ }
+});
