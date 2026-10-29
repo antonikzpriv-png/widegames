@@ -27,6 +27,7 @@ async function worldInput(owner,input){
   if(!packet.dx&&!packet.dy)return room; // The authority already freezes non-roam motion.
   throw new DOMException('Movement requires an active watch.','AbortError');
  }
+ if((packet.dx||packet.dy)&&!networkReady)throw new DOMException('Resynchronizing the connection before moving.','AbortError');
  if(!packet.dx&&!packet.dy&&!owner.lastVector?.dx&&!owner.lastVector?.dy&&!game.self.moving)return room;
  owner.lastVector={dx:packet.dx,dy:packet.dy};
  const current=epoch,id=roomId,opened=controller;
@@ -35,7 +36,12 @@ async function worldInput(owner,input){
   if(!ownsWorld(owner)||current!==epoch||controller!==opened)throw new DOMException('The room changed.','AbortError');
   accept(data);return data;
  }catch(error){
-  if(ownsWorld(owner)&&current===epoch&&error.name!=='AbortError'&&Date.now()-lastInputFailure>5000){lastInputFailure=Date.now();tell(error.message,true);}
+  if(ownsWorld(owner)&&current===epoch&&error.name!=='AbortError'){
+   const unavailable=error.status==null||error.status>=500;
+   if(unavailable){networkReady=false;connectionIssue=true;}
+   if(Date.now()-lastInputFailure>5000){lastInputFailure=Date.now();if(unavailable)connectionFailure(error.message);else tell(error.message,true);}
+   if(unavailable)render();
+  }
   throw error;
  }
 }

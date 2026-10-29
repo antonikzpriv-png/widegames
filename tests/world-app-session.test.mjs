@@ -54,3 +54,15 @@ test('a retained old retry control cannot run its action in a new room',async()=
  const f=await fixture(),scene=await f.open('A');const action=scene.callbacks.action('task',{taskId:'task-A'});f.requests[0].reject(new Error('Lost reply'));await assert.rejects(action);const retry=f.feedback.children.find(node=>node.text==='Retry same request');
  await f.open('B');retry.click();assert.equal(f.requests.length,1);assert.equal(f.api.getRoom().roomId,'B');
 });
+
+test('a failed movement connection revokes readiness until resync, while stop remains best effort',async()=>{
+ const f=await fixture(),scene=await f.open('A');const moving=scene.callbacks.input({seq:1,dx:1,dy:0});f.requests[0].reject(new TypeError('Synthetic connection reset'));await assert.rejects(moving,/connection reset/);
+ f.api.mount();assert.equal(scene.updates.at(-1)[1].connected,false);
+ await assert.rejects(scene.callbacks.input({seq:2,dx:1,dy:0}),error=>error.name==='AbortError');assert.equal(f.requests.length,1);
+ const stopped=scene.callbacks.input({seq:3,dx:0,dy:0});assert.equal(f.requests[1].options.body.dx,0);f.requests[1].resolve(state('A',2));await stopped;f.api.mount();assert.equal(scene.updates.at(-1)[1].connected,true);
+ const fresh=scene.callbacks.input({seq:4,dx:0,dy:1});f.requests[2].resolve(state('A',3));await fresh;
+});
+
+test('ordinary rule rejection does not masquerade as lost connectivity',async()=>{
+ const f=await fixture(),scene=await f.open('A');const pending=scene.callbacks.input({seq:1,dx:1,dy:0});f.requests[0].reject(Object.assign(new Error('Stale sequence'),{status:409,code:'STALE_INPUT'}));await assert.rejects(pending,/Stale sequence/);f.api.mount();assert.equal(scene.updates.at(-1)[1].connected,true);
+});
