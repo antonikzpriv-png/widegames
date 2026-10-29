@@ -47,3 +47,29 @@ node --test _artifacts/tactical-investigation-annex-19e4bf6/tests/tactical-inves
 For the second command, the owned test was copied unchanged into the ignored composite's tests directory to verify default relative source imports. Both invocations pass35/35 with zero skipped/todo/cancelled. Explicit-root evidence _artifacts/tactical-investigation-annex-bounds.txt SHA256 **51F3224A284B22CEE81055FD7F305F4462BF829C15BD70DF38D75BAC6AF5556B**. Default-import evidence _artifacts/tactical-investigation-annex-default.txt SHA256 **33FF084D10432050C23CAD2DAE8382C127E2DA50002C7570104C80D4078E3ECC**. First current-checkout milestone result48/48 (16 tactical Beacon +32 legacy) is preserved in _artifacts/tactical-investigation-milestone.txt SHA256 **7ADA86AFF243D1AF9ABEFC3A23AD949503600B0F436B1DFFB7BCC15192A19604**.
 
 Manager integration gap reported promptly: server/features/strategy/index.mjs deviceFacts still truncates occupancy to six rooms; Annex's eight-room sample requires a map-aware bound there, along with preserving the new source/map/provenance metadata. That is coordinator/Group2 ownership and is not edited here. Prepared real schema4 engine tests require a committed coordinator runtime; current uncommitted candidate is not qualified as a final source. Module tests use actual map geometry and real Core LOS delegation, but this composite's Core spatial wrapper predates its forthcoming map-aware dynamic-door update; Annex dynamic-door physics is not claimed qualified by these module checks.
+
+## Actual schema4 engine author qualification
+
+Exact committed-source composite (all dependencies read-only): coordinator **58497fe0415d9c0654f4f9dc3debeab8ac03cd40** server/shared; Core **6f61f58e0ef8a1d30131b275fdcf7796dd2af37c** shared/maps/** and server/engine/world/**; Systems **b99d5327cdc5d45f2df907c45cabbd8b52e92c66** server/engine/systems/**; owned investigation **2119e021cd31dc9aad7d1727101af8c2b49a7466** server/engine/investigation/**. This is an explicit author qualification composite, not an invented single integrated commit. Files were extracted with git show exact-pin:path; no uncommitted candidate files were used. Ignored layout _artifacts/tactical-investigation-engine-58497fe, source-manifest.json SHA256 **EF176A5A7015620C75E9BEBD2B9FA1E554F93A8264EC70182FE5718F76FB0343** lists every final file's owning source pin/blob/SHA256.
+
+New tests/tactical-investigation-engine.test.mjs uses actual createMatch({tactical:true,map:{id,version}}),12 custom keepers and real navigation/actions/input/ticks. Fixture clocks are accelerated only for100ms device reads/50ms cooldown and selected ordinary cooldowns. It asserts actual schema4 rather than silently skipping or treating legacy schema3 as success. The harness reads private role/path information only to stage actors and compute travel time, never feeds it to a client/AI and never edits player positions or manufactures outcomes.
+
+All45 scoped tests pass (35 map/module +10 real engine), zero failure/skip/todo/cancelled. For both Beacon and Annex:
+
+- A real stationary camera read restores at its50ms midpoint, then a late tick completes once at original100ms deadline, with exact map/provenance/frame field. A retained action ID repeats without another sample. Other actors/spectator get no session/history; replay remains locked and all device records carry only owner visibleTo.
+- Actual movement input cancels the read. A stopped actor can start a later real occupancy read; its rows exactly equal selected map rooms, explicitly eight on Annex.
+- Actual communications sabotage cancels immediately with truthful unavailable device reasons; a later deadline creates no fake successful empty telemetry.
+- A real remote elimination followed by camera access shows the living attacker at the sampled camera but excludes the dead victim and creates no retrospective witness event/attacker field.
+- A real remote elimination followed by a vitals read updates only the reader's learned death status. Another remote keeper and fixed spectator retain their earlier knowledge, no remote coordinates appear, and JSON restart preserves the private dated sample. No attacker witness is manufactured.
+
+```powershell
+Remove-Item Env:WORLD_ENGINE_GEOMETRY_MODULE -ErrorAction SilentlyContinue
+$env:TACTICAL_INVESTIGATION_ROOT=(Join-Path (Get-Location) '_artifacts/tactical-investigation-engine-58497fe')
+node --test tests/tactical-investigation-map.test.mjs tests/tactical-investigation-engine.test.mjs
+Remove-Item Env:TACTICAL_INVESTIGATION_ROOT
+node --test _artifacts/tactical-investigation-engine-58497fe/tests/tactical-investigation-map.test.mjs _artifacts/tactical-investigation-engine-58497fe/tests/tactical-investigation-engine.test.mjs
+```
+
+Second invocation copies the two owned tests unchanged into the ignored committed-source layout, proving default relative imports exercise its actual runtime. Both45/45 and exit0. Explicit-root log _artifacts/tactical-investigation-engine-initial.txt SHA256 **9638C1CA275F9C76EC947633057D4157D84CE9C3F9CB88A827BBB2DC96F0026D**; default log _artifacts/tactical-investigation-engine-default.txt SHA256 **B0397E3F779ACAB9E02F3A69CC6592FD3BE2951DB5BBFA096DB18D374E589E75**. Syntax checks for both runtime files and both tactical tests plus git diff --check pass. The assigned tracked foundation still has the older engine until manager integration; default new engine tests correctly require schema4 there instead of skipping. Manager must integrate the root/Core/Systems dependencies before its ordinary suite.
+
+Implementation is ready for manager/Core independent review. This worker's investigation implementation is never self-approved. No Chrome, full repository suite, HTTP durability, paid/live model, broad match ensemble, main/push/deployment or another worktree mutation is claimed. The requested independent review of another owner follows separately, within the owned test/doc namespace.
