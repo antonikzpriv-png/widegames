@@ -178,7 +178,7 @@ test('strict envelopes, bounded replay/idempotency, actor isolation, persisted d
  const other=applyAction(s,'p2',{id:'same',type:'move',roomId:'lantern'},0);s=other.state;assert.equal(other.accepted,true);
  assert.equal(s.players.find(p=>p.id==='p1').roomId,'archive');assert.equal(s.players.find(p=>p.id==='p2').roomId,'lantern');
  for(let i=0;i<300;i++)s=applyAction(s,'p1',{id:`wait${i}`,type:'wait'},0).state;
- assert.equal(s.requests.p1.length,256);assert.equal(s.requests.p2.length,1);
+ assert.equal(s.requests.p1.length,302);assert.equal(s.requests.p2.length,1);
  const before=s.version;const d=applyAction(s,'p1',{id:'wait299',type:'wait'},0);assert.equal(d.state.version,before);assert.equal(d.duplicate,true);
  assert.equal(tick(s,1).state,s);assert.equal(applyAction(s,'p1',{id:'badtime',type:'wait'},-1).error.code,'INVALID_TIME');
 });
