@@ -73,3 +73,28 @@ Final local working-byte SHA256 pins:
 - `public/world/input.mjs`: `7c83cf9e9066c2783db769b3ebf2f586aac2923d3261cb7f82ca694276d29ed3`.
 - `public/game.css`: `17dd6b464aecce52f7d23f8208ee9c924acb26e77a11782fac78beaebefc7c0c`.
 - Final browser driver: `09a40e439f2c0acdbc861559bd2d158092bc14811cb8d656ce239d5bee5b0086`.
+
+
+## Deferred task rejection correction
+
+Starting from clean worker `dd707716df5a47aa134ebb8a5455576e285ec8e8`, the unchanged independent Reviewer driver reproduced the exact stale task failure: 12 passed / 1 failed, with OLD TASK FAILURE replacing the new council feedback. The final candidate passes that same driver **13/13**, including its still-current rejection control and historical 9e571c7 known-defect control. Reviewer source SHA256 is `3556e2d7a1933af2b3d8adfaee7c80696b664a501407d3c86ec3e5837622f189`; its bytes remain unchanged.
+
+Submission completion now captures the original puzzle and session identity and requires both identities plus current room/match/phase/task/proximity validity before changing feedback or equipment. A still-current rejection keeps the solved equipment, exact nodes, useful error and enabled retry. Owned regressions pass **23/23** (11 new retained-callback counterexamples plus 12 existing model/input checks). Cases cover council, room, match, position, disabled action, death, task completion, manual close, phase returning to roam, disposal and successful retry. These are minimal-DOM/VM callback fixtures, not native browser or backend workflow claims; counts overlap Reviewer coverage.
+
+Raw red, intermediate and final green logs, unchanged Reviewer harness copy, candidate source copies and SHA256 receipt are preserved at `D:/Widegames-work/world-frontend-20261029/_artifacts/world-ui-task-feedback-e1YQkB`. Final source SHA256: `2db939074f1deecd0d7668044b172effc060f6f300ec0d8093f19867738e614b`; owned regression SHA256: `cfd458c8f997d7627b0aa06a9c8a63ddce750ac31475b3e439c381acac7b6ddf`. Syntax and ownership/diff checks also pass. USE now explicitly renders a text-style gear (U+2699 + VS15), SABOTAGE a text-style lightning bolt (U+26A1 + VS15), encoded with JavaScript escapes; evaluated codepoints were checked. Console question marks were an encoding display artifact, so actual source codepoints were inspected before replacement. No external assets.
+
+Commands (from this worker root):
+
+```powershell
+$env:TEMP='D:/Widegames-work/temp'
+$env:TMP='D:/Widegames-work/temp'
+$env:WORLD_AI_SOURCE_ROOT='D:/Widegames-work/world-coordinator-20261029'
+$env:WORLD_AI_REVIEW_UI_ROOT='D:/Widegames-work/world-frontend-20261029'
+Remove-Item Env:WORLD_AI_REVIEW_UI_PIN -ErrorAction SilentlyContinue
+node --test D:/Widegames-work/world-reviewer-20261029/tests/world-ai-ui-review.test.mjs
+$env:WORLD_UI_TEST_SOURCE_ROOT=$env:WORLD_AI_SOURCE_ROOT
+$env:WORLD_UI_TEST_UI_ROOT=$env:WORLD_AI_REVIEW_UI_ROOT
+node --test tests/world-ui-task-feedback.test.mjs tests/world-ui-model.test.mjs
+```
+
+The earlier root hidden-stop concern is superseded by manager `b8cdb4a96e7e28cf1a22f5ddde24e7ac348a80eb`: source now sends a scoped same-origin keepalive zero with a 1500 ms bound before aborting controllers, allocates wire sequences around lifecycle stops and discards the final response. The manager reports an actual hidden-navigation stopping pass; this worker has not independently rerun Chrome. Stopping is best effort: manual movement still has the authority's 600 ms lease; delivery of a zero to cancel an authoritative route cannot be guaranteed during network/process termination. No root edits were made here. The old 19 observed browser cases remain preserved with their **failed source-stability gate**, not relabeled as qualification. Manager retains the exclusive Chrome lease; this correction started no browser or server.
