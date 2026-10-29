@@ -141,3 +141,20 @@ node --test --test-name-pattern='council return:' _artifacts/world-manager-bridg
 ```
 
 The second command intentionally exits1. Default-source helper remains portable/current-checkout-relative; there is no automatic historical-source fallback. Only this document and the uniquely owned app-review test changed. Syntax and diff checks passed. No runtime/root/other-worker edit, broad repeat suite, Chrome, paid request, main, push or deployment occurred. This is a bounded independent root review with WN3 still open, not final whole-game approval or independent approval of this worker's transport.
+
+## Final bounded WN3 closure atb919d007
+
+Independently reviewed exact managerb919d0071498c6ce5eea05d73ab55a3f392524f7, app blob5aedf1ec200438681879f2a06d44e0d0ca5afb5d. captureActionContext now retains worldActionGeneration, actionContextCurrent requires the captured generation, and accept increments it on accepted match/phase/actor transitions AFTER the foreign/older/earlier-time guards. The intervening council therefore irreversibly invalidates the pending pre-council action even when its original phase and other values return. WN3 is closed at this exact pin in the reviewed root callback scope; no new exploratory audit was performed.
+
+Reran this worker's original retained COUNTEREXAMPLE council return invariant directly from the unmodified44ef7bd evidence file with its source override pointing to the immutableb919d007 archive:1 pass,0 fail/skip (original-WN3-closure.txt). The original44ef red files remain intact. Their SHA256 values are9A5BF27BBE61CE44164621F27DCEF23000DBF914E49F0F882FA20D098A5E0C7B for phase-return-counterexample-results.txt and55423440A63734E0E4CBF43C83A0E01BD2F812266F7D7285F8E19EE92BC64180 for phase-return-observation-results.txt. The historical open-finding section above is preserved rather than rewritten.
+
+Added three default-current positive groups: late409/network/503 failures after accepted discussion/voting/roaming return reject with AbortError and create no stale feedback/retry, while a fresh post-council task can still retry its exact current body/ID; ignored foreign/older/earlier-time phase/match/actor views cannot spuriously invalidate a current pending context, and same-phase accepted progress does not invalidate it; already-created retries remain destroyed across accepted council transitions and ignored old-phase snapshots, with no resurrection on roaming return. Existing current-rule feedback, scoped cleanup, readiness and WN1/WN2 controls also pass. Extended actual-app suite:27 registered,27 pass,0 fail/skip. A separate no-source-override checkout-default run of the same test against the archive also passes27. These runs overlap and are not added into a unique coverage total.
+
+Evidence: _artifacts/world-manager-bridge-b919d007/{original-WN3-closure.txt,positive-results.txt,default-current-results.txt}. Explicit pin command:
+
+```powershell
+$env:WORLD_TRANSPORT_APP_REVIEW_ROOT=(Resolve-Path '_artifacts/world-manager-bridge-b919d007/source').Path
+node --test tests/world-transport-app-review.test.mjs
+```
+
+Only the owned app-review test and this document changed; syntax and git diff --check passed. Tests still execute actual selected app/API/envelope source with labelled VM/render/network fixtures and default checkout-local resolution. This receipt does not claim browser/network timing or later remembered-room changes are qualified. No runtime/root/other-worker edits, Chrome, full suite, new exploratory audit, paid call, main/push/deployment or running-data change occurred. No failing invariant remains in this final bounded WN3 closure.
