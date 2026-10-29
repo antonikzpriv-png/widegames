@@ -50,7 +50,7 @@ async function navigate(position){
  return until(r=>distance(r.game.self.position,position)<2&&!r.game.self.moving,'physical route arrival');
 }
 async function solveTask(task){
- await navigate(WORLD_STATIONS[task.roomId]);await page.focus('.lw-world-canvas');await page.keyboard.press('e');await page.waitForSelector('.lw-task-modal',{visible:true});
+ await navigate(WORLD_STATIONS[task.roomId]);await until(r=>r.game.interactions.some(h=>h.type==='task'&&h.enabled&&h.fields.taskId===task.id),'permitted task');await page.waitForFunction(label=>{const b=document.querySelector('.lw-action-use');return b?.title===label&&b.getAttribute('aria-disabled')==='false';},{},task.label);await page.focus('.lw-world-canvas');await page.keyboard.press('e');await page.waitForSelector('.lw-task-modal',{visible:true});
  const kind=await page.$eval('.lw-puzzle',node=>['wires','tuning','sequence'].find(kind=>node.classList.contains('lw-puzzle-'+kind)));assert(kind);report.puzzleKinds.push(kind);await shot('04-task-'+kind);
  if(kind==='wires')for(const n of [1,2,3]){await page.locator(`button[aria-label^="Left cable ${n}"]`).click();await page.locator(`button[aria-label^="Right socket ${n}"]`).click();}
  else if(kind==='tuning'){await page.$eval('.lw-frequency-slider',node=>{node.value='72';node.dispatchEvent(new Event('input',{bubbles:true}));});await press('Lock frequency');}
