@@ -1,4 +1,6 @@
-﻿import * as world from '../../shared/world.mjs';
+﻿import {getMap} from '../../shared/maps/index.mjs';
+import {mapKey,roomName as mapRoomName} from './map-model.mjs';
+import {createLobbyMapSelector} from './lobby-map.mjs';
 import {CHARACTERS} from '../../shared/contracts.mjs';
 import {aiLabel,clock,contexts,distance,point,roleLabel,taskKind,validTaskSession,visiblePlayers} from './model.mjs';
 import {createWorldScene,drawKeeper} from './scene.mjs';
@@ -9,7 +11,6 @@ import {restoreTrigger,trapDialog} from './dom.mjs';
 import {createBeaconPanel} from './beacon-panel.mjs';
 import {knowledge,criticalText,hasActionDescriptor} from './beacon-model.mjs';
 
-const roomName=id=>({bridge:'Bridge',archive:'Archive',lantern:'Lantern',workshop:'Workshop',galley:'Galley',engine:'Engine'})[id]||'At sea';
 const make=(tag,className,text)=>{const e=document.createElement(tag);if(className)e.className=className;if(text!==undefined)e.textContent=text;return e;};
 const button=(text,fn,className='')=>{const b=make('button',className,text);b.type='button';b.addEventListener('click',fn);return b;};
 const setText=(el,text)=>{if(el.textContent!==text)el.textContent=text;};
@@ -18,6 +19,8 @@ let instance=0;
 /** A safe-view-only game surface. The owner supplies networking and request IDs. */
 export function createWorldExperience(host,callbacks){
  if(document.head&&!document.querySelector('link[data-beacon-style]')){const link=make('link');link.rel='stylesheet';link.href='/world/beacon.css';link.setAttribute('data-beacon-style','');document.head.append(link);}
+ let selectedMap=getMap(),world=selectedMap.geometry;
+ const roomName=id=>mapRoomName(selectedMap,id);
  const uid=`lw-world-${++instance}`,shell=make('section','lw-world'),canvas=make('canvas','lw-world-canvas');
  shell.setAttribute('aria-label','Lantern Wake game');canvas.setAttribute('role','img');canvas.setAttribute('aria-label','Storm beacon world');canvas.tabIndex=0;
  const stage=make('div','lw-stage');stage.append(canvas);
@@ -39,8 +42,8 @@ export function createWorldExperience(host,callbacks){
  const mapToggle=button('Map  M',()=>toggleMap(),'lw-map-toggle');mapToggle.setAttribute('aria-expanded','false');
  const mapPane=make('section','lw-map-pane'),mapHeading=make('h2','','Platform map'),mapCanvas=make('canvas','lw-mini-map');mapPane.hidden=true;mapPane.id=`${uid}-map`;mapToggle.setAttribute('aria-controls',mapPane.id);mapCanvas.setAttribute('role','img');mapCanvas.setAttribute('aria-label','Known platform layout and currently visible keepers');mapPane.append(mapHeading,mapCanvas,make('p','','Map shows only positions supplied by the server.'));
  const lobby=make('section','lw-lobby'),lobbyTitle=make('h1','','KEEP THE LIGHT.'),lobbySub=make('p','','Keep the beacon alive. Hidden saboteurs may be aboard.'),roster=make('div','lw-lobby-roster'),start=button('Begin the watch',()=>request(()=>callbacks.start()),'lw-primary');
- const lobbyRows=new Map();
- const lobbyNote=make('p','lw-lobby-note');lobby.append(make('p','lw-eyebrow','STORM BEACON · KEEPER WATCH'),lobbyTitle,lobbySub,roster,start,lobbyNote);
+ const lobbyRows=new Map(),lobbyMap=createLobbyMapSelector({id:uid,settings:callbacks.settings,change:()=>render()});
+ const lobbyNote=make('p','lw-lobby-note');lobby.append(make('p','lw-eyebrow','STORM BEACON · KEEPER WATCH'),lobbyTitle,lobbySub,roster,lobbyMap.node,start,lobbyNote);
  const overlay=make('div','lw-scene-overlay');overlay.hidden=true;
  const roleScene=make('section','lw-role-scene');roleScene.hidden=true;roleScene.setAttribute('role','dialog');roleScene.setAttribute('aria-modal','true');roleScene.setAttribute('aria-labelledby',`${uid}-role-title`);
  const revealArt=make('canvas','lw-reveal-keeper');revealArt.width=240;revealArt.height=250;
@@ -70,7 +73,7 @@ export function createWorldExperience(host,callbacks){
  function closeConfirmation(restore=true){confirmTarget=null;render();if(restore)restoreTrigger(actionButtons.eliminate);}
  function closeTask(restore=true){const current=puzzle;puzzle=null;taskSession=null;current?.dispose();render();if(restore)restoreTrigger(actionButtons.use);}
  function openTask(task){
-  taskSession={taskId:task.id,roomId:room.roomId,matchId:room.game.matchId,location:room.game.self.roomId};
+  taskSession={taskId:task.id,roomId:room.roomId,matchId:room.game.matchId,mapKey:mapKey(room.game.map??room.map),location:room.game.self.roomId};
   puzzle=createTaskPuzzle({id:uid,task,kind:taskKind(task,room.game.self.tasks.indexOf(task)),onClose:()=>closeTask(),onSubmit:async()=>{
    if(!validTaskSession(taskSession,room,world)){closeTask();setFeedback('Station closed: the task or your location changed.');return;}
    const current=puzzle,session=taskSession,taskId=session.taskId;
@@ -86,7 +89,7 @@ export function createWorldExperience(host,callbacks){
   }});input.stop();overlay.append(puzzle.node);render();puzzle.focus();
  }
  async function perform(type,fields){
-  if(disposed||pending()||!options.connected)throw new Error('Wait for the connection or pending action.');
+  if(disposed||pending()||lobbyMap.pending||!options.connected)throw new Error('Wait for the connection or pending action.');
   localPending++;render();try{return await callbacks.action(type,fields);}finally{if(!disposed){localPending--;render();}}
  }
  function movementAllowed(){return !document.hidden&&!!room?.game?.self?.alive&&room.game.worldVersion===1&&room.game.phase==='roam'&&options.connected&&!pending()&&roleScene.hidden&&overlay.hidden&&!beaconPanel?.open&&!room.game.systems?.selfTransit&&!room.game.self?.transit;}
@@ -112,7 +115,8 @@ export function createWorldExperience(host,callbacks){
   for(const p of keepers){let card=lobbyRows.get(p.id);if(!card){card=make('div','lw-seat');const avatar=make('canvas');avatar.width=80;avatar.height=94;card.append(avatar,make('span'));roster.append(card);lobbyRows.set(p.id,card);}const identity=JSON.stringify([p.name,p.color]);if(card.dataset.identity!==identity){const art=card.children[0].getContext('2d');art.clearRect(0,0,80,94);drawKeeper(art,p,40,64,{scale:1,label:false});setText(card.children[1],p.name);card.dataset.identity=identity;}}
   shell.dataset.phase=game?.phase||'lobby';lobby.hidden=!isLobby;assignment.hidden=isLobby;progress.hidden=isLobby;actions.hidden=isLobby||game.phase!=='roam'||!game.self?.alive;joystick.hidden=!movementAllowed();
   setText(mode,aiLabel(room.ai));setText(status,options.connected?'● Connected':'○ Reconnecting');status.dataset.connected=String(!!options.connected);
-  const lastNotice=room.notices?.at(-1),noticeText=typeof lastNotice==='string'?lastNotice:lastNotice?.message||'';setText(aiNotice,noticeText);aiNotice.hidden=!noticeText;setText(lobbyNote,`${room.isHost?`You host this room. ${keepers.length} keepers are aboard.`:'You are observing. The host will begin the watch.'}${noticeText?' '+noticeText:''}`);start.disabled=!room.isHost||pending()||!options.connected;
+  const lastNotice=room.notices?.at(-1),noticeText=typeof lastNotice==='string'?lastNotice:lastNotice?.message||'';setText(aiNotice,noticeText);aiNotice.hidden=!noticeText;setText(lobbyNote,`${room.isHost?`You host this room. ${keepers.length} keepers are aboard.`:'You are observing. The host will begin the watch.'}${noticeText?' '+noticeText:''}`);start.disabled=!room.isHost||pending()||!options.connected||lobbyMap.pending;
+  lobbyMap.update(room,options);setText(mapHeading,`${selectedMap.name} map`);
   setText(role,roleLabel(game));role.dataset.role=game?.self?.role||'spectator';setText(location,game?.self?`${game.self.alive?'':'Fallen · '}${roomName(game.self.roomId)}`:`Public observation · roles ${game?.phase==='ended'?'revealed':'hidden'}`);
   setText(help,canWalk?'WASD / arrows to walk · E use · R report · Q eliminate · M map':'Observe the watch · M map');
   const tasks=game?.self?.tasks||[],ids=new Set(tasks.map(t=>t.id));
@@ -154,9 +158,9 @@ export function createWorldExperience(host,callbacks){
   input.sync();
  }
  function frame(now){raf=0;if(disposed||document.hidden)return;scene.draw(now);if(mapOpen)mini.draw(now,{overview:true});raf=requestAnimationFrame(frame);}
- function blur(){navigationEpoch++;beaconPanel?.suspend();}
+ function blur(){navigationEpoch++;beaconPanel?.suspend();lobbyMap.suspend();}
  window.addEventListener('blur',blur);
- function visibility(){navigationEpoch++;beaconPanel?.suspend();if(document.hidden){cancelAnimationFrame(raf);raf=0;input.stop();}else if(!disposed&&!raf){scene.draw(performance.now());raf=requestAnimationFrame(frame);}}
+ function visibility(){navigationEpoch++;beaconPanel?.suspend();lobbyMap.suspend();if(document.hidden){cancelAnimationFrame(raf);raf=0;input.stop();}else if(!disposed&&!raf){scene.draw(performance.now());raf=requestAnimationFrame(frame);}}
  document.addEventListener('visibilitychange',visibility);if(!document.hidden)raf=requestAnimationFrame(frame);
- return {update(next,nextOptions={}){if(disposed)return;if(lastRoom&&lastRoom!==next.roomId){input.stop();puzzle?.dispose();puzzle=null;taskSession=null;confirmTarget=null;ejectionKey=null;seenEjections.clear();revealed.clear();localFeedback='';lastRole=null;}lastRoom=next.roomId;room=next;options={...options,...nextOptions};scene.update(room,performance.now());mini.update(room,performance.now());render();},dispose(){if(disposed)return;input.dispose();disposed=true;cancelAnimationFrame(raf);document.removeEventListener('visibilitychange',visibility);window.removeEventListener('blur',blur);scene.dispose();mini.dispose();beaconPanel?.dispose();puzzle?.dispose();results.dispose();shell.remove();}};
+ return {update(next,nextOptions={}){if(disposed)return;const nextMap=getMap(next.game?.map??next.map),changed=selectedMap.id!==nextMap.id||selectedMap.version!==nextMap.version;if(changed)navigationEpoch++;if(lastRoom&&(lastRoom!==next.roomId||changed)){input.stop();puzzle?.dispose();puzzle=null;taskSession=null;confirmTarget=null;ejectionKey=null;seenEjections.clear();revealed.clear();localFeedback='';lastRole=null;}lastRoom=next.roomId;selectedMap=nextMap;world=selectedMap.geometry;room=next;options={...options,...nextOptions};scene.update(room,performance.now());mini.update(room,performance.now());render();},dispose(){if(disposed)return;input.dispose();disposed=true;cancelAnimationFrame(raf);document.removeEventListener('visibilitychange',visibility);window.removeEventListener('blur',blur);scene.dispose();mini.dispose();lobbyMap.dispose();beaconPanel?.dispose();puzzle?.dispose();results.dispose();shell.remove();}};
 }
