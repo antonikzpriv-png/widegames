@@ -70,3 +70,5 @@ CHROME_PATH=/usr/bin/chromium npm run test:multiplayer-browser
 ```
 
 Use the cloud Chromium launcher for the independent world UI suite because its launcher otherwise requires a SUID sandbox unavailable in this container. Both npm browser scripts already pass the required container flag. CI uses its existing Chrome installation. The multiplayer driver uses three isolated cookie contexts (two humans plus spectator), real HTTP/WS, a controlled clock, and explicitly labelled local idle AI. Legal fixture AI council votes finish the real engine match; it does not fabricate winners. It verifies settings, names, claims/readiness, movement ownership, reconnect, spectator privacy, a complete multi-saboteur watch, archived replay and rematch role reveal. No paid calls occur. Reports/screenshots are generated under ignored `_artifacts/multiplayer-browser-*/`; selected screenshots are retained in `docs/screenshots/multiplayer/`.
+
+Observed counts, exact commands and retained screenshots are in [Multiplayer qualification](MULTIPLAYER-VERIFICATION.md).
