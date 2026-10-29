@@ -17,7 +17,7 @@ const root=fileURLToPath(new URL('../',import.meta.url)),pause=ms=>new Promise(r
 await mkdir(path.join(root,'_artifacts'),{recursive:true});const output=await mkdtemp(path.join(root,'_artifacts','world-browser-'));
 const git=(...args)=>execFileSync('git',args,{cwd:root,encoding:'utf8',windowsHide:true}).trim();
 const report={sourceCommit:git('rev-parse','HEAD'),modifiedPaths:git('status','--porcelain').split(/\r?\n/).filter(Boolean),fixture:'Actual app/main browser modules, native HTTP/WS, persistent store, seeded world engine and real labeled demo AI. Physical routes may use normal authenticated navigate requests and accelerated server time; no state/winner fabrication or provider calls.',checks:[],privacyChecks:0,errors:[],consoleErrors:[],screenshots:[],outcomes:[],inputPackets:0,puzzleKinds:[]};
-let browser,game,page,origin,skew=0;const pending=new Set();
+let browser,game,page,origin,skew=0,auditClosed=false;const pending=new Set();
 const runtimeFiles=git('ls-files','public','server','shared','package.json','package-lock.json').split(/\r?\n/);
 async function hashes(){return Promise.all(runtimeFiles.map(async file=>[file,createHash('sha256').update(await readFile(path.join(root,file))).digest('hex')]));}
 const before=await hashes();
@@ -34,7 +34,7 @@ async function drain(){let timeout;try{await Promise.race([Promise.allSettled([.
 function instrument(target,consoleGate=false){
  target.on('pageerror',error=>report.errors.push(error.message));if(consoleGate)target.on('console',message=>{if(message.type()==='error')report.consoleErrors.push(message.text());});
  target.on('request',request=>{if(request.method()==='POST'&&request.url().endsWith('/input'))try{const input=JSON.parse(request.postData());assert.deepEqual(Object.keys(input).sort(),['dx','dy','seq']);assert([input.dx,input.dy].every(n=>Number.isInteger(n)&&Math.abs(n)<=1));report.inputPackets++;}catch(error){report.errors.push(String(error));}});
- target.on('requestfinished',request=>{const response=request.response();if(response?.ok()&&response.url().startsWith(origin+'/api/rooms'))track(response.json().then(safeRoom));});
+ target.on('requestfinished',request=>{const response=request.response();if(!auditClosed&&response?.ok()&&response.url().startsWith(origin+'/api/rooms'))track(response.json().then(safeRoom));});
 }
 async function view(target=page){const room=await target.evaluate(async()=>{const id=location.pathname.split('/')[2],response=await fetch('/api/rooms/'+id);if(!response.ok)throw Error('State HTTP '+response.status);return response.json();});safeRoom(room);return room;}
 async function until(predicate,label,target=page,timeout=14000){const end=Date.now()+timeout;while(Date.now()<end){const room=await view(target);if(predicate(room))return room;await pause(90);}throw Error('Timed out: '+label);}
@@ -98,6 +98,6 @@ try{
  await drain();check(!report.errors.length,'No browser exceptions or unsafe returned world views');check(!report.consoleErrors.length,'No primary-page console errors');check(JSON.stringify(before)===JSON.stringify(await hashes()),'Runtime source remained unchanged during qualification');report.browser=await browser.version();report.rules=config.rules;report.humanSeed=humanSeed;
 }catch(error){report.failure=String(error.stack||error);try{if(page)await shot('failure');}catch{}console.error(report.failure);process.exitCode=1;}
 finally{
- const cleanupErrors=[];try{await browser?.close();}catch(error){cleanupErrors.push(String(error));}try{await game?.close();}catch(error){cleanupErrors.push(String(error));}try{await drain();}catch(error){cleanupErrors.push(String(error));}
+ const cleanupErrors=[];auditClosed=true;try{await drain();}catch(error){cleanupErrors.push(String(error));}try{await browser?.close();}catch(error){cleanupErrors.push(String(error));}try{await game?.close();}catch(error){cleanupErrors.push(String(error));}try{await drain();}catch(error){cleanupErrors.push(String(error));}
  report.cleanupErrors=cleanupErrors;report.summary={passed:report.checks.filter(c=>c.passed).length,failed:report.checks.filter(c=>!c.passed).length};await writeFile(path.join(output,'report.json'),JSON.stringify(report,null,2));console.log('World browser evidence: '+output);if(cleanupErrors.length||report.errors.length||report.consoleErrors.length)process.exitCode=1;
 }
