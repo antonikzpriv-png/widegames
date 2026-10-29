@@ -74,3 +74,30 @@ SHA-256 of the actual reviewed Windows-checkout file bytes (Git pin above provid
 Checks were read-only Git diff/show/status/ls-files and filesystem/JSON/source inspection, plus a bounded dependency/import/command-target metadata scan. All command targets and scanned relative runtime imports existed. A first metadata helper attempted to spawn Git inside Node and received host `EPERM`; it was rerun successfully with Git invoked separately by PowerShell and Node limited to read-only filesystem analysis. That host restriction was not a product/test failure.
 
 No new install, full test suite, Chrome, paid/live provider request, coordinator write, deployment, push or main change was performed. The manager owns combined execution/integration checks. The only committed deliverable for this task is `docs/AUDIT-RELEASE-READINESS-20261029.md`; all earlier negative evidence and other workers' files remain untouched.
+
+## Exact-pin R1 harness closure — 2026-10-29
+
+Independently reviewed manager fix **`698336ffb01773d40d5b00383fbe4f106aa63a0b`** against its parent **`6aeaeffe0577f132d102e29fa36c9bd3dc90bfda`** in the coordinator worktree, read only. The diff changes only `scripts/browser-check.mjs`: a normal-completion primary-page console assertion is added, and the final post-cleanup gate includes collected console errors. Reviewed Git blob: **`0de52fc19614ca4e0889896b132fed61c7578cf6`**. The coordinator's working copy of that script matched the exact commit. Original R1 evidence, source pin and fingerprints above are preserved unchanged as the historical failing-source record.
+
+The normal completion now runs the original runtime/privacy check followed by `check(!report.consoleErrors.length,'No primary-page browser console errors')`. After browser/server close and final drain, the gate is `if((report.errors.length||report.consoleErrors.length)&&!report.failure)`, throwing a combined runtime/privacy/console error. The existing prior-failure guard remains so an error already being rethrown is not replaced with a second audit error.
+
+Validation used **actual statements extracted from both committed versions**, including their original `check` function, evaluated with synthetic report objects in bounded Node VM contexts. The browser module was never imported or launched. Ten controls passed:
+
+| Source/control | Observed result |
+| --- | --- |
+| Parent, `errors:[]`, `consoleErrors:['synthetic']`, normal gate | Counterexample passes, reproducing original R1 |
+| Parent, same report, final cleanup gate | Counterexample passes, reproducing original R1 |
+| Exact fix, same report, normal gate | Rejected with the primary-page console assertion |
+| Exact fix, same report, final cleanup gate | Rejected with the late runtime/privacy/console error containing the synthetic message |
+| Exact fix, clean report, normal gate | Passes and records successful checks |
+| Exact fix, clean report, cleanup gate | Passes |
+| Exact fix, clean normal completion followed by a new synthetic console error before final gate | Final gate rejects the late error |
+| Exact fix, runtime-only error, normal gate | Existing runtime/privacy rejection retained |
+| Exact fix, runtime-only error, cleanup gate | Existing late-runtime rejection retained |
+| Exact fix, console error plus an existing `report.failure` | No replacement audit exception; the existing failure remains the failure path |
+
+**R1 is closed for collected primary-page console errors in this exact source-level scope.** This is not a new real-browser qualification pass: no Chrome, game/server execution, installs or full suites were run. The manager owns the real qualification run. An initial Windows `node -e` driver invocation failed with argument-quoting SyntaxError before evaluating any control; piping the driver source directly to Node corrected that invocation, and the ten controls above then completed with exit0. No failed product assertion was skipped or relabelled.
+
+Coverage remains deliberately specific. The primary page still has the console-error collector; the observer page has its existing `pageerror` listener but **no newly added console listener**. Its join/forbidden-action flow intentionally exercises expected HTTP401/403 responses. This review does not claim those observer console messages, all pages, all HTTP errors, or every browser log are collected/clean. The manager's new assertion explicitly says primary-page console errors, which matches the implemented collection scope.
+
+R2 and R3 remain the same conditional packaging/context/browser-availability/health-port limitations described above; they were not fixed or promoted to demonstrated deployment failures by this harness change. My own origin/transport implementation remains outside this independent harness approval and is reviewed separately by Core. Only this appended receipt is changed/committed in the audit worktree; coordinator files, tests, runtime/root sources, previous evidence and other workers' files are untouched. No paid/live provider requests, main changes, push or deployment occurred.
