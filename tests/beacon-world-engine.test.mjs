@@ -1,4 +1,4 @@
-import test from 'node:test';import assert from 'node:assert/strict';import {resolve} from 'node:path';import {pathToFileURL} from 'node:url';
+import test from 'node:test';import assert from 'node:assert/strict';import {resolve} from 'node:path';import {pathToFileURL} from 'node:url';import {createSpatialWorld} from '../server/engine/world/index.mjs';
 const root=process.env.BEACON_WORLD_ENGINE_ROOT?pathToFileURL(resolve(process.env.BEACON_WORLD_ENGINE_ROOT)+'/'):new URL('../',import.meta.url);
 const engine=await import(new URL('server/engine/index.mjs',root)),geometry=await import(new URL('shared/world.mjs',root));
 const enabled=engine.createMatch({id:'beacon-probe',world:true,systems:true,seed:1,now:0}).schemaVersion===3;
@@ -19,4 +19,12 @@ test('real engine remote death remains last-known until actual report muster; wi
 
 test('real action hints and validation both deny a bell within92 when the chart table blocks sight',settings,()=>{
  const g=game();g.travel('p1',{x:726,y:210});assert.ok(geometry.distance(g.state.players.find(p=>p.id==='p1').position,geometry.WORLD_BELL)<92);assert.equal(g.view('p1').availableActions.includes('meeting'),false);assert.equal(g.act('p1','meeting',{},false).error.code,'UNAVAILABLE');
+});
+
+
+test('actual systems vent emits recipient-only hatch traces and validates only finalized checkpoint time',settings,()=>{
+ const g=game();g.travel('p1',{x:200,y:550});g.travel('p2',{x:1430,y:550});g.travel('p6',{x:150,y:550});
+ const enteredAt=g.now;g.act('p6','vent',{entryId:'archive-hatch',exitId:'lantern-hatch'});const departure=g.view('p1').events.find(e=>e.type==='vent_enter');assert.ok(departure);assert.equal(departure.at,enteredAt);assert.equal(departure.entryId,'archive-hatch');assert.equal(Object.hasOwn(departure,'exitId'),false);assert.equal(Object.hasOwn(departure,'visibleTo'),false);assert.equal(Object.hasOwn(departure,'role'),false);assert.equal(g.view('p2').events.some(e=>e.type==='vent_enter'),false);assert.equal(g.view(null).events.some(e=>e.type==='vent_enter'||e.type==='vent_exit'),false);
+ const arrival=g.state.systems.transit.p6.deadlineAt;g.tick(arrival);const exit=g.view('p2').events.find(e=>e.type==='vent_exit');assert.ok(exit);assert.equal(exit.at,arrival);assert.equal(exit.exitId,'lantern-hatch');assert.equal(Object.hasOwn(exit,'entryId'),false);assert.equal(g.view('p1').events.some(e=>e.type==='vent_exit'),false);assert.equal(g.view(null).events.some(e=>e.type==='vent_enter'||e.type==='vent_exit'),false);
+ const spatial=createSpatialWorld(geometry);assert.equal(spatial.validateSpatialState(g.state),true);const count=g.view('p2').events.filter(e=>e.type==='vent_exit').length;g.state=JSON.parse(JSON.stringify(g.state));g.tick(arrival+100);assert.equal(g.view('p2').events.filter(e=>e.type==='vent_exit').length,count);assert.equal(spatial.validateSpatialState(g.state),true);
 });

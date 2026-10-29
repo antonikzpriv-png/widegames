@@ -21,7 +21,7 @@ Input helper validates integer axes/positive safe sequence, finite server time a
 
 ## Private knowledge and safe projection
 
-player.knowledge={version:1,roster:[{id,status,alive,at,source}],events:[],bodies:[],sequence,witnessCursor,musterId}. status is unknown/alive/dead; unknown alive is null, never inferred from hidden actual alive. A previously seen living player stays last-known alive after an unseen death. Position/room are only current permitted observations, not a remembered route. Death becomes known by current body sight, an explicitly authorized witness, own death, owner-only vitals, or meeting muster. Known death cannot be undone by stale samples.
+player.knowledge={version:1,roster:[{id,status,alive,at,source}],events:[],bodies:[],sequence,witnessCursor,traceCursor,musterId}. status is unknown/alive/dead; unknown alive is null, never inferred from hidden actual alive. A previously seen living player stays last-known alive after an unseen death. Position/room are only current permitted observations, not a remembered route. Death becomes known by current body sight, an explicitly authorized witness, own death, owner-only vitals, or meeting muster. Known death cannot be undone by stale samples.
 
 Events cap at min(beaconRules.observationLimit,64); body dedup and roster knowledge cap at player count. Private IDs/cursors survive JSON restart and prevent old witnesses being reissued after history eviction. Body entries carry original death at and actual observedAt separately. No attacker attribution is invented for a body. Witnesses copy only permitted fields from private records carrying visibleTo; that recipient list is never sent to a client. Meetings disclose actual roster life status once per meeting to all viewers, without revealing remote coordinates or roles. No global elimination event is emitted here.
 
@@ -56,3 +56,42 @@ git diff --check
 ~~~
 
 Full scoped result:20 passed, zero failure/skip with the explicit actual-engine composite. Prior module-only17/17 output is _artifacts/beacon-world-module-final.txt; actual-engine first3/3 is beacon-world-interop-initial.txt; final all20 is beacon-world-final.txt. No npm/dependency updates, paid/provider calls, Chrome, push/main/deployment, legacy/runtime/shared/root edits or other-worker-tree changes. Manager independently reviews/integrates the exact commits.
+
+
+## Follow-up: local hatch traces and checkpoint restoration
+
+Exact references inspected read-only: coordinator cb00e33f25bf9ba561743818a5dc8f562fac6fb8, systems owner eb56920185cef5de4689b1bfb60d7eba85274620 and investigation owner35fb1e9f322062dcdeb7695a3f7b936fd2df0219. The coordinator's later group2 baseline0b0e9c3442bbc6605653e0be5e2e76fb7932ba1e is only a reference; no root/group2 code is imported into this tracked branch or edited.
+
+observe now consumes private vent_enter/vent_exit replay records only for explicitly listed player recipients. The entry or exit is validated against its public BEACON_VENTS fixture and matching room/position. Source records with both endpoint IDs, unknown actors/hatches or mismatched positions are ignored. Current observer sight is not substituted for the recorded historical recipients. Empty visibleTo produces no trace; the fixed spectator receives no vent traces, even if an actor includes other recipient entries. Local fields are constructed individually, so recipient lists, roles, destinations and extra private source fields cannot cross the view boundary.
+
+Frontend local event shapes:
+
+~~~js
+{id,type:'vent_enter',at,observedAt,playerId,roomId,position:{x,y},entryId}
+{id,type:'vent_exit',at,observedAt,playerId,roomId,position:{x,y},exitId}
+~~~
+
+at is the original authoritative systems event time; observedAt is when that private record is adopted into the viewer's history. There is exactly one hatch ID, never the remote endpoint. Receiving a past trace can establish last-known alive status from that witnessed event; it cannot undo an already known death or reveal current hidden coordinates. Events share the existing64 cap. player.knowledge.traceCursor persists the highest eligible private trace record sequence, independent of witnessCursor, so restart and history eviction cannot reissue old traces. Previous knowledge without traceCursor remains valid and upgrades when trace records are processed. The spectator's cursor stays zero and its only allowed histories are body/muster; spectator knowledge cannot claim self/witness/vitals provenance.
+
+Restore validation now requires a finite nonnegative state.updatedAt checkpoint and rejects every non-null roster knowledge at, event at or observedAt beyond it, including fractional overshoot. Equal-checkpoint values are accepted; timestamps are never clamped or rewritten. Fixed spectator state has exact allowed keys, exact Bridge x/y, no role/follow/radius/transit attributes or extra position dimensions. These checks validate persisted final state, not an orchestrator's intermediate mutation.
+
+**Coordinator-time assumption:** observe/adoptVitals may legitimately run at the supplied now while state.updatedAt still names the previous checkpoint inside advance or applyInput. The coordinator must finish assigning updatedAt before validateSpatialState/store commit. Do not validate an intermediate state and do not advance clocks inside the world module to bypass this rule. Source inspection at cb00e33 confirms advance assigns updatedAt after chronological work and applyInput assigns it after knowledge refresh; real finalized vent/restart state passes. Normal creation and applyAction already have their current checkpoint. No coordinator change is made here.
+
+Five new controls initially all failed on97b57d7, retained in _artifacts/beacon-world-traces-initial.txt. They now pass: recipient entry/exit separation with hidden-field sanitization; empty-list/spectator denial; original timestamps; defensive trace copies; malformed/future source rejection; bounded100-trace history; JSON/history-eviction dedup; old cursor compatibility; future row/event/observedAt restore rejection; exact spectator shape/provenance. Existing module fixtures now close an explicit updatedAt checkpoint when authoritative changes occur, matching root timing rather than weakening the new validator.
+
+Real-engine composite: exact cb00e33 server/shared, overlaid with only the owned world files, in _artifacts/interop-cb00e33; hashes in interop-cb00e33-manifest.json. A new real vent test physically navigates entry witness, exit witness and saboteur, applies the actual systems vent action, ticks to its real deadline, verifies each local event/absence, and restores JSON without duplication. No hidden-state placement, invented timing or mock vent implementation in that interop case.
+
+~~~powershell
+$env:TEMP='D:/Widegames-work/temp'
+$env:TMP=$env:TEMP
+$env:BEACON_WORLD_ENGINE_ROOT=(Join-Path (Get-Location) '_artifacts/interop-cb00e33')
+Remove-Item Env:WORLD_ENGINE_GEOMETRY_MODULE -ErrorAction SilentlyContinue
+node --test tests/beacon-world-traces.test.mjs tests/beacon-world-knowledge.test.mjs tests/beacon-world-engine.test.mjs
+node --test --test-name-pattern='bounded generated steering' tests/beacon-world-geometry.test.mjs
+node --check server/engine/world/knowledge.mjs
+node --check server/engine/world/index.mjs
+node --check tests/beacon-world-traces.test.mjs
+git diff --check
+~~~
+
+Results:19/19 related/interop checks plus1/1 generated-motion checkpoint control,20 passed, zero failure/skip. Evidence: _artifacts/beacon-world-traces-focused.txt, beacon-world-traces-related.txt and beacon-world-traces-motion-checkpoint.txt. Original milestone/AI/death-knowledge evidence is preserved. This is bounded author verification, not independent approval; manager reviews/integrates. Only owned world/tests/document changed. No root/other-owner edits, Chrome, providers, installs, full repository suite, main/push/deployment.
