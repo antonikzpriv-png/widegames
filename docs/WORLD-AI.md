@@ -85,3 +85,66 @@ After the b2 milestone, Frontend's additional minigame/council source was inspec
 Result: **five passed, one failed, zero skipped**. Solved equipment cannot send after room, phase, position/proximity or available-action changes. Deferred task success does not restore old equipment or steal council focus. **Open candidate defect:** submit a solved task, defer its request, receive discussion state, then reject the old request. The onSubmit catch unconditionally calls setFeedback, replacing current council feedback with `OLD TASK FAILURE`, despite the equipment/session having been closed. Source: public/world/experience.mjs openTask catch. This is stale feedback only; no stale task mutation/secret disclosure was demonstrated. Reported promptly. The positive assertion stays active; final exact committed source must be rechecked before closure. This candidate test depends on Frontend's forthcoming dom/puzzles/phases modules; it is not green on the earlier incomplete b2 slice.
 
 The Core privacy fixture first used an illegal zero initial kill cooldown and was rejected as Invalid rules; corrected to legal1ms before the actual attack assertions. That setup failure was not a product defect. No Chrome or native browser event/focus claim comes from the minimal DOM; no paid/live provider, Docker, hosted CI, deployment, multi-process durability or OS power-loss qualification was performed. AI checks are author self-checks; coordinator/another owner must independently verify AI. Store locking remains one writer per owned data directory, and no directory-fsync/power-loss durability approval is implied.
+
+## Bounded independent UI/integration follow-up
+
+This follow-up changes only `tests/world-ai-ui-review*.test.mjs`, `tests/world-ai-integration-review*.test.mjs` and additions to this report. No AI/runtime or other worker file was edited. Read coordinator `docs/WORLD-INTEGRATION-FINDINGS.md`; historical Core/shared and diagonal-adapter findings remain closed, with their old-source controls preserved. AI author self-checks above are not repeated or relabeled independent approval.
+
+### Exact committed source and result
+
+Frontend committed within the ten-minute review window: **`9e571c7dae0d8153935c7c3d932402357191b8b3`**. Read the actual diff after b2 and verified its committed modules, not just the candidate. Root controller: **`6e3a691813ea25b539ac28b26b4def4544c353a8`**, which includes the readiness fix `59835b7c546bea7784a040637c5f22c80bf6e022`. Latest integration inspected: **`7093c2f501aecd877ffa324d8d7c95d1387cc81a`**.
+
+Git comparisons returned no differences between 6e3a691 and7093c2f for public/app.mjs, api.mjs, ui.mjs, styles.css, world-input-envelope.mjs, shared/** and server/engine/**; no differences between9e571c7 and7093c2f for public/world/**. Thus the exact integrated runtime in this review matches the tested source pins. Relevant integrated blob IDs:
+
+| File | Blob |
+| --- | --- |
+| public/app.mjs | `827dd9139aeb10ad2c3db3241adc5dc686514691` |
+| public/world/experience.mjs | `ee4a5aa5f62df78882b11d6a6dc03e35262475b8` |
+| public/world/model.mjs | `50188c229813ddf455b54283a41c32254b706ae4` |
+| public/world/scene.mjs | `550a31ec6bc0670995929e462b56c5c595fcc344` |
+| public/world/input.mjs | `2aff83f5f1a52fd475329460274301fc25a3c7a9` |
+
+**24 targeted tests:22 passed, two failed, zero skipped. Node exit1. No blanket acceptance.** Both failing assertions remain active, and exact historical controls reproduce both failures. Concrete findings:
+
+1. **Stale task rejection overwrites council feedback**, now confirmed at committed9e571c7 and integrated7093c2f. Open/solve equipment, submit with a controlled pending action, update to discussion (equipment closes), then reject the old task. `openTask` catch still calls setFeedback unconditionally, replacing current feedback with `OLD TASK FAILURE`. Current-room task rejection separately remains visibly failed/retryable and is not reported successful. This finding concerns obsolete feedback, not demonstrated secret disclosure or an accepted stale task action.
+2. **Retained old-room retry handler invokes the new room's retry**, confirmed at c683963,6e3a691 and unchanged integrated7093c2f app source. Produce an ambiguous task failure in A and retain its Retry button handler; open B, produce a different ambiguous task failure in B, invoke the retained A handler. Request count increases2->3 and the handler sends B's retry. `tell` installs `()=>retry?.()` against a mutable global, without capturing its original room/epoch/operation. The extra POST retains B's request ID, so authoritative idempotency bounds the demonstrated consequence; no cross-room credentials or hidden state leaked. The positive regression requires zero extra requests. Historical c683963 control explicitly proves the old behavior. This is an adversarial retained callback fixture, not a measured native event-scheduling frequency claim.
+
+### Passing requested boundaries
+
+- Actual Core-generated task objects across four labeled seeds all have relay labels; taskKind reaches wires/tuning/sequence, and each actual equipment implementation opens through the world experience. This is not a fake descriptive-label fixture or only a helper return-value assertion.
+- At the real usable Bridge bell point, a pending Bridge task outside station range does not mask a legal meeting action; the actual Use handler dispatches meeting. An unavailable already-contributed Engine repair does not mask a legal local task; Use opens the equipment.
+- Actual model+scene execution animates a remote player's observed position change without any private player.moving property in the input. Unchanged observations time out and newly hidden actors disappear; the input view is not mutated.
+- Actual scene canvas-call trace paints narrow doorway thresholds at six independently selected walkable shared-map crossings: Bridge south(800,370), Archive east(440,490), Lantern west(1160,490), Workshop north(800,600), Galley north(260,840), Engine north(1340,840). Source places these patches after room walls. This is source/draw-coordinate qualification, not browser pixels, art quality or native collision screenshots.
+- Solved equipment cannot submit after room, phase, proximity or legal-action hint changes. Deferred success cannot reopen old equipment, claim obsolete task success or steal council focus. Current task rejection remains failed and retryable.
+- Actual root controller functions reject old world callbacks after room change, ignore unabortable queued input/action/replay completions, and do not let an old leave callback leave the new room. Hidden/stopped/disposed owners cannot send further input. Actual input module emits a final zero on hidden/dispose and removes steering listeners; server lease fallback was qualified in the previous independent transport receipt, not rerun here.
+- A deliberately unavailable WebSocket with an accepted authenticated HTTP view leaves world callbacks playable. Ambiguous task failure rejects through worldMutation rather than being swallowed. The visible retry overlay repeats the exact request body/ID and disappears on acknowledgement; its CSS fixed/z-index rule is inspected, not Chrome hit-tested.
+- Independently exercised59835b7: failed movement revokes readiness, further nonzero input is denied without another request, authenticated HTTP polling restores readiness, then a fresh movement request succeeds.
+
+### Commands, source defaults and evidence
+
+```
+$env:TEMP='D:/Widegames-work/temp'
+$env:TMP=$env:TEMP
+$env:npm_config_cache='D:/Widegames-work/npm-cache'
+$env:WORLD_AI_SOURCE_ROOT='D:/Widegames-work/world-coordinator-20261029'
+$env:WORLD_AI_REVIEW_UI_PIN='9e571c7dae0d8153935c7c3d932402357191b8b3'
+$env:WORLD_AI_REVIEW_APP_PIN='6e3a691813ea25b539ac28b26b4def4544c353a8'
+node --test tests/world-ai-ui-review.test.mjs tests/world-ai-integration-review*.test.mjs
+```
+
+Exact-pin run above:24/22pass/2fail/0skip. `_artifacts/world-ui-closure-9e571c7-6e3a691.txt`, SHA256 `CA3EB932276D22F9230327A15AF77D63B6486ED05BBB5BB89B332D1ADBDF6A4B`.
+
+All positive tests default to files relative to their actual test checkout/layout; there is no default old source pin and no integration-absent skip. Optional UI/app SHA overrides read Git objects; WORLD_AI_SOURCE_ROOT/UI_ROOT remain explicit read-only qualification overrides. To exercise the default branch without changing this assigned worktree's old runtime, copied exact root6e3a691 server/shared/public files plus Frontend9e571c7 public/world files and the three owned tests into ignored `_artifacts/world-ui-closure-default-final`, then removed all four source-selection overrides:
+
+```
+Remove-Item Env:WORLD_AI_SOURCE_ROOT,Env:WORLD_AI_REVIEW_UI_ROOT,Env:WORLD_AI_REVIEW_UI_PIN,Env:WORLD_AI_REVIEW_APP_PIN -ErrorAction SilentlyContinue
+node --test _artifacts/world-ui-closure-default-final/tests/world-ai-ui-review.test.mjs _artifacts/world-ui-closure-default-final/tests/world-ai-integration-review*.test.mjs
+```
+
+Default source loading also produced24/22pass/2fail/0skip, exit1. Log `_artifacts/world-ui-closure-default-final.txt`, SHA256 `BE2A78063A2C81566F58E4DC531313DDE8FFF1E3EE5A50E75F9157C84109A40B`. This ignored layout is explicitly pinned qualification evidence, not another Git worktree or a claim this reviewer's runtime was integrated. Source/temp/cache remain on D:.
+
+Preparation evidence is preserved: first new candidate run9pass/1 stale-error failure; after added failure/door controls,15pass/2fail across17 tests. Earlier controller fixture omitted the adapter from its stripped import bindings, initially causing a2-vs3 request setup assertion; injecting the actual adapter corrected that fixture. The independent retry failure remained. An intermediate shell command printed a file hash after Node and therefore ended exit0 despite Node's reported failure; final exact/default commands explicitly retain Node exit1. No failed product assertion was relaxed or skipped.
+
+Frontend preparation source snapshots remain ignored; their experience.mjs SHA256 hashes are `BF0BC48CF4854C2A07F608CD5BABB56F7EBC5043531FEE6ADEAD27BEBB65E74E` and `B953A0591AE92179A893907E7EAAD716B4CFF48CE92F084F40CFBE7827D23C96`. Historical committed controls now pin9e571c7 stale feedback and c683963 retry, alongside earlier b2 diagonal and093/eb64 legacy controls. Final conclusions use committed source only.
+
+No Chrome, paid/live provider, full repeated suite, deployment/main/push, Docker, hosted CI or OS durability qualification. Controller tests stub the renderer to isolate real root lifecycle functions; equipment tests execute real frontend logic with a minimal DOM and controlled promises; drawing tests record calls without a browser. Two concrete findings above prevent a green closure at the reviewed pins.
