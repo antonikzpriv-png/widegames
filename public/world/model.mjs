@@ -1,10 +1,11 @@
-﻿/** Pure presentation rules. Inputs are redacted views, never engine state. */
+﻿import {knowledge} from './beacon-model.mjs';
+/** Pure presentation rules. Inputs are redacted views, never engine state. */
 export const point = p => p && Number.isFinite(p.x) && Number.isFinite(p.y);
 export const distance = (a,b) => point(a)&&point(b)?Math.hypot(a.x-b.x,a.y-b.y):Infinity;
 export const clamp = (n,min,max) => Math.min(max,Math.max(min,n));
 export function remaining(deadline,now){return Math.max(0,Math.ceil(((deadline||now)-now)/1000));}
 export function clock(deadline,now){const n=remaining(deadline,now);return `${Math.floor(n/60)}:${String(n%60).padStart(2,'0')}`;}
-export function visiblePlayers(game){return (game?.players||[]).filter(p=>p.alive&&point(p.position));}
+export function visiblePlayers(game){return (game?.players||[]).filter(p=>(game?.beaconVersion===1?knowledge(game,p)==='alive':p.alive)&&point(p.position));}
 export function visibleBodies(game){return (game?.events||[]).filter(e=>e.type==='body'&&e.bodyId&&point(e.position));}
 export function roleLabel(game){return !game?.self?'Spectator':game.self.role==='saboteur'?'Saboteur':'Crew';}
 export function aiLabel(ai){return ai?.mode==='live'?'HYBRID · live council / local navigation':ai?.mode==='demo'?'DEMO · local keepers':'AI mode pending';}
