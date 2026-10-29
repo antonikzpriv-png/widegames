@@ -793,6 +793,7 @@ body.world-mode{overflow:hidden;background:#081522}
 body.world-mode>.masthead,body.world-mode>footer,body.world-mode>#feedback{display:none}
 body.world-mode #main{width:100%;height:100vh;height:100dvh;max-width:none;margin:0;padding:0;overflow:hidden}
 #world-host{width:100%;height:100%;min-height:0}
+#world-host>.lw-world{height:100%;min-height:0;border-radius:0}
 .harbor{isolation:isolate;position:relative;min-height:calc(100dvh - 170px);display:flex;align-items:center;justify-content:center;flex-direction:column;text-align:center;overflow:hidden;padding:28px 18px 36px;border-radius:24px;background:radial-gradient(ellipse at 50% 35%,#37616f 0,#163548 44%,#0a2031 90%);box-shadow:inset 0 0 0 2px #8eb7bb38}
 .harbor-weather{z-index:-1;position:absolute;inset:0;opacity:.35;background:repeating-linear-gradient(112deg,transparent 0 55px,#b4dfdf22 56px 58px,transparent 59px 98px)}
 .harbor-kicker{font-size:10px;letter-spacing:4px;color:#c4e4dd;font-weight:800}

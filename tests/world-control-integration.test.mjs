@@ -8,6 +8,7 @@ import {createGameServer} from '../server/transport.mjs';
 import * as engine from '../server/engine/index.mjs';
 import {WORLD,WORLD_STATIONS,distance,isWalkable} from '../shared/world.mjs';
 import {worldInputEnvelope} from '../public/world-input-envelope.mjs';
+import {loadConfig} from '../server/config.mjs';
 
 test('real world control: analogue bridge, authority, navigation, hidden coordinates and restart',async t=>{
  const parent=fileURLToPath(new URL('../_artifacts/test-temp/',import.meta.url));await mkdir(parent,{recursive:true});
@@ -32,6 +33,8 @@ test('real world control: analogue bridge, authority, navigation, hidden coordin
  await t.test('real navigate walks through corridors, cancels on steering, and keeps remote state private',async()=>{
   const before=(await request(route,undefined,host.cookie)).body.game.self.position;
   const walking=await request(route+'/action',{id:'navigate-archive',type:'navigate',...pickPoint(WORLD_STATIONS.archive)},host.cookie);assert.equal(walking.status,200);assert.equal(walking.body.game.self.moving,true);assert.deepEqual(walking.body.game.self.position,before);
+  const conflict=await request(route+'/action',{id:'navigate-archive',type:'navigate',...pickPoint(WORLD_STATIONS.engine)},host.cookie);assert.equal(conflict.status,409);assert.equal(conflict.body.error.code,'REQUEST_CONFLICT');
+  assert.deepEqual((await request(route,undefined,host.cookie)).body.game.self.destination,pickPoint(WORLD_STATIONS.archive));
   now+=500;const canceled=await request(route+'/input',{seq:3,dx:0,dy:0},host.cookie);assert.equal(canceled.status,200);assert.equal(canceled.body.game.self.moving,false);assert(distance(before,canceled.body.game.self.position)<=90.001);
   const destination=await request(route+'/action',{id:'navigate-engine',type:'navigate',...pickPoint(WORLD_STATIONS.engine)},host.cookie);assert.equal(destination.status,200);
   now+=20000;const arrived=await request(route+'/input',{seq:4,dx:0,dy:0},host.cookie);assert.equal(arrived.status,200);assert(distance(arrived.body.game.self.position,WORLD_STATIONS.engine)<.01);
@@ -49,6 +52,7 @@ test('real world control: analogue bridge, authority, navigation, hidden coordin
 
 function pickPoint(p){return {x:p.x,y:p.y};}
 test('local analogue encoding preserves request identity and rejects non-direction or hidden fields',()=>{
+ assert.equal(loadConfig({}).worldMode,true,'Normal application startup must enable the physical world');
  assert.deepEqual(worldInputEnvelope({seq:8,dx:.99,dy:.05}),{seq:8,dx:1,dy:0});assert.deepEqual(worldInputEnvelope({seq:9,dx:-.8,dy:.6}),{seq:9,dx:-1,dy:1});
  for(const bad of [{seq:1,dx:Infinity,dy:0},{seq:1,dx:0,dy:0,playerId:'p2'},{seq:0,dx:0,dy:0},{seq:1,dx:2,dy:0},{seq:1,dx:'1',dy:0}])assert.throws(()=>worldInputEnvelope(bad));
 });

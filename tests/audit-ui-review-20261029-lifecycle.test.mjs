@@ -57,6 +57,9 @@ async function appFixture(pin,adapter){
  const context={console,AbortController,DOMException,crypto,Date,Node:dom.NodeFixture,document:dom.document,CSS:{escape:value=>value},history:{replaceState(){},pushState(){}},sessionStorage:{setItem(){},removeItem(){}},location:{href:'http://fixture/',protocol:'http:',host:'fixture'},navigator:{clipboard:{writeText:async()=>{}}},
   setTimeout:(fn,ms)=>{const id=++nextTimer;timers.set(id,{fn,ms});return id;},clearTimeout:id=>timers.delete(id),requestAnimationFrame:fn=>{frames.push(fn);return frames.length;},queueMicrotask:fn=>frames.push(fn),
   roomPath:api.roomPath,roomFrom:api.roomFrom,actionEnvelope:api.actionEnvelope,roomIdFromPath:api.roomIdFromPath,
+  // These existing controls isolate root network ownership. World rendering is
+  // an injected import here; actual canvas/scenes run in the world browser suite.
+  createWorldExperience:()=>({update(){},dispose(){}}),
   request:(path,options={})=>{const entry={path,options};requests.push(entry);if(adapter)return adapter(path,options,entry);return new Promise((resolve,reject)=>Object.assign(entry,{resolve,reject}));}};
  context.globalThis=context;
  const app=source(pin,'public/app.mjs');assert(app.includes('const rulesToggle='));
