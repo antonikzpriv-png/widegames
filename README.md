@@ -1,6 +1,6 @@
 # Lantern Wake
 
-An original web social-deduction game: six keepers maintain a drifting storm beacon; one is a hidden saboteur. Play one human with five AI characters or watch six AI characters. Demo bots require no credentials and are explicitly labeled.
+An original top-down web social-deduction game: walk a keeper through an illustrated storm beacon while one hidden saboteur undermines the crew. Play one human with five AI characters or watch six AI characters. Demo bots require no credentials and are explicitly labeled.
 
 Requires Node22.13+ (Node24 LTS recommended) and npm. There is no build step, CDN or external asset service.
 
@@ -9,11 +9,15 @@ npm ci
 npm start
 ```
 
-Open **http://localhost:3000**. Choose **Join the crew** for a human seat with five AI keepers, or **Watch the keepers** for six AI keepers. All seats are filled automatically; press **Start the watch**. Your assigned role appears privately. Use the room map to move along connections and the action cards to complete tasks, report a body, repair or sabotage. The emergency bell is on Bridge. During council, discuss what you saw, then vote for a keeper or skip. When the match ends, all roles reveal and the full attributed replay is available.
+Open **http://localhost:3000**. Choose **PLAY AS A KEEPER** for a human seat with five AI keepers, or **WATCH THE AI** for six AI keepers. All seats are filled automatically; press **Begin the watch**. Your assigned role appears privately, then **Enter the beacon**.
+
+Walk with **WASD/arrows**, click a clear destination, or use the touch joystick. Rooms, corridors, furniture and nearby keepers occupy an actual server-simulated world. Approach a glowing task station and press **E/Space** or **USE** to open its wiring, tuning or sequence minigame; send the solved task to receive server confirmation. **R/REPORT** reports a nearby fallen keeper. Approach the Bridge bell to call a meeting. A saboteur uses **Q/ELIMINATE** with confirmation for a nearby target, and **SABOTAGE** to start a critical countdown. **M/Map** shows the platform and currently permitted observed positions. The on-screen controls provide the same actions.
+
+Council switches to a dedicated discussion and voting scene. Describe what you observed, then vote for a keeper or skip. When the match ends, all roles reveal and the attributed replay is available. Exit is always visible. The game supports reduced motion and stops rendering and movement-input renewal while hidden; the server keeps the match running.
 
 Crew wins by completing every required task or ejecting the saboteur. The saboteur wins at parity with surviving crew, or when a critical countdown expires. Unfinished tasks transfer from fallen crew to surviving crew. Critical repairs require two distinct living crew in Engine. Unique highest vote wins; a tie, winning skip or no votes ejects nobody. Missing votes abstain. Meetings do not stop a critical countdown. Each keeper has one emergency call; reports are separate.
 
-Default timings: movement1.2s, task equipment4s, elimination22s (first18s), sabotage65s, critical75s, emergency cooldown35s, discussion30s and voting20s. An unattended four-minute roam calls council. The maximum15-minute duration pauses without inventing a winner. The host can leave: server timers and AI continue. A disconnected human stays idle, misses votes as abstentions, and reconnects using its original HttpOnly room cookie. Losing that cookie cannot grant another visitor the seat. See [complete rules](docs/RULES.md).
+World walking speed is180 units/second, with collision and server-owned diagonal normalization. Steering expires after600ms without renewal. Tasks, repair and the bell require proximity92; elimination70; reporting130, with visibility checks. Discrete room-route requests retain a1.2s cooldown; task equipment4s, elimination22s (first18s), sabotage65s, critical75s, emergency cooldown35s, discussion30s and voting20s. An unattended four-minute roam calls council. The maximum15-minute duration pauses without inventing a winner. The host can leave: server timers and AI continue. A disconnected human stops after the short input lease, misses votes as abstentions, and reconnects using its original HttpOnly room cookie. Losing that cookie cannot grant another visitor the seat. See [world contract](docs/WORLD-CONTRACT.md) and [complete rules](docs/RULES.md).
 
 ## AI and configuration
 
