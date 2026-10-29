@@ -683,7 +683,8 @@ summary{
   grid-template-columns:1fr 1fr
 }
 .room[aria-disabled=true]{
-  opacity:.65
+  opacity:1;
+  cursor:help
 }
 .room[aria-disabled=true]:hover{
   border-color:var(--line);
