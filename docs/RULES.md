@@ -1,5 +1,7 @@
 ﻿# Lantern Wake engine rules and integration notes
 
+Integration clarification: a keeper may submit at most2,048 well-formed unique request IDs per match, including rule denials. Old IDs are retained, never evicted into eligibility for a second mutation. After the cap, new IDs are explicitly rejected and retained duplicates stay inert. AI-prefixed IDs and browser UUIDs use the same bounded envelope. The transport persists engine-produced denial/deadline state before returning an error.
+
 The five named exports live in `server/engine/index.mjs`: `createMatch`, `applyAction`, `tick`, `getPlayerView`, `getReplay`. No dependency installation is required. `createMatch` accepts rule overrides directly as `config` (transport passes `config.rules` here), using the exact shared default keys. Internal serializable state has `schemaVersion:1`, `players`, `requests`, `replay`, timestamps, and rules; transport must keep all of it private. Only engine views go to clients and AI. No contract additions are required.
 
 A match begins roaming with six keepers, exactly five crew and one saboteur. The role and room distribution use a cryptographic random secret in production; explicit test seeds reproduce state. Public match IDs do not influence roles. Human mode reserves p1; spectator mode has no human. The secret is never retained.

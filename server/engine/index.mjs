@@ -1,7 +1,7 @@
 ﻿import { randomBytes, createHash } from 'node:crypto';
 import { CHARACTERS, ROOM_LAYOUT, DEFAULT_RULES, ACTION_TYPES } from '../../shared/contracts.mjs';
 
-const MAX_REQUESTS = 256;
+const MAX_REQUESTS = 2048;
 const MAX_EVENTS = 256;
 const MAX_REPLAY = 12000;
 const roomIds = ROOM_LAYOUT.map(r => r.id);
@@ -113,7 +113,7 @@ export function createMatch({id,mode='human',humanPlayerId='p1',now=Date.now(),s
 
 function validateEnvelope(action) {
   if (!action || typeof action!=='object' || Array.isArray(action) || ![Object.prototype,null].includes(Object.getPrototypeOf(action))) return fail('INVALID_ACTION','Invalid action envelope.');
-  if (typeof action.id!=='string' || !/^[A-Za-z0-9_-]{1,100}$/.test(action.id) || !ACTION_TYPES.includes(action.type)) return fail('INVALID_ACTION','Invalid action envelope.');
+  if (typeof action.id!=='string' || !/^[A-Za-z0-9:_-]{1,100}$/.test(action.id) || !ACTION_TYPES.includes(action.type)) return fail('INVALID_ACTION','Invalid action envelope.');
   const keys=['id','type',...fields[action.type]];
   if (Object.keys(action).some(k=>!keys.includes(k)) || keys.some(k=>!Object.hasOwn(action,k))) return fail('INVALID_ACTION','Invalid action fields.');
   if (fields[action.type].some(k=>typeof action[k]!=='string' || action[k].length>(k==='text'?2000:100))) return fail('INVALID_ACTION','Invalid action fields.');
@@ -181,12 +181,12 @@ export function applyAction(input,playerId,action,now=Date.now()) {
     if (prior.fingerprint!==fingerprint) return reject(fail('REQUEST_CONFLICT','Request ID already used for another action.'));
     return {state,events:timed.events,accepted:prior.accepted,...(prior.error?{error:clone(prior.error)}:{}),duplicate:true};
   }
+  if(state.requests[playerId].length>=MAX_REQUESTS)return reject(fail('REQUEST_LIMIT','This keeper has reached the match request limit. Existing requests remain idempotent.'));
   state=clone(state);
   const p=state.players.find(p=>p.id===playerId);
   const error=denial(state,p,action,now);
   // Persist both success and rule denials, bounded per actor. Never save malformed envelopes.
   state.requests[playerId].push({id:action.id,fingerprint,accepted:!error,...(error?{error}: {})});
-  if (state.requests[playerId].length>MAX_REQUESTS) state.requests[playerId].shift();
   state.version++; state.updatedAt=now;
   if (error) return {state,events:timed.events,accepted:false,error};
   const seq=state.sequence;

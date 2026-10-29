@@ -102,7 +102,7 @@ export async function createGameServer(config,dependencies={}) {
             if(!identity.seatId)fail(403,'SPECTATOR','Spectators cannot act.');
             if(!data.state)fail(409,'NOT_STARTED','Start the match first.');
             const result=engine.applyAction(data.state,identity.seatId,input,now());
-            if(!result.accepted){const error=result.error||{};fail(409,typeof error.code==='string'?error.code:'ACTION_REJECTED',typeof error.message==='string'?error.message:'Action rejected.');}
+            if(!result.accepted){if(result.state.version!==data.state.version){const next=structuredClone(data);next.state=result.state;await commit(room,next);broadcast(room);}const error=result.error||{};fail(409,typeof error.code==='string'?error.code:'ACTION_REJECTED',typeof error.message==='string'?error.message:'Action rejected.');}
             const next=structuredClone(data);next.state=result.state;await commit(room,next);
           }
         });
@@ -128,7 +128,7 @@ export async function createGameServer(config,dependencies={}) {
   });
   function scheduleAi(room) {
     if(closing||room.aiBusy||room.aiBlocked||room.removed||!room.data.state||['ended','paused'].includes(room.data.state.phase))return;
-    const player=CHARACTERS.find(p=>(room.data.mode==='spectator'||p.id!=='p1')&&(room.nextDecision.get(p.id)||0)<=now()&&engine.getPlayerView(room.data.state,p.id,now()).self?.alive);
+    const player=CHARACTERS.filter(p=>(room.data.mode==='spectator'||p.id!=='p1')&&(room.nextDecision.get(p.id)||0)<=now()&&engine.getPlayerView(room.data.state,p.id,now()).self?.alive).sort((a,b)=>(room.nextDecision.get(a.id)||0)-(room.nextDecision.get(b.id)||0))[0];
     if(!player)return;
     room.nextDecision.set(player.id,now()+Math.max(100,config.ai?.decisionIntervalMs??1800));room.aiBusy=true;
     track((async()=>{
@@ -146,7 +146,7 @@ export async function createGameServer(config,dependencies={}) {
         await run(room,async data=>{
           const next=structuredClone(data);next.aiContext=structuredClone(context);
           if(proposal&&!['ended','paused'].includes(next.state.phase)) {
-            const result=engine.applyAction(next.state,player.id,proposal,now());if(result.accepted)next.state=result.state;
+            const result=engine.applyAction(next.state,player.id,proposal,now());next.state=result.state;
           }
           await commit(room,next);
         });broadcast(room);
