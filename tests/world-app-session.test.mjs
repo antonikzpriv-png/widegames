@@ -84,3 +84,10 @@ test('fresh controls allocate after lifecycle stops while duplicate/stale client
  const duplicate=scene.callbacks.input({seq:5,dx:1,dy:0});assert.equal(f.requests[1].options.body.seq,5);f.requests[1].resolve(state('A',2));await duplicate;
  await assert.rejects(scene.callbacks.input({seq:4,dx:0,dy:1}),error=>error.name==='AbortError');await assert.rejects(scene.callbacks.input({seq:5,dx:0,dy:1}),/sequence already used/i);
 });
+
+test('late root task failures cannot overwrite a newer council or moved-away context',async()=>{
+ for(const change of ['phase','position']){
+  const f=await fixture(),scene=await f.open('A');const pending=scene.callbacks.action('task',{taskId:'task-A'}),request=f.requests.at(-1);const newer=state('A',2,change==='phase'?'discussion':'roam');if(change==='position')newer.game.self.position.x+=100;f.api.accept(newer);
+  request.reject(new Error('OLD TASK FAILURE'));await assert.rejects(pending,error=>error.name==='AbortError');assert(!f.feedback.textContent.includes('OLD TASK FAILURE'));assert(!f.feedback.children.some(node=>node.text==='Retry same request'));
+ }
+});

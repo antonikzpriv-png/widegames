@@ -11,10 +11,24 @@ const main=document.querySelector('#main');
 const feedback=document.querySelector('#feedback');
 let room=null,roomId=null,controller=null,socket=null,poll=null;
 let epoch=0,pending=false,offset=0,connected=false,networkReady=false,connectionIssue=false;
-let draft='',draftMeeting=null,confirmTarget=null,replay=null,replayIndex=0,retry=null;
+let draft='',draftMeeting=null,confirmTarget=null,replay=null,replayIndex=0,retry=null,retryContext=null;
 const attemptedJoins=new Set();
 let worldExperience=null,worldSession=null,lastInputFailure=0;
 
+function captureActionContext(body){
+ const game=room?.game,self=game?.self;if(!game?.worldVersion||!body.type)return null;
+ return {matchId:game.matchId,phase:game.phase,type:body.type,actor:self?.id,location:self?.roomId,position:self?.position?{...self.position}:null,taskId:body.taskId,knownTask:self?.tasks?.some(task=>task.id===body.taskId)};
+}
+function actionContextCurrent(context){
+ if(!context)return true;const game=room?.game,self=game?.self;
+ if(game?.matchId!==context.matchId||game.phase!==context.phase||self?.id!==context.actor||!self?.alive)return false;
+ if(context.type==='task'){
+  if(self.roomId!==context.location)return false;
+  if(context.position&&self.position&&Math.hypot(self.position.x-context.position.x,self.position.y-context.position.y)>.1)return false;
+  if(context.knownTask&&!self.tasks?.some(task=>task.id===context.taskId&&!task.completed))return false;
+ }
+ return true;
+}
 function stopWorldMovement(){
  const owner=worldSession,game=room?.game;
  if(!owner||owner.id!==roomId||!game?.worldVersion||!game.self?.alive||game.phase!=='roam')return;
@@ -68,6 +82,7 @@ async function worldMutation(owner,suffix,body){
  if(!ownsWorld(owner))throw new DOMException('The room changed.','AbortError');
  const result=await mutation(suffix,body);
  if(!ownsWorld(owner))throw new DOMException('The room changed.','AbortError');
+ if(result?.stale)throw new DOMException('The action context changed.','AbortError');
  if(!result?.ok)throw new Error(result?.error||'Wait for the current action to finish.');
  return result.data;
 }
@@ -97,7 +112,7 @@ function tell(message,error=false){
  feedback.setAttribute?.('data-retry',String(Boolean(retry)));
  if(retry){
   const retained=retry,current=epoch,id=roomId;
-  feedback.append(button('Retry same request',()=>{if(current===epoch&&roomId===id&&retry===retained)return retained();},{class:'quiet'}));
+  feedback.append(button('Retry same request',()=>{if(current===epoch&&roomId===id&&retry===retained&&actionContextCurrent(retryContext))return retained();},{class:'quiet'}));
  }
 }
 function connectionFailure(message){tell(message,true);connectionIssue=true;networkReady=false;}
@@ -110,7 +125,7 @@ function stop(){
  epoch++;
  controller?.abort();controller=null;
  clearTimeout(poll);poll=null;
- connected=false;networkReady=false;pending=false;retry=null;
+ connected=false;networkReady=false;pending=false;retry=null;retryContext=null;
  if(uncertain)connectionFailure('Resynchronizing the room. Check its current state before acting again.');
  if(socket){socket.onclose=null;socket.onerror=null;socket.close();socket=null;}
 }
@@ -129,6 +144,7 @@ function accept(data){
  if(room?.game&&next.game&&(next.game.version<room.game.version||(next.game.version===room.game.version&&next.game.serverNow<room.game.serverNow)))return;
  room=next;
  networkReady=true;
+ if(retryContext&&!actionContextCurrent(retryContext)){retry=null;retryContext=null;tell('Current watch state synchronized.');}
  if(connectionIssue)tell('Connection restored.');
  if(room.game?.serverNow)offset=room.game.serverNow-Date.now();
  const meeting=room.game?.meeting?.id;
@@ -214,17 +230,18 @@ function connect(current){
  }catch{schedulePoll(current);}
 }
 async function mutation(suffix,body,onSuccess){
- const current=epoch,id=roomId;
+ const current=epoch,id=roomId,context=suffix==='/action'?captureActionContext(body):null;
  return busy(async()=>{
   try{
    const data=await request(roomPath(id,suffix),{method:'POST',body,signal:controller.signal});
    if(current!==epoch)return {ok:false,error:'The room changed.'};
-   retry=null;accept(data);if(onSuccess)onSuccess();else tell('Action confirmed.');
+   retry=null;retryContext=null;accept(data);if(onSuccess)onSuccess();else tell('Action confirmed.');
    return {ok:true,data};
   }catch(error){
    if(current!==epoch||error.name==='AbortError')return;
-   if(error.status==null||error.status>=500){retry=()=>mutation(suffix,body,onSuccess);tell('The request could not be confirmed. Retry keeps the same request ID so an accepted action cannot run twice.',true);}
-   else{retry=null;tell(error.message,true);}
+   if(context&&!actionContextCurrent(context))return {ok:false,stale:true,error:'The action context changed.'};
+   if(error.status==null||error.status>=500){retryContext=context;retry=()=>mutation(suffix,body,onSuccess);tell('The request could not be confirmed. Retry keeps the same request ID so an accepted action cannot run twice.',true);}
+   else{retry=null;retryContext=null;tell(error.message,true);}
    return {ok:false,error:error.message};
   }
  });
@@ -306,7 +323,11 @@ function render(){
  const phaseText=phase?phaseLabel(phase):'';if(announcement.textContent!==phaseText)announcement.textContent=phaseText;
  const inWorld=Boolean(roomId&&room&&(!room.game||room.game.worldVersion));
  document.body.classList.toggle('world-mode',inWorld);
- if(inWorld){renderWorld();return;}
+ if(inWorld){
+  const help=document.querySelector('#rules');if(help)help.hidden=true;
+  const toggle=document.querySelector('#rules-toggle');toggle?.setAttribute('aria-expanded','false');
+  renderWorld();return;
+ }
  if(worldExperience)releaseWorld();
  const saved=saveFocus(),output=h('div');
  if(!roomId){output.append(landing());syncChildren(main,output);restoreFocus(saved);return;}
