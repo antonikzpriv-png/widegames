@@ -27,7 +27,7 @@ export function cookie(roomId,token,secure) {
 }
 export function createRoom(mode,now,lobbyConfig) {
   const id=randomBytes(18).toString('base64url');
-  const setup=lobbyConfig?normalizeRoster({...lobbyConfig,mode}):null;
+  const setup=lobbyConfig?normalizeRoster({...lobbyConfig,mode,...(mode==='spectator'?{humanPlayerIds:[]}: {})}):null;
   return {schema:setup?2:1,...(setup?{lobby:{roster:setup.players,saboteurCount:setup.saboteurCount,humanPlayerIds:setup.humanPlayerIds}}:{}),id,mode,createdAt:now,updatedAt:now,identities:[],state:null,startId:null,aiContext:{}};
 }
 
