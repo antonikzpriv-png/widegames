@@ -22,7 +22,7 @@ function captureActionContext(body){
 function actionContextCurrent(context){
  if(!context)return true;const game=room?.game,self=game?.self;
  if(context.generation!==worldActionGeneration||game?.matchId!==context.matchId||game.phase!==context.phase||self?.id!==context.actor||!self?.alive)return false;
- if(context.type==='task'){
+ if(context.type==='task'||context.type==='taskStep'){
   if(self.roomId!==context.location)return false;
   if(context.position&&self.position&&Math.hypot(self.position.x-context.position.x,self.position.y-context.position.y)>.1)return false;
   if(context.knownTask&&!self.tasks?.some(task=>task.id===context.taskId&&!task.completed))return false;
@@ -237,6 +237,7 @@ async function mutation(suffix,body,onSuccess){
   try{
    const data=await request(roomPath(id,suffix),{method:'POST',body,signal:controller.signal});
    if(current!==epoch)return {ok:false,error:'The room changed.'};
+   if(context&&['task','taskStep'].includes(context.type)&&!actionContextCurrent(context))return {ok:false,stale:true,error:'The action context changed.'};
    retry=null;retryContext=null;accept(data);if(onSuccess)onSuccess();else tell('Action confirmed.');
    return {ok:true,data};
   }catch(error){
@@ -253,7 +254,7 @@ function act(type,fields={}){
  return mutation('/action',actionEnvelope(type,fields),()=>{
   if(type==='say')draft='';
   confirmTarget=null;
-  tell(({move:'You moved to the next room.',task:'Task complete.',repair:'Repair contribution received.',vote:'Your vote is recorded.',say:'Message sent.',report:'Report received.',meeting:'Emergency bell rung.',sabotage:'Critical sabotage triggered.',eliminate:'Elimination received.'})[type]||'Action received.');
+  tell(({move:'You moved to the next room.',task:'Task complete.',taskStep:'Station step confirmed.',repair:'Repair contribution received.',vote:'Your vote is recorded.',say:'Message sent.',report:'Report received.',meeting:'Emergency bell rung.',sabotage:'Critical sabotage triggered.',eliminate:'Elimination received.'})[type]||'Action received.');
  });
 }
 async function loadReplay(){

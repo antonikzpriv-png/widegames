@@ -40,7 +40,7 @@ function createLegacyPuzzle({task,kind,onSubmit,onClose,id}){
 /** Controls submit semantic inputs; only an authoritative snapshot advances them. */
 export function createTaskPuzzle(options){
  if(!options.task.progress)return createLegacyPuzzle(options);
- const {id,onClose,onSubmit}=options;let task=options.task,pending=false,closed=false,key='';
+ const {id,onClose,onSubmit}=options;let task=options.task,pending=false,closed=false,key='',focusBeforePending=null;
  const node=dom('section','lw-task-modal');node.setAttribute('role','dialog');node.setAttribute('aria-modal','true');node.tabIndex=-1;
  const heading=dom('h2','',task.label);heading.id=`${id}-title`;node.setAttribute('aria-labelledby',heading.id);
  const close=control('Close station',onClose,'lw-close'),copy=dom('p','lw-task-instruction'),area=dom('div','lw-puzzle'),status=dom('p','lw-puzzle-status');status.setAttribute('role','status');
@@ -55,5 +55,5 @@ export function createTaskPuzzle(options){
   else {const labels=['Isolate power','Replace fuse','Start diagnostic','Verify diagnostic'],inputs=['isolate','replace','start','test'];copy.textContent=c.index===3?'Wait at least 1.5 seconds after starting, then verify. The server checks elapsed time.':'Repair in order: isolate power, replace fuse, start diagnostic, verify.';area.append(control(labels[c.index],()=>send(inputs[c.index])));}
  }
  node.addEventListener('keydown',e=>{if(e.key==='Escape'){e.preventDefault();onClose();}else trapDialog(node,e);});render();
- return {node,focus(){close.focus();},update(next){if(next){const restore=area.contains(document.activeElement),before=key;task=next;render();if(restore&&before!==key)area.querySelector('button,input')?.focus();}},setPending(value){pending=value;for(const button of node.querySelectorAll('button'))button.disabled=value;},feedback(message){status.textContent=message;},dispose(){closed=true;node.remove();}};
+ return {node,focus(){close.focus();},update(next){if(next){const restore=area.contains(document.activeElement),before=key;task=next;render();if(restore&&before!==key)area.querySelector('button,input')?.focus();}},setPending(value){if(value)focusBeforePending=area.contains(document.activeElement)?document.activeElement:null;pending=value;for(const control of node.querySelectorAll('button,input'))control.disabled=value;if(!value&&focusBeforePending){const target=area.contains(focusBeforePending)?focusBeforePending:area.querySelector('button,input');target?.focus();focusBeforePending=null;}},feedback(message){status.textContent=message;},dispose(){closed=true;node.remove();}};
 }

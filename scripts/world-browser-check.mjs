@@ -12,7 +12,6 @@ import {loadConfig} from '../server/config.mjs';
 import * as engine from '../server/engine/index.mjs';
 import {WORLD,WORLD_STATIONS,WORLD_BELL,distance,findWorldPath,canSeeWorldPoint} from '../shared/world.mjs';
 import {challenge} from '../server/engine/tasks.mjs';
-import {taskKind} from '../public/world/model.mjs';
 
 const root=fileURLToPath(new URL('../',import.meta.url)),pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 await mkdir(path.join(root,'_artifacts'),{recursive:true});const output=await mkdtemp(path.join(root,'_artifacts','world-browser-'));
@@ -50,19 +49,41 @@ async function navigate(position){
  skew+=Math.ceil(length/WORLD.speed*1000)+250;
  return until(r=>distance(r.game.self.position,position)<2&&!r.game.self.moving,'physical route arrival');
 }
+async function keyboardPuzzle(label){
+ // Traverse the real dialog with Tab; Enter generates the native button action.
+ for(let attempt=0;attempt<12;attempt++){
+  const selected=await page.evaluate(label=>document.activeElement?.tagName==='BUTTON'&&document.activeElement.textContent===label&&!document.activeElement.disabled,label);
+  if(selected){await page.keyboard.press('Enter');return;}
+  await page.keyboard.press('Tab');
+ }
+ throw Error(`Keyboard cannot reach puzzle control: ${label}`);
+}
+async function touchPuzzle(label){
+ const point=await page.$eval('.lw-task-modal',(modal,label)=>{
+  const button=[...modal.querySelectorAll('button')].find(button=>button.textContent===label);
+  if(!button||button.disabled)throw Error('Missing enabled touch control');
+  button.scrollIntoView({block:'center'});const r=button.getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2};
+ },label);
+ await page.touchscreen.tap(point.x,point.y);
+}
 async function solveTask(task){
  await navigate(WORLD_STATIONS[task.roomId]);await page.focus('.lw-world-canvas');await page.keyboard.press('e');await page.waitForSelector('.lw-task-modal',{visible:true});
  let current=(await view()).game.self.tasks.find(t=>t.id===task.id);const kind=current.progress.kind;report.puzzleKinds.push(kind);await shot('04-task-'+kind);
- const direct=await propose({type:'task',taskId:task.id});assert.equal(direct.status,409);report.expectedConflicts++;
+ if(kind==='pressure')await page.setViewport({hasTouch:true,width:390,height:844});
+ const direct=await propose({type:'task',taskId:task.id});assert.equal(direct.status,409);assert.equal(direct.body.error.code,'TASK_INCOMPLETE');report.expectedConflicts++;
+ const forged=await propose({type:'task',taskId:task.id,solved:true});assert.equal(forged.status,409);assert.equal(forged.body.error.code,'INVALID_ACTION');report.expectedConflicts++;
  while(current.progress.index<current.progress.total){const c=current.progress;
-  if(kind==='wires'){await press(`Left cable ${c.index+1}`);await press(`Right socket ${c.index+1}`);}
-  else if(kind==='sequence')await page.locator(`button[aria-label="Sequence tile ${c.sequence[c.index]}"]`).click();
-  else if(kind==='repair'){if(c.index===3)skew+=1600;await press(['Isolate power','Replace fuse','Start diagnostic','Verify diagnostic'][c.index]);}
-  else if(kind==='pressure'){await press(c.index===0?(c.pressure<5?'Flow right to left':'Flow left to right'):`Transfer ${Math.abs(5-c.pressure)} bar`);}
-  else {const value=c.target;await page.$eval('.lw-frequency-slider',(node,value)=>{node.value=String(value);node.dispatchEvent(new Event('input',{bubbles:true}));},value);await press(kind==='tuning'?'Lock frequency':'Set valve');}
+  if(kind==='wires'){await keyboardPuzzle(`Left cable ${c.index+1}`);await keyboardPuzzle(`Right socket ${c.index+1}`);}
+  else if(kind==='sequence')await keyboardPuzzle(String(c.sequence[c.index]));
+  else if(kind==='repair'){if(c.index===3)skew+=1600;await keyboardPuzzle(['Isolate power','Replace fuse','Start diagnostic','Verify diagnostic'][c.index]);}
+  else if(kind==='pressure'){await touchPuzzle(c.index===0?(c.pressure<5?'Flow right to left':'Flow left to right'):`Transfer ${Math.abs(5-c.pressure)} bar`);}
+  else {await page.focus('.lw-frequency-slider');await page.keyboard.press('Home');for(let value=0;value<c.target;value++)await page.keyboard.press('ArrowRight');await keyboardPuzzle('Lock frequency');}
   current=(await until(r=>r.game.self.tasks.find(t=>t.id===task.id).progress.index>c.index,'authoritative semantic step')).game.self.tasks.find(t=>t.id===task.id);
+  await page.waitForFunction(()=>document.querySelector('.lw-task-modal .lw-puzzle button:not(:disabled)'));
+  check(await page.evaluate(()=>document.querySelector('.lw-task-modal .lw-puzzle').contains(document.activeElement)),`Keyboard focus survives ${kind} step ${c.index}`);
+  if(kind==='pressure'){check(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'Touch pressure controls fit mobile viewport');await shot('04b-pressure-mobile');}
  }
- await press('Send completed task');await until(r=>r.game.self.tasks.find(t=>t.id===task.id)?.completed,'server task acknowledgement');await page.waitForSelector('.lw-task-modal',{hidden:true});
+ await keyboardPuzzle('Send completed task');await until(r=>r.game.self.tasks.find(t=>t.id===task.id)?.completed,'server task acknowledgement');await page.waitForSelector('.lw-task-modal',{hidden:true});if(kind==='pressure')await page.setViewport({hasTouch:true,width:1440,height:1000});
 }
 async function finish(){
  for(let step=0;step<450;step++){
@@ -73,14 +94,14 @@ async function finish(){
 }
 function seedForHuman(){
  for(let i=0;i<2500;i++){const seed='world-browser-'+i,state=engine.createMatch({id:'seed',seed,world:true,config:{tasksPerCrew:5}}),self=state.players[0];if(self.role==='crew'&&self.tasks.some(t=>t.roomId==='bridge')&&new Set(self.tasks.map((task,index)=>challenge(task).kind)).size===5)return seed;}
- throw Error('Normal generated tasks must expose three actual puzzle kinds, including a Bridge task');
+ throw Error('Normal generated tasks must expose five actual puzzle kinds, including a Bridge task');
 }
 try{
  const humanSeed=seedForHuman(),probe=net.createServer();await new Promise(resolve=>probe.listen(0,'127.0.0.1',resolve));const port=probe.address().port;await new Promise(resolve=>probe.close(resolve));origin=`http://127.0.0.1:${port}`;
  const config=loadConfig({HOST:'127.0.0.1',PORT:String(port),PUBLIC_ORIGIN:origin,DATA_DIR:path.join(output,'state'),AI_PROVIDER:'demo'});config.now=()=>Date.now()+skew;config.tickMs=65;config.ai.decisionIntervalMs=250;
  config.rules={tasksPerCrew:5,moveCooldownMs:200,taskCooldownMs:1200,initialKillCooldownMs:300000,killCooldownMs:15000,sabotageCooldownMs:300000,criticalDurationMs:40000,discussionMs:18000,votingMs:10000,meetingCooldownMs:1000,roamDeadlineMs:180000,maxMatchMs:900000};
  game=await createGameServer(config,{engine:{...engine,createMatch:options=>engine.createMatch({...options,seed:options.mode==='human'?humanSeed:'world-browser-spectator'})}});await new Promise(resolve=>game.server.listen(port,'127.0.0.1',resolve));
- browser=await puppeteer.launch({executablePath:process.env.CHROME_PATH||(process.platform==='win32'?'C:/Program Files/Google/Chrome/Application/chrome.exe':'/usr/bin/google-chrome'),headless:true,userDataDir:path.join(output,'chrome-profile'),args:['--no-sandbox','--disable-dev-shm-usage']});page=await browser.newPage();page.setDefaultTimeout(30000);await page.setViewport({width:1440,height:1000});instrument(page,true);
+ browser=await puppeteer.launch({executablePath:process.env.CHROME_PATH||(process.platform==='win32'?'C:/Program Files/Google/Chrome/Application/chrome.exe':'/usr/bin/google-chrome'),headless:true,userDataDir:path.join(output,'chrome-profile'),args:['--no-sandbox','--disable-dev-shm-usage']});page=await browser.newPage();page.setDefaultTimeout(30000);await page.setViewport({hasTouch:true,width:1440,height:1000});instrument(page,true);
  const cdp=await page.createCDPSession();await cdp.send('Network.enable');cdp.on('Network.webSocketFrameReceived',event=>{if(event.response.opcode!==1)return;try{const payload=JSON.parse(event.response.payloadData);if(payload.type==='state')safeRoom(payload.room);}catch(error){report.errors.push(String(error));}});
  await page.goto(origin,{waitUntil:'networkidle0'});await page.waitForSelector('.harbor-play');await shot('01-harbor');check((await page.title()).includes('Lantern Wake'),'Original character game menu loads');
  await page.locator('#rules-toggle').click();check(await page.$eval('#rules',node=>!node.hidden),'Menu help opens before joining');
@@ -103,7 +124,7 @@ try{
  check(new Set(report.puzzleKinds).size===5,'Five real generated equipment minigames complete through UI and server acknowledgement');
  await finish();await page.waitForSelector('.lw-results',{visible:true});await press('Open the role-revealed replay');await page.waitForSelector('.lw-replay',{visible:true});check(true,'Human-plus-AI world reaches a rules-based victory and attributed replay');await chronologicalReplay('Human-plus-AI');await shot('07-human-replay');
  await press('Exit');await page.locator('.harbor-watch').click();await press('Begin the watch');room=await until(r=>r.mode==='spectator'&&r.game?.worldVersion===1,'all-AI match starts');check(room.game.self===null,'All-AI world uses the same authoritative engine without a human private view');
- await page.setViewport({width:390,height:844});await shot('08-all-ai-mobile');check(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'World and HUD fit mobile390');await page.setViewport({width:320,height:720});check(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'World and HUD fit mobile320');await page.setViewport({width:844,height:390});check(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'World and HUD fit mobile landscape');
+ await page.setViewport({hasTouch:true,width:390,height:844});await shot('08-all-ai-mobile');check(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'World and HUD fit mobile390');await page.setViewport({hasTouch:true,width:320,height:720});check(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'World and HUD fit mobile320');await page.setViewport({hasTouch:true,width:844,height:390});check(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'World and HUD fit mobile landscape');
  await finish();await page.waitForSelector('.lw-results',{visible:true});await press('Open the role-revealed replay');await page.waitForSelector('.lw-replay',{visible:true});room=await view();check(room.game.players.every(p=>['crew','saboteur'].includes(p.role)),'All-AI world finishes and reveals roles only after the match');await chronologicalReplay('All-AI');await shot('09-all-ai-replay');
  await drain();check(!report.errors.length,'No browser exceptions or unsafe returned world views');check(report.consoleErrors.length===report.expectedConflicts&&report.consoleErrors.every(message=>message==='Failed to load resource: the server responded with a status of 409 (Conflict)'),'Only expected direct-finish rejection console errors');check(JSON.stringify(before)===JSON.stringify(await hashes()),'Runtime source remained unchanged during qualification');report.browser=await browser.version();report.rules=config.rules;report.humanSeed=humanSeed;
 }catch(error){report.failure=String(error.stack||error);try{if(page)await shot('failure');}catch{}console.error(report.failure);process.exitCode=1;}
