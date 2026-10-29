@@ -72,3 +72,28 @@ node --test tests/beacon-client-controls.test.mjs tests/beacon-client-scene.test
 On a fully integrated checkout, omit those overrides. In the unintegrated foundation, the actual-module/registered-feature checks explicitly skip absent specialized implementations; skipped checks are not a qualification. Both integration drivers fingerprint runtime sources before import and reject during-run changes. Evidence remains under the new follow-up artifact directory recorded below, including targets-red.log, current green logs, exact runtime fingerprints and retained-regressions.log. No prior red evidence is overwritten. Syntax and ownership/diff checks passed. Chrome remains exclusively with the manager; no browser/server/provider process, root/shared/backend edit, push/main/deployment or production approval occurred. Root guard verification is a separate read-only follow-up after this client commit.
 
 Follow-up evidence: `D:/Widegames-work/beacon-client-builder-20261029/_artifacts/beacon-client-targets-401d76f9`.
+
+
+## Independent root guard closure after the client patch
+
+Client runtime/test patch committed as **21de2d498562eed428143b1cfb8e05c26da6b226**. The separate root follow-up adds only tests/beacon-client-root-guards.test.mjs and this report; it does not change root/runtime files. The prior beacon feedback integration gap is **closed for the retained source/VM checks** at exact manager fix **29f2602227838e48e5236a1f437fc40f0a62e5b9**, and against the later current manager source sampled at **6a97c7980ca91fdef67838febdb79a5f4d1d67fe**.
+
+Fourteen checks passed at the exact fix, then the same fourteen passed against current source. These are fourteen repeated checks, not twenty-eight independent workflows. They execute actual root handlers with a minimal DOM/scene and controlled request completions, including nine permanent-revocation boundaries (position and leave/return, transit, session, vision, task progress/completion and descriptor fields/permission). Each stale-error boundary tests both rule failure and uncertain network failure. Old errors preserve current feedback and create no retry. A stale success still accepts the newer authoritative state without changing current feedback. Positive controls retain useful current rule errors, same-ID exact-field retries, permanent revocation of a retained retry handler, and ordinary field-note confirmation with actual accepted notes. An unrelated version/timestamp refresh does not falsely revoke an unchanged context.
+
+The actual predecessor **297354c0c6f98f6892e0abe70c5e5e08f67efdad** is a retained negative control: **3 passed/11 failed, exit 1** as expected. It reproduces old failure feedback, obsolete success confirmation and retained retry problems. Exact/current corrected runs both exit 0. No remaining failure occurred among these fourteen checks. They do not qualify native browser scheduling/layout, HTTP behavior, Core's final hatch witness projection or a production release. Manager retains Chrome and real integrated qualification ownership.
+
+Source pins:
+
+- Exact 29f2602 public/app.mjs SHA256: `c6706e941c59de0d4b07c4a7d558a5c22639e2f79f0efabafa79ace2019bbbf2`.
+- Current working source SHA256: `2dd52ec79f062a50161d4d9fa2a1c4febb77d4471a848125375c94c8f1de55ae`.
+- Exact/current text matches after UTF-8 BOM and LF/CRLF normalization: **true**. Raw differences are preserved in the receipts; root-composition.diff records normalized source differences if any. Both sources remained unchanged during their respective runs.
+
+```powershell
+$env:BEACON_CLIENT_ROOT_REVIEW_ROOT='D:/Widegames-work/beacon-systems-coordinator-20261029'
+$env:BEACON_CLIENT_ROOT_REVIEW_PIN='29f2602227838e48e5236a1f437fc40f0a62e5b9'
+node --test tests/beacon-client-root-guards.test.mjs
+Remove-Item Env:BEACON_CLIENT_ROOT_REVIEW_PIN
+node --test tests/beacon-client-root-guards.test.mjs
+```
+
+Default behavior inspects the current checkout; only an explicit full historical pin uses a Git blob. The unintegrated foundation explicitly skips root checks when the registered feature-shell seam is absent. Evidence in the follow-up directory includes root-exact-29f2602.log, root-current.log, root-negative-predecessor.log, JSON receipts and exact copied source. All prior red artifacts are preserved. Syntax, diff/ownership checks passed; no Chrome/server/provider process or edits to other worktrees/root/shared/backend occurred.
