@@ -40,6 +40,11 @@ function validateWorldStructure(state){
     if(!object(player)||!/^p[1-6]$/.test(player.id)||ids.has(player.id)||!['crew','saboteur'].includes(player.role)||typeof player.alive!=='boolean'||!roomIds.has(player.roomId)||player.human!==(state.mode==='human'&&player.id==='p1')||!point(player.position))throw new Error('Invalid world player');
     ids.add(player.id);const motion=player.motion;
     if(!object(motion)||!Number.isSafeInteger(motion.seq)||motion.seq<0||![motion.dx,motion.dy].every(n=>Number.isInteger(n)&&n>=-1&&n<=1)||typeof motion.manual!=='boolean'||![motion.at,motion.leaseUntil,motion.recordedAt].every(finiteTime)||motion.at>state.updatedAt+1e-6||motion.recordedAt>state.updatedAt+1e-6||!Array.isArray(motion.path)||motion.path.length>4096||motion.path.some(p=>!point(p))||(motion.destination!==null&&!point(motion.destination)))throw new Error('Invalid world motion');
+    // Early schema-2 checkpoints lack error; new Core persists null or a bounded receipt.
+    if(Object.hasOwn(motion,'error')&&motion.error!==null){
+      const error=motion.error;
+      if(!object(error)||Object.keys(error).length!==2||!Object.hasOwn(error,'code')||!Object.hasOwn(error,'message')||typeof error.code!=='string'||!/^[A-Z][A-Z0-9_]{0,63}$/.test(error.code)||typeof error.message!=='string'||error.message.length<1||error.message.length>240)throw new Error('Invalid world motion error');
+    }
     if((motion.manual&&(!(motion.dx||motion.dy)||motion.path.length||motion.destination!==null))||(motion.path.length===0)!==(motion.destination===null)||((!player.alive||state.phase!=='roam')&&(motion.manual||motion.path.length||motion.destination!==null)))throw new Error('Inconsistent world motion');
   }
   if(state.players.filter(player=>player.role==='saboteur').length!==1)throw new Error('Invalid world role assignment');
