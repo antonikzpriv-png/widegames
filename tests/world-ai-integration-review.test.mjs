@@ -44,7 +44,7 @@ test('independent frontend current/pinned input emits integer diagonal, stop and
     const source = await read('public/world-input-envelope.mjs');
     encode = (await import('data:text/javascript;base64,' + Buffer.from(source).toString('base64'))).worldInputEnvelope;
     const app = await read('public/app.mjs');
-    assert(app.includes('body:worldInputEnvelope(input)') || (app.includes('const packet=worldInputEnvelope(input)') && app.includes('body:packet')), 'actual worldInput must use the inspected adapter');
+    assert(app.includes('body:worldInputEnvelope(input)') || (/(?:const|let) packet=worldInputEnvelope\(input\)/.test(app) && app.includes('body:packet')), 'actual worldInput must use the inspected adapter');
   } catch (error) { if (error.code !== 'ENOENT') throw error; }
   const f = fixture(createWorldInput, encode);
   try {

@@ -148,3 +148,56 @@ Preparation evidence is preserved: first new candidate run9pass/1 stale-error fa
 Frontend preparation source snapshots remain ignored; their experience.mjs SHA256 hashes are `BF0BC48CF4854C2A07F608CD5BABB56F7EBC5043531FEE6ADEAD27BEBB65E74E` and `B953A0591AE92179A893907E7EAAD716B4CFF48CE92F084F40CFBE7827D23C96`. Historical committed controls now pin9e571c7 stale feedback and c683963 retry, alongside earlier b2 diagonal and093/eb64 legacy controls. Final conclusions use committed source only.
 
 No Chrome, paid/live provider, full repeated suite, deployment/main/push, Docker, hosted CI or OS durability qualification. Controller tests stub the renderer to isolate real root lifecycle functions; equipment tests execute real frontend logic with a minimal DOM and controlled promises; drawing tests record calls without a browser. Two concrete findings above prevent a green closure at the reviewed pins.
+
+## Independent submission/replay closure after c31f825
+
+Bounded follow-up began19:57 UTC; both owner runtime fixes were committed and inspected within the requested ten-minute window. Ownership remained the world-ai UI/integration audit tests and additions here. No AI/runtime, other worker file, account, main/push/deployment or Chrome change.
+
+### Exact component pins
+
+- Frontend **`889a50d135f4e3e1d9acdbda3a22e8c95604eb0a`**, after9e571c7. Experience blob `270f178ee3a1c3aad4c2799ae225249f6fbebbaa`.
+- Core **`e16bacedfa18b9d6c28a965e06cb08fbaf0fa161`**, after the recorded2e06f74 chronology regression. Index blob `27089c6a986d67c544bb449a450fcb3f03f3e4ab`; world-runtime remains `aa718782aea32472df3e723528ea087fb3d2a442`.
+- Root **`2a841aa9e509aea04cdf65206231f9256af5e5ac`**, including scoped stop/sequence work at `b8cdb4a96e7e28cf1a22f5ddde24e7ac348a80eb`. App blob `677c72b07408b0ff293aad25a6d0090c2b35ea28`; API `ba16136932617c60547aa6f1d01ccfe31e607999`.
+- Shared dependencies read from the coordinator, verified unchanged before/after: world `a2bc61a0320e6033feb8956e59884399d0a34d06`, contracts `ea395a080f8bd6ee3230d62be0884799bbabd4e6`.
+
+These are independently tested committed component pins, **not a claim the coordinator already integrated both new fixes**. Final coordinator read was `3c250bcd21bfb760916b9e7512f37b7f89e0f9a5`, clean, with matching root/shared blobs but still the prior Core4771693 and UIee4a5aa blobs. Manager must import the new Core/UI runtime commits before claiming their behavior in its integrated tree.
+
+### Results and tested limits
+
+**35 targeted checks passed, zero failures/skips, Node exit0.** This includes the previous positive/historical controls; counts overlap earlier receipts and must not be summed. No concrete remaining finding in this tested component scope.
+
+Frontend: reviewed actual committed diff. `ownsSubmission` captures the puzzle and task-session identity and rechecks disposal plus current legal session before either success or failure feedback. The original stale rejected-task assertion is unchanged and now passes. Five additional rejection controls cover room change, proximity loss, action-hint removal, death and disposal. A current failed submission still shows its error, keeps the solved equipment open, and reenables submission rather than claiming success. Historical9e571c7 still reproduces obsolete council feedback. Existing real generated-task type, bell/task/repair priority, observed movement animation, doorway draw trace and success/focus guards continue to pass. Minimal-DOM/drawing limits from the previous receipt remain; no browser result is inferred.
+
+Core: actual fix is limited to ended `getReplay`, returning a deeply cloned log sorted numerically by actual at. Added independent real-engine staging beyond the original2e06 fixture: p1 manual expiry600ms; p2/p3/p4 actual arrivals100ms; p5 fractional arrival `18.125/180*1000`ms. An actual meeting/vote/ejection ends the match before export. Exported movement order is p2,p3,p4,p5,p1, preserving exact times without rounding. For every equal timestamp, exported IDs retain the private append order, including vote_result/ejection/ended/role_reveal causality. The persisted log remains unchanged; nested exported roles, actions and positions can be mutated/reversed without affecting state or subsequent exports. Active, discussion, voting and true maximum-duration paused states return null replay and withhold public roles. Ended public roles are present. Historical aa471eb still reproduces600-before100. A separate real-input control confirms delayed lifecycle stop seq42 cannot cancel already accepted newer seq44; current motion/position continues normally.
+
+Root: adapted the old tests' blanket no-request assumption to the explicit new cleanup contract. Old action/input/replay completions still cannot change the current room; legitimate old-room zero packets are required to target only its /input route, use keepalive=true, timeout1500ms, no soon-aborted ordinary signal, and never accept their response as state. Hidden/closed cleanup acknowledgements cannot revive a view. Fresh local seq5 maps above restored server seq40; lifecycle stops advance wire sequence separately; fresh local seq6 allocates beyond all stops; a duplicate retains its exact prior wire packet, and stale/conflicting client intents send no new request. Actual API fetch options are same-origin/no-store/keepalive with an independent live timeout signal. Existing WN2 active regression now passes at2a841aa while historical c683963 remains reproducible. HTTP fallback, readiness recovery, current task failure propagation and same-ID retry remain passing.
+
+The finite clicked-path limitation is retained: lifecycle stop delivery is best effort. Manual600ms lease does not imply an accepted clicked route expires after600ms; a broken network can prevent cleanup and the finite route can complete. No OS durability or distributed ownership claim follows from these tests.
+
+### Reproduction and evidence
+
+```
+$env:TEMP='D:/Widegames-work/temp'
+$env:TMP=$env:TEMP
+$env:npm_config_cache='D:/Widegames-work/npm-cache'
+$env:WORLD_AI_SOURCE_ROOT='D:/Widegames-work/world-coordinator-20261029'
+$env:WORLD_AI_REVIEW_UI_PIN='889a50d135f4e3e1d9acdbda3a22e8c95604eb0a'
+$env:WORLD_AI_REVIEW_APP_PIN='2a841aa9e509aea04cdf65206231f9256af5e5ac'
+$env:WORLD_AI_REVIEW_ENGINE_PIN='e16bacedfa18b9d6c28a965e06cb08fbaf0fa161'
+node --test tests/world-ai-ui-review.test.mjs tests/world-ai-integration-review*.test.mjs
+```
+
+Log `_artifacts/world-ui-chronology-closure-pinned-final.txt`, SHA256 `E079E796F72F2B41E7FC43A1C6E94586B423145DDC5AF5A1F44F5AB7BCBC0A17`:35/35 pass, no skips. Engine pin mode rewrites dependency import locations only and executes actual committed index/runtime against the qualified shared module; no engine logic is patched by the harness.
+
+Default source loading was also exercised without any source-selection overrides. Ignored `_artifacts/world-ui-chronology-default-final` contains Git copies of2a841aa server/shared/public, replaced only server/engine/** frome16bace and public/world/** from889a50d, plus the four current owned test files. It is an explicit composite qualification layout, not another worktree and not another owner's source edit.
+
+```
+Remove-Item Env:WORLD_AI_SOURCE_ROOT,Env:WORLD_AI_REVIEW_UI_ROOT,Env:WORLD_AI_REVIEW_UI_PIN,Env:WORLD_AI_REVIEW_APP_PIN,Env:WORLD_AI_REVIEW_ENGINE_PIN -ErrorAction SilentlyContinue
+node --test _artifacts/world-ui-chronology-default-final/tests/world-ai-ui-review.test.mjs _artifacts/world-ui-chronology-default-final/tests/world-ai-integration-review*.test.mjs
+```
+
+Default result35/35 pass, zero skipped. Log `_artifacts/world-ui-chronology-default-final.txt`, SHA256 `B46A9A31BD7A3E30AA7010020C04CBA040BC4D743794E34307C79159ED49EA5A`. Positives default to actual relative source files; historical controls keep explicit old pins; no absent-integration skip was added.
+
+Preparation failures remain distinguished: the first new sequence comparison failed only because a VM-realm object was compared with a host-realm copy; comparison now checks identical JSON packet fields. The first35-case run had34 passes/one fixture failure because a source assertion required `const packet`, while the reviewed allocator correctly uses `let packet`; its binding-pattern check now permits const/let, backed by execution of the actual root encoder. The original current-manager chronology control failed with600-before100 before the Core pin was available, then passed at e16bace. Neither product assertion was removed, weakened to accept stale behavior, or skipped. Final source checks `git diff --check` pass.
+
+This is independent UI/Core/root source/VM verification. No AI runtime change or new self-approval, full duplicate suite, Chrome, paid/live provider request, hosted CI, Docker, main/push/deploy, other worktree edit or account substitution occurred. Browser, integrated end-to-end and deployment qualification remain the coordinator's separate work.
