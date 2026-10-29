@@ -18,6 +18,12 @@ export function spatialGeometry(geometry){
   const checker=state=>{const doors=closed(state);return p=>valid(p)&&isWalkable(p)&&!doors.some(r=>{const x=Math.max(r.x,Math.min(p.x,r.x+r.width)),y=Math.max(r.y,Math.min(p.y,r.y+r.height));return Math.hypot(p.x-x,p.y-y)<WORLD.bodyRadius||inside(p,r);});};
   const walkable=(p,state)=>checker(state)(p);
   const segment=(a,b,walk)=>{if(!valid(a)||!valid(b))return false;const n=Math.max(1,Math.ceil(distance(a,b)/4));for(let i=0;i<=n;i++)if(!walk({x:a.x+(b.x-a.x)*i/n,y:a.y+(b.y-a.y)*i/n}))return false;return true;};
+  // Validate the accepted polyline itself, never a newly computed alternate path.
+  function routeClear(start,waypoints,state){
+    const walk=checker(state);let previous=start;
+    for(const next of waypoints){if(!segment(previous,next,walk))return false;previous=next;}
+    return true;
+  }
   function radius(state,observerId){
     const rules={...DEFAULT_BEACON_RULES,...state?.beaconRules},observer=observerId===undefined||observerId===null?null:state?.players?.find(p=>p.id===observerId);
     if(observerId!==undefined&&observerId!==null&&(!observer||!observer.alive||inTransit(state,observerId)))return 0;
@@ -63,5 +69,5 @@ export function spatialGeometry(geometry){
   const spawnRoomId=geometry.WORLD_SPAWN_ROOM??(WORLD_ROOMS.some(r=>r.id==='bridge')?'bridge':geometry.ROOM_LAYOUT?.[0]?.id??WORLD_ROOMS[0]?.id);
   const spawnRoom=WORLD_ROOMS.find(r=>r.id===spawnRoomId);if(!spawnRoom)throw new TypeError('Invalid spatial spawn room');
   const viewpoint=point(geometry.WORLD_VIEWPOINT??spawnRoom.center??worldSpawn('p2'));if(!isWalkable(viewpoint))throw new TypeError('Spatial viewpoint must be walkable');
-  return {WORLD,point,valid,floor,inTransit,walkable,move,path,sees,nearby,radius,station,bell:WORLD_BELL?.position??WORLD_BELL,worldRoomAt,worldSpawn,distance,viewpoint,staticWalkable:isWalkable,rooms:WORLD_ROOMS,spawnRoom,fixtures,viewpointMode:spawnRoom.id==='bridge'?'bridge':'viewpoint'};
+  return {WORLD,point,valid,floor,inTransit,walkable,move,path,routeClear,sees,nearby,radius,station,bell:WORLD_BELL?.position??WORLD_BELL,worldRoomAt,worldSpawn,distance,viewpoint,staticWalkable:isWalkable,rooms:WORLD_ROOMS,spawnRoom,fixtures,viewpointMode:spawnRoom.id==='bridge'?'bridge':'viewpoint'};
 }

@@ -2,12 +2,13 @@
 import {deepFreeze} from './freeze.mjs';
 import {createMapGeometry} from './geometry.mjs';
 const rect=(id,x,y,width,height)=>({id,x,y,width,height,center:{x:x+width/2,y:y+height/2}});
+const corridor=(...args)=>{const {center,...floor}=rect(...args);return floor;};
 const rooms=[rect('signal',140,100,360,260),rect('muster',700,100,400,280),rect('condenser',1320,100,340,260),rect('foundry',140,560,360,260),rect('clinic',1320,560,340,260),rect('ballast',140,1040,360,260),rect('canteen',700,1040,400,280),rect('observatory',1320,1040,340,260)];
 const names=['Signal Loft','Muster Hall','Condenser Bay','Rivet Foundry','Tide Clinic','Ballast Vault','Drift Canteen','Echo Observatory'];
 const links=[['muster','foundry'],['signal','condenser','canteen'],['muster','clinic'],['signal','ballast','clinic'],['condenser','foundry','observatory'],['foundry','canteen'],['ballast','muster'],['clinic']];
 const descriptions=['Storm flags and the communications relay overlook the west catwalk.','A broad assembly hall connects the north ring to the central riser.','Salt condensers feed the eastern power regulator.','Rivet benches flank the cross-deck bypass and lighting relay.','A sheltered medical bay guards the long observation spur.','The western pressure reservoir lies below the ring.','Driftwood tables shelter the southern loop junction.','An isolated echo telescope terminates the narrow eastern spur.'];
 const roomLayout=rooms.map((room,i)=>({id:room.id,name:names[i],x:room.center.x/18,y:room.center.y/14,neighbors:links[i],description:descriptions[i]}));
-const floors=[...rooms,rect('north-west-walk',480,200,240,100),rect('north-east-walk',1080,200,260,100),rect('western-ladder',260,340,100,720),rect('eastern-ladder',1430,340,100,720),rect('southern-link',480,1140,240,100),rect('cross-deck',480,660,860,100),rect('central-riser',850,360,100,700)];
+const floors=[...rooms,corridor('north-west-walk',480,200,240,100),corridor('north-east-walk',1080,200,260,100),corridor('western-ladder',260,340,100,720),corridor('eastern-ladder',1430,340,100,720),corridor('southern-link',480,1140,240,100),corridor('cross-deck',480,660,860,100),corridor('central-riser',850,360,100,700)];
 const obstacles=[rect('flag-locker',180,140,120,40),rect('storm-table',850,120,100,35),rect('condenser-bank',1380,150,110,50),rect('rivet-bench',200,600,110,50),rect('medical-screen',1440,620,80,55),rect('ballast-cylinder',190,1100,110,65),rect('drift-table',800,1120,130,60),rect('echo-lens',1450,1100,80,60)];
 const fixtures={
  doors:[{id:'annex-north-west',roomId:'signal',x:580,y:200,width:24,height:100},{id:'annex-north-east',roomId:'condenser',x:1190,y:200,width:24,height:100},{id:'annex-north-riser',roomId:'muster',x:850,y:450,width:100,height:24},{id:'annex-cross-deck',roomId:'foundry',x:600,y:660,width:24,height:100},{id:'annex-central-riser',roomId:'canteen',x:850,y:880,width:100,height:24}],
