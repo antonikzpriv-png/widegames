@@ -186,3 +186,37 @@ git diff --check
 Evidence: _artifacts/beacon-production-7272556-install.txt, beacon-production-7272556-run.txt, beacon-production-7272556-result.json, raw source manifest and tar archive. Private persisted fixture is _artifacts/beacon-production-private-EEGBw7. No initial failing run or relaxed assertion was needed.
 
 Limits: real loopback Windows process/HTTP/WS/file restart, not Docker/Linux/hosted deployment, OS-delivered POSIX signal, Windows ACL or power-loss verification. This proves startup/default schema/projection/assets/receipts and normal graceful restart, not complete matches, browser rendering/input, exhaustive hint authorization or live original model adapter/provider behavior. Chrome, Docker, paid/live providers, npm updates, runtime edits, other worktrees/data, main/push/deployment were not used. Only the assigned standalone harness and this document changed.
+
+
+## Exact-source production refresh: afc6b1a
+
+Reviewed **afc6b1a94d201a943e84b955fcb492fc2ed031bc** against prior production-qualified **7272556542b762e72a34450801fc762ba06d082c**. The prior receipt above, commit0b2b4905dd89db2041d212908548d9b182e0c0b5, and all prior727 archive/results remain preserved. **The same19 production checks passed on the first new run**, with no fixture corrections or relaxed assertions. No production blocker found within these boundaries.
+
+Exact scoped Git diff (server/shared/public/package.json/package-lock.json) contains only two paths:
+
+- server/ai/world.mjs: saboteur elimination selection uses an enabled authoritative eliminate descriptor and proposal(target), replacing proximity-only target selection. No imports changed. This bounded production run does not independently exercise the multi-saboteur match fix or repeat the other reviewer's match tests.
+- package.json: adds test:beacon-browser = node scripts/beacon-browser-check.mjs; start, ordinary tests, dependencies and existing browser script are unchanged. No browser script was run.
+
+All60 deployed server/public/shared paths are unchanged; all124 parsed static/dynamic import edges are identical. All33 public/shared asset blobs are byte-identical. package-lock.json is identical (Git blob a230e19bd29173704b38878cf3719ab9f756fc95); dependency declarations are unchanged. Other changes in the complete Git diff are workflow, docs, browser-check scripts and tests; no other deployed source change. Compared with727, all-source file count increases216 to220. Thus the prior production graph/assets conclusions remain applicable, with the real runtime boundary checks freshly repeated on the new exact source rather than inferred solely from the diff.
+
+Fresh ignored evidence prefix: _artifacts/beacon-production-afc6b1a. Tar Git PAX comment verifies the full commit; tar SHA256 **a4f542e96246c12fcdb7532859bbed65ba576bbe7f449c11e95902875b8afede**. Executable snapshot contains all220 canonical raw Git blobs, verified by Git blob ID while extracting and SHA256 manifest before/after execution. No overlays or source mutation. source-comparison.json records path/import/asset equality and lock blob. Separate manifest/install/run/result files retain this execution. The owned standalone harness changed only pin, artifact/output names and source count; every behavioral assertion remains unchanged. Ordinary *.test.mjs discovery is unaffected.
+
+Offline production-only install added exactly ws8.22.0 in the archive. Puppeteer is physically absent and unresolvable. Real production main ran twice with demo provider, zero budgets, real time, isolated fixture DATA_DIR, synthetic unused credential marker and outbound fetch block/counter. All33 assets were fetched byte-exact, including public/features and world/beacon.css. Actual default human create/start exposed worldVersion1/beaconVersion1 and private persisted schema3. Authenticated HTTP/owner+spectator WS safe views, private-path404, origin/auth restrictions, legitimate seq1/seq2 stop, private note, request-ID dedup, graceful socket shutdown and same-DATA_DIR restart all passed. Original seat/role/input position/note and note receipt survived restart. Both lock/recovery claims were released; second main acquired a fresh token.
+
+Actual child PIDs2732/21584 exited naturally code0/signalnull. **0 provider fetch attempts,0 socket privacy errors,0 forced stops**. Harness elapsed2774ms; at most two children,6s startup/stop and4s HTTP/WS bounds unchanged. Private fixture: D:/Widegames-work/beacon-world-builder-20261029/_artifacts/beacon-production-private-JhJDtS. All220 source blobs remained unchanged after execution.
+
+Exact commands (archive install cwd _artifacts/beacon-production-afc6b1a; harness cwd assigned D: checkout):
+
+~~~powershell
+$env:TEMP='D:/Widegames-work/temp'
+$env:TMP=$env:TEMP
+$env:npm_config_cache='D:/Widegames-work/npm-cache'
+npm ci --omit=dev --ignore-scripts --no-audit --no-fund --offline --cache D:/Widegames-work/npm-cache
+$env:BEACON_PRODUCTION_REVIEW_ROOT=(Join-Path (Get-Location) '_artifacts/beacon-production-afc6b1a')
+node --check tests/beacon-world-production-review.mjs
+node tests/beacon-world-production-review.mjs
+git diff 7272556542b762e72a34450801fc762ba06d082c afc6b1a94d201a943e84b955fcb492fc2ed031bc -- server shared public package.json package-lock.json
+git diff --check
+~~~
+
+Limits remain those of the727 receipt: loopback Windows HTTP/WS and normal file restart, not browser/Docker/Linux/hosted deployment, power-loss/ACL, full matches, exhaustive hint/rule coverage or original live model adapter/external provider qualification. Windows IPC invoked the actual registered SIGTERM handler; no OS-delivered POSIX signal claim. No Chrome, full suite/match repeats, paid calls, runtime edits, other worktree/data edits, main/push/deploy. This refresh changes only the owned standalone harness and this document.
