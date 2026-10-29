@@ -149,7 +149,14 @@ export function systemActionHints(state,p,now,ctx){
  for(const entry of map.fixtures.vents)for(const exitId of entry.links)add({type:'vent',entryId:entry.id,exitId},`Hatch to ${vents.get(exitId).roomId}`,entry);
  return result;
 }
+// Projection only: canonical unfinished sabotage and its deadline remain historical evidence.
+function tacticalCriticalStatus(state,critical){
+ if(!critical.active)return 'repaired';
+ if(state.phase==='paused')return 'paused';
+ if(state.phase==='ended')return state.outcome?.winner==='saboteur'&&state.outcome.reason==='critical'?'failed':'ended';
+ return 'active';
+}
 export function getSystemsView(state,viewerId){
  const s=state.systems,c=state.sabotage,actor=state.players.find(p=>p.id===viewerId),transit=actor&&own(s.transit,actor.id);
- return {version:s.version,lights:{active:s.lights.active,deadlineAt:s.lights.deadlineAt},communications:{active:s.communications.active,deadlineAt:s.communications.deadlineAt,devicesBlocked:s.communications.active},doors:s.doors.map(d=>({id:d.id,closed:d.closed,deadlineAt:d.deadlineAt,...(tactical(state)?{status:d.status,closeAt:d.closeAt}:{})})),critical:c?{active:c.active,kind:c.kind,roomId:c.roomId,deadlineAt:c.deadlineAt,repairsCompleted:c.repairsCompleted,repairsRequired:c.repairsRequired,sites:c.sites.map(site=>({id:site.id,roomId:site.roomId,position:clone(site.position),label:site.label,progress:site.progress}))}:null,selfTransit:transit?{entryId:transit.entryId,exitId:transit.exitId,startedAt:transit.startedAt,deadlineAt:transit.deadlineAt}:null,cooldowns:actor?clone(tactical(state)&&actor.role==='saboteur'?cooldownFor(state,actor.id):own(s.cooldowns,actor.id)):null};
+ return {version:s.version,lights:{active:s.lights.active,deadlineAt:s.lights.deadlineAt},communications:{active:s.communications.active,deadlineAt:s.communications.deadlineAt,devicesBlocked:s.communications.active},doors:s.doors.map(d=>({id:d.id,closed:d.closed,deadlineAt:d.deadlineAt,...(tactical(state)?{status:d.status,closeAt:d.closeAt}:{})})),critical:c?{active:c.active&&(!tactical(state)||!['ended','paused'].includes(state.phase)),...(tactical(state)?{status:tacticalCriticalStatus(state,c)}:{}),kind:c.kind,roomId:c.roomId,deadlineAt:c.deadlineAt,repairsCompleted:c.repairsCompleted,repairsRequired:c.repairsRequired,sites:c.sites.map(site=>({id:site.id,roomId:site.roomId,position:clone(site.position),label:site.label,progress:site.progress}))}:null,selfTransit:transit?{entryId:transit.entryId,exitId:transit.exitId,startedAt:transit.startedAt,deadlineAt:transit.deadlineAt}:null,cooldowns:actor?clone(tactical(state)&&actor.role==='saboteur'?cooldownFor(state,actor.id):own(s.cooldowns,actor.id)):null};
 }
