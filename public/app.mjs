@@ -3,6 +3,7 @@ import {element as h,button,phaseLabel,secondsUntil,clockText,syncChildren} from
 import {request,roomPath,actionEnvelope,roomFrom,roomIdFromPath} from './api.mjs';
 import {watchPanel,taskPanel,criticalPanel,councilPanel,timelinePanel,resultsPanel,timer} from './panels.mjs';
 import {replayEvents,aiNotice,aiLabel} from './presentation.mjs';
+import {createWorldExperience} from './world/experience.mjs';
 
 const main=document.querySelector('#main');
 const feedback=document.querySelector('#feedback');
@@ -10,6 +11,50 @@ let room=null,roomId=null,controller=null,socket=null,poll=null;
 let epoch=0,pending=false,offset=0,connected=false,connectionIssue=false;
 let draft='',draftMeeting=null,confirmTarget=null,replay=null,replayIndex=0,retry=null;
 const attemptedJoins=new Set();
+let worldExperience=null,worldSession=null,lastInputFailure=0;
+
+function releaseWorld(){
+ const instance=worldExperience,owner=worldSession;worldExperience=null;
+ try{instance?.dispose();}finally{if(worldSession===owner)worldSession=null;}
+}
+function ownsWorld(owner){return worldSession===owner&&roomId===owner.id&&!document.hidden&&controller&&!controller.signal.aborted;}
+async function worldInput(owner,input){
+ if(!ownsWorld(owner))throw new DOMException('The room changed.','AbortError');
+ const current=epoch,id=roomId,opened=controller;
+ try{
+  const data=await request(roomPath(id,'/input'),{method:'POST',body:input,signal:opened.signal});
+  if(!ownsWorld(owner)||current!==epoch||controller!==opened)throw new DOMException('The room changed.','AbortError');
+  accept(data);return data;
+ }catch(error){
+  if(ownsWorld(owner)&&current===epoch&&error.name!=='AbortError'&&Date.now()-lastInputFailure>5000){lastInputFailure=Date.now();tell(error.message,true);}
+  throw error;
+ }
+}
+async function worldMutation(owner,suffix,body){
+ if(!ownsWorld(owner))throw new DOMException('The room changed.','AbortError');
+ const result=await mutation(suffix,body);
+ if(!ownsWorld(owner))throw new DOMException('The room changed.','AbortError');
+ if(!result?.ok)throw new Error(result?.error||'Wait for the current action to finish.');
+ return result.data;
+}
+async function worldReplay(owner){
+ if(!ownsWorld(owner))throw new DOMException('The room changed.','AbortError');
+ const current=epoch,opened=controller;
+ const data=await request(roomPath(owner.id,'/replay'),{signal:opened.signal});
+ if(!ownsWorld(owner)||current!==epoch||controller!==opened)throw new DOMException('The room changed.','AbortError');
+ return data;
+}
+function renderWorld(){
+ if(!worldExperience){
+  const host=h('div',{id:'world-host'}),owner={id:roomId};main.replaceChildren(host);worldSession=owner;
+  worldExperience=createWorldExperience(host,{
+   action:(type,fields={})=>worldMutation(owner,'/action',actionEnvelope(type,fields)),
+   input:input=>worldInput(owner,input),start:()=>worldMutation(owner,'/start',{id:crypto.randomUUID()}),
+   leave:()=>{if(worldSession===owner)home();},loadReplay:()=>worldReplay(owner)
+  });
+ }
+ worldExperience.update(room,{now:Date.now()+offset,connected,pending,feedback:feedback.textContent});
+}
 
 function tell(message,error=false){
  connectionIssue=false;
@@ -31,11 +76,11 @@ function stop(){
  if(socket){socket.onclose=null;socket.onerror=null;socket.close();socket=null;}
 }
 async function busy(fn){
- if(pending)return;
+ if(pending)return {ok:false,error:'Wait for the current action to finish.'};
  const current=epoch,focus=saveFocus();
  pending=true;render();
- try{await fn();}
- catch(error){if(current===epoch&&error.name!=='AbortError')tell(error.message,true);}
+ try{return await fn();}
+ catch(error){if(current===epoch&&error.name!=='AbortError')tell(error.message,true);return {ok:false,error:error.message};}
  finally{if(current===epoch){const lostFocus=document.activeElement===document.body;pending=false;render();if(lostFocus)restoreFocus(focus);}}
 }
 function accept(data){
@@ -51,6 +96,7 @@ function accept(data){
  render();
 }
 async function create(mode){
+ releaseWorld();
  stop();controller=new AbortController();
  await busy(async()=>{
   const current=epoch;
@@ -62,6 +108,7 @@ async function create(mode){
 }
 async function openRoom(id,initial){
  const changed=id!==roomId;
+ if(changed)releaseWorld();
  stop();roomId=id;
  if(changed){room=null;replay=null;replayIndex=0;draft='';draftMeeting=null;confirmTarget=null;}
  persistId(id);
@@ -128,15 +175,17 @@ function connect(current){
 }
 async function mutation(suffix,body,onSuccess){
  const current=epoch,id=roomId;
- await busy(async()=>{
+ return busy(async()=>{
   try{
    const data=await request(roomPath(id,suffix),{method:'POST',body,signal:controller.signal});
-   if(current!==epoch)return;
+   if(current!==epoch)return {ok:false,error:'The room changed.'};
    retry=null;accept(data);onSuccess?.();
+   return {ok:true,data};
   }catch(error){
    if(current!==epoch||error.name==='AbortError')return;
    if(error.status==null||error.status>=500){retry=()=>mutation(suffix,body,onSuccess);tell('The request could not be confirmed. Retry keeps the same request ID so an accepted action cannot run twice.',true);}
    else{retry=null;tell(error.message,true);}
+   return {ok:false,error:error.message};
   }
  });
 }
@@ -157,6 +206,7 @@ async function loadReplay(){
  });
 }
 function home(){
+ releaseWorld();
  stop();room=roomId=null;replay=null;draft='';confirmTarget=null;
  persistId(null);history.pushState(null,'','/');tell('');render();
 }
@@ -212,9 +262,13 @@ function restoreFocus(saved){
  const log=main.querySelector('.dialogue');if(log&&saved.scroll!=null)log.scrollTop=saved.scroll;
 }
 function render(){
- const saved=saveFocus(),output=h('div');
  const announcement=document.querySelector('#phase-status'),phase=room?.game?.phase||room?.phase;
  const phaseText=phase?phaseLabel(phase):'';if(announcement.textContent!==phaseText)announcement.textContent=phaseText;
+ const inWorld=Boolean(roomId&&room&&(!room.game||room.game.worldVersion));
+ document.body.classList.toggle('world-mode',inWorld);
+ if(inWorld){renderWorld();return;}
+ if(worldExperience)releaseWorld();
+ const saved=saveFocus(),output=h('div');
  if(!roomId){output.append(landing());syncChildren(main,output);restoreFocus(saved);return;}
  if(!room){output.append(h('div',{class:'loading'},h('h1',{},'Finding the beacon…'),h('p',{},'Connecting to your room.'),button('Retry connection',()=>openRoom(roomId),{'data-focus':'reconnect'}),button('Back to harbor',home)));syncChildren(main,output);restoreFocus(saved);return;}
  const game=room.game,now=Date.now()+offset,current=epoch;
@@ -246,13 +300,13 @@ document.querySelector('#rules-close').onclick=closeRules;
 document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!rules.hidden)closeRules();});
 document.addEventListener('visibilitychange',()=>{if(!roomId)return;if(document.hidden)stop();else openRoom(roomId);});
 document.querySelector('.wordmark').onclick=event=>{event.preventDefault();home();};
-window.addEventListener('pagehide',stop);
+window.addEventListener('pagehide',()=>{releaseWorld();stop();});
 window.addEventListener('pageshow',event=>{if(event.persisted&&roomId)openRoom(roomId);});
-window.addEventListener('popstate',()=>{const id=roomIdFromPath(location.pathname);if(id)openRoom(id);else{stop();room=roomId=null;render();}});
+window.addEventListener('popstate',()=>{const id=roomIdFromPath(location.pathname);if(id)openRoom(id);else{releaseWorld();stop();room=roomId=null;render();}});
 const initial=roomIdFromPath(location.pathname);
 if(initial)openRoom(initial);
 else{
  let remembered;try{remembered=sessionStorage.getItem('lantern-room');}catch{}
  if(remembered&&/^[A-Za-z0-9_-]{1,100}$/.test(remembered))openRoom(remembered);else render();
 }
-setInterval(()=>{for(const item of document.querySelectorAll('[data-deadline]'))item.textContent=clockText(secondsUntil(Number(item.dataset.deadline),Date.now()+offset));},500);
+setInterval(()=>{if(document.hidden)return;if(worldExperience&&room)worldExperience.update(room,{now:Date.now()+offset,connected,pending,feedback:feedback.textContent});for(const item of document.querySelectorAll('[data-deadline]'))item.textContent=clockText(secondsUntil(Number(item.dataset.deadline),Date.now()+offset));},500);
