@@ -20,14 +20,16 @@ let worldExperience=null,worldSession=null,lastInputFailure=0,worldActionGenerat
 function beaconContextKey(game){
  if(game?.beaconVersion!==1)return null;
  const self=game.self;
- return JSON.stringify([self?.position,self?.roomId,self?.alive,self?.transit,game.systems?.selfTransit,game.investigation?.session,game.vision?.radius,self?.tasks?.map(t=>[t.id,t.completed,t.progress]),game.interactions?.map(h=>[h.id,h.type,h.fields,h.enabled])]);
+ return JSON.stringify([game.map,game.preset,self?.position,self?.roomId,self?.alive,self?.transit,game.systems?.selfTransit,game.investigation?.session,game.vision?.radius,self?.tasks?.map(t=>[t.id,t.completed,t.progress]),game.interactions?.map(h=>[h.id,h.type,h.fields,h.enabled])]);
 }
 function captureActionContext(body){
  const game=room?.game,self=game?.self;if(!game?.worldVersion||!body.type)return null;
  return {generation:worldActionGeneration,matchId:game.matchId,phase:game.phase,type:body.type,actor:self?.id,location:self?.roomId,position:self?.position?{...self.position}:null,taskId:body.taskId,knownTask:self?.tasks?.some(task=>task.id===body.taskId),beacon:beaconContextKey(game)};
 }
 function actionContextCurrent(context){
- if(!context)return true;const game=room?.game,self=game?.self;
+ if(!context)return true;
+ if(context.scope==='settings')return context.generation===worldActionGeneration&&roomId===context.roomId&&!room?.game&&room?.isHost&&room.settingsRevision===context.revision;
+ const game=room?.game,self=game?.self;
  if(context.generation!==worldActionGeneration||game?.matchId!==context.matchId||game.phase!==context.phase||self?.id!==context.actor||!self?.alive)return false;
  if(context.beacon!==null&&context.beacon!==beaconContextKey(game))return false;
  if(['task','taskInteract'].includes(context.type)){
@@ -107,6 +109,7 @@ function renderWorld(){
   worldExperience=createWorldExperience(host,{
    action:(type,fields={})=>worldMutation(owner,'/action',actionEnvelope(type,fields)),
    input:input=>worldInput(owner,input),start:()=>worldMutation(owner,'/start',{id:crypto.randomUUID()}),
+   settings:mapId=>{if(!ownsWorld(owner)||room?.game||!room?.isHost||!networkReady)return Promise.reject(new DOMException('Map settings are unavailable.','AbortError'));return worldMutation(owner,'/settings',{id:crypto.randomUUID(),mapId,expectedRevision:room.settingsRevision});},
    leave:()=>{if(worldSession===owner)home();},loadReplay:()=>worldReplay(owner)
   });
  }
@@ -150,8 +153,9 @@ function accept(data){
  const next=roomFrom(data);
  if(roomId&&next.roomId!==roomId)return;
  if(room?.game&&!next.game)return;
+ if(!room?.game&&!next.game&&Number.isSafeInteger(room?.settingsRevision)&&(!Number.isSafeInteger(next.settingsRevision)||next.settingsRevision<room.settingsRevision))return;
  if(room?.game&&next.game&&(next.game.version<room.game.version||(next.game.version===room.game.version&&next.game.serverNow<room.game.serverNow)))return;
- if(room?.game?.matchId!==next.game?.matchId||room?.game?.phase!==next.game?.phase||room?.game?.self?.id!==next.game?.self?.id||beaconContextKey(room?.game)!==beaconContextKey(next.game))worldActionGeneration++;
+ if(room?.settingsRevision!==next.settingsRevision||JSON.stringify(room?.map)!==JSON.stringify(next.map)||room?.game?.matchId!==next.game?.matchId||room?.game?.phase!==next.game?.phase||room?.game?.self?.id!==next.game?.self?.id||beaconContextKey(room?.game)!==beaconContextKey(next.game))worldActionGeneration++;
  room=next;
  networkReady=true;
  if(retryContext&&!actionContextCurrent(retryContext)){retry=null;retryContext=null;tell('Current watch state synchronized.');}
@@ -241,7 +245,7 @@ function connect(current){
  }catch{schedulePoll(current);}
 }
 async function mutation(suffix,body,onSuccess){
- const current=epoch,id=roomId,context=suffix==='/action'?captureActionContext(body):null;
+ const current=epoch,id=roomId,context=suffix==='/action'?captureActionContext(body):suffix==='/settings'?{scope:'settings',generation:worldActionGeneration,roomId,revision:body.expectedRevision}:null;
  return busy(async()=>{
   try{
    const data=await request(roomPath(id,suffix),{method:'POST',body,signal:controller.signal});
