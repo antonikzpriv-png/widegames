@@ -91,3 +91,37 @@ node --test $files
 ```
 
 Changed MJS syntax checks and git diff --check pass. No Chrome, server, audio hardware, network/provider or browser profile was started. Manager keeps the exclusive Chrome lease; no owned processes remain. Native qualification, main integration and publication remain manager-owned.
+
+
+## Final saved-screenshot audit, 2026-10-30
+
+This is a bounded read-only review of exactly8 existing PNGs from the manager's `_artifacts/tactical-browser-92uVoB`; no new browser run or independent authorship of the manager's qualification is claimed. The run report pins clean source `3805e6f31796f61fed47a58cd03e5ef09d4f2e04`, reports32/32 scenarios and1522 privacy assertions, no page/console errors, no outbound fetch/provider calls, sourceUnchanged=true and completed browser/server/data cleanup. These are the manager's recorded results, not additional tests executed by this worker. Report SHA256: `bbe497b923be41de29d726845f883aa96cc4ab082b540e5a5c0a49fa5882985d`.
+
+The driver builds its source manifest from tracked public/server/shared/package files, hashes each before/after and asserts equality. That in-memory per-file list is not persisted in this run directory; the report retains the equality result and commit. I inspected the pinned source and Git-blob identities below instead of relabeling the historical docs/evidence/beacon-runtime-manifest.json (which qualifies afc6b1a, not this tactical run). Current coordinator CSS/driver text matches the pinned versions after CRLF normalization; the actual audit uses3805e6f, not later HEAD.
+
+| Pinned source | Git blob |
+| --- | --- |
+| public/game.css | `6322ff9c1cf2a231ff64d841a06bc9dbfca65eaa` |
+| public/world/beacon.css | `cbdcb8ceeb7acf400c79700ec8767e77d8abb9fb` |
+| public/world/experience.mjs | `e1153d38f7e69a25a2fe9ed41d0936cd8d2d722a` |
+| public/world/input.mjs | `a544a8ae9718458f7181bf9d98a4091f8c1bf38f` |
+| scripts/tactical-browser-check.mjs | `5ecb7b6cc5c83ec72999bff6984363a6bd56cacb` |
+
+| Inspected PNG | Dimensions | SHA256 |
+| --- | --- | --- |
+| beacon-crew-01-world.png | 1440x1000 | `31221ef817699a58d6d21d905fcbb08167dcb9b9605aea87c3c144cbc3944054` |
+| stormbreak-annex-crew-01-world.png | 1440x1000 | `6446cb31fb1828e1f897b0ccd4f86468b30e99e1cb1d61098f2f82b6f3ac17ce` |
+| stormbreak-annex-crew-02-camera.png | 1440x1000 | `634171905269a20bd54eca35b862f51b0743dfdd3107ee70dd51dc969f415d41` |
+| beacon-saboteur-14-mobile.png | 390x844 | `93714a98173a48487755d8f9fc47ababe8048f5e99d66c8bc5479967dce1d075` |
+| stormbreak-annex-saboteur-14-mobile.png | 390x844 | `385743734d842341c94f6050e6109c590ef9b84e5b18464954bda0fff601cc02` |
+| stormbreak-annex-crew-11-critical-council.png | 1440x1000 | `b55b5cad85ee5abb4916cd566b4d2c91e84fd1824450aae246b9404f764f52fc` |
+| beacon-saboteur-15-ejection.png | 1440x1000 | `022c3ec5459f50e26791684631486ac2dd58dee730194c391ba83e967f033e1b` |
+| stormbreak-annex-saboteur-15-ejection.png | 1440x1000 | `ba15672b58795d51d191b1312790e38194b3dfef66e79388739cfc31e860723c` |
+
+Within those images, the two maps have distinct environmental art and readable nearby room/device labels; the world remains the primary scene. The Annex card explicitly says DATED CAMERA FRAMES, saved samples/not a live feed, map and room, UTC sample time, console source, current cooldown availability, recorded names/count and field radius. Its pale panel/dark text is readable in the sample; scroll clipping at the panel bottom is expected and does not relabel historical evidence as live. The390px mobile panels wrap field-note text without horizontal clipping, retain visible systems/mute/action controls, and show unavailable reasons. The desktop critical council keeps the separate critical countdown and council timer legible, the active chat field has a visible focus outline, and both ejection/result images show attributed revealed roles and the replay action. No additional concrete clarity/contrast/action issue is established by these sampled desktop/evidence/result pixels. This is a visual assessment, not a measured WCAG contrast qualification or a privacy proof from pixels.
+
+**One concrete source-confirmed mobile collision remains:** in touch portrait roam with no equipment pane/modal, game.css shows the joystick at left18px, bottom125px,94x94. The mute control stays at left14px, bottom148px, minimum44px high, z-index25, above the joystick's5. At390x844 the joystick occupies x18..112/y625..719 and the mute's44px vertical band is y652..696; the screenshot shows that button about86px wide, overlapping the knob area. At320x740 the corresponding joystick band is y521..615 and mute band y548..592. The joystick's pointerdown listener belongs to that element; an overlapping sound button receives the touch instead. Reproduction for manager native QA: close systems, acknowledge role, stand in connected living roam, then touch the joystick center near(65,672) at390x844 or(65,568) at320x740. These coordinates fall inside the sound control by the saved button size and pinned CSS. This is a CSS hit-target inference, not a newly executed native failure. The14-mobile screenshots have systems open, which intentionally hides the joystick and therefore does not expose this collision. Required correction is to reserve a separate mobile mute slot outside joystick/action targets while retaining its council visibility; verify disjoint rectangles in active roam at320/390, not just equipment-pane bounds. No runtime edit is made in this receipt.
+
+The council backdrop obstruction is closed in the sampled desktop council/results: Sound: off is above the backdrop and outside the card. Mobile council CSS uses a single-column scrollable overlay and the mute remains fixed above it; there is no saved mobile council image here from which to establish a second specific occluded council action. I do not claim a collision-free mobile council from desktop pixels. The driver's14-mobile screenshot is saved only at390x844, although its native-event loop also checks320x740 and844x390 equipment-pane/document bounds. Thus320px is supported by the manager's recorded checks and CSS inspection, not a320px screenshot; no ninth image or fabricated320px evidence was substituted.
+
+Limits: headless Chrome156 with native keyboard/touch events and reduced-motion desktop, seeded validated demo actions and accelerated authoritative clocks. No physical phone, actual audio hardware/listening, exhaustive responsive states, new native test, full suite or production approval. Exactly docs/TACTICAL-CLIENT.md is appended by this task; prior receipts/red evidence remain intact. No Chrome, server, external service or paid provider was started; manager retains the Chrome lease.
