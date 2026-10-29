@@ -99,21 +99,21 @@ async function victory(f){
   await f.assertStopped('ended');return ended.body;
 }
 
-test('pinned manager: actual HTTP crew victory aborts pending AI and preserves earlier reservations',{timeout:10000},async t=>{
+test('terminal AI: actual HTTP crew victory aborts pending AI and preserves earlier reservations',{timeout:10000},async t=>{
   const f=await fixture(t);const ended=await victory(f);
   assert(!JSON.stringify(ended).includes('privateMemo'));
   const replay=await f.request(f.route+'/replay',undefined,f.host.cookie);assert.equal(replay.status,200);assert(replay.body.replay.some(event=>event.type==='ended'&&event.winner==='crew'));
   const saved=await f.checkpoint();assert.equal(saved.state.phase,'ended');assert.equal(saved.aiContext.matches[`match:${f.id}`].calls,2);
 });
 
-test('pinned manager: unattended maximum-duration pause aborts pending AI without new reservation/send',{timeout:10000},async t=>{
+test('terminal AI: unattended maximum-duration pause aborts pending AI without new reservation/send',{timeout:10000},async t=>{
   const f=await fixture(t,{maxMatchMs:500});f.advance(501);
   await until(()=>f.game.rooms.get(f.id).data.state.phase==='paused','real engine maximum-duration pause');
   await f.assertStopped('paused');const room=await f.request(f.route,undefined,f.host.cookie);assert.equal(room.body.game.outcome,null);assert.equal((await f.request(f.route+'/replay',undefined,f.host.cookie)).status,409);
   const saved=await f.checkpoint();assert.equal(saved.state.phase,'paused');assert.equal(saved.state.pauseReason,'maximum_duration');
 });
 
-test('pinned manager: restarting an ended victory retains private context/budget and schedules no AI',{timeout:10000},async t=>{
+test('terminal AI: restarting an ended victory retains private context/budget and schedules no AI',{timeout:10000},async t=>{
   const f=await fixture(t);await victory(f);const before=await f.checkpoint();
   await f.restart();f.advance(1000);await wait(80);
   const restored=await f.request(f.route,undefined,f.host.cookie);assert.equal(restored.status,200);assert.equal(restored.body.phase,'ended');assert.equal(restored.body.game.self.id,'p1');assert.deepEqual(restored.body.game.outcome,before.state.outcome);

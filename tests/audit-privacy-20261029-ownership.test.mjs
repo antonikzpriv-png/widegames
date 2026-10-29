@@ -33,7 +33,7 @@ test('historical 0842 P3: stale 401 starts a join using the new room abort owner
  assert.equal(staleJoin.path,`/api/rooms/${roomA}/join`);assert.equal(staleJoin.options.signal,f.requests[1].options.signal);assert.equal(staleJoin.options.signal.aborted,false);
  staleJoin.resolve({roomId:roomA,seatId:null,game:null});await old;
  assert.equal(f.api.getRoom().roomId,roomB,'late A data must still be discarded');
- t.diagnostic('New P3 source/lifecycle finding: missing epoch guard before auto-join. Deferred unabortable 401 fixture reproduces an obsolete POST with current controller; no native-browser race frequency claim.');
+ t.diagnostic('Historical 0842 negative control: missing epoch guard before auto-join. Deferred unabortable 401 reproduces an obsolete POST with the newer controller; no native-browser race frequency claim.');
 });
 
 test('positive stale-owner controls discard late successful room and websocket-equivalent snapshots',async()=>{
