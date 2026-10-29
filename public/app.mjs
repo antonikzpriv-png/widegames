@@ -62,6 +62,7 @@ function tell(message,error=false){
  connectionIssue=false;
  feedback.replaceChildren(...(message?[h('span',{},message)]:[]));
  feedback.classList.toggle('error',error);
+ feedback.setAttribute?.('data-retry',String(Boolean(retry)));
  if(retry)feedback.append(button('Retry same request',()=>retry?.(),{class:'quiet'}));
 }
 function connectionFailure(message){tell(message,true);connectionIssue=true;networkReady=false;}
@@ -182,7 +183,7 @@ async function mutation(suffix,body,onSuccess){
   try{
    const data=await request(roomPath(id,suffix),{method:'POST',body,signal:controller.signal});
    if(current!==epoch)return {ok:false,error:'The room changed.'};
-   retry=null;accept(data);onSuccess?.();
+   retry=null;accept(data);if(onSuccess)onSuccess();else tell('Action confirmed.');
    return {ok:true,data};
   }catch(error){
    if(current!==epoch||error.name==='AbortError')return;
