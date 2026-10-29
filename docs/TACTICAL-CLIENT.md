@@ -153,3 +153,23 @@ node --test tests/tactical-client-mobile-layout.test.mjs tests/tactical-client-c
 ```
 
 Manager native follow-up must measure disjoint mute/joystick/action/council targets and touch the actual joystick center in320/390 portrait and844x390 landscape, then mute during council/voting with an explicit state wait. Suggested CSS-derived joystick centers are(65,508), (65,612), (64,264), respectively; use actual bounding boxes in the native driver. Equipment-pane scroll/close, visible Exit, chat composition/draft/focus and council vote targets remain part of that native check. Prior3805e6f screenshots, the manager's concurrently frozen4088 run and the earlier AEC production pin retain their original source identity; they do not qualify this changed CSS. No Chrome, server, full suite, external asset/provider, push/main/deployment or production approval was performed. Manager retains the exclusive Chrome lease.
+
+
+## Mobile equipment/council screenshot closure candidate, 2026-10-30
+
+Inspected the manager's actual docs/tactical-screenshots/stormbreak-annex-saboteur-14b-mobile-council.png: at390x844 the old floating equipment toggle covers the chat label/top of the textarea. Screenshot SHA256: `3d6cb8a7aac7f00c7f56b0351941d7ee430a565ec158f25de87a48f17dc89662`. The prior mute-only geometry checks did not assert the equipment toggle against council content; this receipt preserves that gap and the earlier screenshot evidence instead of treating the32 recorded native passes as a collision-free qualification.
+
+The only runtime edit is public/world/beacon.css. For320/390 portrait and844x390 landscape, the equipment toggle now occupies the right-hand rail slot: right12/bottom8,150x44, while mute remains left12/bottom8,88x44. The corresponding equipment rectangles are x158..308/y688..732, x228..378/y792..836 and x682..832/y338..382. Council/role content still ends60px above the viewport bottom, so neither rail button can cover a visible council input/vote target. The equipment parent retains z-index24 above the pointer-transparent strip's11; mute remains25. The toggle's two-line text fits its explicit line-height/padding and keeps the44px touch target. Desktop is unchanged.
+
+The pane remains attached to the same equipment node, opens60px above its parent's bottom and keeps overflow:auto. Its maximum viewport bounds are x8..308/y80..672 at320x740, x28..378/y80..776 at390x844 and x452..832/y72..322 at844x390. Actual shorter content can start lower. Portrait/landscape max-height calculations leave space for Exit/topbar and the control rail. No equipment history, task-modal visibility, input lease, IME/draft/focus, Escape restoration or asynchronous ownership JavaScript changed.
+
+The expanded actual-sheet regression now checks equipment-toggle nonintersection with mute and the scroll-clipped council/role viewport, full pane width/height bounds and Exit clearance. The obsolete assertion that mute must be below the whole equipment group is replaced by disjoint actual button rectangles because both now intentionally share a row. Existing joystick/action/mute relations remain asserted. `_artifacts/tactical-equipment-rail-20261030/layout-red.log` preserves1 pass/3 failures with the prior CSS; original CSS/test copies remain alongside it. Final focused run:60 pass,0 fail,0 skip. This includes existing imported UI ownership/IME/equipment checks and the24 retained beacon-controls checks including actual fixture Escape/focus restoration; it is not60 native scenarios. Receipt JSON records candidate and screenshot hashes. Changed test syntax and git diff --check pass.
+
+```powershell
+$env:TEMP='D:/Widegames-work/temp'
+$env:TMP=$env:TEMP
+$env:TACTICAL_CLIENT_MAP_ROOT='D:/Widegames-work/tactical-maps-builder-20261029'
+node --test tests/tactical-client-mobile-layout.test.mjs tests/tactical-client-compatibility.test.mjs tests/tactical-client-ui.test.mjs tests/beacon-client-controls.test.mjs
+```
+
+Manager must qualify this new CSS with native council/chat/vote/button rectangles, actual mobile voting, evidence scrolling/close and joystick input. The currently frozen77394 legacy run and prior production/native pins retain their original source identity and cannot qualify the new bytes. No Chrome, server, provider, full suite, other-worktree/root/script edits, push/main/deployment or production approval was performed. Manager keeps the Chrome lease; the only task changes are scoped CSS, its tactical layout test and this appended receipt.
