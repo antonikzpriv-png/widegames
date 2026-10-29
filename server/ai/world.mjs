@@ -113,7 +113,7 @@ function beaconCandidates(view,memory,suspect){
  if(!point(self?.position)||self.transit)return wait();
  const controls=(view.interactions??[]).filter(a=>a.enabled),proposal=d=>({type:d.type,...d.fields});
  const navigate=target=>{const a=localNavigationIntent(view,target);return a.type==='wait'?wait():[a];};
- const bodies=(view.events??[]).filter(e=>e.type==='body'&&point(e.position));
+ const bodies=(view.events??[]).filter(e=>e.type==='body'&&!e.reported&&point(e.position));
  for(const body of bodies){if(allowed.has('report')&&distance(self.position,body.position)<=WORLD.reportRadius)return [{type:'report',bodyId:body.bodyId}];if(distance(self.position,body.position)>WORLD.reportRadius)return navigate(body.position);}
  if(self.role==='crew'){
   const repair=controls.find(a=>a.type==='systemRepair');if(repair)return [proposal(repair)];
