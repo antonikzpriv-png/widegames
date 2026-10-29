@@ -1,4 +1,4 @@
-﻿import test from 'node:test';
+import test from 'node:test';
 import assert from 'node:assert/strict';
 import { pathToFileURL } from 'node:url';
 import { resolve } from 'node:path';
@@ -103,7 +103,7 @@ test('world fixture: unseen actors, their metadata and a forged full-state argum
 
 test('world fixture: bell approach is reachable despite its solid table, then engine hint enables meeting', async () => {
   const view = fixture(); view.events = [{ type: 'witness', playerId: 'p3', targetId: 'p2', roomId: 'bridge', at: 900 }];
-  assert.equal(isWalkable(WORLD_BELL), false, 'labeled solid-prop fixture');
+  assert.equal(isWalkable({ x: 800, y: 205 }), false, 'labeled solid chart-table fixture');
   const approach = await decide(view);
   assert.equal(approach.type, 'navigate'); assert(isWalkable(approach)); assert(distance(approach, WORLD_BELL) <= WORLD.interactionRadius);
   view.self.position = { x: approach.x, y: approach.y }; view.availableActions.push('meeting');
@@ -162,4 +162,17 @@ test('legacy fixture: schema1 local task and adjacent BFS move remain compatible
   assert.deepEqual(actionFields(await decide(view)), { type: 'task', taskId: 'task-bridge' });
   view.self.tasks[0].roomId = 'engine';
   assert.deepEqual(actionFields(await decide(view)), { type: 'move', roomId: 'lantern' });
+});
+
+test('LIVE world fixture: a real mocked vote send retains reservation and cancellation semantics', async t => {
+  const c = live(), context = {}, view = fixture(); let commits = 0;
+  view.phase = 'voting'; view.meeting = { id: 'm-vote', votes: [] }; view.availableActions = ['vote'];
+  const fetch = t.mock.method(globalThis, 'fetch', async () => { assert.equal(commits, 1); return mockResponse(); });
+  assert.equal((await decide(view, c, context, { commitReservation: async () => { commits++; } })).type, 'vote');
+  assert.equal(fetch.mock.callCount(), 1); assert.equal(c.describe(context).calls, 1);
+  const stop = new AbortController(), pendingContext = {}; let reserved;
+  const pending = decide(view, live(), pendingContext, { signal: stop.signal, commitReservation: async () => { reserved = true; await new Promise(() => {}); } });
+  await new Promise(resolve => setImmediate(resolve)); assert(reserved); stop.abort();
+  assert.equal(await pending, null); assert.equal(fetch.mock.callCount(), 1);
+  assert.equal(state(pendingContext).reservations.length, 1, 'uncertain spend must not be refunded');
 });
