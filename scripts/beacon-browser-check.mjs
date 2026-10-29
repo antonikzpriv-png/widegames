@@ -33,7 +33,7 @@ async function travel(actor,target){const p=state().players.find(p=>p.id===actor
 async function jumpTo(at){if(at>now())skew+=at-now()+1;await pause(140);}
 async function press(text){await page.locator('button::-p-text('+text+')').click();}
 async function panel(){if(await page.$eval('.lw-beacon-pane',n=>n.hidden)){if(page.viewport()?.hasTouch)await page.tap('.lw-beacon-toggle');else await press('Systems & evidence');}await page.waitForSelector('.lw-beacon-pane:not([hidden])');}
-async function closePanel(){if(await page.$('.lw-beacon-pane:not([hidden])')){if(page.viewport()?.hasTouch)await page.keyboard.press('Escape');else await press('Close systems');}}
+async function closePanel(){if(await page.$('.lw-beacon-pane:not([hidden])')){if(page.viewport()?.hasTouch){await page.focus('.lw-beacon-pane .lw-secondary');await page.keyboard.press('Escape');}else await press('Close systems');await page.waitForSelector('.lw-beacon-pane[hidden]',{hidden:true});}}
 async function control(id){await panel();await page.locator('[data-interaction-id="'+id+'"]').click();}
 async function shot(name,target=page){const file=name+'.png';await target.screenshot({path:path.join(output,file),fullPage:true});report.screenshots.push(file);}
 async function start(kind){scenario=kind;await page.goto(origin,{waitUntil:'networkidle0'});await page.locator('.harbor-play').click();await page.waitForSelector('.lw-lobby');roomId=new URL(page.url()).pathname.split('/')[2];await press('Begin the watch');await page.waitForSelector('.lw-role-scene:not([hidden])');await press('Enter the beacon');await until(r=>r.game.beaconVersion===1,'default beacon startup');return (await view()).game.self.id;}
