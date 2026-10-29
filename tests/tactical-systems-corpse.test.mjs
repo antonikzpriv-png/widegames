@@ -19,3 +19,11 @@ for(const selection of MAP_CATALOG)test('reported corpse on '+selection.id+' no 
  assert.equal(state.systems.doors.find(d=>d.id===door.id).status,'closed','reported corpse is no longer a physical threshold occupant');assert.equal(state.systems.doors.find(d=>d.id===door.id).deadlineAt,start+46002,'persisted25s door duration is respected');assert.deepEqual(state.players.find(p=>p.id===victim.id).position,deadPosition);
  const legacy=engine.createMatch({id:'legacy-door-default',world:true,systems:true,now:start,seed:'legacy'});assert.equal(legacy.schemaVersion,3);assert.equal(legacy.beaconRules.doorDurationMs,12000);
 });
+
+
+for(const selection of MAP_CATALOG)test('persisted25s tactical doors on '+selection.id+' permit two overlaps with the shared20s auxiliary clock',()=>{
+ const map=getMap(selection.id),start=100000;let state=engine.createMatch({id:'overlap-duration-review',tactical:true,map:{id:map.id,version:map.version},now:start,seed:'overlap-review',saboteurCount:2,beaconRules:{doorDurationMs:25000}});const sabs=state.players.filter(p=>p.role==='saboteur');assert.equal(sabs.length,2);
+ let result=engine.applyAction(state,sabs[0].id,{id:'door-one',type:'systemSabotage',kind:'door',targetId:map.fixtures.doors[0].id},start);assert(result.accepted);state=engine.tick(result.state,start+1000).state;
+ result=engine.applyAction(state,sabs[1].id,{id:'door-two',type:'systemSabotage',kind:'door',targetId:map.fixtures.doors[1].id},start+20000);assert(result.accepted);state=engine.tick(result.state,start+21000).state;assert.equal(state.systems.doors.filter(d=>d.closed).length,2);assert.equal(state.systems.factionCooldowns.saboteur.auxiliaryAt,start+40000);
+ state=JSON.parse(JSON.stringify(state));state=engine.tick(state,start+26000).state;assert.equal(state.systems.doors[0].status,'open');assert.equal(state.systems.doors[1].status,'closed');state=engine.tick(state,start+46000).state;assert(state.systems.doors.every(d=>!d.closed));assert.equal(state.beaconRules.doorDurationMs,25000);
+});
