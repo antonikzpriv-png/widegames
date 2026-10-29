@@ -12,6 +12,7 @@ test('world opt-in has serializable private motion and legacy shape stays exact'
  assert.deepEqual(world.players.map(p=>p.position),world.players.map(p=>worldSpawn(p.id)));
  assert.equal(applyInput(legacy,'p1',{seq:1,dx:1,dy:0},0).error.code,'WORLD_REQUIRED');
  assert.equal('worldVersion' in getPlayerView(legacy,'p1',0),false);
+ assert.equal(applyAction(legacy,'p1',{id:'legacy-nav',type:'navigate',x:800,y:300},0).error.code,'INVALID_ACTION');assert.equal(legacy.requests.p1.length,0);
 });
 test('server speed, normalized diagonal and 600ms lease hold across delayed ticks',()=>{
  const start=fresh(),before=structuredClone(start);let straight=accepted(applyInput(start,'p1',{seq:1,dx:1,dy:0},0));

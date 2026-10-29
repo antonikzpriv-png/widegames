@@ -14,7 +14,7 @@ export function worldRuntime(geometry) {
     state.schemaVersion=2;state.worldVersion=1;
     state.players.forEach((p,i)=>{
       p.position=point(worldSpawn(p.id));
-      p.motion={seq:0,dx:0,dy:0,leaseUntil:now,at:now,manual:false,path:[],destination:null,recordedAt:now};
+      p.motion={seq:0,dx:0,dy:0,leaseUntil:now,at:now,manual:false,path:[],destination:null,recordedAt:now,error:null};
       const room=worldRoomAt(p.position);if(room)p.roomId=typeof room==='string'?room:room.id;
     });
   }
@@ -59,7 +59,7 @@ export function worldRuntime(geometry) {
   function navigation(p,target,now) {
     if(!target||!Number.isFinite(target.x)||!Number.isFinite(target.y)||!isWalkable(target))return null;
     const found=findWorldPath(p.position,target);
-    if(!Array.isArray(found)||found.length>4096||(!found.length&&!same(p.position,target)))return null;
+    if(!Array.isArray(found)||found.length>4096||(!found.length&&distance(p.position,target)>=.01))return null;
     const path=found.map(point).filter(q=>!same(q,p.position));
     if(path.some(q=>!Number.isFinite(q.x)||!Number.isFinite(q.y)||!isWalkable(q)))return null;
     if(path.length&&!same(path.at(-1),target))return null;
@@ -70,7 +70,7 @@ export function worldRuntime(geometry) {
   }
   function input(p,request,now) {
     const m=p.motion;const changed=m.dx!==request.dx||m.dy!==request.dy||m.path.length>0||m.manual!==!!(request.dx||request.dy);
-    m.seq=request.seq;m.dx=request.dx;m.dy=request.dy;m.leaseUntil=now+lease;m.at=now;m.manual=!!(request.dx||request.dy);m.path=[];m.destination=null;
+    m.error=null;m.seq=request.seq;m.dx=request.dx;m.dy=request.dy;m.leaseUntil=now+lease;m.at=now;m.manual=!!(request.dx||request.dy);m.path=[];m.destination=null;
     return changed;
   }
   const moving=(state,p,now)=>state.phase==='roam'&&p.alive&&!!(p.motion.path.length||(p.motion.manual&&now<p.motion.leaseUntil));
