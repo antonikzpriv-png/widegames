@@ -12,3 +12,24 @@
 /* Keep scene typography and controls legible alongside the root landing styles. */
 .lw-world h1,.lw-world h2,.lw-world h3{font-family:system-ui,sans-serif;font-weight:950}.lw-world .lw-secondary,.lw-world .lw-close,.lw-world .lw-vote-button{color:#f8ecd0}.lw-world .lw-replay-log summary{color:#254e5b}.lw-world .lw-feedback{z-index:35}.lw-ai-notice{font-size:10px;color:#f1d49c;margin-top:10px!important;max-width:240px;overflow-wrap:anywhere}.lw-council-heading h1{font-size:clamp(23px,2.7vw,35px)}
 @media(max-width:700px){.lw-ai-notice{font-size:9px}.lw-world[data-critical=true] .lw-assignment{max-height:185px;overflow:auto}.lw-world[data-critical=true] .lw-critical{top:300px}.lw-world[data-critical=true] .lw-scene-overlay,.lw-world[data-critical=true] .lw-scene-overlay:has(.lw-task-modal:not([hidden])),.lw-world[data-critical=true] .lw-scene-overlay:has(.lw-confirm:not([hidden])){padding-top:370px}.lw-world[data-critical=true] .lw-role-scene{padding-top:365px}.lw-council-heading h1{font-size:22px}}
+
+/* Postgame playback and safe live AI observation share the illustrated map. */
+.lw-results:has(.lw-replay:not([hidden])){width:min(1260px,100%)}
+.lw-replay{max-width:1200px;min-width:0}
+.lw-replay-canvas{display:block;width:100%;height:clamp(300px,58vh,650px);border:2px solid #315966;border-radius:12px;margin:14px 0;touch-action:auto}
+.lw-replay-toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.lw-world .lw-replay select,.lw-world .lw-spectator select{max-width:100%;min-height:38px;background:#fff4d9;color:#183b4a;border:2px solid #688f90;border-radius:7px;padding:5px;font:700 12px system-ui}
+.lw-replay-toolbar button{min-height:38px;font-size:12px}
+.lw-replay-toolbar [aria-pressed=true]{outline:2px solid #438c8a;outline-offset:2px}
+.lw-replay-coverage,.lw-replay-limits,.lw-replay-usage,.lw-replay-time,.lw-replay-ballots{font-size:12px;line-height:1.6;overflow-wrap:anywhere;margin:8px 0!important}
+.lw-replay-coverage{font-weight:850}
+.lw-replay-history{margin-top:20px;max-height:390px;overflow:auto;border-top:2px solid #9cb2a2;padding-top:12px;font-size:13px;line-height:1.6;overflow-wrap:anywhere}
+.lw-replay-history h3{font-size:14px;margin:14px 0 8px}
+.lw-replay-history p{margin:7px 0}
+.lw-replay-claim{background:#fff6df;border-left:4px solid #487e7c;padding:12px;margin:12px 0;border-radius:5px}
+.lw-replay-claim small{display:block;line-height:1.5;color:#38565c}
+.lw-spectator{position:absolute;right:20px;top:152px;z-index:5;width:min(310px,calc(100% - 40px));padding:14px;background:#102e42ed;border:2px solid #6c979b;border-radius:12px;display:flex;flex-wrap:wrap;gap:8px;color:#e5f0d4;font-size:12px}
+.lw-spectator strong,.lw-spectator p{width:100%;overflow-wrap:anywhere;margin:0;line-height:1.5}
+.lw-spectator p:last-child{max-height:100px;overflow:auto;color:#efcf91}
+.lw-world .lw-spectator button{font-size:11px;padding:5px}
+@media(max-width:700px){.lw-replay{padding:12px 9px}.lw-replay-canvas{height:350px}.lw-replay-toolbar{gap:8px}.lw-replay-toolbar select{flex:1;min-width:100px}.lw-replay-history{font-size:12px}.lw-spectator{top:205px;right:10px;width:210px;padding:9px;font-size:10px}.lw-spectator p:last-child{max-height:58px}.lw-replay-controls{flex-wrap:wrap}}

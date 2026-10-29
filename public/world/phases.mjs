@@ -2,7 +2,7 @@
 import {drawKeeper} from './scene.mjs';
 import {clock} from './model.mjs';
 import {replayEvents,outcomeText} from '../presentation.mjs';
-import {worldReplayText as readableReplay} from './replay.mjs';
+import {createSpatialReplay} from './replay-viewer.mjs';
 const nameOf=(game,id)=>game.players.find(p=>p.id===id)?.name||id||'The watch';
 function avatar(player,size=64){const canvas=dom('canvas','lw-avatar');canvas.width=size;canvas.height=size;canvas.setAttribute('aria-hidden','true');drawKeeper(canvas.getContext('2d'),player,size/2,size*.72,{scale:size/90,label:false,ghost:player.alive===false});return canvas;}
 
@@ -40,13 +40,27 @@ export function createCouncil({id,action,feedback,pending}){
 }
 
 export function createResults({id,loadReplay,feedback,isCurrent}){
- let game=null,replay=null,index=0,loading=false,generation=0;
- const node=dom('section','lw-results'),eyebrow=dom('p','lw-eyebrow','THE TRUTH COMES ASHORE'),heading=dom('h1'),reason=dom('p'),roster=dom('div','lw-results-roster'),load=control('Open the role-revealed replay',async()=>{
-  if(loading||game?.phase!=='ended')return;const pin=game.matchId,current=++generation;loading=true;load.disabled=true;
-  try{const response=await loadReplay();if(!isCurrent(pin)||current!==generation)return;replay=replayEvents(response);index=0;replayPane.hidden=false;load.hidden=true;log.replaceChildren(...replay.map(e=>dom('li','',readableReplay(e,game))));showStep();range.focus();}catch(error){if(isCurrent(pin))feedback(error?.message||'Replay could not be loaded. Try again.');}finally{loading=false;load.disabled=false;}
- },'lw-primary'),replayPane=dom('div','lw-replay'),range=dom('input'),rangeLabel=dom('label'),eventText=dom('p','lw-replay-event'),prev=control('Previous event',()=>{index=Math.max(0,index-1);showStep();}),next=control('Next event',()=>{index=Math.min((replay?.length||1)-1,index+1);showStep();}),details=dom('details','lw-replay-log'),summary=dom('summary','','Read the complete attributed log'),log=dom('ol');
- range.type='range';range.min=0;range.max=0;range.value=0;range.id=`${id}-replay`;rangeLabel.htmlFor=range.id;range.addEventListener('input',()=>{index=Number(range.value);showStep();});eventText.setAttribute('aria-live','polite');const controls=dom('div','lw-replay-controls');controls.append(prev,next);details.append(summary,log);replayPane.append(dom('h2','','ROLE-REVEALED REPLAY'),rangeLabel,range,eventText,controls,details);replayPane.hidden=true;node.append(eyebrow,heading,reason,roster,load,replayPane);
- function showStep(){range.max=Math.max(0,(replay?.length||0)-1);range.value=index;setText(rangeLabel,`Event ${replay?.length?index+1:0} of ${replay?.length||0}`);setText(eventText,replay?.[index]?readableReplay(replay[index],game):'No recorded events.');prev.disabled=index<=0;next.disabled=index>=(replay?.length||0)-1;}
- let rendered=null;
- return {node,update(nextGame){game=nextGame;if(rendered===game.matchId)return;rendered=game.matchId;replay=null;generation++;index=0;load.hidden=false;replayPane.hidden=true;setText(heading,game.outcome?.winner==='crew'?'THE LIGHT LIVES ON.':'THE LIGHT WENT OUT.');node.dataset.winner=game.outcome?.winner||'unknown';setText(reason,outcomeText(game.outcome?.reason));roster.replaceChildren(...game.players.map(p=>{const card=dom('div','lw-revealed-keeper');card.append(avatar({...p,alive:true},90),dom('strong','',p.name),dom('span',p.role==='saboteur'?'lw-revealed-saboteur':'',p.role||'Role not supplied'));return card;}));},dispose(){generation++;}};
+ let game=null,context={},generation=0,rendered=null,loading=false,viewer=null,fetchController=null,disposed=false;
+ const node=dom('section','lw-results'),eyebrow=dom('p','lw-eyebrow','THE TRUTH COMES ASHORE'),heading=dom('h1'),reason=dom('p'),roster=dom('div','lw-results-roster'),replayPane=dom('div','lw-replay');
+ const load=control('Open the role-revealed replay',async()=>{
+  if(disposed||loading||game?.phase!=='ended')return;
+  const pin=game.matchId,key=rendered,current=++generation;fetchController=new AbortController();loading=true;load.disabled=true;
+  try{
+   const response=await loadReplay({signal:fetchController.signal,matchId:pin});
+   if(disposed||current!==generation||rendered!==key||!isCurrent(pin)||document.hidden)return;
+   viewer?.dispose();viewer=createSpatialReplay(replayPane,response,{game,roomId:context.roomId});replayPane.hidden=false;viewer.refresh();load.hidden=true;viewer.range.focus();
+  }catch(error){if(!disposed&&current===generation&&isCurrent(pin)&&error?.name!=='AbortError')feedback(error?.message||'Replay could not be loaded. Try again.');}
+  finally{if(current===generation){loading=false;load.disabled=false;fetchController=null;}}
+ },'lw-primary');
+ replayPane.hidden=true;node.append(eyebrow,heading,reason,roster,load,replayPane);
+ function cancel(){generation++;fetchController?.abort();fetchController=null;viewer?.dispose();viewer=null;loading=false;load.disabled=false;replayPane.hidden=true;load.hidden=false;}
+ function visibility(){if(document.hidden){fetchController?.abort();if(loading){generation++;loading=false;load.disabled=false;}viewer?.pause();}}
+ document.addEventListener('visibilitychange',visibility);
+ return {node,update(nextGame,nextContext={}){
+  const key=nextContext.roomId+':'+nextGame?.matchId;
+  if(rendered!==key||nextGame?.phase!=='ended'){cancel();rendered=key;}
+  game=nextGame;context=nextContext;if(!game||game.phase!=='ended')return;
+  setText(heading,game.outcome?.winner==='crew'?'THE LIGHT LIVES ON.':'THE LIGHT WENT OUT.');node.dataset.winner=game.outcome?.winner||'unknown';setText(reason,outcomeText(game.outcome?.reason));
+  if(roster.dataset.match!==key){roster.dataset.match=key;roster.replaceChildren(...game.players.map(p=>{const card=dom('div','lw-revealed-keeper');card.append(avatar({...p,alive:true},90),dom('strong','',p.name),dom('span',p.role==='saboteur'?'lw-revealed-saboteur':'',p.role||'Role not supplied'));return card;}));}
+ },deactivate:cancel,dispose(){if(disposed)return;disposed=true;cancel();document.removeEventListener('visibilitychange',visibility);}};
 }
