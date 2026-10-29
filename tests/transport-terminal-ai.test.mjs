@@ -8,7 +8,7 @@ import {once} from 'node:events';
 
 const revision='9b31317c618ea12810a369edb84f87834f9218b9';
 const repository=fileURLToPath(new URL('../',import.meta.url));
-const root=process.env.TRANSPORT_TERMINAL_ROOT?new URL(process.env.TRANSPORT_TERMINAL_ROOT):new URL('../../coordinator/',import.meta.url);
+const root=process.env.TRANSPORT_TERMINAL_ROOT?new URL(process.env.TRANSPORT_TERMINAL_ROOT):new URL('../',import.meta.url);
 const scope=['server/transport.mjs','server/rooms.mjs','server/store.mjs','server/budget.mjs','server/engine/index.mjs','server/static.mjs','shared/contracts.mjs'];
 const normalized=text=>text.replaceAll('\r\n','\n');
 async function assertPinned(){for(const file of scope){const committed=execFileSync('git',['show',`${revision}:${file}`],{cwd:repository,encoding:'utf8',windowsHide:true,maxBuffer:4*1024*1024});assert.equal(normalized(await readFile(new URL(file,root),'utf8')),normalized(committed),`${file} must match exact manager ${revision}`);}}
@@ -22,7 +22,7 @@ const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 async function until(check,label){const end=Date.now()+3000;while(Date.now()<end){if(check())return;await wait(10);}throw new Error(`Timed out: ${label}`);}
 
 async function fixture(t,{maxMatchMs=1000000}={}){
-  const parent=path.resolve(process.env.TRANSPORT_TEST_TEMP||path.join(repository,'../temp'));await mkdir(parent,{recursive:true});
+  const parent=path.resolve(process.env.TRANSPORT_TEST_TEMP||path.join(repository,'_artifacts/test-temp'));await mkdir(parent,{recursive:true});
   const directory=await mkdtemp(path.join(parent,'transport-terminal-ai-'));
   let now=100000,game,base,pending,baselineContext,baselineLedger;
   const counts={decisions:0,simulatedSends:0,aborts:0,finished:0};
