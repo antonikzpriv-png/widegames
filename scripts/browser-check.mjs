@@ -12,7 +12,8 @@ import * as engine from '../server/engine/index.mjs';
 import {ROOM_LAYOUT} from '../shared/contracts.mjs';
 
 const root=fileURLToPath(new URL('../',import.meta.url));
-const output=path.join(root,'_artifacts','browser-'+Date.now());await mkdir(output,{recursive:true});
+await mkdir(path.join(root,'_artifacts'),{recursive:true});
+const output=path.join(root,'_artifacts','browser-'+Date.now()+'-'+crypto.randomUUID().slice(0,8));await mkdir(output);
 const report={fixture:'Seeded QA, accelerated deadlines, real demo bots; no live provider calls.',checks:[],errors:[],consoleErrors:[],privacyChecks:0,screenshots:[],outcomes:[]};
 report.sourceCommit=execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8'}).trim();
 report.modifiedTrackedPaths=execFileSync('git',['diff','--name-only','HEAD'],{cwd:root,encoding:'utf8'}).trim().split(/\r?\n/).filter(Boolean);
