@@ -10,7 +10,7 @@ import {taskService} from '../features/tasks/index.mjs';
 import {abilityService,getAbilityView,deathPolicy} from '../features/abilities/index.mjs';
 import {captureReplaySnapshot,getReplaySnapshots as replaySnapshots} from '../features/replay/index.mjs';
 import {getMap} from '../../shared/maps/index.mjs';
-import {TACTICAL_PRESET} from '../../shared/tactical.mjs';
+import {TACTICAL_PRESET,DEFAULT_TACTICAL_BEACON_RULES} from '../../shared/tactical.mjs';
 const geometry=await import(process.env.WORLD_ENGINE_GEOMETRY_MODULE||'../../shared/world.mjs');
 const worldEngine=worldRuntime(geometry),spatialEngine=createSpatialWorld(geometry);
 const isWorld=state=>[2,3,4].includes(state.schemaVersion)&&state.worldVersion===1;
@@ -136,7 +136,7 @@ function advance(state,now) {
       state.phase='voting'; state.deadlineAt=deadline+state.rules.votingMs; state.meeting.deadlineAt=state.deadlineAt;
       publicEvent(state,'voting',deadline,{meetingId:state.meeting.id}); record(state,'voting',deadline,{meetingId:state.meeting.id});
     } else if (phaseAt===deadline&&state.phase==='voting') tally(state,deadline);
-    else if(systemAt===deadline)systemsModule.advanceSystems(state,deadline,context(state));
+    else if(systemAt===deadline){systemsModule.advanceSystems(state,deadline,context(state));if(state.tacticalVersion===1)runtime(state).invalidateRoutes?.(state,deadline,record);}
     else if(deviceAt===deadline)investigationModule.advanceInvestigation(state,deadline,context(state));
     else break;
     if(isBeacon(state)){refreshKnowledge(state,deadline);captureReplaySnapshot(state,deadline);}
@@ -172,7 +172,7 @@ export function createMatch({id,mode='human',humanPlayerId,now=Date.now(),seed,c
   if(world)(systems?spatialFor(state):worldEngine).initialize(state,now);
   if(systems){
     if(!beaconRules||typeof beaconRules!=='object'||Array.isArray(beaconRules))throw new TypeError('Invalid beacon rules');
-    const values={...DEFAULT_BEACON_RULES};for(const [key,value]of Object.entries(beaconRules)){if(!Object.hasOwn(values,key)||!Number.isSafeInteger(value)||value<1||value>86400000)throw new TypeError('Invalid beacon rule');values[key]=value;}
+    const values={...(tactical?DEFAULT_TACTICAL_BEACON_RULES:DEFAULT_BEACON_RULES)};for(const [key,value]of Object.entries(beaconRules)){if(!Object.hasOwn(values,key)||!Number.isSafeInteger(value)||value<1||value>86400000)throw new TypeError('Invalid beacon rule');values[key]=value;}
     if(values.visionRadius<80||values.visionRadius>900||values.saboteurVisionRadius<80||values.saboteurVisionRadius>900||values.lightsVisionRadius>values.visionRadius||values.observationLimit>64)throw new TypeError('Invalid vision or observation limit');
     state.schemaVersion=tactical?4:3;state.worldVersion=1;state.beaconVersion=1;state.configuration=structuredClone(setup);state.beaconRules=values;state.deathPolicy='redistribute-at-muster';state.abilities={};state.replaySnapshots=[];
     systemsModule.initializeSystems(state,now);investigationModule.initializeInvestigation(state,now);refreshKnowledge(state,now);captureReplaySnapshot(state,now);

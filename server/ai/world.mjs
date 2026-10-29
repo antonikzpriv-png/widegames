@@ -1,3 +1,4 @@
+import {getMap} from '../../shared/maps/index.mjs';
 import { CHARACTERS, ROOM_LAYOUT } from '../../shared/contracts.mjs';
 import { WORLD, WORLD_STATIONS, WORLD_BELL, distance, findWorldPath, canSeeWorldPoint } from '../../shared/world.mjs';
 
@@ -10,7 +11,7 @@ const at = (view, target, radius) => point(target) && distance(view.self.positio
 
 /** Only coordinates already visible in this actor's safe view are usable. */
 export function visibleWorldPlayer(view, player) {
-  return player.id !== view.self.id && player.alive && point(player.position) && canSeeWorldPoint(view.self.position, player.position);
+  return player.id !== view.self.id && player.alive===true && point(player.position) && (view.beaconVersion===1||canSeeWorldPoint(view.self.position, player.position));
 }
 
 function pathLength(start, target) {
@@ -109,17 +110,22 @@ export function worldCandidates(view, memory, suspect) {
 
 /** Group1 adaptation: local goals consume only server-permitted observations. */
 function beaconCandidates(view,memory,suspect){
+ const map=getMap(view.map),{WORLD,WORLD_STATIONS,WORLD_BELL,distance}=map.geometry,ROOM_LAYOUT=map.roomLayout;
  const self=view.self,allowed=new Set(view.availableActions??[]),wait=()=>allowed.has('wait')?[{type:'wait'}]:[];
  if(!point(self?.position)||self.transit)return wait();
  const controls=(view.interactions??[]).filter(a=>a.enabled),proposal=d=>({type:d.type,...d.fields});
- const navigate=target=>{const a=localNavigationIntent(view,target);return a.type==='wait'?wait():[a];};
+ const navigate=target=>{const a=localNavigationIntent(view,target);if(a.type==='wait'&&view.tacticalVersion===1){const door=controls.find(h=>h.type==='systemRepair'&&h.fields.systemId==='door');if(door)return[proposal(door)];}return a.type==='wait'?wait():[a];};
+ if(view.tacticalVersion===1)memory.tacticalStartedAt??=view.serverNow;
+ if(view.investigation?.session?.status==='reading'&&!view.sabotage?.active)return wait();
  const bodies=(view.events??[]).filter(e=>e.type==='body'&&!e.reported&&point(e.position));
- for(const body of bodies){if(allowed.has('report')&&distance(self.position,body.position)<=WORLD.reportRadius)return [{type:'report',bodyId:body.bodyId}];if(distance(self.position,body.position)>WORLD.reportRadius)return navigate(body.position);}
+ const report=controls.find(h=>h.type==='report');if(report)return[proposal(report)];
+ for(const body of bodies)if(distance(self.position,body.position)>WORLD.reportRadius)return navigate(body.position);
  if(self.role==='crew'){
   const repair=controls.find(a=>a.type==='systemRepair');if(repair)return [proposal(repair)];
   const goal=localGoals.select(view,memory);
   if(goal?.goalId==='repair'){memory.goal={id:goal.goalId,at:view.serverNow};return navigate(goal.target);}
-  if(allowed.has('task')&&ready(view,'taskAt')){const task=self.tasks.find(t=>!t.completed&&at(view,WORLD_STATIONS[t.roomId],WORLD.interactionRadius));if(task)return [{type:'task',taskId:task.id}];}
+  const task=controls.find(h=>h.type==='task');if(task&&ready(view,'taskAt'))return [proposal(task)];
+  if(goal?.goalId==='investigate'){const device=controls.find(h=>h.type==='investigate'&&h.fields.deviceId===goal.deviceId);if(device){memory.lastTerminalAt=view.serverNow;memory.tacticalReads=(memory.tacticalReads??0)+1;return [proposal(device)];}return navigate(goal.target);}
   if(!view.sabotage?.active&&suspect!=='skip'&&ready(view,'meetingAt')&&self.meetingsRemaining>0){if(allowed.has('meeting'))return [{type:'meeting'}];return navigate(WORLD_BELL);}
   if(goal){memory.goal={id:goal.goalId,at:view.serverNow};return navigate(goal.target);}
  }else{
@@ -127,6 +133,7 @@ function beaconCandidates(view,memory,suspect){
   if(allowed.has('eliminate')&&ready(view,'killAt')){const target=controls.find(a=>a.type==='eliminate');if(target)return [proposal(target)];}
   const sabotage=controls.filter(a=>a.type==='systemSabotage');
   if(sabotage.length){const order=['lights','communications','door','flood','power'],kind=order[(memory.beaconSabotages??0)%order.length],chosen=sabotage.find(a=>a.fields.kind===kind)??sabotage[0];memory.beaconSabotages=(memory.beaconSabotages??0)+1;return [proposal(chosen)];}
+  if(view.tacticalVersion===1&&(memory.tacticalPassages??0)<2){const passage=controls.filter(h=>h.type==='vent').sort((a,b)=>a.id.localeCompare(b.id))[0];if(passage){memory.tacticalPassages=(memory.tacticalPassages??0)+1;return[proposal(passage)];}}
   if(ready(view,'killAt')&&targets.length){targets.sort((a,b)=>distance(self.position,a.position)-distance(self.position,b.position));return navigate(targets[0].position);}
  }
  if(self.moving)return wait();
