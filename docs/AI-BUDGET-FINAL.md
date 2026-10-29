@@ -4,6 +4,8 @@ Reviewed 2026-10-29. Assigned changes are only this report and `tests/ai-budget-
 
 ## Decision
 
+Historical exact-pin receipt. Its remaining write/restore-size finding is corrected and independently qualified atc77f283 in [budget size closure](AI-BUDGET-SIZE-CLOSURE.md).
+
 The previous canonical-restoration defect is **fixed at the reviewed v2 pin**. The old c38 `KNOWN DEFECT` test remains unchanged as a historical control, and the new suite demonstrates successful v1 raw/canonical migration, v2 writes and repeated restart with the same 1,112-entry tiny-input case.
 
 **One separate concrete availability finding remains in the tested scope:** valid reservations can write a ledger exceeding the module's own restore byte limit. This is fail-closed startup failure, not an overspend. A passing reproducer test is not an approval of that behavior.

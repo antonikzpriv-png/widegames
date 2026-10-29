@@ -4,6 +4,8 @@ This closes the two AI findings recorded in `ENGINE-INTEGRATION-REVIEW.md` for i
 
 ## Pins and isolation
 
+Historical exact-pin receipt. The repair-event finding below is corrected and independently closed in [final privacy review](ENGINE-FINAL-PRIVACY.md).
+
 | Purpose | Exact commit |
 | --- | --- |
 | Original negative control | `414e77fca2c79e239cf60630b134adfd6b062acd` |

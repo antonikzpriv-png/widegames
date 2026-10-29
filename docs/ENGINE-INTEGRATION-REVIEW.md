@@ -6,6 +6,8 @@ The engine worktree remains based on `19aa06d0199c0ee3fb752248ab4bb43d1bd68a30`.
 
 ## Findings for the manager
 
+Historical exact-pin findings. The AI witness/persona corrections and subsequent privacy closure are qualified in [AI closure](ENGINE-AI-CLOSURE.md) and [final privacy review](ENGINE-FINAL-PRIVACY.md).
+
 **Medium: direct eyewitness evidence can lose to accumulated inferred suspicion.** At AI revision 414e77f, `server/ai/demo.mjs:73` records a real witness event as suspicion score 3. Proximity inference at line 84 can independently reach the same score for an innocent keeper. `suspect()` at line 39 resolves equal scores by ascending player ID, with no distinction for eyewitness evidence. The actual killer can therefore lose the tie to an innocent keeper even though the actor directly saw the elimination.
 
 The independent test `characterize witness counterexample: inferred suspicion ties direct evidence and chooses innocent` is a complete legal-action reproduction using only engine safe views for the AI observation policy:

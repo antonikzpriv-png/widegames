@@ -4,6 +4,8 @@ Review date: 2026-10-29. Scope: read-only review of manager/frontend implementat
 
 ## Decision
 
+Historical receipt for its pinned revisions. Later fixes and the final positive qualification are in [budget size closure](AI-BUDGET-SIZE-CLOSURE.md); its old open finding is not current.
+
 The original negative-total bypass is fixed. Canonical integer accounting and file-sync-before-rename controls pass the exercised checks. **Closure remains qualified by one reproduced availability defect below.** The budget module still requires a single instance under the transport storage lock. File/directory durability under OS, power or storage failure is not approved by this audit.
 
 ## Exact qualified source pins
