@@ -187,3 +187,49 @@ git diff --check
 ~~~
 
 Evidence: _artifacts/tactical-map-scene-2015618-focused.txt and tactical-map-scene-51b6cf4-historical.txt, plus preserved initial assertion failure and both manifests. Limits: canvas-call geometry checks, not visual pixel/browser/Chrome qualification. Manager owns browser/full-suite integration. Only this test and receipt changed; no public/runtime/other-worktree edits, providers, installs, main/push/deploy. Production qualification remains unstarted pending its separate assignment.
+
+## Final production-only tactical qualification: exactaec5695
+
+**25/25 production checks passed**, no blocker found in this bounded qualification. Exact frozen manager source **aec5695236acf4e51ec87f2c27425a29573003d3**, including strict historical-map validation. Only standalone tests/tactical-map-production-review.mjs (outside ordinary *.test.mjs discovery) and this receipt changed. This is packaging/real-main qualification, not new feature work or independent approval of Core physics.
+
+Fresh ignored archive: _artifacts/tactical-production-aec5695.tar, exact Git PAX commit comment verified; SHA256 **eb60662bddee43e03479fcf5d9d691e8c9cc451086c74f23ecca62d5fa1d5d92**. Executable snapshot _artifacts/tactical-production-aec5695 contains **285** canonical raw Git blobs, checked against Git blob IDs during extraction and against per-file SHA256 manifest before/after testing. No source overlays, runtime edits, old checkout dependency or archive mutations. Counts are derived from this manifest, never old qualification constants: **72 runtime files,43 public/shared assets,150 local module edges,5 additional literal browser asset references**. Every deployed local reference resolves inside server/public/shared, and every actual public/shared file was fetched and compared as raw bytes, including BOM-bearing modules, immutable map registry/Annex fixtures, annex-art and feature/world styles. All source hashes verify again after receipt preparation.
+
+Environment: Windows, Nodev24.20.0, offline npm production install using D:/Widegames-work/npm-cache and TEMP/TMP D:/Widegames-work/temp. Exactly ws8.22.0 installed/resolves within the archive; installed ledger and physical non-dot package directory contain only ws. Puppeteer and puppeteer-core are absent/unresolvable. Normal loadConfig defaults remain port3000/host127.0.0.1, worldMode/systemsMode/tacticalMode true, initial map beacon. Real main honors the fixture's matching loopback PORT/PUBLIC_ORIGIN. package start uses server/main.mjs, tactical browser script points to its actual file, ordinary test glob excludes this standalone harness. Docker source retains Node24, production-only install and recursive server/shared/public COPY groups, EXPOSE3000 and actual main CMD. Docker was not executed. Updater is N/A for this web service; no installer/update behavior was introduced or qualified.
+
+The harness starts the actual unmodified server/main.mjs twice with NODE_ENV production, real clock, real loadConfig/createGameServer/store/AI, normal tactical mode flags (no schema/runtime/engine injection), demo provider and zero call/token/cost/daily budgets. Only an allowlisted basic process environment and synthetic unused credential marker are supplied, never live account credentials. Before importing main, the Windows IPC wrapper blocks/counts all child global fetch calls; parent HTTP calls target only its own loopback server. Real local demo may run; no match completion or model behavior is implied.
+
+Test fixture preparation uses actual createRoomStore/createDailyBudget APIs while holding the isolated data lock. It reserves0.01 under fixture:uncertain:production-no-send, explicitly a **synthetic conservative uncertain-reservation fixture; no provider send ever occurred**. This tests retention under later zero-budget main processes, not a claimed live uncertain send. Three legacy room files use actual schema1/2/3 constructors, accepted wait receipts and a truthful1ms maximum-duration pause with no winner; these paused compatibility fixtures are sampled, not historical user data or active legacy gameplay. Their files are preserved byte-for-byte through both real main startups/shutdowns.
+
+Passed real runtime boundaries:
+
+- Health readiness, isolated service.lock ownership and fresh token on restart. Both actual mains retain their one registered SIGTERM handler. Windows IPC invokes process.emit('SIGTERM') and disconnects; normal main/game.close logic closes sockets/timers/storage. Both children exit naturally code0/signalnull and release lock/recovery claim, no forced kill.
+- Both beacon and stormbreak-annex selected through authenticated pre-start settings. Beacon fixture explicitly toggles to Annex then back, rather than merely accepting its default. Original selection retry is idempotent before start and after restart; persisted revision/receipt ledger remains exact. Spectator/missing identity and reused-ID/different-content requests reject; a new setting after start rejects.
+- Both actual normal-default starts create persisted room schema3/match schema4 with worldVersion1/beaconVersion1/tacticalVersion1, exact map/preset and real private seat. Safe owner/spectator HTTP and WebSocket snapshots have own role only before end, explicit knowledge statuses, no raw state/request/identity/memory/recipient/contributor payloads. Returned remote positions are checked against the projected vision origin/radius and solid/door LOS using only public fixtures and permitted own/public view fields. Spectators retain fixed map viewpoint, no private notes/session/observations/acting hints/transit/cooldowns. Hint fields match public action contracts.
+- Legitimate seq1 movement and seq2 zero cleanup physically move/stop the human within server lease/speed; note action records its actual prior own location. Private field notes are absent from spectator. Foreign-origin steering and spectator action authority reject. Post-restart note/input retries keep note/ability state, stopped position, sequence and human request count unchanged; accepted original note receipt was retained.
+- Eight authenticated owner/spectator socket connections across both mains/maps are view-checked. Actual WS upgrades reject missing cookie, cross-room cookie and foreign origin; cross-room HTTP fails. No raw credentials or synthetic marker appears in HTTP/WS bodies or child stdout/stderr. All child stderr is empty.
+- Every actual43 public/shared asset returns exact bytes and expected CSS/JS MIME, CSP and nosniff. Server/AI/investigation source, package/lock/.env/dependencies/data/artifact paths and encoded path traversal return404. Foreign mutation origin returns403. No browser/CDN is used.
+- After graceful first stop, both schema4 checkpoints retain exact map, settings, human identity, private note, inputSeq2 and accepted action-ID receipt with no quarantine/temp residue. Restart uses the same DATA_DIR and original cookies, restores original role/seat/map/input position/notes and settings revision, and preserves exact identity/settings ledgers and ability state after retries. The labeled daily ledger and all three legacy files remain byte-identical after the second stop.
+
+Successful actual run: **25 checks,6842ms**, child PIDs20444/24400 both exit0/signalnull. **0 external provider fetch attempts,0 forced kills,0 socket privacy errors**. Main process count capped at2; global fixture deadline90s, startup10s, graceful stop8s, HTTP/WS4s, and bounded manifest/asset/request loops. Each harness attempt receives a fresh evidence/private-data directory; reports persist on failure. No original/manager data directory is touched.
+
+Preserved initial failure: the first attempt stopped after3 preflight checks, before launching any child, because this new harness interpreted the HTML home-link '/' as a physical public/ directory. Corrected the test resolver to match actual serveStatic('/') -> public/index.html. No product assertion weakened or source changed. First failure: _artifacts/tactical-production-aec5695-run-u73Iuu/report.json and tactical-production-aec5695-first-run.txt. Successful second attempt: **_artifacts/tactical-production-aec5695-run-j3fwBz/report.json**, private data beneath that same run directory; console evidence tactical-production-aec5695-second-run.txt. All prior production/audit evidence remains intact.
+
+Exact commands, install cwd _artifacts/tactical-production-aec5695:
+
+~~~powershell
+$env:TEMP='D:/Widegames-work/temp'
+$env:TMP=$env:TEMP
+$env:npm_config_cache='D:/Widegames-work/npm-cache'
+npm ci --omit=dev --ignore-scripts --no-audit --no-fund --offline --cache D:/Widegames-work/npm-cache
+~~~
+
+Then cwd D:/Widegames-work/tactical-maps-builder-20261029:
+
+~~~powershell
+$env:TACTICAL_PRODUCTION_REVIEW_ROOT=(Join-Path (Get-Location) '_artifacts/tactical-production-aec5695')
+node --check tests/tactical-map-production-review.mjs
+node tests/tactical-map-production-review.mjs
+git diff --check
+~~~
+
+Limits: production-only local Windows process/HTTP/WS/file restart and source graph, not Docker execution/Linux/hosted deployment, OS-delivered POSIX signal, ACL/power-loss/crash recovery, browser visual/audio/input, complete matches/full unit suite or original live model adapter/provider qualification. Legacy samples are paused synthetic checkpoints. The existing live-provider adapter was never invoked. No Chrome, Docker, paid/provider calls, broad suite, npm updates, root/runtime/shared/public/other-worktree edits, main/push/deploy or updater work occurred. Manager owns integration/publication; this receipt does not deploy anything.
