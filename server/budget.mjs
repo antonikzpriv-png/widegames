@@ -19,10 +19,11 @@ export async function createDailyBudget({directory,maxCostUsd=5,now=Date.now}){
  async function reserve({id,amount}){
   const run=queue.catch(()=>{}).then(async()=>{
    if(typeof id!=='string'||!/^[A-Za-z0-9:._-]{1,180}$/.test(id)||!Number.isFinite(amount)||amount<0||amount>100)throw new Error('Invalid AI reservation');
+   if(day()<ledger.day)throw new Error('Server clock precedes persisted AI budget day');
    const next=ledger.day===day()?structuredClone(ledger):{version:1,day:day(),reservations:{},total:0};
    if(Object.hasOwn(next.reservations,id)){if(next.reservations[id]!==amount)throw new Error('AI reservation ID conflict');return status();}
    if(Object.keys(next.reservations).length>=10000||next.total+amount>maxCostUsd+1e-9)throw new Error('Deployment daily AI budget exhausted');
-   next.reservations[id]=amount;next.total+=amount;
+   Object.defineProperty(next.reservations,id,{value:amount,enumerable:true,writable:true,configurable:true});next.total+=amount;
    const temporary=file+'.'+randomUUID()+'.tmp';
    try{await writeFile(temporary,JSON.stringify(next),{flag:'wx',mode:0o600});await rename(temporary,file);}catch(error){await unlink(temporary).catch(()=>{});throw error;}
    ledger=next;return status();

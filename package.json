@@ -4,12 +4,19 @@
   "private": true,
   "type": "module",
   "description": "A playable AI social deduction game aboard a storm beacon.",
-  "engines": {"node": ">=22.13.0"},
+  "engines": {
+    "node": ">=22.13.0"
+  },
   "scripts": {
     "start": "node server/main.mjs",
     "dev": "node --watch server/main.mjs",
     "test": "node --test tests/*.test.mjs",
     "check": "node scripts/check.mjs"
   },
-  "dependencies": {"ws": "8.22.0"}
+  "dependencies": {
+    "ws": "8.22.0"
+  },
+  "devDependencies": {
+    "puppeteer-core": "25.16.0"
+  }
 }
