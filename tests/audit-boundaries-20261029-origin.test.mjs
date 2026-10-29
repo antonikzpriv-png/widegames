@@ -1,15 +1,16 @@
-﻿import test from 'node:test';
+import test from 'node:test';
 import assert from 'node:assert/strict';
 import {mkdir,mkdtemp,lstat,readdir,readFile,writeFile,rm} from 'node:fs/promises';
 import path from 'node:path';
 import http from 'node:http';
+import {fileURLToPath} from 'node:url';
 import {validatePublicOrigin} from '../server/origin.mjs';
 import {loadConfig} from '../server/config.mjs';
 import {createGameServer} from '../server/transport.mjs';
 
-const temporary='D:/Widegames-work/temp';
+const temporary=fileURLToPath(new URL('../_artifacts/test-temp/',import.meta.url));
 const invalidOrigins=[
-  null,undefined,'',false,{},'null','file:///D:/origin-fixture','data:text/plain,origin-fixture','javascript:void(0)','ftp://example.invalid','ws://example.invalid',
+  null,undefined,'',false,{},'null','file:///origin-fixture','data:text/plain,origin-fixture','javascript:void(0)','ftp://example.invalid','ws://example.invalid',
   'not-a-url','//example.invalid','https:example.invalid','https:///example.invalid','http://','https://example.invalid:65536',
   'https://origin-user:origin-secret@example.invalid','https://origin-user@example.invalid','https://:origin-secret@example.invalid','https://@example.invalid',
   'https://example.invalid?origin-secret','https://example.invalid/?','https://example.invalid#origin-secret','https://example.invalid/#',

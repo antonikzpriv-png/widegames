@@ -117,3 +117,41 @@ git diff --check
 ```
 
 Observed: **25/25 passed, zero failures/skips/todos**, actual test exit **0**, 5.094 seconds. Both previously failing assertions pass; the existing independent provider/mock budget/cancellation checks and explicitly labelled transport self-checks still pass. Syntax/diff checks pass. Reviewed diff scope: the shared helper, config wiring, transport import/origin initialization only, owned tests and this appended report. `server/main.mjs`, budget/provider/engine/static/public/root files are untouched. No deployment, paid/live provider call, browser or main-branch change occurred. Docker availability remains unqualified/unavailable as recorded above. Core must independently assess the exact correction commit; these are owner results, not worker self-approval.
+
+## Audit test portability — 2026-10-29
+
+Only the owned audit test files and this appended report change in this pass. Runtime/provider/config/shared sources are unchanged from correction commit `5c698b92c1c465830d5ad52f0383072536f12d14`. The original failing audit at `0842a00`, its D: raw logs, and the successful original production-only/correction evidence above remain preserved; the commands and fixture locations below supersede their platform-specific setup for future ordinary runs.
+
+All generated audit fixtures now derive their root from each test's checkout URL and live in ignored `_artifacts/test-temp`. This works independently of the checkout drive/name and current working directory. Child TEMP, TMP and TMPDIR point there too. Cleanup still verifies the resolved target is inside that owned directory. The fake opaque URL fixtures no longer contain a drive-specific path. Fixture env-file DATA_DIR is quoted so checkout paths containing spaces or `#` remain intact.
+
+Child processes preserve the inherited platform/CI environment, including HOME, USERPROFILE, PATH, platform-specific case spelling and loader settings. App/provider/config variables are removed case-insensitively before loading the synthetic demo env file, so inherited real credentials or production data-directory settings cannot override it. The npm cache is no longer fixed: the opt-in probe honors the normal npm environment/configuration, or `AUDIT_NPM_CACHE` supplies an explicit override. npm CLI discovery uses the inherited `npm_execpath` when available, standard Windows/POSIX installation locations otherwise, with `AUDIT_NPM_CLI` for nonstandard installations.
+
+The existing positive CLI canonical-origin/health/static/key-exclusion/cleanup assertions have been split into an ordinary test that uses the already installed checkout dependencies. Every ordinary config, origin, provider, static, startup and cap assertion still runs. Only the additional isolated production **install** probe is skipped unless `AUDIT_PRODUCTION_ONLY=1`; it remains offline and therefore needs an appropriate prewarmed cache when explicitly requested. Its local dependency check inspects the staged `node_modules` directory rather than assuming `require.resolve` cannot see ancestor checkout dev dependencies.
+
+Ordinary targeted invocation (no npm install or prewarmed cache needed beyond the normal checkout dependency installation):
+
+```powershell
+Remove-Item Env:AUDIT_PRODUCTION_ONLY -ErrorAction SilentlyContinue
+node --test --test-concurrency=2 tests/audit-boundaries-20261029-config-static.test.mjs tests/audit-boundaries-20261029-origin.test.mjs tests/audit-boundaries-20261029-provider.test.mjs
+```
+
+Observed locally: **26 total / 25 passed / one explicit production-install skip / zero failures**, test exit **0**, 4.705 seconds. An explicitly nonexistent checkout-local `AUDIT_NPM_CACHE` was used for this run and remained uncreated, demonstrating that ordinary checks did not invoke npm or need the old D: cache. All three owned test files passed `node --check`; `git diff --check` passed. The fixture/evidence directory is ignored by the existing `.gitignore`; no root ignore/config changes were made.
+
+Exact separately executed D: opt-in command, from `D:/Widegames-work/audit-boundaries-20261029`:
+
+```powershell
+$env:AUDIT_PRODUCTION_ONLY='1'
+$env:AUDIT_NPM_CACHE='D:/Widegames-work/npm-cache'
+node --test --test-name-pattern='opt-in production-only offline npm install' tests/audit-boundaries-20261029-config-static.test.mjs
+Remove-Item Env:AUDIT_PRODUCTION_ONLY -ErrorAction SilentlyContinue
+Remove-Item Env:AUDIT_NPM_CACHE -ErrorAction SilentlyContinue
+```
+
+Observed: **one selected production probe passed / zero failures/skips**, test exit **0**, 3.862 seconds. The staged fixture installed production dependencies offline, contained only `ws`, lacked a local Puppeteer package and booted/closed the actual CLI. For POSIX CI the corresponding opt-in form is `AUDIT_PRODUCTION_ONLY=1 AUDIT_NPM_CACHE=/path/to/prewarmed/cache node --test --test-name-pattern='opt-in production-only offline npm install' tests/audit-boundaries-20261029-config-static.test.mjs`; ordinary `npm test` requires no such flag.
+
+New ignored evidence, relative to this checkout:
+
+- `_artifacts/test-temp/audit-boundaries-portable-ordinary-d63c744d12f34a0982aa8e9466aa9a19.txt`
+- `_artifacts/test-temp/audit-boundaries-portable-production-4734c827b25d4810954840d11cc73818.txt`
+
+Actual execution remains Windows/Node24.20.0; a Linux runtime/hosted CI execution was not performed here. Docker remains unavailable (`ENOENT`); no container, Chrome, paid/live provider, deployment or main-branch operation occurred. No earlier negative evidence was deleted or rewritten. This is an owner portability receipt, pending coordinator integration and independent review.
