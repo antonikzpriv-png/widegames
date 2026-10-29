@@ -124,7 +124,7 @@ function beaconCandidates(view,memory,suspect){
   if(goal){memory.goal={id:goal.goalId,at:view.serverNow};return navigate(goal.target);}
  }else{
   const targets=ordered((view.players??[]).filter(p=>p.id!==self.id&&p.alive&&point(p.position)));
-  if(allowed.has('eliminate')&&ready(view,'killAt')){const target=targets.find(p=>distance(self.position,p.position)<=WORLD.killRadius);if(target)return [{type:'eliminate',targetId:target.id}];}
+  if(allowed.has('eliminate')&&ready(view,'killAt')){const target=controls.find(a=>a.type==='eliminate');if(target)return [proposal(target)];}
   const sabotage=controls.filter(a=>a.type==='systemSabotage');
   if(sabotage.length){const order=['lights','communications','door','flood','power'],kind=order[(memory.beaconSabotages??0)%order.length],chosen=sabotage.find(a=>a.fields.kind===kind)??sabotage[0];memory.beaconSabotages=(memory.beaconSabotages??0)+1;return [proposal(chosen)];}
   if(ready(view,'killAt')&&targets.length){targets.sort((a,b)=>distance(self.position,a.position)-distance(self.position,b.position));return navigate(targets[0].position);}
