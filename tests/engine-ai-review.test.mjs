@@ -80,10 +80,16 @@ test.describe('independent current AI closure',{skip:!root},()=>{
    const inspect=value=>{if(!value||typeof value!=='object')return;for(const [key,item]of Object.entries(value)){assert.equal(['role','roles','action','visibleTo','requests','replay','repairers'].includes(key),false,`Hidden timeline key ${key}`);inspect(item);}};inspect(view.events);
   }
  });
- test('unseen critical repair actor stays private from a remote observer',{skip:process.env.ENGINE_AI_CHECK_REPAIR_PRIVACY!=='1'},()=>{
+ test('unseen critical repair actor stays private in remote/spectator views and attributed only in ended replay',()=>{
   const f=fixture(api);f.act('p6','sabotage',{},65000);f.act('p1','move',{roomId:'workshop'},65000);f.act('p1','move',{roomId:'engine'},65001);f.act('p1','repair',{},65001);
   const remote=f.view('p2',65001);assert.equal(remote.self.roomId,'bridge');assert.equal(remote.players.find(p=>p.id==='p1').roomId,null);assert.equal(remote.sabotage.roomId,'engine');assert.equal(remote.sabotage.repairsCompleted,1);
-  assert.equal(remote.events.some(e=>e.type==='repair'&&e.playerId==='p1'),false,'Unseen crew-only repair broadcasts hidden actor identity and therefore role/location');
+  for(const view of [remote,f.view(null,65001)]){
+   const repairs=view.events.filter(e=>e.type==='repair');assert.equal(repairs.length,1);
+   assert.deepEqual(Object.keys(repairs[0]).sort(),['at','id','repairsCompleted','type'],'Unseen crew-only repair broadcasts hidden actor identity and therefore role/location');
+   assert.equal(repairs[0].repairsCompleted,1);assert.equal(view.players.some(p=>Object.hasOwn(p,'role')),false);
+  }
+  assert.equal(api.engine.getReplay(f.state),null);f.tick(140000);assert.equal(f.state.phase,'ended');
+  const replay=api.engine.getReplay(f.state),repair=replay.find(e=>e.type==='action'&&e.action.type==='repair');assert.equal(repair.playerId,'p1');assert.equal(repair.action.type,'repair');
  });
  test('model-supplied outcome fields reject and public winner claims cannot end the engine',()=>{
   const f=fixture(api);f.act('p2','meeting',{},35000);
