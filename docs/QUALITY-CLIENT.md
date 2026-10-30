@@ -181,3 +181,30 @@ $env:QUALITY_CLIENT_REPLAY2_ROOT='D:/Widegames-work/ship-quality-main-ui-2026103
 node --test tests/quality-client-main-replay2.test.mjs
 # Expected at exact Core1c:11 pass /2 fail. Keep both positive assertions for Core closure.
 ```
+
+
+## Ward target closure on current coordinator foundation
+
+Separate branch `codex/ship-quality-ward-target-20261030`, worktree `D:/Widegames-work/ship-quality-ward-ui-20261030`, starts from exact coordinator `f465b645c8f4a8a280786a84a578664d747dee17`. Previous worktrees/branches remain preserved, including owner self-check `fa1e3bec4f31cc4501278e6ff454e9fee3e9d9f4` and its original frozen f9 red evidence. No root/server/shared/Core/replay/task/ghost runtime changes were made. The only runtime change is public/world/experience.mjs ability selection.
+
+Beacon Ward options now derive exclusively from exact enabled protect descriptors, rather than nearby roster positions or a general availableActions flag. A new owner context selects the first permitted descriptor (current server order is self first) and synchronizes the select's actual value. Choosing another keeper changes both the action label/context and the exact descriptor selected at activation. Submitted fields are cloned from that matching current descriptor; no target permission is synthesized or overridden. If a chosen permission disappears, the select shows its empty placeholder and WARD becomes unavailable. A returning permission does not silently change that blank selection; the player deliberately chooses again. Pending/disconnected controls remain disabled; option nodes/selection/focus survive ordinary updates. Legacy schema2 retains the original selected-target capability path.
+
+Evidence `_artifacts/ward-target-closure-20261030`: unchanged-red.log reproduces the original positive counterexample on f465 (selected p2, applied p4). unchanged-first-green.log records that exact original assertion passing after the fix. ward-boundaries.log:8 pass/0 fail/0 skip, adding default/self synchronization, revoked permission ABA, absent-descriptor fail-closed behavior despite nearby roster/availableActions, reordered permissions with node/focus retention, pending/disconnect/reconnect, legacy schema2 and disposal. The permission-removal/return projections are explicitly adversarial safe-view fixtures, not claimed HTTP workflows. Actual accepted Ward effects in the positive cases come from the genuine local engine.
+
+retained-ui.log:41 pass/0 fail/0 skip from the bounded current local files quality-client-main-integration, quality-client-regression-audit and quality-client-main-replay2. They preserve five old taskStep panels, six new station kinds, real map2/Annex/custom-roster replay2, ghost station/chat ownership, cancellation, stale feedback, IME and touch/input lifetime controls. These overlap earlier qualification; they are not additional independent browser/full matches. sourcepins-before.json covers every public/server/shared MJS and post-run verification found no byte changes. closure-receipt.json records the actual base/candidate/source/test hashes. No environment override was needed; tests use this real integrated local checkout. Syntax/diff checks pass; no Chrome/native server/full suite/providers/main/push/deployment or production self-approval.
+
+```powershell
+$env:TEMP='D:/Widegames-work/temp'; $env:TMP=$env:TEMP
+node --test tests/quality-client-main-ward-selection.test.mjs
+node --test tests/quality-client-main-integration.test.mjs tests/quality-client-regression-audit.test.mjs tests/quality-client-main-replay2.test.mjs
+```
+
+### Existing Reviewer native screenshot inspection
+
+After module verification, the UI author read the actual native report/source manifest and eight real PNGs from `D:/Widegames-work/ship-quality-audit-20261030/_artifacts/quality-browser-final-f9b3215-8tFE9j`, without launching a browser or editing Reviewer files. Source pin is **f9b32151e4dfab4f2525cee067a9859cd1a27dff**, manifest SHA256 **ae0f3bd44a5cd33c7d73b451e1a127d7417bd9e45094ce9ea5075d8e38e2c25e**, verified against the manifest bytes. The report records19 passed scenarios and1 failed ghost/ability scenario (TypeError reading type in the runner at line224), with no product exception/console-error entries. This is the report's observed state, not a claimed successful complete native gate or a diagnosis that its runner failure is harmless.
+
+Sampled PNGs: desktop-beacon2-start, desktop-whole-map-fourteen-room-key, mobile390-walking, watch0-glyph-grid-320x740, watch0-glyph-grid-390x844, watch0-glyph-grid-844x390, mobile320-council-literal-message, landscape-council. Exact image/report hashes are in closure-receipt.json. Desktop room silhouettes/character outlines and the numbered14-room map key are readable; the390px world view keeps movement, task actions, sound, Systems and Exit separate. The390px glyph panel shows the target clue, all nine distinct symbol/name buttons, Verify and Close clearly.
+
+Concrete sampled limits: the320px glyph image is scrolled so the heading and beginning of the clue are clipped; the844x390 glyph image is scrolled to Verify/progress with its tile rows largely outside the current viewport. Close, Exit and sound remain visible. Both320px and landscape council captures put the heading/timer behind the persistent top bar; the320px feedback banner crosses the Send-message region. These are observed overlap/scroll-position readability issues at f9, not proof that every control is permanently unreachable. They need targeted native scroll/focus/rectangle assessment by the lease holder before claiming mobile council usability closed; no unrelated CSS redesign is included in this Ward fix.
+
+This image review is an owner self-review of existing headless Chrome/native-event evidence, not independent approval or a physical phone/audio-hardware result. It predates the Ward fix and latest door changes, so it cannot qualify this candidate's native selected-target behavior. Reviewer retains Chrome; no owned browser/server process remains.

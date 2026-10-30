@@ -11,7 +11,7 @@ import {createTaskPuzzle} from './puzzles.mjs';
 import {createCouncil,createResults} from './phases.mjs';
 import {restoreTrigger,trapDialog} from './dom.mjs';
 import {createBeaconPanel} from './beacon-panel.mjs';
-import {knowledge,criticalText,hasActionDescriptor,viewKey} from './beacon-model.mjs';
+import {knowledge,criticalText,hasActionDescriptor,actionDescriptors,viewKey} from './beacon-model.mjs';
 
 const make=(tag,className,text)=>{const e=document.createElement(tag);if(className)e.className=className;if(text!==undefined)e.textContent=text;return e;};
 const button=(text,fn,className='')=>{const b=make('button',className,text);b.type='button';b.addEventListener('click',fn);return b;};
@@ -37,6 +37,9 @@ export function createWorldExperience(host,callbacks,{mapResolver=getMap,motionF
  const spectator=make('section','lw-spectator'),spectatorTitle=make('strong','','AI WATCH'),spectatorFollow=make('select'),spectatorOverview=button('Overview',()=>{spectatorWide=!spectatorWide;spectatorOverview.setAttribute('aria-pressed',String(spectatorWide));},'lw-secondary'),spectatorInfo=make('p'),spectatorClaim=make('p');
  spectatorFollow.setAttribute('aria-label','Follow a keeper');const automatic=make('option','','All keepers');automatic.value='';spectatorFollow.append(automatic);const spectatorOptions=new Map();spectatorFollow.addEventListener('change',()=>{spectatorWide=!spectatorFollow.value;spectatorOverview.setAttribute('aria-pressed',String(spectatorWide));});spectatorOverview.setAttribute('aria-pressed','true');spectator.append(spectatorTitle,spectatorFollow,spectatorOverview,spectatorInfo,spectatorClaim);stage.append(spectator);let spectatorWide=true;
  const abilityInfo=make('p','lw-ability-info'),wardTarget=make('select','lw-ward-target');wardTarget.setAttribute('aria-label','Harbor Ward target');assignment.append(abilityInfo,wardTarget);const targetOptions=new Map();
+ const wardPlaceholder=make('option','','Choose a permitted keeper');wardPlaceholder.value='';wardPlaceholder.disabled=true;wardTarget.append(wardPlaceholder);
+ let wardOwner=null,wardChoice=null;
+ wardTarget.addEventListener('change',()=>{if(disposed)return;if(room?.game?.beaconVersion===1)wardChoice=wardTarget.value;render();});
  const taskRows=new Map();
  const critical=make('div','lw-critical');critical.hidden=true;critical.setAttribute('role','region');critical.setAttribute('aria-label','Critical countdown');
  const criticalTitle=make('strong','','BEACON FAILURE'),criticalClock=make('span','lw-critical-clock'),criticalInfo=make('span');criticalClock.setAttribute('role','timer');criticalClock.setAttribute('aria-label','Critical time remaining');critical.append(criticalTitle,criticalClock,criticalInfo);
@@ -122,9 +125,16 @@ export function createWorldExperience(host,callbacks,{mapResolver=getMap,motionF
  function setFeedback(message){if(disposed)return;localFeedback=String(message||'');setText(feedback,localFeedback);}
  async function request(fn){if(disposed||mapError||pending()||lobbyMap.pending)return;const generation=actionGeneration,key=actionKey(room);localPending++;render();try{return await fn();}catch(error){if(!disposed&&!document.hidden&&generation===actionGeneration&&key===actionKey(room)&&error?.name!=='AbortError')setFeedback(error?.message||'The request failed. Try again.');}finally{if(!disposed){localPending--;render();}}}
  function toggleMap(){mapOpen=!mapOpen;mapPane.hidden=!mapOpen;mapToggle.setAttribute('aria-expanded',String(mapOpen));if(mapOpen){mini.update(room,performance.now());mini.draw(performance.now(),{overview:true});}}
+ function enabledWardHints(){const game=room?.game;return game?.phase==='roam'&&game.self?.alive&&!game.systems?.selfTransit&&!game.self.transit?actionDescriptors(game).filter(h=>h.type==='protect'&&h.enabled===true):[];}
+ function actionContext(key){
+  const context=contexts(room?.game,world)[key];
+  if(key!=='protect'||room?.game?.beaconVersion!==1||!context)return context;
+  const descriptor=enabledWardHints().find(h=>h.fields.targetId===wardTarget.value);
+  return {...context,type:'protect',fields:descriptor?{...descriptor.fields}:{},enabled:context.enabled&&!!descriptor,label:descriptor?.label||context.label,hint:descriptor?context.hint:'Choose a currently permitted Ward target. The previous target may no longer be available.'};
+ }
  function activate(key){
   if(disposed||mapError||!room?.game||!roleScene.hidden||!overlay.hidden||beaconPanel?.open)return;
-  const context=contexts(room.game,world)[key];if(!context)return;if(key==='protect'&&room.game.beaconVersion!==1)context.fields.targetId=wardTarget.value||room.game.self.id;
+  const context=actionContext(key);if(!context)return;if(key==='protect'&&room.game.beaconVersion!==1)context.fields.targetId=wardTarget.value||room.game.self.id;
   if(!options.connected){setFeedback('Connection interrupted. Reconnect before acting.');return;}
   if(pending()||!context.enabled){setFeedback(pending()?'An action is still being sent.':context.hint);return;}
   input.stop();
@@ -158,9 +168,19 @@ export function createWorldExperience(host,callbacks,{mapResolver=getMap,motionF
   setText(help,game?.self?.ghost?'Ghost tasks: walk and use your remaining stations. Living keepers cannot see or hear you. Council, reports, repairs and abilities are unavailable.':canWalk?'WASD / arrows to walk · E use · R report · Q eliminate · M map':'Observe the watch · M map');
   const ability=game?.self?.ability;abilityInfo.hidden=!ability||!game.self.alive;wardTarget.hidden=ability?.type!=='ward'||!game?.self?.alive;
   setText(abilityInfo,ability?`${ability.type==='ward'?'Harbor Ward · one-hit shield, 8s, range 140':'Signal Echo · labeled distraction, 6s'} · ready in ${Math.max(0,Math.ceil((ability.readyAt-options.now)/1000))}s`:'');
-  const targets=(game?.players||[]).filter(p=>(game.beaconVersion===1?knowledge(game,p)==='alive':p.alive)&&point(p.position)&&distance(game.self?.position,p.position)<=140);const targetIds=new Set(targets.map(p=>p.id));
+  const beaconWard=game?.beaconVersion===1,hints=beaconWard?enabledWardHints():[];
+  const wardScope=equipmentOwner(room);if(wardOwner!==wardScope){wardOwner=wardScope;wardChoice=null;}
+  const targets=beaconWard?hints.map(h=>game.players.find(p=>p.id===h.fields.targetId)||{id:h.fields.targetId,name:h.fields.targetId}):(game?.players||[]).filter(p=>p.alive&&point(p.position)&&distance(game.self?.position,p.position)<=140),targetIds=new Set(targets.map(p=>p.id));
+  const previousChoice=wardTarget.value;
   for(const [id,option]of targetOptions)if(!targetIds.has(id)){option.remove();targetOptions.delete(id);}
-  for(const p of targets)if(!targetOptions.has(p.id)){const option=make('option','',p.name+(p.id===game.self.id?' (you)':''));option.value=p.id;targetOptions.set(p.id,option);wardTarget.append(option);}
+  for(const p of targets){let option=targetOptions.get(p.id);if(!option){option=make('option');option.value=p.id;targetOptions.set(p.id,option);wardTarget.append(option);}setText(option,p.name+(p.id===game.self?.id?' (you)':''));}
+  if(beaconWard){
+   if(wardChoice===null)wardChoice=hints[0]?.fields.targetId||'';
+   else if(!targetIds.has(wardChoice))wardChoice='';
+   // Revoked choices stay unselected until the player deliberately chooses again.
+   wardTarget.value=wardChoice;
+  }else wardTarget.value=targetIds.has(previousChoice)?previousChoice:targets[0]?.id||'';
+  wardTarget.disabled=pending()||!options.connected||!targets.length;
   const tasks=game?.self?.tasks||[],ids=new Set(tasks.map(t=>t.id));
   for(const [id,node]of taskRows)if(!ids.has(id)){node.remove();taskRows.delete(id);}
   for(const task of tasks){let li=taskRows.get(task.id);if(!li){li=make('li');taskRows.set(task.id,li);taskList.append(li);}setText(li,`${task.completed?'✓':'◇'} ${task.label} · ${roomName(task.roomId)}`);li.dataset.complete=String(task.completed);}
@@ -168,7 +188,7 @@ export function createWorldExperience(host,callbacks,{mapResolver=getMap,motionF
   critical.hidden=!game?.sabotage?.active;setText(criticalClock,clock(game?.sabotage?.deadlineAt,options.now));setText(criticalInfo,`${roomName(game?.sabotage?.roomId)} · ${game?.sabotage?.repairsCompleted||0}/${game?.sabotage?.repairsRequired||0} repairs · continues through council`);
   phaseClock.hidden=!game?.deadlineAt;setText(phaseClock,`${game?.phase==='roam'?'Watch':'Council'} ${clock(game?.deadlineAt,options.now)}`);
   const current=contexts(game,world);
-  for(const [key,b]of Object.entries(actionButtons)){const c=current[key]||{enabled:false,label:key,hint:'Unavailable in this watch.'};b.hidden=key==='protect'?(!game?.self?.alive||game.self.ability?.type!=='ward'):key==='decoy'?(!game?.self?.alive||game.self.ability?.type!=='echo'):(game?.self?.ghost&&key!=='use')||(['eliminate','sabotage'].includes(key)&&game?.self?.role!=='saboteur');b.setAttribute('aria-disabled',String(!c.enabled||pending()||!options.connected));b.title=c.enabled?c.label:c.hint;b.setAttribute('aria-label',`${c.label}${key==='use'?' (E / Space)':key==='report'?' (R)':key==='eliminate'?' (Q)':''}`);}
+  for(const [key,b]of Object.entries(actionButtons)){const c=(key==='protect'?actionContext(key):current[key])||{enabled:false,label:key,hint:'Unavailable in this watch.'};b.hidden=key==='protect'?(!game?.self?.alive||game.self.ability?.type!=='ward'):key==='decoy'?(!game?.self?.alive||game.self.ability?.type!=='echo'):(game?.self?.ghost&&key!=='use')||(['eliminate','sabotage'].includes(key)&&game?.self?.role!=='saboteur');b.setAttribute('aria-disabled',String(!c.enabled||pending()||!options.connected));b.title=c.enabled?c.label:c.hint;b.setAttribute('aria-label',`${c.label}${key==='use'?' (E / Space)':key==='report'?' (R)':key==='eliminate'?' (Q)':''}`);}
   canvas.setAttribute('aria-label',isLobby?`${keepers.length} raincoat keepers gathered on ${selectedMap.id==='beacon'?'the storm beacon':selectedMap.name}.`:`${roomName(game?.self?.roomId)}. Visible keepers: ${visiblePlayers(game).map(p=>p.name).join(', ')||'none'}. ${canWalk?'Use keyboard or click the deck to walk.':'Observation only. Open the map to view the platform.'}`);
   if(puzzle&&!validTaskSession(taskSession,room,world)){const old=puzzle,stationFocus=old.node.className.split(' ').includes('lw-station-modal')&&old.node.contains(document.activeElement);puzzle=null;old.dispose();const completed=game?.matchId===taskSession?.matchId&&game?.self?.tasks?.some(task=>task.id===taskSession?.taskId&&task.completed);setFeedback(completed?'Task complete.':'Station closed: the watch state or your location changed.');taskSession=null;if(stationFocus&&completed&&game.phase==='roam'&&!document.hidden)canvas.focus();}
   if(puzzle?.update){const currentTask=game?.self?.tasks?.find(t=>t.id===taskSession?.taskId);if(currentTask)puzzle.update(currentTask,{pending:pending(),connected:options.connected});}
