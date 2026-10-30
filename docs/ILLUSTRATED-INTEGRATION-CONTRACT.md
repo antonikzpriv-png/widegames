@@ -28,3 +28,8 @@ Replay v1 records canonical map string plus optional mapRevision2. Replay v2 rem
 mapReference(room) emits legacy {mapId,revision} or existing exact .map. Normalize presentation only with resolved references; do not reinterpret mapId:beacon,mapRevision2 as tactical Beacon2. Include namespace in leases, samples and replay identity. Render main's interior-art for illustrated geometry while retaining quality tactical art and bounded terrain caches. Source shape geometry governs walkability. Keep private owner inspector, unknown public information, ghost/task controls, Ward, council and lifecycle guards.
 
 Coordinator owns shared world/map registry, root configuration/docs and scripts. Core owns engine/replay/AI revision adaptation. Integrations owns config/room/store/transport/inspection revision binding. Frontend owns public/world including movement helper and interior-art integration plus UI tests. Separate D: worktrees from the shared prepared registry commit. No paid calls/deployment/main writes before complete qualification.
+
+
+## Qualification routing
+
+The ordinary browser/task/tactical gates still select their original versioned fixtures. The main illustrated gate explicitly selects beacon-illustrated while asserting the engine's canonical mapId:beacon/mapRevision2. Expanded-map gates use current revision from the actual safe view. Entry controls are selected through the real role panel rather than assuming every map uses the Beacon button text. No role, outcome, coordinate, deadline or puzzle assertion is removed. A new joined browser context verifies that public all-AI visitors cannot receive private owner inspection.
