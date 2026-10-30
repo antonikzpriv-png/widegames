@@ -345,3 +345,72 @@ Normal final native coverage is separately preserved in `_artifacts/quality-brow
 Other preserved fixture evidence: `...-vVlJSk` stops on a landscape glyph no-request click; the automated viewport-based locator targeted under a sticky header. Real scroll/hit-tested mouse/touch activation now completes those same glyphs in8tFE9j. `...-E6Ft5g` uses an overly short fixed400ms mobile displacement assertion under concurrent load; final controls instead require observed displacement within a bounded8s interval, retaining the positive distance assertion and making no timing grade. `...-5Ufzs0` likewise preserves the short180ms ghost movement assertion; bounded actual movement reaches the USE obstruction. These are retained fixture failures, not suppressed server rejections or altered returned views. The helper explicitly permits only actual crew ghosts with a current server task capability (and a previously authorized completed acknowledgement); real dead non-ghost and incomplete-council negative controls remain, with3/3 driver-unit checks passing before native use.
 
 Commands: TEMP/TMP D:/Widegames-work/temp, npm cache D:/Widegames-work/npm-cache; QUALITY_BROWSER_MODE=final, QUALITY_BROWSER_PIN=f9b32151e4dfab4f2525cee067a9859cd1a27dff, QUALITY_BROWSER_ROOT exact archive. `node scripts/quality-browser-check.mjs` with SECTION=all captures8tFE9j; SECTION=ghost captures42yuaB. No runtime or other-owner edits. The exclusive Chrome lease is still held only to finish the separate real-controller DEMO outcome/replay checks; explicit release follows cleanup. This receipt **does not grant final native approval** because Q-F1 is open.
+
+## Frozenf9 final qualification disposition and lease release
+
+Independent final target remains **f9b32151e4dfab4f2525cee067a9859cd1a27dff**; no mutable coordinator files or newer runtime were substituted. The all422-file manifest above remains exact after all runs. **Q-A1/Q-A2 and Q-M1/Q-M2/Q-M3 close atf9 under the unchanged14/14 independent controls. Q-F1 remains OPEN, so final native approval is withheld.** Early staged/520/941/911 counterexamples and6ca evidence remain historical, with their original qualified pins and actual failures.
+
+Final-mode code and the active Q-F1 assertion are committed in **9cbe9597f8620ac45e735f1c8aece66ee8203cc3**. Executed runner raw SHA256 **b5bf03f92f5f6253ea61c575336246b0c10e110792b178adbc201b320745d5f6**; normalized-LF/Git script SHA256 **445f6a410b845b0e296ec28e918f2ae5d1dfb1b78590025bbaf49d53c00d2df3**. Each report's runner.mjs copy matches its own raw runner hash. Windows working-file line endings explain the raw/normalized difference; the exact executed copy is retained. The historical baseline function is text-identical to the earlier committed function, and strict941/d551/911 gates are retained.
+
+### Actual separate autonomous watches atf9
+
+`D:/Widegames-work/ship-quality-audit-20261030/_artifacts/quality-browser-final-f9b3215-MfWefX/report.json`: **2/2 native checks pass**, actual packaged DEMO controller, seed3, normal four-job rules,800ms bounded authoritative clock acceleration per observation loop plus actual elapsed time. Human mode deliberately leaves the human idle; this is separate from the staged native human console coverage. No no-op fixture is counted as an autonomous match. No fallback winner or task/position/alive replacement is used.
+
+| Actual completed watch | Outcome | Jobs completed | Actual taskInteract proposals | Accepted /denied proposals | Replay events /snapshots |
+| --- | --- | --- | --- | --- | --- |
+| Human mode, human idle | crew /ejection | 4/20 | 20 | 111 /0 | 340 /27 |
+| All-AI spectator mode | crew /ejection | 3/20 | 14 | 224 /0 | 667 /65 |
+
+Both role-revealed spatial replays load through the actual results UI. The native viewer exercises follow, historical perspective, postgame-role toggle and Play/Pause; real HTTP replay/snapshots have nondecreasing timestamps and exact version2 `{id:'beacon',version:2}` metadata. These are currentf9 outcomes, not the earlier911 parity outcomes or coordinator520 browser results. Completed jobs before ejection do not imply every job or all six kinds completed in these hostile watches; six-kind human controls are established separately by the generated staged watches.
+
+Autonomous report SHA256 **6c1b4efa6dadc07a92445a8c71b5ca09da2c4185a469bf005522649610f12649**. sourceStable/driverStable true, browser/server closed, owned profile/data removed, no page/console errors, zero application Node/page outbound attempts and zero provider calls. No CPU/rAF/Canvas profiling is installed or collected in final mode. These bounded observations do not claim whole-machine network capture, GPU/FPS guarantees, OS power-loss durability or a live strategic-provider pass.
+
+Artifacts under `.../quality-browser-final-f9b3215-MfWefX/` include `autonomous-human-actual-outcome.png`, `autonomous-human-role-revealed-replay.png`, `autonomous-spectator-actual-outcome.png`, `autonomous-spectator-role-revealed-replay.png`, and the corresponding `autonomous-human-public-ended-replay.json` / `autonomous-spectator-public-ended-replay.json`. Replay screenshots show the real current Beacon2 canvas; this is not an invented full winner or an old view replayed as live.
+
+### Current native coverage and explicit limits
+
+The normal19-positive-check cohort is `_artifacts/quality-browser-final-f9b3215-8tFE9j/report.json`, SHA256 **cab4c345168bf74a73db38352b6614554b4fd07c82ff1d103b7eec5a6f1baf67**, runner SHA256 **58ef22859abe4f1ebcefbdf2b03a349283e09886042a12d17be70408de474ff2**. Its enclosing run fails later on the preserved ghost-checkbox fixture setup, so it is not presented as a single all-green final run. All six actual generated station controls, both watches,320/390/landscape glyph access, literal error/pending/stale guards, current14-room map/art, keyboard/touch movement, registered solid collision/reversal, council/vote and real HTTP fallback/reconnect pass in that cohort. It records321 HTTP/243 WS safe-view inspections. Its actual geometry/control assertions remain unchanged in the later driver; the later edits verify native preset selection and bounded ghost setup rather than silently altering the product.
+
+Useful manager visual-review files in8tFE9j are `desktop-beacon2-start.png`, `desktop-whole-map-fourteen-room-key.png`, `desktop-registered-table-collision.png`, all six `watch*-*-open.png` and `-confirmed.png` panels, `watch*-glyph-grid-320x740.png` / `390x844.png` / `844x390.png`, `mobile320-council-literal-message.png`, `landscape-vote-recorded.png` and `landscape-resumed-world.png`. These show actual rendered sourcef9, not old520 screenshots. Beacon1's original chart-table interpolation/camera regression is separately covered by the unchanged Node controls; the current native solid is Beacon2's registered bridge-equipment collider. No proprietary pixel/map parity claim is made.
+
+The actual ghost/ability stage in42yuaB reaches genuine ghost-preset startup, selected self-Ward activation and exclusive expiry, queued engine-accepted NPC elimination, actual crew-ghost movement and public observer coordinate/task/role-hiding assertions. It then fails the unobscured USE-center requirement at390x844, as documented above. **Ghost station input and fallen-chat native completion remain unqualified; no alive flag is changed to force them. New-map Echo UI is unqualified.** A keyboard shortcut or lower button edge is not used to conceal the mobile obstruction. Other normal browser gates, complete native Annex qualification and a final UI fix are not claimed from these scoped runs. Earlier legacy/manager gates retain their own pins. Historically authored AI is exercised as a dependency, not independently self-approved by these workflow observations.
+
+Relevant frozen runtime blobs for closure/fix review:
+
+| File | f9 blob |
+| --- | --- |
+| public/game.css | 303abe6239909600486b3debf52ae65ec6154635 |
+| public/world/experience.mjs | 7d78b22a738dd7ac004462f89962f8d94e6d3c23 |
+| public/world/model.mjs | 20b02589c0b6eaee42d3dd2356b0ec6c471288f1 |
+| public/world/scene.mjs | 7308063f1a31a5f441ab0a3a68bdc194e1df61b6 |
+| server/transport.mjs | 82be38090581e3476137fe7b76d987c06c1b8443 |
+| server/store.mjs | 8abef2f7bd9d2f19c7eda8f5470aa5ca1ce111d5 |
+| server/engine/index.mjs | 54eda0684bb39da69421e2f35621a2e68417ce38 |
+
+```powershell
+$env:TEMP='D:/Widegames-work/temp'; $env:TMP=$env:TEMP
+$env:npm_config_cache='D:/Widegames-work/npm-cache'
+$env:QUALITY_REVIEW_ROOT=(Resolve-Path '_artifacts/quality-source-f9b3215').Path
+$env:QUALITY_MAIN_REVIEW_ROOT=$env:QUALITY_REVIEW_ROOT
+Remove-Item Env:QUALITY_MAIN_GHOST_ROOT -ErrorAction SilentlyContinue
+Remove-Item Env:WORLD_ENGINE_GEOMETRY_MODULE -ErrorAction SilentlyContinue
+node --test tests/quality-review-initial.test.mjs tests/quality-main-boundaries-root.test.mjs tests/quality-main-boundaries-lifecycle.test.mjs
+# Exact unchanged14, Node exit0, original historical red retained.
+node --test tests/quality-review-browser-helper.test.mjs
+# Three actual-engine driver-unit guards; browser surface explicitly stubbed.
+$env:QUALITY_BROWSER_MODE='final'
+$env:QUALITY_BROWSER_PIN='f9b32151e4dfab4f2525cee067a9859cd1a27dff'
+$env:QUALITY_BROWSER_ROOT=$env:QUALITY_REVIEW_ROOT
+$env:QUALITY_BROWSER_SECTION='all'
+node scripts/quality-browser-check.mjs
+# Preserved normal19 positives then ghost fixture preparation failure.
+$env:QUALITY_BROWSER_SECTION='ghost'
+node scripts/quality-browser-check.mjs
+# Q-F1 remains a real failing native assertion, exit1.
+$env:QUALITY_BROWSER_SECTION='autonomous'
+Remove-Item Env:QUALITY_BROWSER_WATCH -ErrorAction SilentlyContinue
+node scripts/quality-browser-check.mjs
+# Actual two DEMO outcomes/spatial replays pass, exit0.
+```
+
+Every final-attempt report (vVlJSk, E6Ft5g,8tFE9j,5Ufzs0,42yuaB,MfWefX) retains sourceStable/driverStable true and confirmed owned browser/server/profile/data cleanup. No final artifact directory contains a cpuprofile; old941/911 profiling and its limitations stay historical. All422 source hashes were independently rechecked after the last browser closed. **The exclusive Chrome lease was explicitly released immediately afterMfWefX cleanup, before this receipt/commit. No further browser launch occurred.** No runtime/other-worktree/main/push/deployment edit or paid call was made. The final disposition is bounded successful regression/outcome evidence plus one concrete mobile ghost UI finding, not blanket approval from prose.
