@@ -6,6 +6,8 @@ import {createRoomStore} from './store.mjs';
 import {createDailyBudget} from './budget.mjs';
 import {createRooms,ServiceError,fail,identityFor,issueIdentity,cookie,requestId} from './rooms.mjs';
 import {CHARACTERS} from '../shared/contracts.mjs';
+import {aiRoster} from './features/lobbies/index.mjs';
+import {proposeMapSetting} from './map-settings.mjs';
 
 const object=value=>value!==null&&typeof value==='object'&&!Array.isArray(value);
 function safeError(error) {
@@ -42,7 +44,7 @@ export async function createGameServer(config,dependencies={}) {
   let daily,service;
   try {
     daily=dependencies.dailyBudget||await createDailyBudget({directory:config.dataDir,maxCostUsd:config.ai?.maxDailyCostUsd??5,now});
-    service=createRooms({store,engine,ai,now,maxActiveRooms:config.maxActiveRooms??12,roomTtlMs:config.roomTtlMs??3600000});await service.restore();
+    service=createRooms({store,engine,ai,now,maxActiveRooms:config.maxActiveRooms??12,roomTtlMs:config.roomTtlMs??3600000,lobbyConfig:config.systemsMode?config.lobbyConfig??{}:null,tacticalMode:config.tacticalMode===true&&config.worldMode===true&&config.systemsMode===true,mapId:config.mapId});await service.restore();
   } catch(error){await store.close();throw error;}
   const {rooms,get,run,commit,view}=service;
   const limit=limiter(now),tasks=new Set();let closing=false,maintenance=null,closePromise;
@@ -72,7 +74,7 @@ export async function createGameServer(config,dependencies={}) {
         if(!['human','spectator'].includes(input.mode)||Object.keys(input).some(k=>!['mode','name'].includes(k))||(input.name!==undefined&&(typeof input.name!=='string'||input.name.length>40)))fail(400,'INVALID_ROOM','Choose human or spectator mode.');
         const {room,token,identity}=await service.create(input.mode);json(res,201,view(room,identity),{'Set-Cookie':cookie(room.data.id,token,secure)});return;
       }
-      const match=/^\/api\/rooms\/([A-Za-z0-9_-]+)(?:\/(join|start|action|input|replay|socket))?$/.exec(url.pathname);
+      const match=/^\/api\/rooms\/([A-Za-z0-9_-]+)(?:\/(join|start|settings|action|input|replay|socket))?$/.exec(url.pathname);
       if(!match)fail(404,'NOT_FOUND','Route not found.');
       const room=get(match[1]),route=match[2]||'';
       if(route==='join'&&req.method==='POST') {
@@ -85,13 +87,19 @@ export async function createGameServer(config,dependencies={}) {
       }
       const identity=authenticate(room,req);
       if(route===''&&req.method==='GET'){json(res,200,view(room,identity));return;}
+      if(route==='settings'&&req.method==='POST') {
+        limit('write:'+ip,180);limit('actor:'+room.data.id+':'+identity.hash,60);
+        const input=await body(req,Math.min(config.maxBodyBytes??8192,8192));
+        await run(room,async data=>{const result=proposeMapSetting(data,identity,input);if(result.next){await commit(room,result.next);if(result.accepted)broadcast(room);}if(result.error)fail(409,result.error.code,result.error.message);});
+        json(res,200,view(room,identity));return;
+      }
       if(route==='replay'&&req.method==='GET') {
         if(room.data.state?.phase!=='ended')fail(409,'REPLAY_UNAVAILABLE','Replay is available after the match ends.');
-        json(res,200,{roomId:room.data.id,replay:engine.getReplay(room.data.state)});return;
+        json(res,200,{roomId:room.data.id,...(room.data.state.tacticalVersion===1?{map:{...room.data.state.map},preset:{...room.data.state.preset}}:{}),replay:engine.getReplay(room.data.state),...(room.data.state.beaconVersion?{snapshots:engine.getReplaySnapshots(room.data.state)}:{})});return;
       }
       if(route==='input'&&req.method==='POST') {
         limit(`input-ip:${ip}`,600);limit(`input-actor:${room.data.id}:${identity.hash}`,600);
-        if(identity.seatId!=='p1'||room.data.mode!=='human')fail(403,'SPECTATOR','Only this room\'s human seat can send movement input.');
+        if(!identity.seatId||room.data.mode!=='human'||(room.data.state&&!room.data.state.players.some(p=>p.id===identity.seatId&&p.human)))fail(403,'SPECTATOR','Only this room\'s human seat can send movement input.');
         const input=await body(req,Math.min(config.maxBodyBytes??8192,8192));
         if(Object.keys(input).length!==3||!['seq','dx','dy'].every(key=>Object.hasOwn(input,key))||!Number.isSafeInteger(input.seq)||input.seq<=0||!['dx','dy'].every(key=>Number.isInteger(input[key])&&input[key]>=-1&&input[key]<=1))fail(400,'INVALID_INPUT','Movement requires exactly {seq,dx,dy}: a positive safe sequence and integer directions from -1 to 1.');
         await run(room,async data=>{
@@ -102,7 +110,7 @@ export async function createGameServer(config,dependencies={}) {
           const next=structuredClone(data);next.state=result.state;
           // Validate even an inert result before considering a durable update.
           service.validate(next);
-          if(result.accepted&&result.state.schemaVersion===2&&result.state.players.find(player=>player.id===identity.seatId)?.motion.seq!==input.seq)throw new Error('Invalid engine input sequence');
+          if(result.accepted&&[2,3,4].includes(result.state.schemaVersion)&&result.state.players.find(player=>player.id===identity.seatId)?.motion.seq!==input.seq)throw new Error('Invalid engine input sequence');
           if(result.state.version!==data.state.version){await commit(room,next);broadcast(room);}
           if(!result.accepted){const error=result.error||{};fail(409,typeof error.code==='string'&&/^[A-Z][A-Z0-9_]{0,63}$/.test(error.code)?error.code:'INPUT_REJECTED',typeof error.message==='string'&&error.message.length<=240?error.message:'Movement input rejected.');}
         });
@@ -118,9 +126,9 @@ export async function createGameServer(config,dependencies={}) {
             if(Object.keys(input).some(k=>k!=='id'))fail(400,'INVALID_START','Start accepts only a request ID.');
             if(data.startId===input.id)return;
             if(data.state)fail(409,'ALREADY_STARTED','This match has already started.');
-            const next=structuredClone(data);next.startId=input.id;next.state=engine.createMatch({id:data.id,mode:data.mode,humanPlayerId:'p1',now:now(),config:config.rules||{},world:config.worldMode===true});await commit(room,next);
+            const next=structuredClone(data);next.startId=input.id;next.state=engine.createMatch({id:data.id,mode:data.mode,humanPlayerId:data.lobby?.humanPlayerIds[0]??'p1',...(data.lobby?{roster:data.lobby.roster,humanPlayerIds:data.lobby.humanPlayerIds,saboteurCount:data.lobby.saboteurCount}:{}),now:now(),config:config.rules||{},world:config.worldMode===true||[2,3].includes(data.schema),systems:[2,3].includes(data.schema),...(data.schema===3?{tactical:true,map:data.map}:{}),beaconRules:config.beaconRules??{}});await commit(room,next);
           } else {
-            if(!identity.seatId)fail(403,'SPECTATOR','Spectators cannot act.');
+            if(!identity.seatId||(data.state&&!data.state.players.some(p=>p.id===identity.seatId&&p.human)))fail(403,'SPECTATOR','Spectators cannot act.');
             if(!data.state)fail(409,'NOT_STARTED','Start the match first.');
             const result=engine.applyAction(data.state,identity.seatId,input,now());
             if(!result.accepted){if(result.state.version!==data.state.version){const next=structuredClone(data);next.state=result.state;await commit(room,next);broadcast(room);}const error=result.error||{};fail(409,typeof error.code==='string'?error.code:'ACTION_REJECTED',typeof error.message==='string'?error.message:'Action rejected.');}
@@ -149,7 +157,7 @@ export async function createGameServer(config,dependencies={}) {
   });
   function scheduleAi(room) {
     if(closing||room.aiBusy||room.aiBlocked||room.removed||!room.data.state||['ended','paused'].includes(room.data.state.phase))return;
-    const player=CHARACTERS.filter(p=>(room.data.mode==='spectator'||p.id!=='p1')&&(room.nextDecision.get(p.id)||0)<=now()&&engine.getPlayerView(room.data.state,p.id,now()).self?.alive).sort((a,b)=>(room.nextDecision.get(a.id)||0)-(room.nextDecision.get(b.id)||0))[0];
+    const player=aiRoster(room.data.state).filter(p=>(room.nextDecision.get(p.id)||0)<=now()&&engine.getPlayerView(room.data.state,p.id,now()).self?.alive).sort((a,b)=>(room.nextDecision.get(a.id)||0)-(room.nextDecision.get(b.id)||0))[0];
     if(!player)return;
     room.nextDecision.set(player.id,now()+Math.max(100,config.ai?.decisionIntervalMs??1800));room.aiBusy=true;
     track((async()=>{

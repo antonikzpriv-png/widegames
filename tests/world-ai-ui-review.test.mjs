@@ -14,6 +14,18 @@ if (pin) assert.match(pin, /^[a-f0-9]{40}$/);
 const source = (path, revision = pin) => revision ? execFileSync('git', ['show', `${revision}:${path}`], { encoding: 'utf8' }) : readFileSync(new URL(path, uiRoot), 'utf8');
 const strip = text => text.replace(/^\uFEFF/, '').replace(/^import .*$/gm, '').replace(/^export /gm, '');
 const flush = () => new Promise(resolve => setImmediate(resolve));
+const {getMap} = await import(new URL('shared/maps/index.mjs', sourceRoot));
+const mapHelpers = await import(new URL('public/world/map-model.mjs', uiRoot));
+const beaconHelpers = await import(new URL('public/world/beacon-model.mjs', uiRoot));
+
+
+// Draw tests instrument drawKeeper after stripping imports; restore the scene's
+// real beacon helpers and their transitive dependencies, not placeholder stubs.
+// Older pinned scenes have no beacon import and keep their original VM setup.
+const sceneDependencies = /from ['"]\.\/beacon-scene\.mjs['"]/.test(source('public/world/scene.mjs'))
+  ? await import(new URL('public/world/beacon-scene.mjs', uiRoot)) : {};
+const { visionFrame, drawBeaconFixtures } = sceneDependencies;
+const annexHelpers = /annex-art/.test(source('public/world/scene.mjs')) ? await import(new URL('public/world/annex-art.mjs', uiRoot)) : {};
 
 // Actual frontend logic, controlled network completions, minimal DOM. These
 // adversarial retained callbacks are not claims about native click scheduling.
@@ -42,7 +54,7 @@ function fixture(sourcePin = pin) {
   }
   document.createElement = tag => new Node(tag); document.body = new Node('body'); document.activeElement = document.body;
   const win = { ...events(), setInterval: () => 1, clearInterval() {} }, calls = [];
-  const context = vm.createContext({ document, window: win, world, CHARACTERS, console, Date, performance: { now: () => 100 }, matchMedia: () => ({ matches: true }), requestAnimationFrame: () => 1, cancelAnimationFrame() {},
+  const context = vm.createContext({ document, window: win, world, CHARACTERS, getMap, ...mapHelpers, mapRoomName:mapHelpers.roomName, ...beaconHelpers, console, Date, performance: { now: () => 100 }, matchMedia: () => ({ matches: true }), requestAnimationFrame: () => 1, cancelAnimationFrame() {},
     drawKeeper() {}, createWorldScene: () => ({ update() {}, draw() {}, toWorld() { return { x: 0, y: 0 }; }, dispose() {} }), replayText: event => event.type, replayEvents: value => value.replay ?? [], outcomeText: reason => reason });
   const module = (path, names) => Object.assign(context, vm.runInContext(`(()=>{${strip(source(path, sourcePin))};return {${names}};})()`, context));
   module('public/world/dom.mjs', 'dom,control,setText,trapDialog,restoreTrigger');
@@ -50,6 +62,14 @@ function fixture(sourcePin = pin) {
   module('public/world/input.mjs', 'createWorldInput');
   module('public/world/puzzles.mjs', 'createTaskPuzzle');
   module('public/world/phases.mjs', 'createCouncil,createResults');
+  // New dependencies are actual modules in the fixture DOM, never inert replacements.
+  // Preserve the historical 9e equipment fixture whose source predates these imports.
+  if (/createLocalSound/.test(source('public/world/experience.mjs', sourcePin))) {
+    module('public/world/lobby-map.mjs', 'createLobbyMapSelector');
+    module('public/world/sound.mjs', 'createLocalSound');
+    module('public/world/camera-cards.mjs', 'createCameraCards');
+    module('public/world/beacon-panel.mjs', 'createBeaconPanel');
+  }
   module('public/world/experience.mjs', 'createWorldExperience');
   const host = document.createElement('main'); document.body.append(host);
   let action = async (type, fields) => { calls.push({ type, fields }); };
@@ -93,7 +113,7 @@ test('independent frontend task: deferred old failure must not replace current c
   finally { f.experience.dispose(); }
 });
 
-const presentationModel = () => vm.runInNewContext(`(()=>{${strip(source('public/world/model.mjs'))};return {taskKind,contexts,ActorSamples,clamp,point,visibleBodies};})()`);
+const presentationModel = () => vm.runInNewContext(`(()=>{${strip(source('public/world/model.mjs'))};return {taskKind,contexts,ActorSamples,clamp,point,visibleBodies};})()`, {getMap,...mapHelpers,mapRoomName:mapHelpers.roomName,...beaconHelpers});
 
 test('independent frontend: actual generated relay tasks reach all three real puzzle implementations', async () => {
   const engine = await import(new URL('server/engine/index.mjs', sourceRoot)), model = presentationModel(), examples = new Map();
@@ -132,7 +152,7 @@ test('independent frontend: observed positional movement animates without privat
   const model = presentationModel(), captured = [], gradient = { addColorStop() {} };
   const ctx = new Proxy({}, { get: (_, key) => String(key).startsWith('create') ? () => gradient : () => {}, set: () => true });
   const canvas = { getContext: () => ctx, getBoundingClientRect: () => ({ left: 0, top: 0, width: 800, height: 600 }) };
-  const context = vm.createContext({ world, CHARACTERS, ...model, captured });
+  const context = vm.createContext({ world, CHARACTERS, ...model, getMap, ...annexHelpers, visionFrame, drawBeaconFixtures, captured });
   const createScene = vm.runInContext(`(()=>{${strip(source('public/world/scene.mjs'))};drawKeeper=(ctx,player,x,y,options)=>captured.push({id:player.id,step:options.step});return createWorldScene;})()`, context);
   const scene = createScene(canvas), view = room(); view.game.players[1].position = { x: 850, y: 300 };
   try {
@@ -154,7 +174,7 @@ test('independent frontend source/draw trace: doorway paint aligns with six actu
   const model = presentationModel(), rectangles = [], gradient = { addColorStop() {} };
   const ctx = new Proxy({}, { get: (_, key) => String(key).startsWith('create') ? () => gradient : (...args) => { if (key === 'fillRect') rectangles.push(args); }, set: () => true });
   const canvas = { getContext: () => ctx, getBoundingClientRect: () => ({ left: 0, top: 0, width: 800, height: 600 }) };
-  const context = vm.createContext({ world, CHARACTERS, ...model });
+  const context = vm.createContext({ world, CHARACTERS, ...model, getMap, ...annexHelpers, visionFrame, drawBeaconFixtures });
   const createScene = vm.runInContext(`(()=>{${strip(source('public/world/scene.mjs'))};drawKeeper=()=>{};return createWorldScene;})()`, context);
   const scene = createScene(canvas);
   try {

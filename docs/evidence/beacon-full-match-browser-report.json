@@ -1,0 +1,179 @@
+{
+  "sourceCommit": "0525738d6e5a66a8e660ada27d0ec7be00852403",
+  "modifiedPaths": [],
+  "fixture": "Actual app/main browser modules, native HTTP/WS, persistent store, seeded world engine and real labeled demo AI. Physical routes may use normal authenticated navigate requests and accelerated server time; no state/winner fabrication or provider calls. Auxiliary effects use explicit one-second fixture durations; the dedicated beacon scenarios qualify standard effects.",
+  "checks": [
+    {
+      "name": "Original character game menu loads",
+      "passed": true
+    },
+    {
+      "name": "Menu help opens before joining",
+      "passed": true
+    },
+    {
+      "name": "Open menu help closes before the full-screen game",
+      "passed": true
+    },
+    {
+      "name": "Hovered primary game button retains readable measured contrast",
+      "passed": true
+    },
+    {
+      "name": "Normal production config starts a physical world and private human role",
+      "passed": true
+    },
+    {
+      "name": "Room seat remains HttpOnly",
+      "passed": true
+    },
+    {
+      "name": "Physical game fills the viewport without displaced content",
+      "passed": true
+    },
+    {
+      "name": "WASD diagonal moves the actual character through validated integer input",
+      "passed": true
+    },
+    {
+      "name": "Hiding the page cancels an authoritative walking route before arrival",
+      "passed": true
+    },
+    {
+      "name": "A pending out-of-range Bridge task does not mask the emergency bell",
+      "passed": true
+    },
+    {
+      "name": "Council draft and focus survive physical-world snapshots",
+      "passed": true
+    },
+    {
+      "name": "Council dialogue renders literal text",
+      "passed": true
+    },
+    {
+      "name": "Shared room opens a role-private public spectator",
+      "passed": true
+    },
+    {
+      "name": "Reload restores the same world identity and private role",
+      "passed": true
+    },
+    {
+      "name": "Three real generated equipment minigames complete through UI and server acknowledgement",
+      "passed": true
+    },
+    {
+      "name": "Human-plus-AI world reaches a rules-based victory and attributed replay",
+      "passed": true
+    },
+    {
+      "name": "Human-plus-AI exports actual replay in chronological order",
+      "passed": true
+    },
+    {
+      "name": "All-AI world uses the same authoritative engine without a human private view",
+      "passed": true
+    },
+    {
+      "name": "World and HUD fit mobile390",
+      "passed": true
+    },
+    {
+      "name": "World and HUD fit mobile320",
+      "passed": true
+    },
+    {
+      "name": "World and HUD fit mobile landscape",
+      "passed": true
+    },
+    {
+      "name": "All-AI world finishes and reveals roles only after the match",
+      "passed": true
+    },
+    {
+      "name": "All-AI exports actual replay in chronological order",
+      "passed": true
+    },
+    {
+      "name": "No browser exceptions or unsafe returned world views",
+      "passed": true
+    },
+    {
+      "name": "No primary-page console errors",
+      "passed": true
+    },
+    {
+      "name": "Runtime source remained unchanged during qualification",
+      "passed": true
+    }
+  ],
+  "privacyChecks": 505,
+  "errors": [],
+  "consoleErrors": [],
+  "screenshots": [
+    "01-harbor.png",
+    "02-lobby.png",
+    "03-private-role.png",
+    "03b-world.png",
+    "04-task-tuning.png",
+    "04-task-sequence.png",
+    "05-council.png",
+    "06-vote.png",
+    "04-task-wires.png",
+    "07-human-replay.png",
+    "08-all-ai-mobile.png",
+    "09-all-ai-replay.png"
+  ],
+  "outcomes": [
+    {
+      "winner": "crew",
+      "reason": "tasks",
+      "at": 1793312167631
+    },
+    {
+      "winner": "crew",
+      "reason": "tasks",
+      "at": 1793312235776
+    }
+  ],
+  "inputPackets": 8,
+  "puzzleKinds": [
+    "tuning",
+    "sequence",
+    "wires"
+  ],
+  "hoverColors": {
+    "foreground": "rgb(23, 56, 74)",
+    "background": "rgb(255, 221, 160)"
+  },
+  "browser": "Chrome/156.0.8078.73",
+  "rules": {
+    "tasksPerCrew": 3,
+    "moveCooldownMs": 200,
+    "taskCooldownMs": 1200,
+    "initialKillCooldownMs": 300000,
+    "killCooldownMs": 15000,
+    "sabotageCooldownMs": 300000,
+    "criticalDurationMs": 40000,
+    "discussionMs": 18000,
+    "votingMs": 10000,
+    "meetingCooldownMs": 1000,
+    "roamDeadlineMs": 180000,
+    "maxMatchMs": 900000
+  },
+  "beaconRules": {
+    "visionRadius": 360,
+    "lightsVisionRadius": 110,
+    "saboteurVisionRadius": 400,
+    "lightsDurationMs": 1000,
+    "communicationsDurationMs": 1000,
+    "doorDurationMs": 1000
+  },
+  "humanSeed": "world-browser-8",
+  "cleanupErrors": [],
+  "summary": {
+    "passed": 26,
+    "failed": 0
+  }
+}

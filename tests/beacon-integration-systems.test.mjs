@@ -1,0 +1,42 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import * as engine from '../server/engine/index.mjs';
+import * as geometry from '../shared/world.mjs';
+import {createSpatialWorld} from '../server/engine/world/index.mjs';
+import {BEACON_REPAIRS,BEACON_VENTS} from '../shared/beacon.mjs';
+import {validateSystemsState} from '../server/engine/systems/index.mjs';
+// Actual rule modules, seeded private preconditions and legal actions; no AI/provider calls.
+function fixture(){let state=engine.createMatch({id:'systems-integrated',world:true,systems:true,now:1000,seed:11,config:{initialKillCooldownMs:1,killCooldownMs:1,sabotageCooldownMs:1,criticalDurationMs:120000,meetingCooldownMs:1,roamDeadlineMs:600000,maxMatchMs:900000},beaconRules:{doorDurationMs:1000,ventTravelMs:1000}}),now=1000,serial=0;const spatial=createSpatialWorld(geometry);return {get state(){return state;},get now(){return now;},p:id=>state.players.find(p=>p.id===id),get sab(){return state.players.find(p=>p.role==='saboteur').id;},get crew(){return state.players.filter(p=>p.role==='crew').map(p=>p.id);},view:id=>engine.getPlayerView(state,id,now),act(id,type,fields={},at=now){now=at;const result=engine.applyAction(state,id,{id:'integrated-'+ ++serial,type,...fields},now);state=result.state;return result;},input(id,seq,dx,dy){const result=engine.applyInput(state,id,{seq,dx,dy},now);state=result.state;return result;},tick(ms){now+=ms;state=engine.tick(state,now).state;},travel(id,target){const path=spatial.navigation(this.p(id),target,now,state);assert(path,'Fixture must have an actual reachable route');let length=0,last=this.p(id).position;for(const q of path){length+=geometry.distance(last,q);last=q;}assert(this.act(id,'navigate',target).accepted);this.tick(Math.ceil(length/geometry.WORLD.speed*1000)+1);assert(geometry.distance(this.p(id).position,target)<.01);}};}
+
+test('actual engine lights visibility and physical repair permissions survive JSON state',()=>{
+ const g=fixture();g.tick(1);const crew=g.crew[0],before=g.view(crew).vision.radius;assert(g.act(g.sab,'systemSabotage',{kind:'lights',targetId:'beacon'}).accepted);assert(g.view(crew).vision.radius<before);assert.equal(g.view(g.sab).vision.radius,g.state.beaconRules.saboteurVisionRadius);assert.equal(g.act(crew,'systemRepair',{systemId:'lights',siteId:'relay'}).accepted,false);
+ g.travel(crew,BEACON_REPAIRS.lights[0].position);assert(g.act(crew,'systemRepair',{systemId:'lights',siteId:'relay'}).accepted);assert.equal(g.view(crew).vision.radius,before);assert(validateSystemsState(JSON.parse(JSON.stringify(g.state))));
+});
+
+test('closed door blocks real steering and LOS until exact reopening deadline',()=>{
+ const g=fixture(),crew=g.crew[0];g.travel(crew,{x:500,y:490});g.tick(1);assert(g.act(g.sab,'systemSabotage',{kind:'door',targetId:'west-upper'}).accepted);const closedAt=g.now;assert(g.input(crew,1,1,0).accepted);g.tick(900);assert(g.p(crew).position.x<=506.01);assert(g.view(crew).systems.doors.find(d=>d.id==='west-upper').closed);g.tick(100);assert.equal(g.now,closedAt+1000);assert.equal(g.view(crew).systems.doors.find(d=>d.id==='west-upper').closed,false);assert(g.input(crew,2,1,0).accepted);g.tick(400);assert(g.p(crew).position.x>520);const expired=g.state.events.find(e=>e.type==='system'&&e.doorId==='west-upper'&&e.reason==='expired');assert.equal(expired.at,closedAt+1000);
+});
+
+for(const kind of ['power','flood'])test('actual '+kind+' critical requires distinct crew/sites and omits repairer identities',()=>{
+ const g=fixture();g.tick(1);const [first,second,observer]=g.crew;assert(g.act(g.sab,'systemSabotage',{kind,targetId:'beacon'}).accepted);const sites=BEACON_REPAIRS[kind];g.travel(first,sites[0].position);assert(g.act(first,'systemRepair',{systemId:kind,siteId:sites[0].id}).accepted);g.travel(first,sites[1].position);assert.equal(g.act(first,'systemRepair',{systemId:kind,siteId:sites[1].id}).accepted,false);g.travel(second,sites[1].position);assert(g.act(second,'systemRepair',{systemId:kind,siteId:sites[1].id}).accepted);assert.equal(g.state.sabotage.active,false);const view=g.view(observer);assert.equal(view.sabotage.repairsCompleted,2);for(const site of view.sabotage.sites){assert.equal(site.repairedBy,undefined);assert.equal(site.repairers,undefined);}assert(validateSystemsState(g.state));
+});
+
+test('critical deadline resolves before an exactly simultaneous submitted repair and survives restart',()=>{
+ const g=fixture();g.tick(1);assert(g.act(g.sab,'systemSabotage',{kind:'flood',targetId:'beacon'}).accepted);const deadline=g.state.sabotage.deadlineAt;const restored=JSON.parse(JSON.stringify(g.state));const result=engine.applyAction(restored,g.crew[0],{id:'too-late',type:'systemRepair',systemId:'flood',siteId:'pump-galley'},deadline);assert.equal(result.accepted,false);assert.equal(result.state.phase,'ended');assert.deepEqual(result.state.outcome,{winner:'saboteur',reason:'critical',at:deadline});assert(engine.getReplay(result.state).some(e=>e.type==='role_reveal'));assert.equal(engine.getPlayerView(result.state,null,deadline).players.filter(p=>p.role==='saboteur').length,1);
+});
+
+test('actual hatch travel forbids all movement/interaction and retains exact input denial after restart',()=>{
+ const g=fixture(),entry=BEACON_VENTS[0],exit=BEACON_VENTS.find(v=>v.id===entry.links[0]);g.travel(g.sab,entry.position);const action=g.act(g.sab,'vent',{entryId:entry.id,exitId:exit.id});assert(action.accepted);const deadline=g.state.systems.transit[g.sab].deadlineAt;assert.equal(g.view(g.sab).self.transit.exitId,exit.id);assert.equal(g.view(g.crew[0]).systems.selfTransit,null);assert.equal(g.view(g.crew[0]).systems.transit,undefined);const denied=g.input(g.sab,1,1,0);assert.equal(denied.error.code,'IN_TRANSIT');assert.equal(g.act(g.sab,'ability',{abilityId:'field-note',targetId:g.sab}).accepted,false);const restored=JSON.parse(JSON.stringify(g.state));assert(validateSystemsState(restored));const arrived=engine.tick(restored,deadline).state;assert(geometry.distance(arrived.players.find(p=>p.id===g.sab).position,exit.position)<.01);const retry=engine.applyInput(arrived,g.sab,{seq:1,dx:1,dy:0},deadline+1);assert(retry.duplicate);assert.equal(retry.accepted,false);assert.equal(retry.error.code,'IN_TRANSIT');assert.equal(retry.state.players.find(p=>p.id===g.sab).motion.manual,false);
+});
+
+
+test('real camera context uses camera vision independent of the console operator faction',()=>{
+ let now=1000,state=engine.createMatch({id:'camera-context',world:true,systems:true,now,seed:11,beaconRules:{visionRadius:500,saboteurVisionRadius:100,lightsVisionRadius:80},config:{sabotageCooldownMs:1,roamDeadlineMs:600000}}),serial=0;
+ const spatial=createSpatialWorld(geometry),sab=state.players.find(p=>p.role==='saboteur').id,crew=state.players.filter(p=>p.role==='crew').map(p=>p.id);
+ const act=(id,type,fields={})=>{const result=engine.applyAction(state,id,{id:'camera-'+ ++serial,type,...fields},now);assert(result.accepted,JSON.stringify(result.error));state=result.state;};
+ const travel=(id,target)=>{const p=state.players.find(p=>p.id===id),path=spatial.navigation(p,target,now,state);assert(path);let length=0,last=p.position;for(const q of path){length+=geometry.distance(last,q);last=q;}act(id,'navigate',target);now+=Math.ceil(length/geometry.WORLD.speed*1000)+1;state=engine.tick(state,now).state;};
+ travel(crew[1],{x:700,y:490});travel(crew[0],{x:930,y:310});travel(sab,{x:930,y:310});act(crew[0],'investigate',{deviceId:'security'});act(sab,'investigate',{deviceId:'security'});now+=state.beaconRules.deviceReadMs;state=engine.tick(state,now).state;
+ const sample=id=>engine.getPlayerView(state,id,now).investigation.observations.at(-1).data.frames.find(f=>f.cameraId==='archive-camera').players.map(p=>p.id);
+ assert(sample(crew[0]).includes(crew[1]));assert(sample(sab).includes(crew[1]));assert.deepEqual(sample(sab),sample(crew[0]));
+ act(sab,'systemSabotage',{kind:'lights',targetId:'beacon'});now+=state.beaconRules.deviceCooldownMs+1;state=engine.tick(state,now).state;act(crew[0],'investigate',{deviceId:'security'});act(sab,'investigate',{deviceId:'security'});now+=state.beaconRules.deviceReadMs;state=engine.tick(state,now).state;assert(!sample(crew[0]).includes(crew[1]));assert.deepEqual(sample(sab),sample(crew[0]));
+});

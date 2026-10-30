@@ -8,8 +8,8 @@ async function service(t,extras={},dependencies={}){
  const seen=new Set();let id=0;
  const aiController={describe:()=>({mode:'demo',provider:'demo',calls:0,tokens:0,costUsd:0}),async decide({view,player}){seen.add(player.id);assert.equal(view.self.id,player.id);assert(view.players.every(p=>!Object.hasOwn(p,'role')));return {id:'probe:'+id++,type:'wait'};}};
  // Historical scheduler/idempotency fixtures retain schema1 room-step movement.
- // Actual world input/navigation boundaries are exercised in world-* tests.
- const config={...loadConfig({DATA_DIR:directory,PUBLIC_ORIGIN:origin}),worldMode:false,tickMs:25,...extras};config.ai={...config.ai,decisionIntervalMs:100};
+ // Actual world/schema3 denial boundaries remain in world-* and beacon-* tests.
+ const config={...loadConfig({DATA_DIR:directory,PUBLIC_ORIGIN:origin}),worldMode:false,systemsMode:false,tickMs:25,...extras};config.ai={...config.ai,decisionIntervalMs:100};
  const game=await createGameServer(config,{aiController,...dependencies});await new Promise(r=>game.server.listen(0,'127.0.0.1',r));
  const base='http://127.0.0.1:'+game.server.address().port;
  t.after(async()=>{await game.close();await rm(directory,{recursive:true,force:true});});

@@ -12,7 +12,9 @@
     "dev": "node --watch server/main.mjs",
     "test": "node --test --test-concurrency=2 tests/*.test.mjs",
     "check": "node scripts/check.mjs",
-    "test:browser": "node scripts/world-browser-check.mjs"
+    "test:browser": "node scripts/world-browser-check.mjs",
+    "test:beacon-browser": "node scripts/beacon-browser-check.mjs",
+    "test:tactical-browser": "node scripts/tactical-browser-check.mjs"
   },
   "dependencies": {
     "ws": "8.22.0"

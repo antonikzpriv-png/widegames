@@ -1,0 +1,75 @@
+{
+  "pin": "afc6b1a94d201a943e84b955fcb492fc2ed031bc",
+  "node": "v24.20.0",
+  "checks": [
+    "All220 raw committed source blobs match the exact manifest",
+    "Production graph is isolated ws8.22.0 only; Puppeteer is absent",
+    "Normal main/config default to schema3; package scripts and production COPY groups cover it",
+    "All60 runtime files/local imports present, including feature modules and beacon.css",
+    "Real production main health is ready with no private room metadata",
+    "Real main acquires only the fresh isolated DATA_DIR lock",
+    "All33 public/shared assets byte-exact, including features and beacon.css, with correct MIME/CSP",
+    "Runtime, credentials, package metadata and private data paths return404",
+    "Normal-config human room starts beaconVersion1 with safe knowledge/status, own role and permitted hints",
+    "Authenticated joiner has fixed Bridge view, no role/private knowledge, notes, sessions or acting hints",
+    "Legitimate input/zero cleanup persist sequence2; foreign origin and spectator steering reject",
+    "Real registered field-note action records only own location and remains private to owner",
+    "Real authenticated owner/spectator WebSockets expose only their safe roles, knowledge, notes and hints",
+    "Real main SIGTERM handler exits0, closes both sockets, releases lock and recovery claim",
+    "Private persisted checkpoint contains schema3 seat, input and accepted note-ID receipt without quarantine",
+    "Fresh real main restores original cookie/seat/role and exact stopped input/note checkpoint",
+    "Restored duplicate input/note remain inert; original spectator remains isolated",
+    "Restarted main independently acquires and gracefully releases its new lock",
+    "All220 source blobs unchanged; no provider fetch attempts, socket privacy errors or forced stops"
+  ],
+  "children": [
+    {
+      "pid": 2732,
+      "origin": "http://127.0.0.1:64005",
+      "stdout": "Lantern Wake — open http://127.0.0.1:64005\nListening on 127.0.0.1:64005. AI provider: demo. Provider credentials stay server-side.\n",
+      "stderr": "",
+      "messages": [
+        {
+          "type": "main-loaded",
+          "handlers": 1
+        },
+        {
+          "type": "shutdown-handler",
+          "handlers": 1
+        }
+      ],
+      "exit": {
+        "code": 0,
+        "signal": null
+      }
+    },
+    {
+      "pid": 21584,
+      "origin": "http://127.0.0.1:64016",
+      "stdout": "Lantern Wake — open http://127.0.0.1:64016\nListening on 127.0.0.1:64016. AI provider: demo. Provider credentials stay server-side.\n",
+      "stderr": "",
+      "messages": [
+        {
+          "type": "main-loaded",
+          "handlers": 1
+        },
+        {
+          "type": "shutdown-handler",
+          "handlers": 1
+        }
+      ],
+      "exit": {
+        "code": 0,
+        "signal": null
+      }
+    }
+  ],
+  "providerFetchAttempts": 0,
+  "forcedStops": 0,
+  "socketErrors": [],
+  "startedAt": "2026-10-29T22:03:03.861Z",
+  "dataDir": "D:\\Widegames-work\\beacon-world-builder-20261029\\_artifacts\\beacon-production-private-JhJDtS",
+  "staticAssets": 33,
+  "status": "passed",
+  "finishedAt": "2026-10-29T22:03:06.635Z"
+}
