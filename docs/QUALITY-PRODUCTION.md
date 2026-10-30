@@ -1,3 +1,9 @@
+# Latest production qualification
+
+The latest independent production preparation is exact application3c1c206:35/35,430 raw source blobs and57 byte-exact served assets, two actual main processes with restart and graceful cleanup. No external/provider calls. Subsequent runner/docs edits preserve that application graph; Core peer review of exactf0ea76d follows at the end. Earlier f9/25 receipts below are historical. See [current verification](QUALITY-VERIFICATION.md).
+
+---
+
 ﻿# Frozen f9 production/runtime qualification
 
 Qualified source: **f9b32151e4dfab4f2525cee067a9859cd1a27dff**. Worker: D:/Widegames-work/ship-quality-production-final-20261030, branch codex/ship-quality-production-final-20261030, created from this exact pin. Only tests/quality-production-review.mjs and this receipt change. Existing engine/core branches, dirty merge-fixture staging and all older worktrees are preserved. The earlier f6 qualification at5ebe6f5c373a4a061086a42a73074a7325383dfa is **historical**, not approval of the merged Group2 runtime. Its original source/report remain in the original core worktree; a receipt copy is retained in this worker's _artifacts/QUALITY-PRODUCTION-f6-historical.md.
