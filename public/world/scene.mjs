@@ -29,8 +29,8 @@ export function drawKeeper(ctx,player,x,y,{scale=1,step=0,selected=false,ghost=f
  if(label){text(ctx,player.name||'Keeper',0,36,14,'#102d3e');ctx.lineWidth=4;ctx.strokeStyle='#eff8e8';ctx.strokeText(player.name||'Keeper',0,36);text(ctx,player.name||'Keeper',0,36,14,'#102d3e');}
  ctx.restore();
 }
-export function createWorldScene(canvas,{reduced=false,mapResolver=getMap}={}){
- const ctx=canvas.getContext('2d'),samples=new ActorSamples();let map=mapResolver(),world=map.geometry;let room=null,lastKey=null,camera={x:800,y:400},view={width:1,height:1,zoom:1},stopped=false,lastFrame=null;
+export function createWorldScene(canvas,{reduced=false,mapResolver=getMap,motionFactory}={}){
+ const ctx=canvas.getContext('2d'),samples=motionFactory?motionFactory({mapResolver}):new ActorSamples();let map=mapResolver(),world=map.geometry;let room=null,lastKey=null,camera={x:800,y:400},view={width:1,height:1,zoom:1},stopped=false,lastFrame=null;
  const cache=createStaticLayer({paint:paintEnvironment,makeCanvas:(w,h)=>{if(typeof OffscreenCanvas!=='undefined')return new OffscreenCanvas(w,h);return canvas.ownerDocument?.createElement?.('canvas')||globalThis.document?.createElement?.('canvas');}});
  function update(next,at){map=mapResolver(next?.game?.map??next?.map);world=map.geometry;const key=`${next?.roomId}:${next?.game?.matchId}:${map.id}:${map.version}`;if(key!==lastKey){samples.clear();lastFrame=null;lastKey=key;camera={...(visionFrame(next?.game,map)?.origin||next?.game?.self?.position||world.WORLD_VIEWPOINT)};}room=next;samples.update(room?.game,at);}
  function draw(time,{overview=false}={}){
@@ -41,7 +41,7 @@ export function createWorldScene(canvas,{reduced=false,mapResolver=getMap}={}){
   const sea=ctx.createLinearGradient(0,0,width,height);sea.addColorStop(0,map.id==='beacon'?'#102f48':'#172f46');sea.addColorStop(1,map.id==='beacon'?'#244957':'#3e6067');ctx.fillStyle=sea;ctx.fillRect(0,0,width,height);
   if(!reduced){ctx.strokeStyle='#93c2d01c';ctx.lineWidth=2;for(let i=0;i<45;i++){const x=(i*137+time*.014)% (width+80)-40,y=(i*83+time*.038)%(height+80)-40;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x-12,y+27);ctx.stroke();}}
   const game=room?.game,lobby=!game;
-  const vision=visionFrame(game,map),follow=vision?.origin||game?.self?.position||samples.at(game?.players?.find(p=>point(p.position)&&p.alive)?.id,time,reduced)||world.WORLD_VIEWPOINT;
+  const vision=visionFrame(game,map),follow=(game?.self?samples.at(game.self.id,time,reduced):null)||vision?.origin||game?.self?.position||samples.at(game?.players?.find(p=>point(p.position)&&p.alive)?.id,time,reduced)||world.WORLD_VIEWPOINT;
   // Camera moves only toward an observed position; hidden actors have no samples.
   const destination=lobby?{x:world.WORLD_VIEWPOINT.x,y:world.WORLD_VIEWPOINT.y+25}:follow;camera=followCamera(camera,destination,lastFrame===null?0:time-lastFrame,reduced);lastFrame=time;
   const zoom=overview?Math.min((width-30)/world.WORLD.width,(height-30)/world.WORLD.height):lobby?Math.min(width/620,height/390):clamp(Math.min(width/650,height/650),.64,1.28);
@@ -70,5 +70,5 @@ export function createWorldScene(canvas,{reduced=false,mapResolver=getMap}={}){
    const fog=ctx.createRadialGradient(sx,sy,radius*.35,sx,sy,radius);fog.addColorStop(0,'#091d3000');fog.addColorStop(.82,'#091d3038');fog.addColorStop(1,'#091d30e8');ctx.fillStyle=fog;ctx.fillRect(0,0,width,height);
   }
  }
- return {update,draw,toWorld(clientX,clientY){const r=canvas.getBoundingClientRect();return {x:(clientX-r.left-view.width/2)/view.zoom+view.camera.x,y:(clientY-r.top-view.height/2)/view.zoom+view.camera.y};},stats(){return cache.stats();},dispose(){stopped=true;samples.clear();cache.dispose();}};
+ return {update,draw,setIntent(input,at){return samples.setIntent?.(input,at)||false;},suspend(){samples.clear();lastFrame=null;},toWorld(clientX,clientY){const r=canvas.getBoundingClientRect();return {x:(clientX-r.left-view.width/2)/view.zoom+view.camera.x,y:(clientY-r.top-view.height/2)/view.zoom+view.camera.y};},stats(){return cache.stats();},dispose(){stopped=true;samples.clear();cache.dispose();}};
 }

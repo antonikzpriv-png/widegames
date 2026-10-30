@@ -1,9 +1,10 @@
-import test from 'node:test';
+import test,{after} from 'node:test';
 import assert from 'node:assert/strict';
-import {readFileSync,writeFileSync,mkdirSync} from 'node:fs';
+import {readFileSync,writeFileSync,mkdirSync,readdirSync} from 'node:fs';
 import {performance} from 'node:perf_hooks';
 import {execFileSync} from 'node:child_process';
-import {fileURLToPath} from 'node:url';
+import {fileURLToPath,pathToFileURL} from 'node:url';
+import {resolve} from 'node:path';
 import {createHash} from 'node:crypto';
 import {createWorldScene} from '../public/world/scene.mjs';
 import {getMap} from '../shared/maps/index.mjs';
@@ -52,5 +53,41 @@ test('measured actual draw dispatch vs frozen941e baseline, not FPS or native pi
   }
  }finally{if(saved===undefined)delete globalThis.OffscreenCanvas;else globalThis.OffscreenCanvas=saved;}
  for(const width of [320,390,1440]){const a=measure.find(m=>m.width===width&&m.label==='baseline'),b=measure.find(m=>m.width===width&&m.label==='candidate');assert(b.commands<a.commands*.65,'actual command reduction at '+width);}
- const output=new URL('_artifacts/quality-client-20261030/render-benchmark.json',root);mkdirSync(new URL('.',output),{recursive:true});writeFileSync(output,JSON.stringify({baselineCommit:'941e857f046ef7cc9bae25f0fcad27cf6ab7578a',candidateSha256:createHash('sha256').update(readFileSync(new URL('public/world/scene.mjs',root))).digest('hex'),measure,limits:'Actual JS canvas command dispatch with counting surfaces; no GPU/native paint or FPS/mobile hardware claim.'},null,2));
+ const output=new URL('_artifacts/quality-client-20261030/render-benchmark-'+Date.now()+'.json',root);mkdirSync(new URL('.',output),{recursive:true});writeFileSync(output,JSON.stringify({baselineCommit:'941e857f046ef7cc9bae25f0fcad27cf6ab7578a',candidateSha256:createHash('sha256').update(readFileSync(new URL('public/world/scene.mjs',root))).digest('hex'),measure,limits:'Actual JS canvas command dispatch with counting surfaces; no GPU/native paint or FPS/mobile hardware claim.'},null,2));
 });
+
+const externalPins=[];
+for(const [key,dirs]of [['QUALITY_CLIENT_MAP_ROOT',['shared/maps']],['QUALITY_CLIENT_MOVEMENT_ROOT',['public/world/movement.mjs','shared/maps']]])if(process.env[key]){
+ const base=pathToFileURL(resolve(process.env[key])+'/');for(const dir of dirs){const files=dir.endsWith('.mjs')?[dir]:readdirSync(new URL(dir+'/',base)).filter(f=>f.endsWith('.mjs')).map(f=>dir+'/'+f);for(const file of files)externalPins.push({root:base.href,file,sha256:createHash('sha256').update(readFileSync(new URL(file,base))).digest('hex')});}
+}
+const mapRegistry=process.env.QUALITY_CLIENT_MAP_ROOT?await import(pathToFileURL(resolve(process.env.QUALITY_CLIENT_MAP_ROOT,'shared/maps/index.mjs'))):{getMap};
+let largeMap;try{largeMap=mapRegistry.getMap({id:'beacon',version:2});}catch{}
+const motion=process.env.QUALITY_CLIENT_MOVEMENT_ROOT?await import(pathToFileURL(resolve(process.env.QUALITY_CLIENT_MOVEMENT_ROOT,'public/world/movement.mjs'))):null;
+
+test('actual Beacon2 fourteen-room metadata, overview and exact legacy versions stay independent',{skip:!largeMap&&'Beacon2 absent; integrate real map owner or set QUALITY_CLIENT_MAP_ROOT'},()=>{
+ assert.equal(largeMap.geometry.WORLD.width,3200);assert.equal(largeMap.roomLayout.length,14);assert.equal(new Set(Object.values(largeMap.taskKinds)).size,6);
+ const g=largeMap.geometry,plan=environmentPlan(largeMap);for(const prop of plan.props.filter(p=>p.solid))assert(g.WORLD_OBSTACLES.some(o=>['x','y','width','height'].every(k=>o[k]===prop[k])));
+ const labels=[],counts={calls:0},canvas=surface(768,640,counts),ctx=canvas.getContext('2d');ctx.fillText=(text)=>labels.push(text);const scene=createWorldScene(canvas,{reduced:true,mapResolver:mapRegistry.getMap});
+ try{scene.update(view(largeMap),0);scene.draw(0,{overview:true});for(const [index]of largeMap.roomLayout.entries())assert(labels.includes(String(index+1)));assert.deepEqual(scene.toWorld(384,320),{x:g.WORLD.width/2,y:g.WORLD.height/2});scene.update(view(mapRegistry.getMap({id:'beacon',version:1})),100);scene.draw(100,{overview:true});assert.deepEqual(scene.toWorld(384,320),{x:800,y:600});}
+ finally{scene.dispose();}
+});
+
+test('scene delegates actual Core motion intent and clears it on suspended lifecycle',{skip:!motion&&'Core movement helper absent; set QUALITY_CLIENT_MOVEMENT_ROOT for exact real module'},()=>{
+ const map=getMap({id:'beacon',version:1}),canvas=surface(),tracks=[],scene=createWorldScene(canvas,{motionFactory:options=>{const track=new motion.MotionTrack(options);tracks.push(track);return track;}}),room=view(map);room.game.self.moving=false;
+ try{scene.update(room,0);assert(scene.setIntent({seq:2,dx:1,dy:0},0));const p=tracks[0].at(room.game.self.id,16);assert(p.x>room.game.self.position.x);assert(p.x-room.game.self.position.x<=180*.1);scene.suspend();assert.equal(tracks[0].samples.size,0);assert.equal(tracks[0].intent,null);assert.equal(scene.setIntent({seq:3,dx:1,dy:0},20),false);scene.update(room,40);room.game.players[0].position=null;scene.update(room,50);assert.equal(tracks[0].at(room.game.self.id,60),null);}
+ finally{scene.dispose();}
+});
+
+
+test('actual Beacon2 DPR2 camera worksets stay bounded without a full-world bitmap',{skip:!largeMap&&'Beacon2 metadata absent'},()=>{
+ const saved=globalThis.OffscreenCanvas,savedDpr=globalThis.devicePixelRatio,records=[];
+ try{for(const [width,height]of [[320,740],[390,844],[844,390]]){const counts={calls:0},sizes=[];globalThis.devicePixelRatio=2;globalThis.OffscreenCanvas=class{constructor(w,h){sizes.push([w,h]);Object.assign(this,surface(w,h,counts));}};const canvas=surface(width,height,counts),scene=createWorldScene(canvas,{reduced:true,mapResolver:mapRegistry.getMap}),room=view(largeMap),started=performance.now();
+   try{for(const id of ['bridge','workshop','reservoir']){const p=largeMap.geometry.WORLD_STATIONS[id];room.game.self.position={x:p.x,y:p.y};room.game.self.roomId=id;room.game.players[0].position={...room.game.self.position};room.game.vision.origin={...room.game.self.position};scene.update(room,0);for(let frame=0;frame<20;frame++)scene.draw(frame*16.67);assert(scene.stats().bytes<=8*1024*1024);}
+    assert(sizes.every(([w,h])=>w===256&&h===256));records.push({width,height,dpr:2,frames:60,commands:counts.calls,dispatchMs:performance.now()-started,cache:scene.stats(),limits:'Three explicitly repositioned unit camera views, not a walking/HTTP workflow.'});
+   }finally{scene.dispose();}
+  }
+ }finally{if(saved===undefined)delete globalThis.OffscreenCanvas;else globalThis.OffscreenCanvas=saved;if(savedDpr===undefined)delete globalThis.devicePixelRatio;else globalThis.devicePixelRatio=savedDpr;}
+ writeFileSync(new URL('_artifacts/quality-client-20261030/beacon2-cache-'+Date.now()+'.json',root),JSON.stringify({records,limits:'Actual command dispatch/allocated tile dimensions at DPR2; no GPU/native FPS claim.'},null,2));
+});
+
+after(()=>{for(const pin of externalPins)assert.equal(createHash('sha256').update(readFileSync(new URL(pin.file,pin.root))).digest('hex'),pin.sha256,'External renderer dependency changed: '+pin.file);if(process.env.QUALITY_CLIENT_RENDER_RECEIPT)writeFileSync(process.env.QUALITY_CLIENT_RENDER_RECEIPT,JSON.stringify({externalPins,sourceStable:true,limits:'Actual geometry/motion modules and canvas command traces, not native GPU/FPS.'},null,2));});

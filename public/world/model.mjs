@@ -74,6 +74,7 @@ export class ActorSamples{
 export function validTaskSession(session,room,world){
  const game=room?.game,task=game?.self?.tasks?.find(t=>t.id===session?.taskId);
  const current=!!session&&room.roomId===session.roomId&&game?.matchId===session.matchId&&game.phase==='roam'&&game.self?.alive&&!game.systems?.selfTransit&&!game.self?.transit&&task&&!task.completed&&game.self.roomId===session.location;
+ if(current&&session.challengeKey!==undefined&&session.challengeKey!==JSON.stringify([task.challenge?.version,task.challenge?.kind,task.challenge?.puzzle]))return false;
  if(!current||session.mapKey!==undefined&&session.mapKey!==mapKey(game.map??room.map))return false;
  if(game.beaconVersion===1)return hasActionDescriptor(game,'task',{taskId:session.taskId});
  return task.roomId===session.location&&distance(game.self.position,world.WORLD_STATIONS[task.roomId])<=world.WORLD.interactionRadius&&game.availableActions?.includes('task');

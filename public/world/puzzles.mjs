@@ -1,7 +1,9 @@
-﻿import {dom,control,setText,trapDialog} from './dom.mjs';
+import {createStationPuzzle} from '../features/tasks/station.mjs';
+import {dom,control,setText,trapDialog} from './dom.mjs';
 
 /** Local puzzles gate a real task request; their solved state has no server authority. */
 export function createTaskPuzzle({task,kind,onSubmit,onClose,id}){
+ if(task?.kind==='station')return createStationPuzzle({task,kind,onSubmit,onClose,id});
  let solved=false,closed=false,selected=null,sent=false;
  const node=dom('section','lw-task-modal');node.setAttribute('role','dialog');node.setAttribute('aria-modal','true');node.setAttribute('aria-labelledby',`${id}-title`);node.tabIndex=-1;
  const heading=dom('h2','',task.label);heading.id=`${id}-title`;
