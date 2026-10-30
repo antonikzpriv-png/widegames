@@ -9,7 +9,7 @@ npm ci
 npm start
 ```
 
-Keep the terminal running and open **http://localhost:3000** in your browser. Choose **PLAY AS A KEEPER** for a human seat with five AI keepers, or **WATCH THE AI** for six AI keepers. All seats are filled automatically. Choose **Storm Beacon** or **Stormbreak Annex** in the host lobby, then press **Begin the watch**. Your role appears privately before entering your selected map. Map selection is fixed once started; a new room chooses independently.
+Keep the terminal running and open **http://localhost:3000** in your browser. Choose **PLAY AS A KEEPER** for a human seat with five AI keepers, or **WATCH THE AI** for six AI keepers. All seats are filled automatically. Choose **Storm Beacon**, **Stormbreak Annex**, **Storm Foundry**, **Tidal Observatory** or **Illustrated Beacon** in the host lobby, then press **Begin the watch**. Your role appears privately before entering your selected map. Map selection is fixed once started; a new room chooses independently.
 
 New watches use the gameplay-quality preset: the original fourteen-room **Storm Beacon v2** (3200x2400 world units), or eight-room **Stormbreak Annex v1**. Both have map-specific stations, colliding furniture, detailed equipment and alternate routes. Older Beacon v1 saves retain their exact map. New crew receive four different station jobs. The preset includes map-specific sabotage, temporary doors, maintenance passages and timed investigation consoles. Stormbreak Annex has eight rooms, interlocking loops and an isolated observatory, with original copper/slate environmental art. **Systems & evidence** lists your server-permitted actions, cooldowns and historical samples. **E/Space/USE** opens nearby equipment and hatch destination choices.
 
@@ -53,7 +53,13 @@ npm run test:tactical-browser
 npm run test:beacon-browser
 npm run test:features:browser
 npm run test:spatial-browser
+npm run test:maps:browser
+npm run test:spectator:browser
+npm run test:illustrated:browser
+LW_WORLD_BROWSER=1 node --test tests/world-ui-browser.test.mjs
 ```
+
+The last command uses POSIX environment syntax; in PowerShell use `$env:LW_WORLD_BROWSER='1'; node --test tests/world-ui-browser.test.mjs`.
 
 The first two run offline engine, AI, authorization, persistence and presentation regressions. Audit suites require a full Git checkout with historical commits; CI fetches that history. Browser qualification requires an installed Chrome/Chromium; `CHROME_PATH` overrides its location. On Windows the default is the standard Google Chrome installation; on Linux it is `/usr/bin/google-chrome`. It starts its own real local server and fresh private fixture, exercises both complete match modes and writes screenshots/report under `_artifacts/world-browser-*/`. These are explicitly seeded, accelerated demo fixtures, with no paid provider calls. The tactical browser audit additionally exercises both maps and checks sabotage, devices, hidden deaths, hatches, private notes, reconnect and native mobile equipment controls through real routes. See [tactical rules](docs/TACTICAL-RULES.md), [exact working interfaces](docs/TACTICAL-INTERFACES.md) and [tactical qualification](docs/TACTICAL-VERIFICATION.md). [Prior Group1 verification](docs/BEACON-VERIFICATION.md) and [earlier verification](docs/VERIFICATION.md) remain historical evidence, not qualification of the tactical revision.
 
@@ -78,7 +84,7 @@ The host can select **Ghost tasks + fallen chat** and **Optional ability roles**
 
 ## Expanded maps from current main
 
-The lobby also offers **Storm Foundry** (12 rooms) and **Tidal Observatory** (14 rooms), preserved from main41b4c6e. These use their authored world2/taskStep protocol: twelve jobs per crew keeper, covering the original five puzzles plus glyph selection, counting, ascending order, rotation, odd-one-out and code transcription. Progress is authoritative and saved; no external CAPTCHA service or model call is required. Their original mapId-based saved games and replay geometry remain distinct from tactical station watches.
+The lobby also offers **Storm Foundry** (12 rooms) and **Tidal Observatory** (14 rooms), preserved from main41b4c6e and updated with the illustrated layouts from main668a867e. These use their authored world2/taskStep protocol: twelve jobs per crew keeper, covering the original five puzzles plus glyph selection, counting, ascending order, rotation, odd-one-out and code transcription. Progress is authoritative and saved; no external CAPTCHA service or model call is required. Their original mapId-based saved games and replay geometry remain distinct from tactical station watches. New selections use authored revision2; revision1 saves retain their original geometry. **Illustrated Beacon** is the separate six-room cutaway map with three original step-puzzle jobs per crew keeper. It preserves canonical `mapId:beacon,mapRevision:2` saves from main668a867e; it does not replace the fourteen-room tactical Beacon2. Map identities are resolved by namespace in storage, navigation, rendering and replay.
 
 Beacon2 and Stormbreak Annex retain their tactical systems and six station challenge kinds. Original Beacon1 and prior map/protocol versions remain readable. Server defaults may use GAME_MAP; the host chooses the final map through the same lobby. Run npm run test:maps:browser for the expanded-map native fixture. [Authored map details and screenshots](docs/EXPANDED-MAPS.md), [newest integration qualification](docs/QUALITY-LATEST-MAIN-INTEGRATION.md).
 
