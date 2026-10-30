@@ -40,10 +40,11 @@ const sees=(state,p,target)=>runtime(state).sees(p.position,target,state,state.p
 const context=state=>({record,publicEvent,nearby,sees,geometry:mapGeometry(state),stop:(s,p,at,reason)=>runtime(s).stop(s,p,at,reason,record)});
 function refreshKnowledge(state,at){if(!isBeacon(state))return false;return runtime(state).observe(state,at,record)||false;}
 function featureHints(state,p,now){
- if(!isBeacon(state)||!p?.alive||state.phase!=='roam'||ownEntry(state.systems.transit,p.id))return [];
- const ctx=context(state),hints=[...systemsModule.systemActionHints(state,p,now,ctx),...investigationModule.investigationActionHints(state,p,now,ctx),...abilityService.hints(state,p,now,ctx)];
+ if(!isBeacon(state)||!canWorldAct(state,p)||state.phase!=='roam'||ownEntry(state.systems.transit,p.id))return [];
+ const ctx=context(state),hints=p.alive?[...systemsModule.systemActionHints(state,p,now,ctx),...investigationModule.investigationActionHints(state,p,now,ctx),...abilityService.hints(state,p,now,ctx)]:[];
  const add=(type,fields,label,position)=>{if(!denial(state,p,{id:'hint',type,...fields},now))hints.push({id:type+':'+Object.values(fields).join(':'),type,fields,label,enabled:true,...(position?{position:clone(position)}:{})});};
  for(const task of p.tasks)add('task',{taskId:task.id},task.label,runtime(state).station(task.roomId));
+ if(!p.alive)return hints;
  for(const target of state.players)add('eliminate',{targetId:target.id},'Eliminate '+target.name,target.position);
  for(const body of state.bodies)add('report',{bodyId:body.id},'Report fallen keeper',body.position);
  add('meeting',{},'Emergency bell',runtime(state).bell);return hints;
