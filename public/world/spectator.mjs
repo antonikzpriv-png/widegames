@@ -1,4 +1,6 @@
-import * as world from '../../shared/world.mjs';
+import {getMap} from '../../shared/maps/index.mjs';
+import {mapReference} from './map-model.mjs';
+import {knowledge} from './beacon-model.mjs';
 
 const directions=new Map([['w',[0,-1]],['arrowup',[0,-1]],['s',[0,1]],['arrowdown',[0,1]],['a',[-1,0]],['arrowleft',[-1,0]],['d',[1,0]],['arrowright',[1,0]]]);
 const clamp=(value,min,max)=>Math.max(min,Math.min(max,value));
@@ -10,7 +12,7 @@ const element=(tag,className,text)=>{const node=document.createElement(tag);if(c
 export function createSpectatorInput({target,joystick,knob,getState,onMove,onClick,win=window,doc=document}){
  let disposed=false,lastFrame=null,pointer=null,stick=null;const keys=new Set();
  const enabled=()=>!disposed&&!doc.hidden&&getState().enabled;
- const typing=event=>event.target?.closest?.('input,textarea,select,[contenteditable="true"],[role="dialog"]');
+ const typing=event=>event.target?.closest?.('input,textarea,select,[contenteditable="true"],[role="dialog"],.lw-inspector');
  function stop(){keys.clear();stick=null;pointer=null;lastFrame=null;if(knob)knob.style.transform='translate(0px,0px)';}
  function keydown(event){const key=event.key.toLowerCase();if(!directions.has(key)||event.defaultPrevented||event.isComposing||event.ctrlKey||event.altKey||event.metaKey||typing(event)||!enabled())return;event.preventDefault();keys.add(key);}
  function keyup(event){if(keys.delete(event.key.toLowerCase()))event.preventDefault();}
@@ -27,17 +29,25 @@ export function createSpectatorInput({target,joystick,knob,getState,onMove,onCli
 /** Narrow observer data only; a human-room observer falls back to its safe public view. */
 export function observerAgents(game){return !game?.self&&game?.inspection?.mode==='all-ai-observer'&&game.inspection.matchId===game.matchId&&Array.isArray(game.inspection.agents)?game.inspection.agents:[];}
 
+/** A local drawing projection of an explicitly supplied owner inspection. No
+ * request, credential, hidden engine state or inferred unseen death is read. */
+export function observerGame(game){
+ const agents=observerAgents(game);if(!agents.length)return game;
+ const byId=new Map(agents.map(a=>[a.id,a]));
+ return {...game,vision:null,players:(game.players||[]).map(p=>{const a=byId.get(p.id);return a?{...p,alive:a.alive,ghost:a.ghost===true,status:a.alive===true?'alive':a.alive===false?'dead':'unknown',roomId:a.roomId,position:point(a.position)?{x:a.position.x,y:a.position.y}:null,moving:a.moving===true,...(['crew','saboteur'].includes(a.role)?{role:a.role}:{})}:p;})};
+}
+
 /** Pure descriptions also power keyboard object selection; no raw model context is read. */
 export function describeSpectatorSelection(game,selection){
  if(!game||game.self||!selection)return null;
- const geometry=typeof world.getWorld==='function'?world.getWorld(game.mapId||'beacon'):world;
- const roomName=id=>geometry.ROOM_LAYOUT?.find(room=>room.id===id)?.name||game.rooms?.find(room=>room.id===id)?.name||geometry.WORLD_ROOMS.find(room=>room.id===id)?.name||(geometry.WORLD_ROOMS.some(room=>room.id===id)?title(id):'In transit');
+ let map;try{map=getMap(mapReference({game}));}catch{return null;}const geometry=map.geometry;
+ const roomName=id=>map.roomLayout?.find(room=>room.id===id)?.name||game.rooms?.find(room=>room.id===id)?.name||geometry.WORLD_ROOMS.find(room=>room.id===id)?.name||(geometry.WORLD_ROOMS.some(room=>room.id===id)?title(id):'In transit');
  const agents=observerAgents(game),player=game.players?.find(p=>p.id===selection.id),agent=agents.find(p=>p.id===selection.id),facts=[],sections=[];
  const result={title:'World object',description:'Read-only observation.',facts,sections};
  if(selection.type==='player'){
-  if(!player)return null;result.title=player.name;result.followId=player.id;const current=agent||player;
-  result.description=agent?'All-AI observer details. Roles are revealed to observers, not to the agents.':'Public observer details. This watch has a human seat; private roles and tasks remain hidden.';
-  facts.push(['Role',agent?.role||player.role||'Hidden'],['Status',current.ghost?'Fallen ghost':current.alive?'On watch':'Fallen'],['Location',roomName(current.roomId)]);
+  if(!player)return null;result.title=player.name;const current=agent||player;if(point(current.position))result.followId=player.id;
+  result.description=agent?'Private owner observatory - omniscient all-AI inspection. These fields are server-supplied; agents keep their own permitted views.':'Public observer details. Private owner inspection is unavailable. Only this server-permitted feed is shown; private roles and tasks remain hidden.';
+  facts.push(['Role',agent?.role||player.role||'Hidden'],['Status',current.ghost?'Fallen ghost':(agent?(current.alive===true?'On watch':current.alive===false?'Fallen':'Status unknown'):({alive:'On watch',dead:'Fallen',unknown:'Status unknown'})[knowledge(game,player)])],['Location',point(current.position)?roomName(current.roomId):'Location unavailable']);
   if(point(current.position))facts.push(['Position',`${current.position.x.toFixed(1)}, ${current.position.y.toFixed(1)}`]);
   if(agent){
    if(agent.ability)facts.push(['Ability',title(agent.ability.type)]);
@@ -49,6 +59,7 @@ export function describeSpectatorSelection(game,selection){
    if(Number.isInteger(agent.meetingsRemaining))facts.push(['Emergency calls left',String(agent.meetingsRemaining)]);
    if(point(agent.destination))facts.push(['Recorded destination',`${agent.destination.x.toFixed(1)}, ${agent.destination.y.toFixed(1)}`]);
    const activity=agent.activity;
+   if(Number.isFinite(game.inspection?.updatedAt))facts.push(['Inspection snapshot at',String(game.inspection.updatedAt)]);
    sections.push({title:'Current activity',lines:[activity?.label||'No current activity recorded.',activity?.source==='recorded-action'?'Source: accepted recorded action.':'Source: recorded state.',"Private thoughts are unavailable. Activity is not a statement of the agent’s reasoning."]});
    const plan=agent.plan;
    sections.push({title:'Selected plan (recorded controller state)',lines:plan?[plan.label||'Recorded plan',`Recorded at ${plan.recordedAt} · valid until ${plan.expiresAt}`,plan.notice||'Last selected plan; may no longer be current. This is not private thoughts.']:['No selected plan recorded.']});
@@ -60,7 +71,7 @@ export function describeSpectatorSelection(game,selection){
   return result;
  }
  if(selection.type==='station'){
-  const id=selection.id.replace(/^station-/,''),station=geometry.WORLD_STATIONS[id];if(!station)return null;result.title=`${roomName(id)} station`;result.description='Task equipment. Observing cannot solve or submit tasks.';
+  const id=selection.roomId||Object.keys(geometry.WORLD_STATIONS).find(id=>geometry.WORLD_STATIONS[id].id===selection.id)||selection.id.replace(/^station-/,''),station=geometry.WORLD_STATIONS[id];if(!station)return null;result.title=`${roomName(id)} station`;result.description='Task equipment. Observing cannot solve or submit tasks.';
   const tasks=agents.flatMap(p=>(p.tasks||[]).filter(task=>task.roomId===id).map(task=>`${game.players.find(q=>q.id===p.id)?.name||p.id} · ${task.label} · ${task.completed?'complete':'pending'}`));
   facts.push(['Room',roomName(id)],['Position',`${station.x}, ${station.y}`]);
   if(game.sabotage?.active&&game.sabotage.roomId===id)facts.push(['Critical repairs',`${game.sabotage.repairsCompleted}/${game.sabotage.repairsRequired}`]);
@@ -68,11 +79,11 @@ export function describeSpectatorSelection(game,selection){
  }
  if(selection.type==='room'){
   const room=geometry.WORLD_ROOMS.find(p=>p.id===selection.id);if(!room)return null;result.title=roomName(room.id);result.description=`A room of ${geometry.metadata?.name||'the storm beacon'}.`;
-  const occupants=(game.players||[]).filter(p=>p.roomId===room.id&&point(p.position));facts.push(['Visible keepers',occupants.map(p=>p.name).join(', ')||'None'],['Task station',`${geometry.WORLD_STATIONS[room.id].x}, ${geometry.WORLD_STATIONS[room.id].y}`]);return result;
+  const occupants=(observerGame(game).players||[]).filter(p=>p.roomId===room.id&&point(p.position));facts.push(['Visible keepers',occupants.map(p=>p.name).join(', ')||'None'],['Task station',`${geometry.WORLD_STATIONS[room.id].x}, ${geometry.WORLD_STATIONS[room.id].y}`]);return result;
  }
  if(selection.type==='bell'){result.title='Emergency bell';const bellRoom=roomName(geometry.worldRoomAt(geometry.WORLD_BELL));result.description=`Living keepers can call council from ${bellRoom}. Observers cannot ring the bell.`;facts.push(['Location',bellRoom],['Council',game.meeting?title(game.phase):'Not in session']);return result;}
  if(selection.type==='body'){
-  const event=(game.events||[]).find(event=>event.bodyId===selection.id||event.id===selection.id),id=event?.playerId||selection.playerId;result.title=`${game.players.find(p=>p.id===id)?.name||'Fallen keeper'} · body`;result.description='A recorded fallen keeper. The body stays at its recorded position.';if(event?.at!==undefined)facts.push(['Recorded at',String(event.at)]);return result;
+  const event=(game.events||[]).find(event=>event.type==='body'&&(event.bodyId===selection.id||event.id===selection.id));if(!event||!point(event.position))return null;const id=event.playerId;result.title=`${game.players.find(p=>p.id===id)?.name||'Fallen keeper'} · body`;result.description='A recorded fallen keeper. The body stays at its recorded position.';if(event?.at!==undefined)facts.push(['Recorded at',String(event.at)]);return result;
  }
  if(selection.type==='effect'){
   const effect=(game.effects||[]).find(effect=>effect.id===selection.id);if(!effect)return null;result.title=effect.kind==='ward'?'Harbor Ward':'Signal Echo';result.description='A visible ability effect. An effect does not establish its issuer’s faction.';facts.push(['Type',title(effect.kind)]);if(Number.isFinite(effect.expiresAt))facts.push(['Recorded expiry',String(effect.expiresAt)]);return result;
@@ -85,6 +96,6 @@ export function describeSpectatorSelection(game,selection){
 export function createSpectatorInspector({onFollow,onClose}){
  const node=element('aside','lw-inspector'),head=element('header','lw-inspector-head'),heading=element('h2'),close=element('button','lw-inspector-close','×'),summary=element('p','lw-inspector-summary'),follow=element('button','lw-inspector-follow','Follow this keeper'),facts=element('dl','lw-inspector-facts'),sections=element('div','lw-inspector-sections');
  node.hidden=true;node.setAttribute('aria-label','World inspector');close.type=follow.type='button';close.setAttribute('aria-label','Close inspector');head.append(heading,close);node.append(head,summary,follow,facts,sections);
- let current=null,signature='';close.addEventListener('click',()=>onClose());follow.addEventListener('click',()=>{if(current?.followId)onFollow(current.followId);});
- return {node,update(game,selection){const next=describeSpectatorSelection(game,selection),key=JSON.stringify(next);if(signature===key)return;signature=key;current=next;node.hidden=!next;node.dataset.selection=selection?`${selection.type}:${selection.id}`:'';if(!next)return;heading.textContent=next.title;summary.textContent=next.description;follow.hidden=!next.followId;facts.replaceChildren();for(const [term,value]of next.facts)facts.append(element('dt','',term),element('dd','',value));sections.replaceChildren();for(const section of next.sections){const box=element('section','lw-inspector-section'),list=element('ul','lw-inspector-list');box.append(element('h3','',section.title),list);for(const line of section.lines)list.append(element('li','',line));sections.append(box);}},reset(){current=null;signature='';node.hidden=true;}};
+ let current=null,signature='',disposed=false;const shut=()=>{if(!disposed)onClose();};close.addEventListener('click',shut);node.addEventListener('keydown',event=>{if(event.key==='Escape'){event.preventDefault();shut();}});follow.addEventListener('click',()=>{if(!disposed&&current?.followId)onFollow(current.followId);});
+ return {node,focus(){if(!disposed&&!node.hidden)close.focus();},update(game,selection){if(disposed)return;const next=describeSpectatorSelection(game,selection),key=JSON.stringify(next);if(signature===key)return;signature=key;current=next;node.hidden=!next;node.dataset.selection=selection?`${selection.type}:${selection.id}`:'';if(!next){heading.textContent=summary.textContent='';facts.replaceChildren();sections.replaceChildren();return;}heading.textContent=next.title;summary.textContent=next.description;follow.hidden=!next.followId;facts.replaceChildren();for(const [term,value]of next.facts)facts.append(element('dt','',term),element('dd','',value));sections.replaceChildren();for(const section of next.sections){const box=element('section','lw-inspector-section'),list=element('ul','lw-inspector-list');box.append(element('h3','',section.title),list);for(const line of section.lines)list.append(element('li','',line));sections.append(box);}},reset(){current=null;signature='';node.hidden=true;heading.textContent=summary.textContent='';facts.replaceChildren();sections.replaceChildren();},dispose(){disposed=true;current=null;node.remove();}};
 }

@@ -17,6 +17,7 @@ const flush = () => new Promise(resolve => setImmediate(resolve));
 const {getMap} = await import(new URL('shared/maps/index.mjs', sourceRoot));
 const mapHelpers = await import(new URL('public/world/map-model.mjs', uiRoot));
 const beaconHelpers = await import(new URL('public/world/beacon-model.mjs', uiRoot));
+const spectatorHelpers=await import(new URL('public/world/spectator.mjs',uiRoot));
 // Real shared dependency introduced by merged ghost/task UI, no behavior stub.
 const featureHelpers=/canViewAct/.test(source('public/world/experience.mjs'))?await import(new URL('shared/features.mjs',uiRoot)):{};
 
@@ -60,7 +61,7 @@ function fixture(sourcePin = pin) {
   }
   document.createElement = tag => new Node(tag); document.body = new Node('body'); document.activeElement = document.body;
   const win = { ...events(), setInterval: () => 1, clearInterval() {} }, calls = [];
-  const context = vm.createContext({ document, window: win, world, CHARACTERS, getMap, ...mapHelpers, mapRoomName:mapHelpers.roomName, ...beaconHelpers, ...featureHelpers, console, Date, performance: { now: () => 100 }, matchMedia: () => ({ matches: true }), requestAnimationFrame: () => 1, cancelAnimationFrame() {},
+  const context = vm.createContext({ document, window: win, world, CHARACTERS, getMap, ...mapHelpers, mapRoomName:mapHelpers.roomName, ...beaconHelpers, ...featureHelpers, ...spectatorHelpers, console, Date, performance: { now: () => 100 }, matchMedia: () => ({ matches: true }), requestAnimationFrame: () => 1, cancelAnimationFrame() {},
     drawKeeper() {}, createWorldScene: () => ({ update() {}, draw() {}, toWorld() { return { x: 0, y: 0 }; }, dispose() {} }), replayText: event => event.type, replayEvents: value => value.replay ?? [], outcomeText: reason => reason });
   const module = (path, names) => Object.assign(context, vm.runInContext(`(()=>{${strip(source(path, sourcePin))};return {${names}};})()`, context));
   module('public/world/dom.mjs', 'dom,control,setText,trapDialog,restoreTrigger');
@@ -76,6 +77,7 @@ function fixture(sourcePin = pin) {
     module('public/world/camera-cards.mjs', 'createCameraCards');
     module('public/world/beacon-panel.mjs', 'createBeaconPanel');
   }
+  if(/createSpectatorInput/.test(source('public/world/experience.mjs', sourcePin)))module('public/world/spectator.mjs','createSpectatorInput,createSpectatorInspector,observerAgents,observerGame');
   module('public/world/experience.mjs', 'createWorldExperience');
   const host = document.createElement('main'); document.body.append(host);
   let action = async (type, fields) => { calls.push({ type, fields }); };
@@ -119,7 +121,7 @@ test('independent frontend task: deferred old failure must not replace current c
   finally { f.experience.dispose(); }
 });
 
-const presentationModel = () => vm.runInNewContext(`(()=>{${strip(source('public/world/model.mjs'))};return {taskKind,contexts,ActorSamples,clamp,point,visibleBodies};})()`, {getMap,...qualitySceneHelpers,...mapHelpers,mapRoomName:mapHelpers.roomName,...beaconHelpers,...featureHelpers});
+const presentationModel = () => vm.runInNewContext(`(()=>{${strip(source('public/world/model.mjs'))};return {taskKind,contexts,ActorSamples,clamp,point,visibleBodies};})()`, {getWorld:world.getWorld,isWalkable:world.isWalkable,getMap,...spectatorHelpers,...qualitySceneHelpers,...mapHelpers,mapRoomName:mapHelpers.roomName,...beaconHelpers,...featureHelpers});
 
 test('independent frontend: actual generated relay tasks reach all three real puzzle implementations', async () => {
   const engine = await import(new URL('server/engine/index.mjs', sourceRoot)), model = presentationModel(), examples = new Map();
@@ -158,7 +160,7 @@ test('independent frontend: observed positional movement animates without privat
   const model = presentationModel(), captured = [], gradient = { addColorStop() {} };
   const ctx = new Proxy({}, { get: (_, key) => String(key).startsWith('create') ? () => gradient : () => {}, set: () => true });
   const canvas = { getContext: () => ctx, getBoundingClientRect: () => ({ left: 0, top: 0, width: 800, height: 600 }) };
-  const context = vm.createContext({ world, CHARACTERS, ...model, getMap, ...annexHelpers, ...qualitySceneHelpers, visionFrame, drawBeaconFixtures, captured });
+  const context = vm.createContext({ world, CHARACTERS, ...model, getMap, ...mapHelpers, ...spectatorHelpers, ...annexHelpers, ...qualitySceneHelpers, visionFrame, drawBeaconFixtures, captured });
   const createScene = vm.runInContext(`(()=>{${strip(source('public/world/scene.mjs'))};drawKeeper=(ctx,player,x,y,options)=>captured.push({id:player.id,step:options.step});return createWorldScene;})()`, context);
   const scene = createScene(canvas), view = room(); view.game.players[1].position = { x: 850, y: 300 };
   try {
@@ -180,7 +182,7 @@ test('independent frontend source/draw trace: doorway paint aligns with six actu
   const model = presentationModel(), rectangles = [], gradient = { addColorStop() {} };
   const ctx = new Proxy({}, { get: (_, key) => String(key).startsWith('create') ? () => gradient : (...args) => { if (key === 'fillRect') rectangles.push(args); }, set: () => true });
   const canvas = { getContext: () => ctx, getBoundingClientRect: () => ({ left: 0, top: 0, width: 800, height: 600 }) };
-  const context = vm.createContext({ world, CHARACTERS, ...model, getMap, ...annexHelpers, ...qualitySceneHelpers, visionFrame, drawBeaconFixtures });
+  const context = vm.createContext({ world, CHARACTERS, ...model, getMap, ...mapHelpers, ...spectatorHelpers, ...annexHelpers, ...qualitySceneHelpers, visionFrame, drawBeaconFixtures });
   const createScene = vm.runInContext(`(()=>{${strip(source('public/world/scene.mjs'))};drawKeeper=()=>{};return createWorldScene;})()`, context);
   const scene = createScene(canvas);
   try {
