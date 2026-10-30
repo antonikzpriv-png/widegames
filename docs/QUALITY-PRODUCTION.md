@@ -176,3 +176,61 @@ Focused compatibility closure for cf73e8498caa355457e95df67e2b19c2efdde665:
 - `node --test tests/quality-main-ghost-factions.test.mjs`: final **11/11 pass,0 skip**,5364.7312ms; log _artifacts/ghost-factions-final-green.txt. Original exact-base ten red controls and first10/10 green evidence remain. The added positive crew case was not miscounted as another original failure.
 
 Only the explicitly owned three runtime files, new faction test and this receipt change. Root transport/demo and the obsolete policy test/help remain coordinator follow-ups; no self-approval of those integrations or new production qualification. The previous25ce30/30 receipt is historical. All providers in these bounded checks are mocked or denied; no paid sends, package rerun or Chrome.
+
+## Final PR6 production qualification:3c1c206
+
+Qualified exact **3c1c206b65d7d44c71471450120ba23c43efad9e**. Fresh worker D:/Widegames-work/ship-quality-production-3c-20261030, branch codex/ship-quality-production-3c-20261030, from that clean committed source. Earlier f9/25ce production results and fallen-faction red/green evidence remain historical and untouched in their original worktrees. This supersedes the earlier package receipt and earlier coordinator handoff gaps; it does not claim later runtime/asset revisions.
+
+**Passed on the first/only run in19,501ms.** The unchanged30-check qualifier emitted **35 passing check records,0 failures** because its existing bounded crypto-role loop needed a second ordinary Beacon room for a crew owner:4 room checks plus1 restart check were repeated. No check was added/skipped/weakened, no role was injected and no second qualification run was made to force a30 count. One Beacon saboteur host, one Annex host and one Beacon crew host all received the same auth/privacy/receipt/restart checks. The only harness change is its default full pin.
+
+All **430 tracked Git blobs** match the clean raw archive manifest. Shipped server/shared/public groups contain91 files,57 assets,218 literal local module edges and5 additional browser references. Every asset was fetched byte-exact with the retained MIME/CSP/nosniff checks. Normal offline production npm ci installed only ws8.22.0; Puppeteer/Puppeteer-core are absent and unresolvable. No source overlay or mutation. Archive uses command-local core.autocrlf=false/core.eol=lf, and each extracted file is compared with git cat-file plus its canonical blob OID before recording SHA256. Source hashes are rechecked before and after the actual run.
+
+Unmodified real server/main.mjs instances24116 and23340 used one isolated synthetic DATA_DIR. Native authenticated HTTP/WS, default room4/match5/Beacon2/four distinct station jobs, both maps' real settings/start/input/private-note boundaries, range/incorrect/direct-completion denials, one legal glyph station step and duplicate/restarted receipts pass. The real station route was851.3122284377272 units at normal authoritative speed; this is not a performance measurement or full-match claim. Safe roles/positions/discovery/owner fields, fixed spectator viewpoints, blocked private source/data/traversal paths and denied foreign/cross-room identities remain strict.
+
+Valid legacy1/2/3/4/5 paused files and receipts remain byte-exact across both mains. Authenticated ended history1/schema2 and history2/schema5 metadata/events/snapshots match real engine exports before and after restart, retaining actual map identity/chronology and omitting private fallen chat. All three new normal matches saved exact-map version2 histories. Six future room/match/history/features/station/map fixtures fail safely through real store setup guards, preserve originals without quarantine and release locks. Those guards are module-level setup checks, not six extra main startups. Labeled synthetic short-deadline ended fixtures are not complete demo matches.
+
+The labeled uncertain daily0.01 reservation was created without a send and stayed byte-exact through both zero-budget/demo mains. Both main instances exited code0/signal null using the actual single SIGTERM handler, closed sockets, released service/recovery locks and restarted under a new ownership token. Windows IPC emits process SIGTERM; OS/POSIX delivery is not qualified. Actual totals: **0 provider fetch attempts,0 outbound attempts,0 forced stops,0 socket privacy errors**. All child fetch/http/https/net outbound paths were blocked before importing main; harness HTTP/WS was loopback only. No production/user data was used.
+
+### Read-only dispatcher/scheduler qualification
+
+Compared25ce ->3c: runtime changes only public/world/experience.mjs; server/engine/features.mjs; server/ai/index.mjs, demo.mjs, world.mjs; server/transport.mjs. Shared modules, CSS, map/movement/station geometry, package.json, lockfile, Dockerfile and .dockerignore are unchanged. No new runtime dependency or browser asset path appears.
+
+Inspected f433a4fe8ebf66f5d5c1a7f0fb62890f1a088989 and exact3c source. Controller now calls one candidates dispatcher; demo's canonical ghost entry reaches the same world planner for every fallen faction. Ghosts bypass strategic intentions/provider reservation/send, retain truthful saboteur observer speech then wait, while only crew plan owned tasks. Server helper imports canonical shared isGhost; living/dead action whitelist, versions and existing budget caps are unchanged. This repairs the prior direct-dispatch gap without a parallel controller path.
+
+Transport schedules only nonhuman roster actors. Living actors retain normal behavior; active crew ghosts with unfinished tasks retain task scheduling. A fallen observer requires current roam/ghostSay permission, no persisted memory.ghostSpoken and no existing accepted own chat message. After the local message, either persisted evidence suppresses further idle planning, including restart. Room aiBusy and serialized run/commit remain; the generation/phase/meeting/alive-or-ghost fence still drops stale work. Context and accepted engine action are persisted together by the existing final commit. No model call is introduced by this scheduling change. No concrete blocker found in this bounded source review. The two-map transport tests at the pin use one preconfigured nonhuman observer, actual controller/room scheduling and restart, with no provider fetch; their reported19/19 closure is not independently rerun or counted as package checks here. The obsolete fabricated-death policy assertion was replaced upstream with legal two-saboteur council/ejection coverage.
+
+### Commands, exact hashes and copyable evidence
+
+From this new worker root, TEMP/TMP=D:/Widegames-work/temp and npm cache D:/Widegames-work/npm-cache:
+
+```powershell
+node _artifacts/archive-production-3c1c206.mjs
+npm ci --omit=dev --offline --no-audit --no-fund --cache D:/Widegames-work/npm-cache --prefix _artifacts/quality-production-3c1c206-raw
+node --check tests/quality-production-review.mjs
+$env:QUALITY_PRODUCTION_REVIEW_PIN='3c1c206b65d7d44c71471450120ba23c43efad9e'
+$env:QUALITY_PRODUCTION_REVIEW_ROOT='D:/Widegames-work/ship-quality-production-3c-20261030/_artifacts/quality-production-3c1c206-raw'
+node tests/quality-production-review.mjs
+node _artifacts/receipt-production-3c1c206-source.mjs
+git diff --check
+```
+
+Paths relative to D:/Widegames-work/ship-quality-production-3c-20261030:
+
+- Raw source: _artifacts/quality-production-3c1c206-raw/
+- Tar: _artifacts/quality-production-3c1c206-raw.tar
+- Manifest: _artifacts/quality-production-3c1c206-raw-manifest.json
+- Successful report: _artifacts/quality-production-3c1c206-run-RNAcFs/report.json
+- Executed harness: _artifacts/quality-production-3c1c206-run-RNAcFs/harness-executed.mjs
+- Source/graph/hash receipt: _artifacts/quality-production-3c1c206-source-audit.json
+- Logs: _artifacts/quality-production-3c1c206-raw-archive.txt, _artifacts/quality-production-3c1c206-raw-install.txt, _artifacts/quality-production-3c1c206-first.txt
+- Synthetic private data: _artifacts/quality-production-3c1c206-run-RNAcFs/private-data/
+
+| Artifact | SHA256 |
+| --- | --- |
+| Raw tar | 3e4d026d022032dc65820a73e8ab5e40a71a876b0a5701a800e20b470677bc1e |
+| Manifest | 1a25c541e987b8bebc11ff298dd8d4e9a5338e8fc07080c3227190d76fd8c4e7 |
+| Report | 87d0fa149a0333cf9aa53469ba1405cd7ab00fbc0b4359e4deaf74e450df9a2c |
+| Executed harness | d425185915cb93b1671101868b19f364e01de21a9afdc1b641447aa7f78097f2 |
+| Runtime/served graph (ordered file,SHA256 pairs) | 72af53010f80ba8f48fd717af353dad6a47deed5f2157b108b452d5b7d4f3d2c |
+
+No Chrome, full suite, profiling/perf loop, live/paid provider, Docker execution, updater/installer/deployment claim, other-worker edit, main or push. Reviewer/manager retain their independent exact-source full/native/browser gates. Only qualifier default and this receipt change; commit message includes [skip ci] as requested for the partial worker branch. The final integration PR retains its normal CI. Qualification complete; stop pending any explicit new counterexample/assignment.
