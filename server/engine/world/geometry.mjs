@@ -18,11 +18,29 @@ export function spatialGeometry(geometry){
   const checker=state=>{const doors=closed(state);return p=>valid(p)&&isWalkable(p)&&!doors.some(r=>{const x=Math.max(r.x,Math.min(p.x,r.x+r.width)),y=Math.max(r.y,Math.min(p.y,r.y+r.height));return Math.hypot(p.x-x,p.y-y)<WORLD.bodyRadius||inside(p,r);});};
   const walkable=(p,state)=>checker(state)(p);
   const motionGeometry=state=>closed(state).map(d=>d.id).sort().join("|");
-  const segment=(a,b,walk)=>{if(!valid(a)||!valid(b))return false;const n=Math.max(1,Math.ceil(distance(a,b)/4));for(let i=0;i<=n;i++)if(!walk({x:a.x+(b.x-a.x)*i/n,y:a.y+(b.y-a.y)*i/n}))return false;return true;};
+  function collisionSweep(from,length,state){
+    const solids=[...WORLD_OBSTACLES,...closed(state)];
+    const r=WORLD.bodyRadius,d=r/Math.SQRT2,probes=[[0,0],[r,0],[-r,0],[0,r],[0,-r],[d,d],[-d,d],[d,-d],[-d,-d]];
+    const localFloors=WORLD_FLOORS.filter(f=>f.x<=from.x+length+r&&f.x+f.width>=from.x-length-r&&f.y<=from.y+length+r&&f.y+f.height>=from.y-length-r);
+    function interval(a,x,y,rect,strict=false){let low=0,high=1;for(const [v,delta,min,size] of [[a.x,x,rect.x,rect.width],[a.y,y,rect.y,rect.height]]){if(Math.abs(delta)<1e-12){if(strict?v<=min||v>=min+size:v<min||v>min+size)return null;}else{let first=(min-v)/delta,last=(min+size-v)/delta;if(first>last)[first,last]=[last,first];low=Math.max(low,first);high=Math.min(high,last);if(strict?low>=high:low>high)return null;}}return [low,high];}
+    return function swept(a,x,y){
+      let until=1;
+      // Every body probe must remain in the union of floors for the WHOLE
+      // segment, including concave corridor seams whose endpoints are valid.
+      for(const [ox,oy] of probes){const ranges=[];for(const floor of localFloors){const span=interval({x:a.x+ox,y:a.y+oy},x,y,floor);if(span)ranges.push(span);}ranges.sort((a,b)=>a[0]-b[0]);let covered=0;for(const [low,high] of ranges){if(low>covered+1e-12)break;covered=Math.max(covered,high);}until=Math.min(until,covered);}
+      for(const rect of solids){
+        for(const expanded of [{x:rect.x-r,y:rect.y,width:rect.width+2*r,height:rect.height},{x:rect.x,y:rect.y-r,width:rect.width,height:rect.height+2*r}]){const span=interval(a,x,y,expanded,true);if(span)until=Math.min(until,span[0]);}
+        const speed=x*x+y*y;if(!speed)continue;
+        for(const cx of [rect.x,rect.x+rect.width])for(const cy of [rect.y,rect.y+rect.height]){const px=a.x-cx,py=a.y-cy,dot=px*x+py*y,disc=dot*dot-speed*(px*px+py*py-r*r);if(disc<=0||dot>=0)continue;const hit=(-dot-Math.sqrt(disc))/speed;if(hit>=-1e-9&&hit<=1)until=Math.min(until,Math.max(0,hit));}
+      }
+      return until;
+    };
+  }
+  const segment=(a,b,walk,state)=>valid(a)&&valid(b)&&walk(a)&&walk(b)&&collisionSweep(a,distance(a,b),state)(a,b.x-a.x,b.y-a.y)>=1-1e-9;
   // Validate the accepted polyline itself, never a newly computed alternate path.
   function routeClear(start,waypoints,state){
     const walk=checker(state);let previous=start;
-    for(const next of waypoints){if(!segment(previous,next,walk))return false;previous=next;}
+    for(const next of waypoints){if(!segment(previous,next,walk,state))return false;previous=next;}
     return true;
   }
   function radius(state,observerId){
@@ -43,7 +61,7 @@ export function spatialGeometry(geometry){
   const nearby=(from,to,range=WORLD.interactionRadius,state,actorId)=>Number.isFinite(range)&&range>=0&&distance(from,to)<=range&&sees(from,to,state,actorId);
   function move(from,dx,dy,amount,state,slide=true){
     const walk=checker(state);if(!walk(from)||![dx,dy,amount].every(Number.isFinite)||amount<0)return point(from);
-    const norm=Math.hypot(dx,dy);if(!norm)return point(from);
+    const norm=Math.hypot(dx,dy);if(!norm||!amount)return point(from);
     const length=Math.min(amount,WORLD.width+WORLD.height),n=Math.max(1,Math.ceil(length/4)),unitX=dx/Math.max(1,norm),unitY=dy/Math.max(1,norm);let current=point(from),contacted=false,stepX=0,stepY=0;
     // Reach contact rather than dropping a whole substep; project onto the
     // tangent of rounded props so diagonal input does not snag their corners.
@@ -53,29 +71,37 @@ export function spatialGeometry(geometry){
       const x=stepX&&!walk({x:p.x+Math.sign(stepX)*.001,y:p.y})?-Math.sign(stepX):0,y=stepY&&!walk({x:p.x,y:p.y+Math.sign(stepY)*.001})?-Math.sign(stepY):0,d=Math.hypot(x,y);
       return d?{x:x/d,y:y/d}:null;
     }
-    function advance(a,x,y){if(!x&&!y)return {position:a,fraction:1};const next={x:a.x+x,y:a.y+y};if(walk(next))return {position:next,fraction:1};let low=0,high=1;for(let j=0;j<14;j++){const t=(low+high)/2;if(walk({x:a.x+x*t,y:a.y+y*t}))low=t;else high=t;}return {position:{x:a.x+x*low,y:a.y+y*low},fraction:low};}
+    const swept=collisionSweep(from,length,state);
+    function advance(a,x,y){if(!x&&!y)return {position:a,fraction:1};let fraction=swept(a,x,y);if(fraction<1)fraction=Math.max(0,fraction-1e-7);const position={x:a.x+x*fraction,y:a.y+y*fraction};return {position,fraction};}
     for(let i=0;i<n;i++){
-      stepX=unitX*Math.min(4,length-i*4);stepY=unitY*Math.min(4,length-i*4);
+      // A partial final step samples the canonical full step's timed segments.
+      // Re-solving a shorter contact can choose a different tangent and jitter.
+      stepX=unitX*4;stepY=unitY*4;const take=Math.min(1,(length-i*4)/4);
       const before=current,normal=slide&&contacted?normalAt(current):null,dot=normal?Math.min(0,stepX*normal.x+stepY*normal.y):0;
-      const x=stepX-(normal?.x??0)*dot,y=stepY-(normal?.y??0)*dot,moved=advance(current,x,y);current=moved.position;
-      if(moved.fraction<1){
-        if(!slide)break;contacted=true;
-        const hit=normalAt(current),remaining=1-moved.fraction;
-        if(hit){const inward=Math.min(0,x*hit.x+y*hit.y);current=advance(current,(x-hit.x*inward)*remaining,(y-hit.y*inward)*remaining).position;}
-        else{current=advance(current,x*remaining,0).position;current=advance(current,0,y*remaining).position;}
-      }else contacted=!!normal;
-      if(distance(before,current)<1e-8)break;
+      const x=stepX-(normal?.x??0)*dot,y=stepY-(normal?.y??0)*dot,moved=advance(current,x,y),first=moved.position,f=moved.fraction;
+      const interpolate=(a,b,t)=>({x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t});
+      if(f===1)current=interpolate(before,first,take);
+      else if(take<=f)current=interpolate(before,first,f?take/f:0);
+      else if(!slide)current=first;
+      else{
+        const hit=normalAt(first),remaining=1-f;let last;
+        if(hit){const inward=Math.min(0,x*hit.x+y*hit.y);last=advance(first,(x-hit.x*inward)*remaining,(y-hit.y*inward)*remaining).position;}
+        else{const horizontal=advance(first,x*remaining,0).position,vertical=advance(first,0,y*remaining).position;last=distance(first,horizontal)>=distance(first,vertical)?horizontal:vertical;}
+        current=interpolate(first,last,(take-f)/remaining);
+      }
+      contacted=f<1||!!normal;
+      if(take<1||distance(before,current)<1e-8||!slide&&f<1)break;
     }
     return current;
   }
   function path(start,target,state){
     const walk=checker(state);if(!walk(start)||!walk(target))return null;if(distance(start,target)<.01)return [];
-    if(segment(start,target,walk))return [point(target)];
+    if(segment(start,target,walk,state))return [point(target)];
     const size=WORLD.grid,columns=Math.ceil(WORLD.width/size),rows=Math.ceil(WORLD.height/size);if(columns*rows>50000)return null;
     const toPoint=id=>({x:id%columns*size,y:Math.floor(id/columns)*size}),safe=new Map(),edges=new Map();
     const cell=id=>{if(!safe.has(id))safe.set(id,walk(toPoint(id)));return safe.get(id);};
-    const edge=(a,b)=>{const key=a<b?a+':'+b:b+':'+a;if(!edges.has(key))edges.set(key,segment(toPoint(a),toPoint(b),walk));return edges.get(key);};
-    function anchor(p){const list=[],cx=Math.round(p.x/size),cy=Math.round(p.y/size);for(let y=cy-2;y<=cy+2;y++)for(let x=cx-2;x<=cx+2;x++){if(x<0||y<0||x>=columns||y>=rows)continue;const id=y*columns+x;list.push({id,d:distance(p,toPoint(id))});}list.sort((a,b)=>a.d-b.d||a.id-b.id);return list.find(v=>cell(v.id)&&segment(p,toPoint(v.id),walk))?.id;}
+    const edge=(a,b)=>{const key=a<b?a+':'+b:b+':'+a;if(!edges.has(key))edges.set(key,segment(toPoint(a),toPoint(b),walk,state));return edges.get(key);};
+    function anchor(p){const list=[],cx=Math.round(p.x/size),cy=Math.round(p.y/size);for(let y=cy-2;y<=cy+2;y++)for(let x=cx-2;x<=cx+2;x++){if(x<0||y<0||x>=columns||y>=rows)continue;const id=y*columns+x;list.push({id,d:distance(p,toPoint(id))});}list.sort((a,b)=>a.d-b.d||a.id-b.id);return list.find(v=>cell(v.id)&&segment(p,toPoint(v.id),walk,state))?.id;}
     const first=anchor(start),last=anchor(target);if(first===undefined||last===undefined)return null;
     const queue=[first],parents=new Map([[first,null]]);let head=0;
     while(head<queue.length&&!parents.has(last)){const id=queue[head++],x=id%columns,y=Math.floor(id/columns);for(const [dx,dy]of [[0,-1],[-1,0],[1,0],[0,1]]){const nx=x+dx,ny=y+dy;if(nx<0||ny<0||nx>=columns||ny>=rows)continue;const next=ny*columns+nx;if(parents.has(next)||!cell(next)||!edge(id,next))continue;parents.set(next,id);queue.push(next);}}
