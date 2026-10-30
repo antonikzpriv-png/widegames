@@ -91,3 +91,43 @@ Exact final hashes:
 Raw report: `_artifacts/quality-production-a739a7f-run-6GokT1/report.json`; preparation/tar/manifest conversion, offline install, dependency proof, checker output, source hashes and final-summary.json are under `_artifacts/illustrated-production-final/`. All generated rooms are isolated under this final run's private-data directory. Git confirms no differences in app/shared/runner/preparer/package sources from the frozen pin.
 
 This closes the requested exact-pin offline production fixture qualification. It does not claim Chrome/browser, full-suite, CI, Docker container, live-provider account or deployment qualification; coordinator owns the parallel remaining gates. No model/paid call, main change, merge, push, deployment or prior-worktree edit.
+
+
+## Superseding final Escape-fix production qualification, 2026-10-30
+
+Exact frozen pin: `76105e25154c31b0da9a35149569e8a0444230c9`. This production result supersedes the a739 qualification above for the updated app5f94da4 Escape map-close/listener cleanup; every earlier receipt/tree remains preserved. New isolated worktree/branch: `D:/Widegames-work/ship-quality-production-escape-final-20261030`, `codex/ship-quality-production-escape-final-20261030`. Only this appended documentation changes.
+
+Repeated the unchanged raw Git-blob preparer and verified574 tracked files, including all86 PNGs and the six newly added screenshot PNGs, without rewriting image bytes. Raw root: `D:\Widegames-work\ship-quality-production-escape-final-20261030\_artifacts\quality-source-76105e2-raw-AvWFFv`. The exact-pin `git -c core.autocrlf=false archive --format=tar` output has574 regular-file entries, all independently SHA256-matched against the raw blob manifest. Only ignored metadata was converted into the adjacent checker manifest with pin/tarSha256/files(file,mode,blob,oid,sha256). Source/preparer/runner/app/package files were not edited or overlaid.
+
+Ran `npm ci --omit=dev --offline --ignore-scripts --no-audit --no-fund` inside the raw root, using `D:/Widegames-work/npm-cache` and TEMP/TMP `D:/Widegames-work/temp`. Install succeeded with one package. The production graph contains only local ws8.22.0; Puppeteer and puppeteer-core are unresolvable, NODE_PATH unset. No coordinator or development node_modules ancestor was used.
+
+The original90s checker was executed once from the new worktree:
+
+```powershell
+$env:TEMP='D:/Widegames-work/temp'
+$env:TMP=$env:TEMP
+$env:npm_config_cache='D:/Widegames-work/npm-cache'
+$env:QUALITY_PRODUCTION_REVIEW_PIN='76105e25154c31b0da9a35149569e8a0444230c9'
+$env:QUALITY_PRODUCTION_REVIEW_ROOT='D:/Widegames-work/ship-quality-production-escape-final-20261030/_artifacts/quality-source-76105e2-raw-AvWFFv'
+node tests/quality-production-review.mjs
+```
+
+Exit0, passed35 recorded checks in22.910s on Nodev24.20.0; original assertions, timeout and runner are unchanged. The actual variable count is30+5 for one extra Beacon attempt needed to obtain a crew owner. Active HTTP/WS rooms are two Beacon2 attempts and one Annex1, all exercised through their actual production main. No manual rerun or assertion change was used to obtain this result.
+
+Final coverage/counts:574 blobs unchanged before/after;103 runtime files;67 public/shared assets fetched byte-exact with MIME/CSP;249 local import edges and6 browser references resolve. Tracked documentation PNGs are verified raw source artifacts, not falsely claimed as public static assets. Default room4/match5/station1, static/private/traversal denials, host/origin/cookie/cross-room permissions, private notes, settings/start/action/input receipts and owner/public-viewer WebSockets pass. Four distinct station jobs/kinds, an actual normal-speed881.035-unit route, one legal glyphs step, remote/incorrect/direct-completion refusal and exact-ID duplicate handling are retained across restart.
+
+Legacy schemas1/2/3/4/5 and ended histories1/2 preserve their bytes/metadata/events/snapshots/authorization. Six future types (room,match,history,features,station,map) refuse without quarantine and retain original files. The labeled synthetic uncertain daily reservation$0.01 remains byte-identical across both mains, without refund/reset or provider send. Both actual main children exit0 through their real SIGTERM handlers with empty stderr; sockets close, original locks release, restart uses a distinct ownership token, and receipt/identity state is retained. Provider fetch attempts0, outbound attempts0, forced stops0, socket errors0; no checker/preparation/cleanup error.
+
+| Final artifact | SHA256 |
+| --- | --- |
+| Exact Git source tar | `d1669284e6b0cf29f03093fe2d246d8d2140c07f5a82f7f977fb4fc39a10a99f` |
+| Preparer source manifest | `8bcb81290f1cc7afa852f6f5e9de789092f58de75155767df80ace98374fad19` |
+| Adjacent checker manifest | `fd04e99d6f088592df1147787c3af1a489b61f5726d199a69dcd99beed6eb26e` |
+| Production report | `0edc02d828f001c4d7e780bce0ed4c51b51cced349b6b30a2ca3e9a4561c18a1` |
+| Unchanged checker | `60b604d320a5451c6c243b6a004cd4fc7d51f7c91427dcb0e094358973cf5ad9` |
+| Unchanged preparer | `4af84f864e79bf0e53d8deff0f53f5033fce4c2d4dcd2367f7e7be014a47eb14` |
+| package-lock.json | `69d8d16c85c641063313fb66033ecab494e56c6f3463d1319a725560b1d35162` |
+
+Report: `_artifacts/quality-production-76105e2-run-AZGKJz/report.json`. Preparation/install/checker logs, raw tar, manifest/dependency proofs, frozen hashes and final-summary.json remain under `_artifacts/escape-final-production/`; generated private rooms stay inside this run's private-data directory. Earlier artifacts/worktrees are untouched. Git confirms app/runner/shared/config/package sources remain exactly the frozen pin.
+
+This is the requested final WS-only actual-main production qualification at76105e2. The fixture does not itself operate a browser or the Escape key; coordinator's browser evidence covers those controls. No Chrome, paid/model call, full suite, Docker container run, main/push/merge or deployment is claimed or performed. Only this focused receipt is committed.
