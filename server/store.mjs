@@ -12,6 +12,10 @@ export const ROOM_ID = /^[A-Za-z0-9_-]{20,40}$/;
 const phases = new Set(['roam','discussion','voting','ended','paused']);
 const object = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 export function validateRoom(room) {
+  if(!object(room))throw new Error('Invalid room');
+  if(Object.hasOwn(room,'mapRevision')&&![1,2].includes(room.mapRevision))throw new Error('Invalid room map revision');
+  if(room.state&&Object.hasOwn(room.state,'mapRevision')&&(![1,2].includes(room.state.mapRevision)||room.state.schemaVersion!==2))throw new Error('Invalid match map revision');
+  if(room.state&&(room.mapRevision??1)!==(room.state.mapRevision??1))throw new Error('Inconsistent map revision');
   if(Object.hasOwn(room,'mapId'))parseMapId(room.mapId);
   if(room.state&&Object.hasOwn(room.state,'mapId')){parseMapId(room.state.mapId);if(room.state.schemaVersion!==2)throw new Error('Map requires world state');}
   if(room.state&&(room.mapId??'beacon')!==(room.state.mapId??'beacon'))throw new Error('Inconsistent room map');
@@ -33,6 +37,7 @@ export function validateRoom(room) {
     if(state.replayHistory!==undefined){
       if(state.schemaVersion!==2)throw new Error('Mixed legacy/world replay history');
       validateReplayHistory(state.replayHistory);
+      if((state.replayHistory.mapRevision??1)!==(state.mapRevision??1))throw new Error('Replay map revision mismatch');
       if(state.replayHistory.map!==(state.mapId??'lantern-wake-v1'))throw new Error('Replay map mismatch');
       if(state.replayHistory.checkpoints.some(a=>a.at<state.startedAt||a.at>state.updatedAt||a.sequence>state.replaySequence))throw new Error('Replay checkpoint exceeds match history');
     }
@@ -50,7 +55,7 @@ const roomIds=new Set(ROOM_LAYOUT.map(room=>room.id));
 const finiteTime=value=>Number.isFinite(value)&&value>=0&&value<=Number.MAX_SAFE_INTEGER;
 const point=value=>object(value)&&Number.isFinite(value.x)&&Number.isFinite(value.y);
 function validateWorldStructure(state){
-  const roomIds=new Set(getWorld(state.mapId).ROOM_LAYOUT.map(r=>r.id));
+  const roomIds=new Set(getWorld(state.mapId,state.mapRevision??1).ROOM_LAYOUT.map(r=>r.id));
   if(state.worldVersion!==1||!finiteTime(state.startedAt)||!finiteTime(state.updatedAt)||state.updatedAt<state.startedAt||!Array.isArray(state.bodies))throw new Error('Invalid world match');
   const tasks=state.players.flatMap(p=>p.tasks||[]);
   if(state.mapId&&(tasks.length!==state.rules.tasksPerCrew*5||new Set(tasks.map(t=>t?.id)).size!==tasks.length))throw new Error('Invalid map task totals');
@@ -80,7 +85,7 @@ async function worldGeometry(supplied){
 export async function validateRoomSnapshot(room,{worldGeometry:provided}={}){
   validateRoom(room);
   if(room.state?.schemaVersion===2){
-    const geometry=room.state.mapId?getWorld(room.state.mapId):await worldGeometry(provided),{WORLD,isWalkable}=geometry;
+    const geometry=room.state.mapId||room.state.mapRevision===2?getWorld(room.state.mapId,room.state.mapRevision??1):await worldGeometry(provided),{WORLD,isWalkable}=geometry;
     const validPoint=p=>point(p)&&p.x>=0&&p.y>=0&&p.x<=WORLD.width&&p.y<=WORLD.height&&isWalkable(p);
     for(const player of room.state.players){
       const m=player.motion;

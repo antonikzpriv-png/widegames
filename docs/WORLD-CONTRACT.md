@@ -1,5 +1,7 @@
 # World experience contract
 
+Current map extension: new production rooms use validated `mapRevision:2`. `getWorld(mapId, revision=1)` resolves original geometry for absent revision metadata and the illustrated polygon layouts for revision 2. Engine state, room configuration, recipient-safe views and replay metadata retain the selected revision. Numeric rules and existing ghost/ability metadata are unchanged. Polygon union boundaries enforce body-radius wall clearance; shared rectangular furniture footprints remain solid. [Revision compatibility](MAP-REVISIONS.md), [current layouts and verification](ILLUSTRATED-MAPS.md).
+
 Base: latest remote integration `d5eed65eb4737ceccab594c6dad911ff9033d2ba` (there is still no origin/main). Every editor uses a separate `D:/Widegames-work/world-*-20261029` checkout. The user's original running checkout and data are preserved. Official reference: https://www.innersloth.com/games/among-us/ and https://innersloth.itch.io/among-us . Original Lantern Wake maps, characters, artwork and names remain ours; reference assets are not shipped.
 
 The product becomes a full-screen illustrated top-down character game: WASD/arrows/touch movement, clickable navigation, nearby stations with minigames, bodies, sabotage, dedicated meetings/voting and reveal/replay scenes. AI uses the same authoritative world.

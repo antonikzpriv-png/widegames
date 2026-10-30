@@ -70,3 +70,9 @@ Choose a map in the lobby before **Begin the watch**. **Storm Foundry** has 12 r
 Six new original CAPTCHA-style equipment puzzles add glyph selection, counting, ascending order, rotation, odd-one-out and code transcription to the existing five station puzzles. Every stage is checked by the server; native keyboard/touch controls, saved progress, ghosts, abilities, bots and spatial replay work on the new maps. These are local game puzzles and require no external CAPTCHA service.
 
 Server defaults can use `GAME_MAP=storm-foundry` or `GAME_MAP=tidal-observatory`; hosts choose the final map in the lobby. Run `npm run test:maps:browser` for the real expanded-map browser qualification. [Maps, puzzle rules and screenshots](docs/EXPANDED-MAPS.md).
+
+## Illustrated deck redesign
+
+New rooms use redesigned, original cutaway versions of **all three maps**, with irregular room outlines, asymmetric corridor loops, beveled hull walls, distinct equipment and floor materials, glazing, pipes, cables, vents, grates, warning paint and readable room labels. The **M / Map** control opens a large deck plan; gold task stations mark your remaining work.
+
+After updating and restarting the server, **Exit** any saved room and create a fresh room to see the redesign. Existing rooms and replays retain their original geometry so saved positions and task progress stay valid. [Design, screenshots and verification](docs/ILLUSTRATED-MAPS.md). Run `npm run test:illustrated:browser` for the actual app’s all-room tour, native task controls, mobile layout and restart checks.

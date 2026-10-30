@@ -25,7 +25,8 @@ function project(r,at){
  return copy(p);
 }
 function base(roster){return {phase:'unknown',players:roster.map(p=>({id:p.id,name:p.name,color:p.color,position:null,alive:true,role:null,roomId:null,tasks:[],route:null,positionAt:null})),features:null,effects:[],bodies:[],sabotage:null,meeting:null,activity:[],observations:[],claims:[],outcome:null};}
-export function createReplayModel(response,{matchId,roomId,players=CHARACTERS,mapId}={}){
+export function createReplayModel(response,{matchId,roomId,players=CHARACTERS,mapId,mapRevision}={}){
+ if(mapRevision!==undefined&&![1,2].includes(mapRevision))throw new Error('Invalid expected map revision.');
  if(response?.roomId!==undefined&&roomId!==undefined&&response.roomId!==roomId)throw new Error('Replay belongs to another room.');
  if(response?.matchId!==undefined&&matchId!==undefined&&response.matchId!==matchId)throw new Error('Replay belongs to another match.');
  const events=copy(replayEvents(response));
@@ -35,7 +36,11 @@ export function createReplayModel(response,{matchId,roomId,players=CHARACTERS,ma
  const metadata=response?.metadata?copy(validateReplayMetadata(response.metadata,matchId??response.matchId)):null;
  const selectedMap=metadata?.map===REPLAY_MAP?'beacon':metadata?.map??mapId??'beacon';
  if(mapId!==undefined&&selectedMap!==mapId)throw new Error('Replay belongs to another map.');
- const world=getWorld(selectedMap),{WORLD,canSeeWorldPoint}=world,point=p=>p&&Number.isFinite(p.x)&&Number.isFinite(p.y)&&world.isWalkable(p);
+ // A recording without revision metadata is explicitly legacy, even when the
+ // caller expects a new layout. Only metadata-free event logs may use that hint.
+ const selectedRevision=metadata?(metadata.mapRevision??1):(mapRevision??1);
+ if(![1,2].includes(selectedRevision)||(mapRevision!==undefined&&selectedRevision!==mapRevision))throw new Error('Replay belongs to another map revision.');
+ const world=getWorld(selectedMap,selectedRevision),{WORLD,canSeeWorldPoint}=world,point=p=>p&&Number.isFinite(p.x)&&Number.isFinite(p.y)&&world.isWalkable(p);
  const anchor=metadata?.anchor;
  const started=events.find(e=>e.type==='started'),hasStart=started?.worldVersion===1&&Array.isArray(started.positions);
  const roster=CHARACTERS.map(c=>{const p=players.find(p=>p.id===c.id);return {id:c.id,name:p?.name||c.name,color:p?.color||c.color};});
@@ -98,7 +103,7 @@ export function createReplayModel(response,{matchId,roomId,players=CHARACTERS,ma
    }
    if(e.type==='effect_started'){
     const effect={id:e.effectId??e.id,kind:e.kind,playerId:e.playerId,createdAt:e.createdAt,expiresAt:e.expiresAt,...(e.kind==='ward'?{targetId:e.targetId}:{position:copy(e.position)})};
-    if(validReplayEffect(effect,metadata?.map??(selectedMap==='beacon'?REPLAY_MAP:selectedMap))){s.effects=s.effects.filter(f=>f.id!==effect.id);s.effects.push(effect);}
+    if(validReplayEffect(effect,metadata?.map??(selectedMap==='beacon'?REPLAY_MAP:selectedMap),selectedRevision)){s.effects=s.effects.filter(f=>f.id!==effect.id);s.effects.push(effect);}
    }
    if(e.type==='effect_ended')s.effects=s.effects.filter(f=>f.id!==e.effectId);
    if(e.type==='tasks_reassigned'){interrupt(p);for(const assignment of e.assignments||[]){const task=p?.tasks.find(t=>t.id===assignment.taskId),owner=get(assignment.playerId);if(task&&owner){p.tasks=p.tasks.filter(t=>t!==task);owner.tasks.push(task);}}}
@@ -112,14 +117,14 @@ export function createReplayModel(response,{matchId,roomId,players=CHARACTERS,ma
   }
   for(const p of s.players){p.ghost=!p.alive&&(s.features?.deathPolicy==='ghost-tasks'||!!p.recordedFallenMotion);if((p.alive||p.ghost)&&p.route)p.position=project(p.route,time);}
   s.activity=s.activity.slice(-12);s.replayTaskRooms=s.activity.filter(e=>['task','taskStep'].includes(e.action?.type)&&time-e.at<=3000).map(e=>s.players.flatMap(p=>p.tasks).find(t=>t.id===e.action.taskId)?.roomId).filter(Boolean);s.time=time;s.events=s.bodies.filter(b=>!b.reported).map(b=>({...b,type:'body',bodyId:b.id}));
-  s.self=null;s.worldVersion=1;if(selectedMap!=='beacon')s.mapId=selectedMap;s.matchId=matchId??response?.matchId??'legacy';s.roles=Object.fromEntries(roles);return s;
+  s.self=null;s.worldVersion=1;if(selectedRevision===2)s.mapRevision=2;if(selectedMap!=='beacon')s.mapId=selectedMap;s.matchId=matchId??response?.matchId??'legacy';s.roles=Object.fromEntries(roles);return s;
  }
  function perspective(s,id){
   const self=s.players.find(p=>p.id===id),visible=self&&point(self.position)?s.players.filter(p=>point(p.position)&&(p.id===id||(!p.ghost||!self.alive)&&distance(self.position,p.position)<=WORLD.visibilityRadius&&canSeeWorldPoint(self.position,p.position))):[];
   return {label:'Reconstructed visibility at recorded positions; not proof of attention or model input.',visible:visible.map(p=>p.id),bodies:s.bodies.filter(b=>self&&point(self.position)&&point(b.position)&&distance(self.position,b.position)<=WORLD.visibilityRadius&&canSeeWorldPoint(self.position,b.position)).map(b=>b.id),observations:s.observations.filter(e=>Array.isArray(e.visibleTo)&&e.visibleTo.includes(id)),ownRole:self?.role??null};
  }
  function claims(s,id){return s.claims.filter(e=>!id||e.playerId===id).slice(-12).map(claim=>({claim,evidence:events.filter(e=>e.at<=s.time&&Math.abs(e.at-claim.at)<=10000&&(e.type==='witness'||e.type==='action'&&e.action?.type!=='say'&&e.action?.type!=='wait')).slice(-6),label:'Context comparison only. A public claim is not verified by nearby events; absence of evidence is not contradiction.'}));}
- return {events,coverage,at,perspective,claims,metadata,mapId:selectedMap,mapName:world.metadata.name};
+ return {events,coverage,at,perspective,claims,metadata,mapId:selectedMap,...(selectedRevision===2?{mapRevision:2}:{}),mapName:world.metadata.name};
 }
 
 /** Clock owns no network or input callbacks. Seek resets wall-clock accumulation. */

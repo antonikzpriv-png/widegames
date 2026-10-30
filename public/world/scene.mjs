@@ -1,4 +1,5 @@
 import * as world from '../../shared/world.mjs';
+import {drawInterior,drawInteriorLabels,drawInteriorLights} from './interior-art.mjs';
 import {ActorSamples,clamp,point,visibleBodies} from './model.mjs';
 import {CHARACTERS} from '../../shared/contracts.mjs';
 
@@ -91,6 +92,11 @@ function glowLayer(canvas,critical){
  context.shadowColor=critical?'#ff6963':'#ffe895';context.shadowBlur=22;circle(context,64,64,31,critical?'#e87162':'#f3d98e',undefined,4);glowBitmaps.set(key,bitmap);return bitmap;
 }
 function paintStructure(ctx,geometry){
+ if(geometry.metadata?.revision===2){
+  drawInterior(ctx,geometry,{cache:false});
+  circle(ctx,geometry.WORLD_BELL.x,geometry.WORLD_BELL.y,19,'#e1a34f');circle(ctx,geometry.WORLD_BELL.x,geometry.WORLD_BELL.y,9,'#fff0ba',undefined,2);
+  return;
+ }
  const legacy=geometry.metadata?.id==='beacon'||!geometry.metadata?.id,corridors=geometry.WORLD_FLOORS.filter(f=>!f.center);
   // Structural silhouette beneath the painted floor.
   for(const floor of geometry.WORLD_FLOORS)round(ctx,floor.x-8,floor.y-8,floor.width+16,floor.height+16,13,'#142838','#091c2c',9);
@@ -100,7 +106,7 @@ function paintStructure(ctx,geometry){
    ctx.save();ctx.beginPath();ctx.rect(r.x+12,r.y+16,r.width-24,r.height-30);ctx.clip();ctx.strokeStyle='#19344413';ctx.lineWidth=2;for(let x=r.x+30;x<r.x+r.width;x+=36){ctx.beginPath();ctx.moveTo(x,r.y+14);ctx.lineTo(x,r.y+r.height-8);ctx.stroke();}ctx.restore();
    const roomLabel=r.name?.toUpperCase()||names[r.id]||r.id.toUpperCase(),authoredLabel=(geometry.WORLD_DECOR||[]).some(item=>item.kind==='label'&&String(item.text).toUpperCase()===roomLabel);
    if(!authoredLabel)text(ctx,roomLabel,r.x+r.width/2,r.y+r.height-7,19,'#163346');
-   if(legacy)decor(ctx,r);else if(r.description){const limit=Math.max(25,Math.floor((r.width-40)/6)),words=r.description.split(' ');let line='',lines=[];for(const word of words){if((line+' '+word).length>limit){lines.push(line);line=word;}else line+=(line?' ':'')+word;}if(line)lines.push(line);for(const [i,line]of lines.slice(0,2).entries())text(ctx,line,r.x+r.width/2,r.y+28+i*14,11,'#254d5a');} 
+   if(legacy)decor(ctx,r);else if(r.description){const limit=Math.max(25,Math.floor((r.width-40)/6)),words=r.description.split(' ');let line='',lines=[];for(const word of words){if((line+' '+word).length>limit){lines.push(line);line=word;}else line+=(line?' ':'')+word;}if(line)lines.push(line);for(const [i,line]of lines.slice(0,2).entries())text(ctx,line,r.x+r.width/2,r.y+28+i*14,11,'#254d5a');}
 
   }
   // Open thresholds exactly where shared corridor floors cross a room boundary.
@@ -114,8 +120,8 @@ function paintStructure(ctx,geometry){
   circle(ctx,geometry.WORLD_BELL.x,geometry.WORLD_BELL.y,19,'#e1a34f');circle(ctx,geometry.WORLD_BELL.x,geometry.WORLD_BELL.y,9,'#fff0ba',undefined,2);
 }
 function staticWorld(canvas,geometry){
- const key=geometry.metadata?.id||'beacon';if(staticWorldBitmaps.has(key))return staticWorldBitmaps.get(key);
- // Three validated map IDs, bounded raster size: even the expanded maps do not
+ const key=`${geometry.metadata?.id||'beacon'}:${geometry.metadata?.revision||1}`;if(staticWorldBitmaps.has(key))return staticWorldBitmaps.get(key);
+ // Validated map/revision pairs, bounded cache and raster size: expanded maps do not
  // retain an unbounded full-resolution canvas for every scene or room.
  const scale=Math.min(1,2048/Math.max(geometry.WORLD.width,geometry.WORLD.height));
  const bitmap=createBitmap(canvas,Math.ceil(geometry.WORLD.width*scale),Math.ceil(geometry.WORLD.height*scale));if(!bitmap)return null;
@@ -127,15 +133,16 @@ function staticWorld(canvas,geometry){
 export function createWorldScene(canvas,{reduced=false,playback=false}={}){
  const ctx=canvas.getContext('2d'),samples=new ActorSamples();
  let room=null,lastKey=null,geometry=world,camera={x:800,y:400},view={width:1,height:1,zoom:1,camera:null},stopped=false,lastDraw=null,paintedActors=[];
- function update(next,at){geometry=typeof world.getWorld==='function'?world.getWorld(next?.game?.mapId||next?.mapId||'beacon'):world;const key=`${next?.roomId}:${next?.game?.matchId}:${geometry.metadata?.id||'beacon'}`;if(key!==lastKey){samples.clear();lastKey=key;camera={...(next?.game?.self?.position||geometry.worldSpawn?.('p1')||{x:800,y:300})};lastDraw=null;paintedActors=[];}room=next;samples.update(room?.game,at);}
+ function update(next,at){geometry=typeof world.getWorld==='function'?world.getWorld(next?.game?.mapId||next?.mapId||'beacon',next?.game?.mapRevision??next?.mapRevision??1):world;const key=`${next?.roomId}:${next?.game?.matchId}:${geometry.metadata?.id||'beacon'}:${geometry.metadata?.revision||1}`;if(key!==lastKey){samples.clear();lastKey=key;camera={...(next?.game?.self?.position||geometry.worldSpawn?.('p1')||{x:800,y:300})};lastDraw=null;paintedActors=[];}room=next;samples.update(room?.game,at);}
  function draw(time,{overview=false,follow:followId=null,camera:freeCamera=null,spectatorGhost=false}={}){
   if(stopped)return;const rect=canvas.getBoundingClientRect();if(!rect.width||!rect.height)return;
   const dpr=Math.min(2,globalThis.devicePixelRatio||1),width=rect.width,height=rect.height;
   if(canvas.width!==Math.round(width*dpr)||canvas.height!==Math.round(height*dpr)){canvas.width=Math.round(width*dpr);canvas.height=Math.round(height*dpr);}
   ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,width,height);
-  const sea=ctx.createLinearGradient(0,0,width,height);sea.addColorStop(0,'#102f48');sea.addColorStop(1,'#244957');ctx.fillStyle=sea;ctx.fillRect(0,0,width,height);
+  const illustrated=geometry.metadata?.revision===2;
+  const sea=ctx.createLinearGradient(0,0,width,height);sea.addColorStop(0,illustrated?'#09151e':'#102f48');sea.addColorStop(1,illustrated?'#182c36':'#244957');ctx.fillStyle=sea;ctx.fillRect(0,0,width,height);
   if(!reduced){ctx.strokeStyle='#93c2d01c';ctx.lineWidth=2;for(let i=0;i<45;i++){const x=(i*137+time*.014)% (width+80)-40,y=(i*83+time*.038)%(height+80)-40;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x-12,y+27);ctx.stroke();}}
-  const game=room?.game,lobby=!game,legacy=!geometry.metadata?.id||geometry.metadata.id==='beacon',mapCenter={x:geometry.WORLD.width/2,y:geometry.WORLD.height/2},lobbyCenter=legacy?{x:800,y:310}:geometry.WORLD_ROOMS.find(r=>r.id==='bridge')?.center||mapCenter,free=!game?.self&&point(freeCamera);
+  const game=room?.game,lobby=!game,legacy=!illustrated&&(!geometry.metadata?.id||geometry.metadata.id==='beacon'),mapCenter={x:geometry.WORLD.width/2,y:geometry.WORLD.height/2},lobbyCenter=legacy?{x:800,y:310}:geometry.WORLD_ROOMS.find(r=>r.id==='bridge')?.center||mapCenter,free=!game?.self&&point(freeCamera);
   const followed=game?.players?.find(p=>p.id===followId&&point(p.position));
   const followedId=followed?.id||game?.self?.id||game?.players?.find(p=>point(p.position)&&p.alive)?.id;
   const follow=(!playback&&samples.at(followedId,time,reduced))||followed?.position||game?.self?.position||mapCenter;
@@ -149,6 +156,7 @@ export function createWorldScene(canvas,{reduced=false,playback=false}={}){
   if(canvas.dataset){canvas.dataset.cameraX=String(camera.x);canvas.dataset.cameraY=String(camera.y);canvas.dataset.cameraZoom=String(zoom);canvas.dataset.cameraMode=overview?'overview':free?'free':'follow';}
   ctx.save();ctx.translate(width/2,height/2);ctx.scale(zoom,zoom);ctx.translate(-camera.x,-camera.y);
   const bitmap=staticWorld(canvas,geometry);if(bitmap){ctx.imageSmoothingEnabled=false;ctx.drawImage(bitmap,0,0,geometry.WORLD.width,geometry.WORLD.height);ctx.imageSmoothingEnabled=true;}else paintStructure(ctx,geometry);
+  if(illustrated){drawInteriorLights(ctx,geometry,time,reduced);drawInteriorLabels(ctx,geometry,zoom);}
   const lantern=geometry.WORLD_ROOMS.find(r=>r.id==='lantern');
   if(legacy&&lantern){ctx.save();ctx.translate(lantern.x+95,lantern.y+100);ctx.rotate(reduced?0:time/9000);ctx.fillStyle='#fff4ba66';ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(90,-25);ctx.lineTo(90,25);ctx.closePath();ctx.fill();ctx.restore();}
   for(const r of geometry.WORLD_ROOMS){

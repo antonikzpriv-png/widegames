@@ -5,7 +5,7 @@ permissions:
 jobs:
   offline:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
         with:
@@ -21,6 +21,9 @@ jobs:
         env:
           CHROME_PATH: /usr/bin/google-chrome
       - run: npm run test:maps:browser
+        env:
+          CHROME_PATH: /usr/bin/google-chrome
+      - run: npm run test:illustrated:browser
         env:
           CHROME_PATH: /usr/bin/google-chrome
       - run: npm run test:features:browser
@@ -56,3 +59,5 @@ jobs:
             _artifacts/spectator-browser-*/*.png
             _artifacts/maps-captcha-browser-*/report.json
             _artifacts/maps-captcha-browser-*/*.png
+            _artifacts/illustrated-maps-browser-*/report.json
+            _artifacts/illustrated-maps-browser-*/*.png

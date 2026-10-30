@@ -36,6 +36,9 @@ function limiter(now) {
 
 // Optional dependencies let transport tests exercise faults without provider calls.
 export async function createGameServer(config,dependencies={}) {
+  if(Object.hasOwn(config,'mapRevision')&&![1,2].includes(config.mapRevision))throw new TypeError('Invalid map revision');
+  if(config.mapRevision===2&&config.worldMode!==true)throw new TypeError('Map revision requires world mode');
+  const mapRevision=config.worldMode===true?(config.mapRevision??1):1;
   const now=config.now||Date.now;
   const origin=validatePublicOrigin(config.publicOrigin),secure=origin.startsWith('https:');
   const engine=dependencies.engine||await import('./engine/index.mjs');
@@ -76,7 +79,7 @@ export async function createGameServer(config,dependencies={}) {
         if((features.deathPolicy==='ghost-tasks'||features.abilities)&&config.worldMode!==true)fail(400,'WORLD_REQUIRED','Optional presets require world mode.');
         let mapId;try{mapId=parseMapId(Object.hasOwn(input,'mapId')?input.mapId:config.mapId);}catch{fail(400,'INVALID_MAP','Choose an available map.');}
         if(mapId!=='beacon'&&config.worldMode!==true)fail(400,'WORLD_REQUIRED','Maps require world mode.');
-        const {room,token,identity}=await service.create(input.mode,features,mapId);json(res,201,view(room,identity),{'Set-Cookie':cookie(room.data.id,token,secure)});return;
+        const {room,token,identity}=await service.create(input.mode,features,mapId,mapRevision);json(res,201,view(room,identity),{'Set-Cookie':cookie(room.data.id,token,secure)});return;
       }
       const match=/^\/api\/rooms\/([A-Za-z0-9_-]+)(?:\/(join|start|action|input|replay|socket))?$/.exec(url.pathname);
       if(!match)fail(404,'NOT_FOUND','Route not found.');
@@ -134,7 +137,7 @@ export async function createGameServer(config,dependencies={}) {
             if((next.features?.deathPolicy==='ghost-tasks'||next.features?.abilities)&&config.worldMode!==true)fail(400,'WORLD_REQUIRED','Optional presets require world mode.');
             if(Object.hasOwn(input,'mapId')){let chosen;try{chosen=parseMapId(input.mapId);}catch{fail(400,'INVALID_MAP','Choose an available map.');}if(chosen==='beacon')delete next.mapId;else next.mapId=chosen;}
             if(next.mapId&&config.worldMode!==true)fail(400,'WORLD_REQUIRED','Maps require world mode.');
-            next.startId=input.id;next.state=engine.createMatch({id:data.id,mode:data.mode,humanPlayerId:'p1',now:now(),config:config.rules||{},world:config.worldMode===true,features:next.features,mapId:next.mapId});await commit(room,next);
+            next.startId=input.id;next.state=engine.createMatch({id:data.id,mode:data.mode,humanPlayerId:'p1',now:now(),config:config.rules||{},world:config.worldMode===true,features:next.features,mapId:next.mapId,mapRevision:next.mapRevision??1});await commit(room,next);
           } else {
             if(!identity.seatId)fail(403,'SPECTATOR','Spectators cannot act.');
             if(!data.state)fail(409,'NOT_STARTED','Start the match first.');

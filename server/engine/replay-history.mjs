@@ -13,7 +13,7 @@ function snapshot(state){
 }
 export function checkpointReplay(state){
  if(state.schemaVersion!==2||state.worldVersion!==1)return;
- const h=state.replayHistory??={version:REPLAY_VERSION,map:state.mapId??REPLAY_MAP,checkpoints:[]};
+ const h=state.replayHistory??={version:REPLAY_VERSION,map:state.mapId??REPLAY_MAP,...(state.mapRevision===2?{mapRevision:2}:{}),checkpoints:[]};
  const last=h.checkpoints.at(-1),first=replaySequenceOf(state.replay.find(e=>replaySequenceOf(e)!==null))||0;
  if(last&&state.replaySequence-last.sequence<REPLAY_LIMITS.interval&&h.checkpoints.some(a=>a.sequence>=first-1))return;
  // Only capture at completed engine transaction boundaries, after all actors settle.
@@ -25,6 +25,6 @@ export function replayMetadata(state){
  let anchor=null;
  const first=replaySequenceOf(state.replay.find(e=>replaySequenceOf(e)!==null))||0;
  if(state.replayHistory){validateReplayHistory(state.replayHistory);anchor=state.replayHistory.checkpoints.find(a=>a.sequence>=first-1)??null;}
- return copy(validateReplayMetadata({version:REPLAY_VERSION,map:state.mapId??REPLAY_MAP,matchId:state.id,anchor,
+ return copy(validateReplayMetadata({version:REPLAY_VERSION,map:state.mapId??REPLAY_MAP,...(state.mapRevision===2?{mapRevision:2}:{}),matchId:state.id,anchor,
   coverage:{startedAt:state.startedAt,from:anchor?.at??Math.min(...state.replay.map(e=>e.at),state.outcome?.at??state.updatedAt),through:state.outcome?.at??state.updatedAt,partial:!anchor||anchor.at!==state.startedAt||first>1}},state.id));
 }

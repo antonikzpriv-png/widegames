@@ -20,7 +20,7 @@ function selectedPlan(state,player,context,now){
   plan.startedAt<state.startedAt||plan.startedAt>now||plan.expiresAt<=now||plan.expiresAt>plan.startedAt+30000||memory.planProgress?.failures>=3)return null;
  const result={goal:plan.goal,label:goals[plan.goal],source:'recorded-controller-state',recordedAt:plan.startedAt,expiresAt:plan.expiresAt,status:'last-selected',notice:'Last selected plan; may no longer be current. This is not private thoughts.'};
  if(['task','repair','fake_work','alibi','position','investigate'].includes(plan.goal)){
-  if(!getWorld(state.mapId).WORLD_ROOMS.some(room=>room.id===plan.roomId))return null;result.roomId=plan.roomId;
+  if(!getWorld(state.mapId,state.mapRevision??1).WORLD_ROOMS.some(room=>room.id===plan.roomId))return null;result.roomId=plan.roomId;
  }
  if(plan.goal==='task'){
   if(player.role!=='crew'||!player.tasks.some(task=>task.id===plan.taskId&&task.roomId===plan.roomId&&!task.completed))return null;

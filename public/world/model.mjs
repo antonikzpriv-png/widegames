@@ -56,10 +56,11 @@ function receivedSegment(from,to,isWalkable){
  * There is no extrapolation, and newly hidden actors are removed immediately.
  */
 export class ActorSamples{
- constructor(){this.samples=new Map();this.delayMs=100;this.mapId=null;}
+ constructor(){this.samples=new Map();this.delayMs=100;this.mapKey=null;}
  update(game,at){
-  const mapId=game?.mapId??'beacon';if(this.mapId!==mapId){this.samples.clear();this.mapId=mapId;}
-  const {isWalkable}=getWorld(mapId);
+  const mapId=game?.mapId??'beacon',revision=game?.mapRevision??1,mapKey=`${mapId}:${revision}`;
+  if(this.mapKey!==mapKey){this.samples.clear();this.mapKey=mapKey;}
+  const {isWalkable}=getWorld(mapId,revision);
   const seen=new Set();
   for(const player of visiblePlayers(game)){
    seen.add(player.id);const old=this.samples.get(player.id);
