@@ -280,3 +280,52 @@ git diff --check
 ```
 
 The new tests default to the actual checkout and have no skip/source-fallback logic; the optional source root explicitly labels this incomplete-merge boundary fixture. The old941 audit checkout does not pretend to implement Group2. No runtime, other worktree, main, provider, deployment or push mutation is made. Q-A1/Q-A2 implementation is now manager-reported fixed via the safe-motion/camera change integrated as **f6cb78b4c61e0859fcf0d0ddb5a8171d87e20789**; the original assertions/red remain preserved. Independent unchanged requalification is deferred until the final combined source is frozen, as requested.
+
+## Exact composed-candidate boundary receipt520cc3c
+
+While the early staged receipt was being prepared, the coordinator committed the merge and ghost completed-view correction. Independently froze **520cc3ce94d603ad04d94ff40f6b97c740aace88** to `_artifacts/quality-main-source-520cc3c`: **93 exact runtime/package files, no overlays**, manifest SHA256 **8aabd1d387ffba522dd9a0571c09f7623ea66d002bcf1e63fc9dbb823eb4e38d**. All runtime hashes still match after the checks. This supersedes reliance on the boundary composite for the results below; the original staged red remains intact in commit **332ea914d746e96772956f1c43b6ef81585e9470** and its ignored archive/log.
+
+**Six bounded independent checks:4 pass,2 fail,0 skip/todo/cancel; actual Node exit1.** Final receipt `_artifacts/quality-main-520cc3c-six-final.txt`, SHA256 **989f065cdd4395eadb12d97b8a134cfd0f84d137e14f6d979c0d49c5f5ae4b72**. Byte-identical test copies run beside the exact archive with both source overrides removed, so default relative imports exercise the composed source without a skip or implicit historical fallback. The old941 runtime in this reviewer branch remains preserved; it does not pretend to contain Group2. No conflicting coordinator source is imported.
+
+| Result | Boundary and evidence |
+| --- | --- |
+| **Q-M1 remains OPEN** | Same accepted start ID with changed `{deathPolicy,abilities}` still returns200 and the original features. Identical retry, different-ID409 and visitor403 prerequisites pass. Exact transport2ba18f7, line133, is the early-return path. |
+| **Q-M2 remains OPEN** | Actual Beacon2/schema5 validation still accepts the strict v1 original-map history fixture. Legacy schema2/v1 readability and unmodified normal schema5 validity both pass first. Exact store7b54f80, line47, calls shared validateReplayHistory(history) without the match. Core already exports **validateReplayHistoryState(history,state)** at server/engine/replay-history.mjs:37; its line38 explicitly rejects v1 when schemaVersion is not2 and its v2 path binds exact map/roster. Root store has not wired that existing hook. This is restore integrity/replay usability risk, not demonstrated unauthenticated state injection or a live-data leak. |
+| **Q-M3 CLOSED at520cc3c in tested scope** | Replay-history version3 now throws VERSION_UNAVAILABLE, leaves exact original bytes/path present and creates no quarantine. The newer store preflight is independently verified; historical quarantine evidence remains. This does not approve every unknown nested future subversion. |
+| PASS: ghost transition/lifecycle | Actual combined-engine legacy world2 views place the living human at a real legal taskStep station. Root rejects the deferred living taskStep failure as obsolete after actual elimination creates a crew ghost, then accepts the ghost's correctly serialized direction input. Actual ghostSay is visible to that ghost and absent from living/spectator views. Root forwards matchId and caller AbortSignal to replay fetch and rejects its late response after room leave. VM drawing/network are explicitly stubbed; game actions and views are real. This is not native-browser or all-map ghost privacy qualification. |
+| PASS: reservation order/fence | Real HTTP/store plus a labeled deferred mock AI verifies that the per-match reservation is already on disk when the actual daily reserve runs. One fixture-only0.01USD reservation yields10000000 canonical nanodollars; no provider send occurs. A real accepted emergency council changes generation: getCurrentView returns null, a later reservation rejects, ledger bytes stay exact, and the stale proposal/context cannot enter the new council or overwrite committed memory. This qualifies coordinator hook ordering/fencing, not the pending strategic model implementation or OS power-loss durability. |
+| PASS: normal ghost station startup | The real schema5 engine control supports ghost-tasks; normal config/create/start via actual HTTP/store succeeds200 with room4, stationTasksVersion1 and the actual feature preset in roam. No task, position, role or winner is injected. This confirms the earlier schema2-only feature-validation interface gap was adapted in the committed source, rather than assuming the old staged source remained current. |
+
+Relevant exact520 blobs:
+
+| File | Blob |
+| --- | --- |
+| server/store.mjs | 7b54f80ba8666b12b60d0528ddf492e88e2fcc4b |
+| server/transport.mjs | 2ba18f7ad1d3193cf4703905aa75a8d2e8eb7843 |
+| server/feature-validation.mjs | aa601afefa4a73b19dd8c52e151672614949b6e8 |
+| server/engine/index.mjs | 5a9dbaab574f5129ea78b652d5ee259fd7e2a4f0 |
+| server/engine/replay-history.mjs | ca3bba3e394b76b8e44398a1bfd2fc1c18e80396 |
+| server/engine/features.mjs | 9d8a308d0a941e58128117f6ee64f9042c66641d |
+| shared/replay.mjs | 920b573517b733e2e1a69f5d92e9715ad96da353 |
+| shared/replay-v2.mjs | 25eeed55793c440edfc117328053b7fb518ddf22 |
+| public/app.mjs | a5fd43d73ca5e13da46781b9e249a950114a104c |
+
+Source review confirms separate legacy v1 and exact-map v2 readers rather than enlarged v1 bounds; v2 bounds custom4..12 IDs and station challenge shapes. The remaining binding failure above is in root persistence. Live engine getPlayerView, room projection and ended-only replay route remain distinct surfaces. This receipt does not blanket-approve all v2 anchor invariants, all ghost death/end/restart combinations or the new strategic provider path. Core/runtime and Frontend changes require final frozen-source qualification; no worker self-approval is inferred from dependency tests.
+
+The two lifecycle controls were first prepared against a separately preserved later-stage fixture (`quality-main-staged-root-next`, manifest **52b4c8c984ec821d4d7dad836f014f7d532a94495c1c61657262dbdd9efb6667**) and actual committed incoming43 engine (`quality-main-incoming-43c0799`, manifest **931c6c368d53188c2c01e77aa2de9354facb2abf2417b0a91c59e87ff7533f94**). Final520 results use **only520 for both engines and root**. Preparation failures are preserved: `_artifacts/quality-main-staged-next-five.txt` initially spread the legacy taskInput string as fields rather than constructing `{step,input}`; `_artifacts/quality-main-staged-next-lifecycle.txt` passed a VM-realm object directly to the engine, which correctly rejected its prototype. The fixture now uses the real JSON serialization boundary. Its two corrected controls pass in `_artifacts/quality-main-staged-next-lifecycle-final.txt` (**a9848291e4202bad4183726af0962392940703885c1e52dcc92962370df0b6aa**). These are fixture corrections, not weakened engine validation or additional product findings. A Windows console encoding error occurred after the final six-check log was already written; reading that existing log recovered its actual Node exit1 without repeating the tests.
+
+Actual bounded commands, TEMP/TMP/cache still on D:
+
+```powershell
+$env:QUALITY_MAIN_REVIEW_ROOT=(Resolve-Path '_artifacts/quality-main-source-520cc3c').Path
+Remove-Item Env:QUALITY_MAIN_GHOST_ROOT -ErrorAction SilentlyContinue
+node --test tests/quality-main-boundaries*.test.mjs
+# Final default-source verification: byte-identical tests staged under exact archive.
+Remove-Item Env:QUALITY_MAIN_REVIEW_ROOT
+node --test _artifacts/quality-main-source-520cc3c/tests/quality-main-boundaries*.test.mjs
+node --check tests/quality-main-boundaries-root.test.mjs
+node --check tests/quality-main-boundaries-lifecycle.test.mjs
+git diff --check
+```
+
+The final raw-log wrapper explicitly records Node exit1; subsequent successful syntax/whitespace checks are not a test approval. Two red assertions remain active. Existing Q-A1/Q-A2 assertions/evidence and6ca pin are untouched; manager-reported walking fixes await the requested one-time unchanged checks on the explicitly frozen final combination. **No Chrome, provider calls, runtime edits, other-worker writes, full suite, main/push/deployment or final integration approval.** This bounded audit is complete with the two concrete root counterexamples ready for coordinator correction.
