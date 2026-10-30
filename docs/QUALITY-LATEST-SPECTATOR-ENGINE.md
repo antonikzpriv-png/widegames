@@ -1,0 +1,13 @@
+﻿# Latest spectator engine integration
+
+Candidate base88b9646f1f577c1e12b2f2a10172aa51d5f9e38e composes quality18c38d9 with main aa1f58c7699acb53ecba96c977a089c54c41c340. This worker changes only assigned engine copy/runtime and local world AI paths, owned tests and this receipt. It does not qualify the full candidate or provide native/browser approval.
+
+The incoming copyState implementation is retained byte-for-byte. Legacy schemas1/2 use its independent recursive copy and idle pending preflight. Schemas3/4/5 retain structuredClone and the full chronological advance path: lights/doors/transit/device timers, knowledge and snapshot capture are not covered by the legacy idle predicate. applyAction/applyInput reuse only a newly allocated tick result, otherwise copy; no mutable history is intentionally shared with the input.
+
+Original evidence: _artifacts/spectator-engine-incoming-red.txt has5/6 engine controls passing, with idle proxy history failing DataCloneError before adaptation. _artifacts/spectator-ai-baseline-red.txt has both map-local auxiliary/job controls failing: actual legal lights sabotage made a keeper navigate to remote repair instead of consuming the enabled task descriptor. The staggered seed3 controller simulation already ended by parity (12 completed jobs), but performed zero task inputs while auxiliary sabotage was active; it is not a reproduction of the native15-minute pause. The original raw44 native21/22 receipt remains separate and unaltered.
+
+Local policy now keeps critical repairs urgent, completes nearby enabled owner tasks before remote auxiliary repair/device visits, and retains a chosen finite own-job destination. Only projected tasks, public equipment, current permitted doors and enabled descriptors enter proposals; the ordinary engine still validates every action. No winner/deadline/seed/budget changes, hidden-state input or provider calls are introduced. Optional device goals remain after owned work and critical repair may interrupt a task.
+
+Focused green and native scheduler follow-up are pending at this milestone. No claimed frame rate or complete-match native approval.
+
+Milestone focused results: incoming engine optimization6/6 and owned AI3/3, zero skips. Seed3 staggered500ms simulation now ends by actual crew task victory at147500 (20 completed jobs,72 task inputs,71 during auxiliary sabotage,zero denied proposals/zero fetch/model calls); original same cadence ended by parity at293500 with12 completed jobs andzero auxiliary task inputs. This is not a native scheduler result. Logs: _artifacts/spectator-engine-incoming-green.txt and _artifacts/spectator-ai-focused-green.txt. world-runtime.pending and state-copy were already present from the merge and are retained unchanged.

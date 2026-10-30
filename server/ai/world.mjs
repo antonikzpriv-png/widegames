@@ -133,11 +133,26 @@ function beaconCandidates(view,memory,suspect){
  const report=controls.find(h=>h.type==='report');if(report)return[proposal(report)];
  for(const body of bodies)if(distance(self.position,body.position)>WORLD.reportRadius)return navigate(body.position);
  if(self.role==='crew'){
-  const repair=controls.find(a=>a.type==='systemRepair');if(repair)return [proposal(repair)];
-  const goal=localGoals.select(view,memory);
+  // Critical safety interrupts any job. Auxiliary disruptions and optional
+  // consoles must not repeatedly erase progress on a multi-input station.
+  const critical=view.sabotage?.active===true;
+  const repair=controls.find(a=>a.type==='systemRepair'&&(!critical||a.fields.systemId===view.sabotage.kind));
+  if(critical&&repair)return [proposal(repair)];
+  const unfinished=(self.tasks??[]).filter(t=>!t.completed&&WORLD_STATIONS[t.roomId]);
+  const goal=critical||!unfinished.length?localGoals.select(view,memory):null;
   if(goal?.goalId==='repair'){memory.goal={id:goal.goalId,at:view.serverNow};return navigate(goal.target);}
   const optional=featureCandidates(view,memory);if(optional)return optional;
   const task=controls.find(h=>h.type==='task');if(task&&ready(view,'taskAt')){const own=self.tasks.find(t=>t.id===task.fields.taskId);return own?[worldTaskAction(view,own)]:wait();}
+  if(unfinished.length){
+   // Preserve an accepted own-job destination rather than switching to the next
+   // nearest station at a route corner. All targets are public map equipment.
+   const current=unfinished.find(t=>self.destination&&distance(self.destination,WORLD_STATIONS[t.roomId])<1);
+   if(current&&self.moving)return wait();
+   if(repair&&!critical)return [proposal(repair)]; // zero-detour local maintenance
+   const next=unfinished.map(task=>({task,target:WORLD_STATIONS[task.roomId]})).sort((a,b)=>distance(self.position,a.target)-distance(self.position,b.target)||a.task.id.localeCompare(b.task.id)).find(({target})=>worldRoute(view,target));
+   if(next){if(distance(self.position,next.target)<=WORLD.interactionRadius&&task)return wait();return navigate(next.target);}
+   return wait();
+  }
   if(goal?.goalId==='investigate'){const device=controls.find(h=>h.type==='investigate'&&h.fields.deviceId===goal.deviceId);if(device){memory.lastTerminalAt=view.serverNow;memory.tacticalReads=(memory.tacticalReads??0)+1;return [proposal(device)];}return navigate(goal.target);}
   if(!view.sabotage?.active&&suspect!=='skip'&&ready(view,'meetingAt')&&self.meetingsRemaining>0){if(allowed.has('meeting'))return [{type:'meeting'}];return navigate(WORLD_BELL);}
   if(goal){memory.goal={id:goal.goalId,at:view.serverNow};return navigate(goal.target);}

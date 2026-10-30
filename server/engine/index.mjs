@@ -4,6 +4,7 @@ import {checkpointReplay,replayMetadata} from './replay-history.mjs';
 import { randomBytes, createHash } from 'node:crypto';
 import { CHARACTERS, ROOM_LAYOUT, DEFAULT_RULES, ACTION_TYPES } from '../../shared/contracts.mjs';
 import {worldRuntime} from './world-runtime.mjs';
+import {copyState} from './state-copy.mjs';
 import {createSpatialWorld} from './world/index.mjs';
 import * as systemsModule from './systems/index.mjs';
 import * as investigationModule from './investigation/index.mjs';
@@ -61,6 +62,9 @@ const MAX_REPLAY = 12000;
 const roomIds = ROOM_LAYOUT.map(r => r.id);
 const fields = {move:['roomId'],task:['taskId'],eliminate:['targetId'],report:['bodyId'],say:['text'],vote:['targetId'],sabotage:[],repair:[],meeting:[],wait:[],navigate:['x','y'],taskStep:['taskId','step','input'],ghostSay:['text'],protect:['targetId'],decoy:['x','y'],...BEACON_ACTION_FIELDS};
 const clone = value => structuredClone(value);
+// Tactical modules retain the proven generic copy; legacy plain records use main's
+// independent deep copier. Never share caller-owned history or mutable knowledge.
+const copyEngineState = state => isBeacon(state) ? clone(state) : copyState(state);
 const fail = (code, message) => ({code,message});
 const finiteTime = n => typeof n === 'number' && Number.isSafeInteger(n) && n >= 0;
 function publicEvent(state,type,at,data={}) {
@@ -276,7 +280,14 @@ function denial(state,p,a,now,hint=false) {
 
 export function tick(input,now=Date.now()) {
   if (!finiteTime(now) || now<input.updatedAt) return {state:input,events:[]};
-  const state=clone(input),seq=state.sequence;
+  if (['ended','paused'].includes(input.phase)) return {state:input,events:[]};
+  // Only legacy schemas have this complete pending/deadline set. Tactical ticks
+  // must also observe systems, transit, devices, discovery and replay snapshots.
+  if (!isBeacon(input)) {
+    const deadline=Math.min(input.sabotage?.active?input.sabotage.deadlineAt:Infinity,input.startedAt+input.rules.maxMatchMs,input.deadlineAt??Infinity,nextEffectAt(input));
+    if(deadline>now&&(!isWorld(input)||!worldFor(input).pending(input,now)))return {state:input,events:[]};
+  }
+  const state=copyEngineState(input),seq=state.sequence;
   if (!advance(state,now)) return {state:input,events:[]};
   state.version++;checkpointReplay(state);
   return {state,events:clone(state.events.filter(e=>Number(e.id.slice(1))>seq))};
@@ -297,7 +308,7 @@ export function applyAction(input,playerId,action,now=Date.now()) {
     return {state,events:timed.events,accepted:prior.accepted,...(prior.error?{error:clone(prior.error)}:{}),duplicate:true};
   }
   if(state.requests[playerId].length>=MAX_REQUESTS)return reject(fail('REQUEST_LIMIT','This keeper has reached the match request limit. Existing requests remain idempotent.'));
-  state=clone(state);
+  if(state===input)state=copyEngineState(state);
   const p=state.players.find(p=>p.id===playerId);
   let error=denial(state,p,action,now);
   let path,target;
@@ -419,7 +430,7 @@ export function applyInput(input,playerId,request,now=Date.now()) {
     return {state,events:timed.events,accepted:!motion.error,...(motion.error?{error:clone(motion.error)}:{}),duplicate:true};
   }
   const error=isBeacon(state)&&ownEntry(state.systems.transit,actor.id)?fail('IN_TRANSIT','Wait until you exit the secret route.'):['ended','paused'].includes(state.phase)?fail('MATCH_INACTIVE','This match is not active.'):!canWorldAct(state,actor)?fail('PLAYER_DEAD','Eliminated keepers cannot move.'):state.phase!=='roam'?fail('WRONG_PHASE','Movement requires roaming.'):null;
-  state=clone(state);const p=state.players.find(p=>p.id===playerId);
+  if(state===input)state=copyEngineState(state);const p=state.players.find(p=>p.id===playerId);
   if(error){p.motion.seq=request.seq;p.motion.dx=request.dx;p.motion.dy=request.dy;p.motion.error=error;state.version++;state.updatedAt=now;return {state,events:timed.events,accepted:false,error:clone(error)};}
   if(request.dx||request.dy)interruptTasks({players:[p]});
   if(runtime(state).input(p,request,now,state))record(state,'direction',now,{playerId:p.id,dx:request.dx,dy:request.dy,position:clone(p.position)});
