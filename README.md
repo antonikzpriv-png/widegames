@@ -74,3 +74,10 @@ See [strategic configuration and behavior](docs/AI.md#optional-strategic-gamepla
 The host can select **Ghost tasks + fallen chat** and **Optional ability roles** in the lobby before beginning. Classic task transfer and no abilities remain the defaults. Fallen crew in the ghost preset retain their tasks, walk with normal collisions and use the same station puzzles, while remaining dead and excluded from living votes, repair, reports and parity. Only fallen seated keepers receive the private fallen chat.
 
 **Harbor Ward** gives one crew keeper a nearby one-hit protection ability; **Signal Echo** gives the saboteur a clearly labeled distraction. To change server defaults, set `GAME_DEATH_POLICY=ghost-tasks` and `GAME_ABILITIES=true`. [Complete rules, privacy, configuration and screenshots](docs/GHOST-ABILITIES.md). Run `npm run test:features:browser` for the real browser fixture. No live model support is required.
+
+
+## Expanded maps from current main
+
+The lobby also offers **Storm Foundry** (12 rooms) and **Tidal Observatory** (14 rooms), preserved from main41b4c6e. These use their authored world2/taskStep protocol: twelve jobs per crew keeper, covering the original five puzzles plus glyph selection, counting, ascending order, rotation, odd-one-out and code transcription. Progress is authoritative and saved; no external CAPTCHA service or model call is required. Their original mapId-based saved games and replay geometry remain distinct from tactical station watches.
+
+Beacon2 and Stormbreak Annex retain their tactical systems and six station challenge kinds. Original Beacon1 and prior map/protocol versions remain readable. Server defaults may use GAME_MAP; the host chooses the final map through the same lobby. Run npm run test:maps:browser for the expanded-map native fixture. [Authored map details and screenshots](docs/EXPANDED-MAPS.md), [newest integration qualification](docs/QUALITY-LATEST-MAIN-INTEGRATION.md).
