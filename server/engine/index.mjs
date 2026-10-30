@@ -3,6 +3,7 @@ import { randomBytes, createHash } from 'node:crypto';
 import { CHARACTERS, ROOM_LAYOUT, DEFAULT_RULES } from '../../shared/contracts.mjs';
 import {initializeFeatures,isGhost,nextEffectAt,clearEffects,featureDenial,activateFeature,safeEffects} from './features.mjs';
 import {worldRuntime} from './world-runtime.mjs';
+import {checkpointReplay,replayMetadata} from './replay-history.mjs';
 const worldEngine=worldRuntime(await import(process.env.WORLD_ENGINE_GEOMETRY_MODULE||'../../shared/world.mjs'));
 const isWorld=state=>state.schemaVersion===2&&state.worldVersion===1;
 
@@ -20,8 +21,10 @@ function publicEvent(state,type,at,data={}) {
   if (state.events.length>MAX_EVENTS) state.events.shift();
 }
 function record(state,type,at,data={}) {
-  state.replay.push({id:`r${++state.replaySequence}`,type,at,...data});
-  if (state.replay.length>MAX_REPLAY) state.replay.shift();
+  const sequence=++state.replaySequence;
+  state.replay.push({id:`r${sequence}`,type,at,...data,sequence});
+  state.replayBytes=(state.replayBytes??state.replay.slice(0,-1).reduce((n,e)=>n+Buffer.byteLength(JSON.stringify(e)),0))+Buffer.byteLength(JSON.stringify(state.replay.at(-1)));
+  while(state.replay.length>MAX_REPLAY||state.replayBytes>2*1024*1024)state.replayBytes-=Buffer.byteLength(JSON.stringify(state.replay.shift()));
 }
 function end(state,winner,reason,at) {
   clearEffects(state,at,'ended',record);
@@ -132,6 +135,7 @@ export function createMatch({id,mode='human',humanPlayerId='p1',now=Date.now(),s
   if(world)worldEngine.initialize(state,now);
   initializeFeatures(state,features,random);
   publicEvent(state,'started',now); record(state,'started',now,{...(world?{worldVersion:1,positions:players.map(p=>({id:p.id,position:clone(p.position)}))}:{}),roles:players.map(p=>({id:p.id,role:p.role})),tasks:players.map(p=>({id:p.id,tasks:clone(p.tasks)}))});
+  checkpointReplay(state);
   return state;
 }
 
@@ -197,6 +201,7 @@ export function tick(input,now=Date.now()) {
   const state=clone(input),seq=state.sequence;
   if (!advance(state,now)) return {state:input,events:[]};
   state.version++;
+  checkpointReplay(state);
   return {state,events:clone(state.events.filter(e=>Number(e.id.slice(1))>seq))};
 }
 
@@ -252,6 +257,7 @@ export function applyAction(input,playerId,action,now=Date.now()) {
       clearEffects(state,now,'blocked',record,e=>e.id===shield.id);
       p.cooldowns.killAt=now+state.rules.killCooldownMs;
       record(state,'attack_blocked',now,{playerId:p.id,targetId:target.id});
+      checkpointReplay(state);
       return {state,events:timed.events,accepted:true};
     }
     target.alive=false;
@@ -274,8 +280,9 @@ export function applyAction(input,playerId,action,now=Date.now()) {
     state.meeting.messages.push(message);publicEvent(state,'said',now,message);
   }
   if (action.type==='vote') state.meeting.votes.push({playerId:p.id,targetId:action.targetId});
-  if(!privateAction)record(state,'action',now,{playerId:p.id,action:clone(action),...(isWorld(state)?{position:clone(p.position)}:{})});
+  if(!privateAction)record(state,'action',now,{playerId:p.id,action:clone(action),...(['taskStep','task'].includes(action.type)&&isWorld(state)?{taskProgress:clone(taskProgress(p.tasks.find(t=>t.id===action.taskId)))}:{}),...(isWorld(state)?{position:clone(p.position),...(['navigate','move'].includes(action.type)&&path.length<=128?{route:clone(path),speed:worldEngine.WORLD.speed}:{})}:{})});
   victory(state,now);
+  checkpointReplay(state);
   return {state,events:[...timed.events,...clone(state.events.filter(e=>Number(e.id.slice(1))>seq))],accepted:true};
 }
 
@@ -316,6 +323,8 @@ export function getPlayerView(state,playerIdOrNull,now=Date.now()) {
     outcome:clone(state.outcome),events:events.sort((a,b)=>a.at-b.at).slice(-MAX_EVENTS),availableActions:hints};
 }
 
+export const getReplayMetadata=replayMetadata;
+
 export function getReplay(state) {
   // Settle may append an earlier arrival after another keeper's later sample.
   // Stable numeric sorting preserves causal append order for equal timestamps.
@@ -342,5 +351,6 @@ export function applyInput(input,playerId,request,now=Date.now()) {
   if(request.dx||request.dy)interruptTasks({players:[p]});
   if(worldEngine.input(p,request,now))record(state,'direction',now,{playerId:p.id,dx:request.dx,dy:request.dy,position:clone(p.position)});
   state.version++;state.updatedAt=now;
+  checkpointReplay(state);
   return {state,events:timed.events,accepted:true};
 }

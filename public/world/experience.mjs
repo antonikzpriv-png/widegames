@@ -1,4 +1,4 @@
-import * as world from '../../shared/world.mjs';
+﻿import * as world from '../../shared/world.mjs';
 import {CHARACTERS} from '../../shared/contracts.mjs';
 import {aiLabel,clock,contexts,distance,point,roleLabel,taskKind,validTaskSession,visiblePlayers} from './model.mjs';
 import {createWorldScene,drawKeeper} from './scene.mjs';
@@ -23,6 +23,8 @@ export function createWorldExperience(host,callbacks){
  const progress=make('div','lw-progress'),progressLabel=make('span','','CREW TASKS'),meter=make('progress'),progressCount=make('span');meter.max=1;meter.value=0;meter.setAttribute('aria-label','Crew tasks complete');progress.append(progressLabel,meter,progressCount);
  const assignment=make('aside','lw-assignment'),role=make('strong','lw-role'),location=make('span','lw-location'),taskList=make('ul','lw-tasks'),help=make('p','lw-help');assignment.append(role,location,taskList,help);
  const aiNotice=make('p','lw-ai-notice');assignment.append(aiNotice);
+ const spectator=make('section','lw-spectator'),spectatorTitle=make('strong','','AI WATCH'),spectatorFollow=make('select'),spectatorOverview=button('Overview',()=>{spectatorWide=!spectatorWide;spectatorOverview.setAttribute('aria-pressed',String(spectatorWide));},'lw-secondary'),spectatorInfo=make('p'),spectatorClaim=make('p');
+ spectatorFollow.setAttribute('aria-label','Follow a keeper');const automatic=make('option','','All keepers');automatic.value='';spectatorFollow.append(automatic);for(const p of CHARACTERS){const option=make('option','',p.name);option.value=p.id;spectatorFollow.append(option);}spectatorFollow.addEventListener('change',()=>{spectatorWide=!spectatorFollow.value;spectatorOverview.setAttribute('aria-pressed',String(spectatorWide));});spectatorOverview.setAttribute('aria-pressed','true');spectator.append(spectatorTitle,spectatorFollow,spectatorOverview,spectatorInfo,spectatorClaim);stage.append(spectator);let spectatorWide=true;
  const abilityInfo=make('p','lw-ability-info'),wardTarget=make('select','lw-ward-target');wardTarget.setAttribute('aria-label','Harbor Ward target');assignment.append(abilityInfo,wardTarget);const targetOptions=new Map();
  const taskRows=new Map();
  const critical=make('div','lw-critical');critical.hidden=true;critical.setAttribute('role','region');critical.setAttribute('aria-label','Critical countdown');
@@ -62,7 +64,7 @@ export function createWorldExperience(host,callbacks){
   input.stop().then(()=>{if(!disposed&&intent===navigationEpoch&&room?.roomId===pin&&room?.game?.matchId===match&&movementAllowed())return perform('navigate',{x:target.x,y:target.y});}).catch(error=>{if(!disposed&&error?.name!=='AbortError')setFeedback(error?.message||'The walking route could not be sent.');});return null;
  },onShortcut:key=>{if(key==='m')toggleMap();else activate(({e:'use',' ':'use',q:'eliminate',r:'report'})[key]);},onError:error=>{if(!disposed&&!document.hidden&&options.connected&&error?.name!=='AbortError')setFeedback(error?.message||'Movement could not be sent. Reconnect and try again.');}});
  const council=createCouncil({id:uid,action:perform,feedback:setFeedback,pending});
- const results=createResults({id:uid,loadReplay:()=>callbacks.loadReplay(),feedback:setFeedback,isCurrent:matchId=>!disposed&&room?.game?.phase==='ended'&&room.game.matchId===matchId});
+ const results=createResults({id:uid,loadReplay:request=>callbacks.loadReplay(request),feedback:setFeedback,isCurrent:matchId=>!disposed&&room?.game?.phase==='ended'&&room.game.matchId===matchId});
  const confirmation=make('section','lw-confirm'),confirmTitle=make('h2','','Eliminate keeper?'),confirmCopy=make('p'),confirmYes=button('Confirm elimination',async()=>{if(!validElimination()){closeConfirmation();setFeedback('That keeper is no longer in reach.');return;}const targetId=confirmTarget;closeConfirmation(false);await request(()=>callbacks.action('eliminate',{targetId}));},'lw-danger'),confirmNo=button('Cancel',()=>closeConfirmation(),'lw-secondary');
  confirmation.setAttribute('role','dialog');confirmation.setAttribute('aria-modal','true');confirmation.setAttribute('aria-labelledby',uid+'-confirm');confirmTitle.id=uid+'-confirm';confirmation.append(make('p','lw-eyebrow','SABOTEUR ACTION'),confirmTitle,confirmCopy,confirmYes,confirmNo);
  const ejection=make('section','lw-ejection'),ejectionArt=make('canvas','lw-ejection-art'),ejectionTitle=make('h1'),ejectionCopy=make('p'),ejectionClose=button('Return to watch',()=>{ejectionKey=null;render();canvas.focus();},'lw-primary');ejectionArt.width=200;ejectionArt.height=220;ejection.append(make('p','lw-eyebrow','COUNCIL DECISION'),ejectionArt,ejectionTitle,ejectionCopy,ejectionClose);
@@ -110,6 +112,9 @@ export function createWorldExperience(host,callbacks){
  }
  function render(){
   if(!room||disposed)return;const game=room.game,isLobby=!game,canWalk=game?.phase==='roam'&&(game.self?.alive||game.self?.ghost);
+  spectator.hidden=!game||!!game.self||game.phase==='ended';
+  if(!spectator.hidden){setText(spectatorTitle,room.mode==='spectator'?'AI WATCH':'WATCH THE KEEPERS');const selected=game.players.find(p=>p.id===spectatorFollow.value),said=(game.events||[]).filter(e=>e.type==='said'&&(!selected||e.playerId===selected.id)).at(-1);setText(spectatorInfo,selected?`${selected.name} · ${selected.alive?'on watch':'fallen'} · ${roomName(selected.roomId)}. Roles remain hidden.`:'Follow the keepers through tasks and council. Roles remain hidden until completion.');setText(spectatorClaim,said?`Public claim · ${game.players.find(p=>p.id===said.playerId)?.name||'Keeper'}: ${said.text}`:'No public claim recorded yet. Movement is public; private reasoning is unavailable.');}
+
   shell.dataset.phase=game?.phase||'lobby';lobby.hidden=!isLobby;assignment.hidden=isLobby;progress.hidden=isLobby;actions.hidden=isLobby||game.phase!=='roam'||!(game.self?.alive||game.self?.ghost);joystick.hidden=!movementAllowed();
   setText(mode,aiLabel(room.ai));setText(status,options.connected?'● Connected':'○ Reconnecting');status.dataset.connected=String(!!options.connected);
   const lastNotice=room.notices?.at(-1),noticeText=typeof lastNotice==='string'?lastNotice:lastNotice?.message||'';setText(aiNotice,noticeText);aiNotice.hidden=!noticeText;setText(lobbyNote,`${room.isHost?'You host this room. All six keepers are aboard.':'You are observing. The host will begin the watch.'}${noticeText?' '+noticeText:''}`);start.disabled=!room.isHost||pending()||!options.connected;
@@ -142,7 +147,7 @@ export function createWorldExperience(host,callbacks){
   const isCouncil=['discussion','voting'].includes(game?.phase);
   council.node.hidden=!isCouncil;results.node.hidden=game?.phase!=='ended';paused.hidden=game?.phase!=='paused';confirmation.hidden=!confirmTarget;ejection.hidden=!ejectionKey;
   if(isCouncil)council.update(game,options);
-  if(game?.phase==='ended')results.update(game);
+  results.update(game,{roomId:room.roomId,ai:room.ai});
   if(confirmTarget){const target=game.players.find(p=>p.id===confirmTarget);setText(confirmTitle,`Eliminate ${target?.name||'keeper'}?`);setText(confirmCopy,'This action cannot be undone. The server checks your target and cooldown again.');confirmYes.disabled=pending()||!options.connected;}
   overlay.hidden=!(isCouncil||game?.phase==='ended'||game?.phase==='paused'||puzzle||confirmTarget||ejectionKey);
   shell.dataset.critical=String(!!game?.sabotage?.active);
@@ -158,10 +163,10 @@ export function createWorldExperience(host,callbacks){
   previousPhase=game?.phase;
   input.sync();
  }
- function frame(now){raf=0;if(disposed||document.hidden)return;scene.draw(now);if(mapOpen)mini.draw(now,{overview:true});raf=requestAnimationFrame(frame);}
+ function frame(now){raf=0;if(disposed||document.hidden)return;scene.draw(now,{overview:!room?.game?.self&&!!room?.game&&spectatorWide,follow:!room?.game?.self?spectatorFollow.value:null});if(mapOpen)mini.draw(now,{overview:true});raf=requestAnimationFrame(frame);}
  function blur(){navigationEpoch++;}
  window.addEventListener('blur',blur);
  function visibility(){navigationEpoch++;if(document.hidden){cancelAnimationFrame(raf);raf=0;input.stop();}else if(!disposed&&!raf){scene.draw(performance.now());raf=requestAnimationFrame(frame);}}
  document.addEventListener('visibilitychange',visibility);if(!document.hidden)raf=requestAnimationFrame(frame);
- return {update(next,nextOptions={}){if(disposed)return;if(lastRoom&&lastRoom!==next.roomId){input.stop();puzzle?.dispose();puzzle=null;taskSession=null;confirmTarget=null;ejectionKey=null;seenEjections.clear();revealed.clear();ghostRows.clear();ghostMessages.replaceChildren();ghostInput.value='';localFeedback='';lastRole=null;}lastRoom=next.roomId;room=next;options={...options,...nextOptions};scene.update(room,performance.now());mini.update(room,performance.now());render();},dispose(){if(disposed)return;input.dispose();disposed=true;cancelAnimationFrame(raf);document.removeEventListener('visibilitychange',visibility);window.removeEventListener('blur',blur);scene.dispose();mini.dispose();puzzle?.dispose();results.dispose();shell.remove();}};
+ return {update(next,nextOptions={}){if(disposed)return;if(lastRoom&&lastRoom!==next.roomId){input.stop();puzzle?.dispose();puzzle=null;taskSession=null;confirmTarget=null;ejectionKey=null;seenEjections.clear();revealed.clear();ghostRows.clear();ghostMessages.replaceChildren();ghostInput.value='';localFeedback='';lastRole=null;spectatorFollow.value='';spectatorWide=true;}lastRoom=next.roomId;room=next;options={...options,...nextOptions};scene.update(room,performance.now());mini.update(room,performance.now());render();},dispose(){if(disposed)return;input.dispose();disposed=true;cancelAnimationFrame(raf);document.removeEventListener('visibilitychange',visibility);window.removeEventListener('blur',blur);scene.dispose();mini.dispose();puzzle?.dispose();results.dispose();shell.remove();}};
 }

@@ -86,10 +86,11 @@ async function worldMutation(owner,suffix,body){
  if(!result?.ok)throw new Error(result?.error||'Wait for the current action to finish.');
  return result.data;
 }
-async function worldReplay(owner){
+async function worldReplay(owner,options={}){
  if(!ownsWorld(owner))throw new DOMException('The room changed.','AbortError');
- const current=epoch,opened=controller;
- const data=await request(roomPath(owner.id,'/replay'),{signal:opened.signal});
+ const current=epoch,opened=controller,matchId=room?.game?.matchId;
+ const data=await request(roomPath(owner.id,'/replay')+'?matchId='+encodeURIComponent(matchId),{signal:options.signal?AbortSignal.any([opened.signal,options.signal]):opened.signal});
+ if(room?.game?.matchId!==matchId||data.matchId&&data.matchId!==matchId)throw new DOMException('The match changed.','AbortError');
  if(!ownsWorld(owner)||current!==epoch||controller!==opened)throw new DOMException('The room changed.','AbortError');
  return data;
 }
@@ -99,7 +100,7 @@ function renderWorld(){
   worldExperience=createWorldExperience(host,{
    action:(type,fields={})=>worldMutation(owner,'/action',actionEnvelope(type,fields)),
    input:input=>worldInput(owner,input),start:features=>worldMutation(owner,'/start',{id:crypto.randomUUID(),...(features?{features}:{})}),
-   leave:()=>{if(worldSession===owner)home();},loadReplay:()=>worldReplay(owner)
+   leave:()=>{if(worldSession===owner)home();},loadReplay:options=>worldReplay(owner,options)
   });
  }
  worldExperience.update(room,{now:Date.now()+offset,connected:networkReady,pending,feedback:feedback.textContent});

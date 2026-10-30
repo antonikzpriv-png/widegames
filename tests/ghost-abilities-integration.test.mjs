@@ -76,7 +76,11 @@ test('transport schedules fallen demo actors with unfinished tasks',async t=>{
  game.server.listen(0,'127.0.0.1');await once(game.server,'listening');const base='http://127.0.0.1:'+game.server.address().port;
  const create=await fetch(base+'/api/rooms',{method:'POST',headers:{Origin:origin,'Content-Type':'application/json'},body:JSON.stringify({mode:'spectator'})});const created=await create.json(),cookie=create.headers.get('set-cookie').split(';')[0];
  await fetch(base+'/api/rooms/'+created.roomId+'/start',{method:'POST',headers:{Origin:origin,'Content-Type':'application/json',Cookie:cookie},body:JSON.stringify({id:'start'})});
- const entry=game.rooms.get(created.roomId),s=entry.data.state,sab=s.players.find(p=>p.role==='saboteur'),victim=s.players.find(p=>p.role==='crew');for(const p of [sab,victim]){p.position={x:728,y:272};p.roomId='bridge';}entry.data.state=engine.applyAction(s,sab.id,{id:'kill-bot',type:'eliminate',targetId:victim.id},1001).state;now=1002;
+ const entry=game.rooms.get(created.roomId);
+ // Serialize fixture state changes with maintenance/AI commits; a pending idle
+ // commit must not overwrite the fixture's death before the scheduler sees it.
+ const killed=entry.queue.then(()=>{const s=structuredClone(entry.data.state),sab=s.players.find(p=>p.role==='saboteur'),victim=s.players.find(p=>p.role==='crew');for(const p of [sab,victim]){p.position={x:728,y:272};p.roomId='bridge';}const result=engine.applyAction(s,sab.id,{id:'kill-bot',type:'eliminate',targetId:victim.id},1001);assert(result.accepted);entry.data={...entry.data,state:result.state};});
+ entry.queue=killed.catch(()=>{});await killed;now=1002;
  for(let n=0;n<100&&calls===0;n++){now+=100;await new Promise(r=>setTimeout(r,10));}
  assert(calls>0,'dead bot must reach scheduler');
 });

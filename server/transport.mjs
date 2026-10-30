@@ -66,7 +66,7 @@ export async function createGameServer(config,dependencies={}) {
       if(!url.pathname.startsWith('/api/')){await serveStatic(req,res);return;}
       checkOrigin(req,req.method!=='GET');
       const ip=req.socket.remoteAddress||'unknown';limit(`all:${ip}`,600);
-      if(url.search)fail(400,'INVALID_REQUEST','API requests do not accept query parameters.');
+      if(url.search&&!(req.method==='GET'&&/^\/api\/rooms\/[A-Za-z0-9_-]+\/replay$/.test(url.pathname)&&[...url.searchParams.keys()].length===1&&url.searchParams.has('matchId')))fail(400,'INVALID_REQUEST','API requests do not accept query parameters.');
       if(req.method==='GET'&&url.pathname==='/api/health'){json(res,200,{ok:true,game:'Lantern Wake',protocol:1});return;}
       if(req.method==='POST'&&url.pathname==='/api/rooms') {
         limit(`create:${ip}`,8);const input=await body(req,Math.min(config.maxBodyBytes??8192,8192));
@@ -89,8 +89,11 @@ export async function createGameServer(config,dependencies={}) {
       const identity=authenticate(room,req);
       if(route===''&&req.method==='GET'){json(res,200,view(room,identity));return;}
       if(route==='replay'&&req.method==='GET') {
+        if(url.searchParams.has('matchId')&&url.searchParams.get('matchId')!==room.data.state?.id)fail(404,'MATCH_NOT_FOUND','This completed match is not available in this room.');
         if(room.data.state?.phase!=='ended')fail(409,'REPLAY_UNAVAILABLE','Replay is available after the match ends.');
-        json(res,200,{roomId:room.data.id,replay:engine.getReplay(room.data.state)});return;
+        const metadata=engine.getReplayMetadata?.(room.data.state);
+        const aiSummary=view(room,identity).ai;
+        json(res,200,{roomId:room.data.id,matchId:room.data.state.id,replay:engine.getReplay(room.data.state),...(metadata?{metadata}:{}),ai:aiSummary});return;
       }
       if(route==='input'&&req.method==='POST') {
         limit(`input-ip:${ip}`,600);limit(`input-actor:${room.data.id}:${identity.hash}`,600);

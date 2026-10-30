@@ -1,0 +1,96 @@
+{
+  "validatedWorkHead": "62e82be00891974ad316415025b2f65cac1bd794",
+  "integratedMain": "22340f0dd92fb312f01bc7a14d406541dab9ce09",
+  "validation": {
+    "syntaxModules": 116,
+    "tests": {
+      "total": 538,
+      "passed": 532,
+      "failed": 0,
+      "skipped": 6
+    },
+    "browser": {
+      "primary": {
+        "checks": 42,
+        "errors": [],
+        "summary": {
+          "passed": 42,
+          "failed": 0
+        },
+        "passed": true
+      },
+      "independent": {
+        "checks": 19,
+        "errors": [],
+        "summary": null,
+        "passed": true
+      },
+      "features": {
+        "checks": 19,
+        "errors": [],
+        "summary": null,
+        "passed": true
+      },
+      "replay": {
+        "checks": 21,
+        "errors": [],
+        "summary": null,
+        "passed": true
+      }
+    }
+  },
+  "expectedPrimaryConsoleDenials": 10,
+  "scope": [
+    "Integrated authoritative task steps, ghost/ability gameplay and strategic AI from current main.",
+    "Preserved generation-fenced strategic scheduling, reservations and private intent exclusion.",
+    "Strategic replay labels use the recorded live strategy field; demo fallback remains distinct.",
+    "Closed causal event-index and terminal-checkpoint outcome audit findings.",
+    "Existing historical receipts/screenshots remain unchanged."
+  ],
+  "runtimeSha256": {
+    "public/api.mjs": "86e58d5c18377a2d69012346f7608611257e95ce376466cd69c7740bb387ea81",
+    "public/app.mjs": "f2d295effcd32f242d4b162b639a7beaa9c894088268dfceded33afc00d6daa6",
+    "public/favicon.svg": "6502f813f8a3f0973f28c7fd3d08c8814829cc32832aa326cd57b9daaa1d6c59",
+    "public/game.css": "f9a97324cd2b6ec9299ab70614fbc9e675584f7d24b027eeb0a04504e6865d47",
+    "public/harbor.mjs": "2fd11c4458764ed1a4d7146e979b20bf077723118e2d97a19ab5d12f91f71e7a",
+    "public/index.html": "79c6455393d4d272dc92c5dfdea0e4590695372ab2124c0603f4e97f245197d9",
+    "public/panels.mjs": "e0fab17f6e478687932bdf197b5f03d69121f67683f58360c8ea9caf645254d2",
+    "public/presentation.mjs": "d3a98f5d191e2df0e4ea3255e49261f2f4be6385f162d1421449d650ce15c3dc",
+    "public/styles.css": "335d5670e89500451202f07d60812638a49358ed0dc852af271e3272b8c5ee02",
+    "public/ui.mjs": "60498216e8715ec284ac4ca2e7d3cd5248283d6059016b79b8b5d6fa5a4e1a8f",
+    "public/world-input-envelope.mjs": "5ff82433cebfd15abc549923632a0c862c82a3bbd031b43397159584a4a4cfcc",
+    "public/world/dom.mjs": "96f1b4358301984548cba35f147acd233b8ae9974799210f68a69f0441ba0012",
+    "public/world/experience.mjs": "f7f75ce002938c3d04372588cec6a828850ce19590565a7b3d77a5fde57b03d6",
+    "public/world/input.mjs": "31d4c845f18a84280ec219ade3b0038daf130f4300bdd7fe115244c14c3018d0",
+    "public/world/model.mjs": "defc2ce8f220cda6fdb2b9b7edb13210f8d8f64dd9a3172cac3d04294fbc6a8e",
+    "public/world/phases.mjs": "a7a83c070bf0e13fd343a515ddf618078afa1cf2776d59be6da3f2fd7f17e813",
+    "public/world/puzzles.mjs": "79261f49eb8b5b8fce69818200f07c338c49406864535dbd80d2d188628540be",
+    "public/world/replay-model.mjs": "9409624abe8203e9fbd2d31e48cd0dbf36f47b8ea72bd824296f9f0bf28320dc",
+    "public/world/replay-viewer.mjs": "5d0dfdb02c8815a29110f56b29a16c9570dd9b9d35e5234f56a2e96b62b88608",
+    "public/world/replay.mjs": "20daa39224c8893861f3fab2b1cc2b779d1bfcd070c5ffdb20e5dfcba6390ea3",
+    "public/world/scene.mjs": "70e6d5a4a7ae2a5cbbb6187f701914becdb1c4496db4a7cdc65770c4690383aa",
+    "server/ai/anthropic.mjs": "e09eda9115995d3eb09a481d71f61f399d4c0edc31c7e3cdbdeb0e47402ac66c",
+    "server/ai/demo.mjs": "56b6ce4c43dfcd2317585139ce0d2f6bbff6b54779b7ace868085faaad4a0a1c",
+    "server/ai/index.mjs": "6b33ac25dcaa694a804f77966dd52f10dcf577268d7975acf507e4d11084f326",
+    "server/ai/strategic.mjs": "545f700793e9898d0ad165aa87680158c58d7da29855e8e912c7c92035e30f63",
+    "server/ai/world.mjs": "7637e8f65befec217ada19da86ba2302ccc527c1705f58e624a92b4a666e282a",
+    "server/budget.mjs": "20ca2be9c4a6187419a64b7b90b9101739557b276f0fe404edb536ada6345990",
+    "server/config.mjs": "09eb439cfce49ef659e8f924e89676b9a508785c624e0cd806a566827eab93ff",
+    "server/engine/features.mjs": "fd1a2cf42e75014a370700bd9f1816206dc2dd0031dd24efb9d7a19edba446b3",
+    "server/engine/index.mjs": "ca492e2535d31592b6677bba7812cbd57751463f741a33b558b76f130c54b04c",
+    "server/engine/replay-history.mjs": "fe5c383a2b891044ffe47254c863345cd1ee627ef06eb4b4fad7a981c89a09e1",
+    "server/engine/tasks.mjs": "7bf3dadc279ca401b6895ce4d486d4fc51ec5e7232951d2579f3ec7df70a0012",
+    "server/engine/world-runtime.mjs": "00d32ac2040c8f486db99c5cc8ffa43c4a900b85ab8fb4d9105399fdcb21bcdd",
+    "server/feature-validation.mjs": "ca95b4bf3f6a6424e285422e224a8f0cfe7a4fa6f6e97107a927cfc905b99f95",
+    "server/main.mjs": "1835fb6d7e44e264c137e2a77fc320f986560546ce03404bec58fd67c90b1019",
+    "server/origin.mjs": "6ebdcb4f65cc3f44411ae1de1cbed6fb8618791674e5b550bcb3555ddad67cbe",
+    "server/rooms.mjs": "23a08ce86c597c25b3ef6a4402a7d716bf495d9d8bf07446695264e6097437c6",
+    "server/static.mjs": "cd832f9facdf467bdd2e3129fdaf4281ed92e4f8286a9bfadfe0e25185db974f",
+    "server/store.mjs": "1cc17f11a45753855ff9ca9b49f031765656194c802f93df9c877d61aa44991e",
+    "server/transport.mjs": "978f14e76540dc18b5af49da6f26da3df9bfffe43a0ea733311baf0f91147db7",
+    "shared/contracts.mjs": "e432d31a70f7b41288abb6ad67c00c36dde27eb1dfc47d99f822a8d2f4a4d5f9",
+    "shared/features.mjs": "9279383ace5c705e29eff3395446c9a5cef99a824217ef78133e33be5bbdea0d",
+    "shared/replay.mjs": "30048a32a53d890130535f0f0b6b85770c4ce3530c80b823120169ea3931a8b0",
+    "shared/world.mjs": "8c405a3a6771db6a103907ab9124d81eb7dd03517e8a6d7dce08bdb3b0fa1378"
+  }
+}
