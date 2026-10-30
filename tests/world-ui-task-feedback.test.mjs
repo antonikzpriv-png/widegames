@@ -18,6 +18,8 @@ const flush = () => new Promise(resolve => setImmediate(resolve));
 const {getMap} = await import(new URL('shared/maps/index.mjs', sourceRoot));
 const mapHelpers = await import(new URL('public/world/map-model.mjs', uiRoot));
 const beaconHelpers = await import(new URL('public/world/beacon-model.mjs', uiRoot));
+// Real shared dependency introduced by merged ghost/task UI, no behavior stub.
+const featureHelpers=/canViewAct/.test(source('public/world/experience.mjs'))?await import(new URL('shared/features.mjs',uiRoot)):{};
 
 
 // Actual frontend logic, controlled network completions, minimal DOM. These
@@ -47,7 +49,7 @@ function fixture() {
   }
   document.createElement = tag => new Node(tag); document.body = new Node('body'); document.activeElement = document.body;
   const win = { ...events(), setInterval: () => 1, clearInterval() {} }, calls = [];
-  const context = vm.createContext({ document, window: win, world, CHARACTERS, getMap, ...mapHelpers, mapRoomName:mapHelpers.roomName, ...beaconHelpers, console, Date, performance: { now: () => 100 }, matchMedia: () => ({ matches: true }), requestAnimationFrame: () => 1, cancelAnimationFrame() {},
+  const context = vm.createContext({ document, window: win, world, CHARACTERS, getMap, ...mapHelpers, mapRoomName:mapHelpers.roomName, ...beaconHelpers, ...featureHelpers, console, Date, performance: { now: () => 100 }, matchMedia: () => ({ matches: true }), requestAnimationFrame: () => 1, cancelAnimationFrame() {},
     drawKeeper() {}, createWorldScene: () => ({ update() {}, draw() {}, toWorld() { return { x: 0, y: 0 }; }, dispose() {} }), replayText: event => event.type, replayEvents: value => value.replay ?? [], outcomeText: reason => reason });
   const module = (path, names) => Object.assign(context, vm.runInContext(`(()=>{${strip(source(path))};return {${names}};})()`, context));
   module('public/world/dom.mjs', 'dom,control,setText,trapDialog,restoreTrigger');
