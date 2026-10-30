@@ -94,7 +94,9 @@ for (const mode of ['spectator', 'human']) test(`strategic sustained ${mode}: co
   return new Response(JSON.stringify({stop_reason:'tool_use',content:[{type:'tool_use',name:'pick_action',input:{choice}}],usage:{input_tokens:100,output_tokens:20}}));
  });
  for(const seed of [1,7]){
-  const settings={provider:'anthropic',apiKey:'offline',strategy:'strategic',maxCalls:48,maxTokens:mode==='human'?250000:120000,maxCostUsd:.5,decisionIntervalMs:1800};
+  // Seed 1 all-AI retains the default token cap. Other sustained fixtures
+  // explicitly configure the supported allowance for interactive steps/council.
+  const settings={provider:'anthropic',apiKey:'offline',strategy:'strategic',maxCalls:48,maxTokens:mode==='spectator'&&seed===1?120000:250000,maxCostUsd:.5,decisionIntervalMs:1800};
   let controller=createAiController({config:settings}),context={},state=engine.createMatch({id:`sustained-${mode}-${seed}`,mode,seed,now:1000,world:true,config:{discussionMs:6000,votingMs:4000}}),restarted=false;
   const types=new Set();let intentions=0,lastCalls=0;
   for(let now=1000;now<=901000&&!['ended','paused'].includes(state.phase);now+=250){

@@ -1,5 +1,5 @@
 import { WORLD, WORLD_STATIONS, distance, findWorldPath, canSeeWorldPoint } from '../../shared/world.mjs';
-import { visibleWorldPlayer } from './world.mjs';
+import { visibleWorldPlayer, worldTaskAction } from './world.mjs';
 
 const visible = view => (view.players ?? []).filter(p => visibleWorldPlayer(view, p));
 const point = p => p && Number.isFinite(p.x) && Number.isFinite(p.y);
@@ -134,7 +134,9 @@ export function execute(view, memory) {
   progress.steps++;
   if (remaining <= radius) {
     progress.failures = 0;
-    if (['task', 'task_route'].includes(plan.goal) && ready(view, 'taskAt')) return action('task', { taskId });
+    if (['task', 'task_route'].includes(plan.goal) && ready(view, 'taskAt') && allowed.has('task')) {
+      return worldTaskAction(view, self.tasks.find(t => t.id === taskId));
+    }
     if (plan.goal === 'repair') return action('repair');
     if (plan.goal === 'report') return action('report', { bodyId: plan.bodyId });
     return wait(); // fake work, alibi and positioning never complete crew tasks

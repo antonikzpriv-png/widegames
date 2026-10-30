@@ -125,3 +125,9 @@ results cannot persist their context into a later generation. Each retry retains
 its own durable authorization and uncertain reservations. Valid travel proceeds
 without a model call. This implementation uses the existing engine's living-seat
 permissions; it adds no ghost abilities.
+
+World task execution also honors the merged authoritative equipment protocol:
+local and strategic bots share the same safe-view task action helper. It submits
+one semantic `taskStep` per local decision, waits for the server diagnostic timer,
+and submits `task` only when all confirmed steps are complete. Task steps and
+waits do not make model calls or grant fake-work progress.

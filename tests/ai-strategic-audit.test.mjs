@@ -178,3 +178,25 @@ test('real saboteur model fake work only navigates and waits without completing 
  for(let now=1000;now<18000;now+=250){state=engine.tick(state,now).state;const action=await controller.decide({view:engine.getPlayerView(state,player.id,now),player,context,commitReservation:async()=>{}});if(!action)continue;types.add(action.type);assert(['navigate','wait'].includes(action.type));const applied=engine.applyAction(state,player.id,action,now);assert(applied.accepted);state=applied.state;}
  assert.deepEqual([...types].sort(),['navigate','wait']);assert.equal(state.players.flatMap(p=>p.tasks).filter(t=>t.completed).length,0);assert.equal(mock.mock.callCount(),1);
 });
+
+test('strategic repair equipment persists semantic steps and waits for the authoritative diagnostic',async t=>{
+ let state,player,task;
+ for(let seed=0;seed<20&&!task;seed++){
+  state=engine.createMatch({id:'strategic-equipment',mode:'spectator',world:true,seed,now:1000});
+  const owner=state.players.find(p=>p.role==='crew'&&p.tasks.some(t=>t.roomId==='workshop'));
+  if(owner){player=CHARACTERS.find(p=>p.id===owner.id);task=owner.tasks.find(t=>t.roomId==='workshop');}
+ }
+ assert(task);const moved=engine.applyAction(state,player.id,{id:'approach-equipment',type:'navigate',...WORLD_STATIONS.workshop},1000);assert(moved.accepted);state=engine.tick(moved.state,15000).state;
+ let controller=c(),context={},restarted=false,waits=0,steps=0,completed=false;
+ const mock=t.mock.method(globalThis,'fetch',async(_url,o)=>{const input=JSON.parse(JSON.parse(o.body).messages[0].content);return response(input.choices.findIndex(p=>p.goal==='task'&&p.taskId===task.id));});
+ for(let now=15000;now<22000&&!completed;now+=250){
+  state=engine.tick(state,now).state;const view=engine.getPlayerView(state,player.id,now),before=view.self.tasks.find(t=>t.id===task.id);
+  const action=await controller.decide({view,player,context,commitReservation:async()=>{}});if(!action)continue;
+  if(before.progress.index===3&&now<before.progress.readyAt){assert.equal(action.type,'wait');waits++;}
+  if(action.type==='taskStep')steps++;
+  if(action.type==='task'){assert.equal(before.progress.index,4);completed=true;}
+  const applied=engine.applyAction(state,player.id,action,now);assert(applied.accepted,JSON.stringify(applied.error));state=applied.state;
+  if(!restarted&&state.players.find(p=>p.id===player.id).tasks.find(t=>t.id===task.id).progress?.index===3){state=JSON.parse(JSON.stringify(state));context=JSON.parse(JSON.stringify(context));controller=c();restarted=true;}
+ }
+ assert(completed);assert(restarted);assert.equal(steps,4);assert(waits>0);assert.equal(mock.mock.callCount(),1);
+});

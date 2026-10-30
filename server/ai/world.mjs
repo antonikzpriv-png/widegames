@@ -1,3 +1,4 @@
+import {taskProgress,taskInput} from '../engine/tasks.mjs';
 import { CHARACTERS, ROOM_LAYOUT } from '../../shared/contracts.mjs';
 import { WORLD, WORLD_STATIONS, WORLD_BELL, distance, findWorldPath, canSeeWorldPoint } from '../../shared/world.mjs';
 
@@ -5,6 +6,16 @@ const ordered = values => [...values].sort((a, b) => a.id.localeCompare(b.id));
 const point = value => value && Number.isFinite(value.x) && Number.isFinite(value.y);
 const ready = (view, key) => (view.self.cooldowns?.[key] ?? 0) <= view.serverNow;
 const at = (view, target, radius) => point(target) && distance(view.self.position, target) <= radius;
+
+/** One legal equipment proposal from the owner's permitted task view only. */
+export function worldTaskAction(view, task) {
+  if (!task.progress) return { type: 'task', taskId: task.id };
+  const progress = taskProgress(task);
+  if (progress.kind === 'repair' && progress.index === 3 && view.serverNow < progress.readyAt) return { type: 'wait' };
+  return progress.index < progress.total
+    ? { type: 'taskStep', taskId: task.id, step: progress.index, input: taskInput(task) }
+    : { type: 'task', taskId: task.id };
+}
 
 /** Only coordinates already visible in this actor's safe view are usable. */
 export function visibleWorldPlayer(view, player) {
@@ -70,7 +81,7 @@ export function worldCandidates(view, memory, suspect) {
     }
   } else {
     const here = ordered((self.tasks ?? []).filter(task => !task.completed && task.roomId === self.roomId));
-    if (allowed.has('task') && ready(view, 'taskAt') && at(view, WORLD_STATIONS[self.roomId], WORLD.interactionRadius) && here.length) return [{ type: 'task', taskId: here[0].id }];
+    if (allowed.has('task') && ready(view, 'taskAt') && at(view, WORLD_STATIONS[self.roomId], WORLD.interactionRadius) && here.length) return [worldTaskAction(view, here[0])];
     if (!critical?.active && self.meetingsRemaining > 0 && ready(view, 'meetingAt') && suspect !== 'skip') {
       if (allowed.has('meeting') && at(view, WORLD_BELL, WORLD.interactionRadius)) return [{ type: 'meeting' }];
       return navigate(bellApproach());

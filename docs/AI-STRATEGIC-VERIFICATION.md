@@ -112,3 +112,47 @@ delay, reproduced `Timed out: voting phase` in
 `_artifacts/world-browser-IUM73i/`; the final normal browser driver also passed
 both complete match modes in `_artifacts/world-browser-XZfnyw/`.
 GitHub checks on the updated head must pass before the authorized merge proceeds.
+
+## Integration with main's authoritative tasks (80dcc60)
+
+Main advanced to `80dcc60` (PR #3) before merge, so the earlier 90bb6e8-based
+qualification above is historical. Integrated the complete task feature and its
+browser work, resolving the shared browser-driver edit while retaining the
+current-deadline fix. Engine, task validation, storage and task UI implementations
+match that main revision; the strategic feature does not replace their rules.
+
+Both local and strategic world plans now call `worldTaskAction`, which reuses the
+merged taskProgress/taskInput helpers on the permitted owner's task view. It emits
+one semantic taskStep, waits for diagnostic readyAt, and only proposes task
+completion after the final confirmed stage. Fake work still never calls this
+helper. A new real-engine regression restores a running repair diagnostic,
+waits for its authoritative timer, completes all four steps, and proves the model
+was called only once for the entire task.
+
+The full integrated qualification passed:
+
+- `npm run check`: 99 modules.
+- `npm test`: 483 tests; 477 passed, zero failed, six existing opt-in skips.
+- Standard browser driver: five generated equipment types, native keyboard/touch,
+  both complete match modes and replay passed in `_artifacts/world-browser-VFKERF/`.
+- Opt-in world UI browser suite passed without skips in
+  `_artifacts/world-ui-3CGuWA/`.
+- Engine, budget, store, shared contracts and task UI have no strategic changes
+  relative to 80dcc60. The task AI helper is shared rather than duplicated.
+
+Interactive steps change the earlier fixture durations and token requirements.
+Sustained all-AI seed 1 retains the default 120,000-token cap; the other sustained
+fixtures explicitly use the already-supported 250,000-token allowance. Production
+budget defaults, maxima, accounting order and uncertain reservations are unchanged.
+All four sustained fixtures remain in strategic mode until the real outcome:
+
+| Mode | Seed | Outcome/time | Requests | Reserved tokens |
+| --- | --- | --- | --- | --- |
+| All AI | 1 | Crew ejection, 35 seconds | 22 | 118,501 |
+| All AI | 7 | Crew tasks, 61 seconds | 33 | 182,107 |
+| Idle human | 1 | Crew tasks, 69 seconds | 37 | 200,575 |
+| Idle human | 7 | Crew tasks, 65 seconds | 36 | 191,320 |
+
+The six-call fallback fixtures also still finish, now at 51/89 seconds for all-AI
+(tasks/ejection), and 111/115 seconds for idle-human (saboteur parity). Every
+proposed taskStep and completion is accepted by the actual integrated engine.
