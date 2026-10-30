@@ -20,6 +20,7 @@ function fixture(){
   replaceChildren(...nodes){for(const child of [...this.children])child.remove();this.children=[];this.text='';this.append(...nodes);}
   remove(){if(this.parent)this.parent.children=this.parent.children.filter(node=>node!==this);this.parent=null;}
   set textContent(value){this.text=String(value);this.children=[];}get textContent(){return this.text+this.children.map(node=>node.textContent).join('');}
+  contains(node){return this===node||this.children.some(child=>child.contains(node));}
   focus(){}getContext(){return {clearRect(){}};}
  }
  const document={...events(),hidden:false,createElement:tag=>new Node(tag)};
