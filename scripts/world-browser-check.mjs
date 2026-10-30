@@ -16,7 +16,7 @@ import {challenge} from '../server/engine/tasks.mjs';
 const root=fileURLToPath(new URL('../',import.meta.url)),pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 await mkdir(path.join(root,'_artifacts'),{recursive:true});const output=await mkdtemp(path.join(root,'_artifacts','world-browser-'));
 const git=(...args)=>execFileSync('git',args,{cwd:root,encoding:'utf8',windowsHide:true}).trim();
-const report={sourceCommit:git('rev-parse','HEAD'),modifiedPaths:git('status','--porcelain').split(/\r?\n/).filter(Boolean),fixture:'Actual app/main browser modules, native HTTP/WS, persistent store, seeded world engine and real labeled demo AI. Physical routes may use normal authenticated navigate requests and accelerated server time; no state/winner fabrication or provider calls.',checks:[],privacyChecks:0,errors:[],consoleErrors:[],screenshots:[],outcomes:[],inputPackets:0,puzzleKinds:[],expectedConflicts:0};
+const report={taskEdition:1,mapRevision:1,sourceCommit:git('rev-parse','HEAD'),modifiedPaths:git('status','--porcelain').split(/\r?\n/).filter(Boolean),fixture:'Actual app/main browser modules, native HTTP/WS, persistent store, seeded world engine and real labeled demo AI. Physical routes may use normal authenticated navigate requests and accelerated server time; no state/winner fabrication or provider calls.',checks:[],privacyChecks:0,errors:[],consoleErrors:[],screenshots:[],outcomes:[],inputPackets:0,puzzleKinds:[],expectedConflicts:0};
 let browser,game,page,origin,skew=0,auditClosed=false;const pending=new Set();
 const runtimeFiles=git('ls-files','public','server','shared','package.json','package-lock.json').split(/\r?\n/);
 async function hashes(){return Promise.all(runtimeFiles.map(async file=>[file,createHash('sha256').update(await readFile(path.join(root,file))).digest('hex')]));}
@@ -93,12 +93,12 @@ async function finish(){
  throw Error('Demo world match did not finish within bounded QA steps');
 }
 function seedForHuman(){
- for(let i=0;i<2500;i++){const seed='world-browser-'+i,state=engine.createMatch({id:'seed',seed,world:true,config:{tasksPerCrew:5}}),self=state.players[0];if(self.role==='crew'&&self.tasks.some(t=>t.roomId==='bridge')&&new Set(self.tasks.map((task,index)=>challenge(task).kind)).size===5)return seed;}
+ for(let i=0;i<2500;i++){const seed='world-browser-'+i,state=engine.createMatch({id:'seed',seed,world:true,mapRevision:1,taskEdition:1,config:{tasksPerCrew:5}}),self=state.players[0];if(self.role==='crew'&&self.tasks.some(t=>t.roomId==='bridge')&&new Set(self.tasks.map((task,index)=>challenge(task).kind)).size===5)return seed;}
  throw Error('Normal generated tasks must expose five actual puzzle kinds, including a Bridge task');
 }
 try{
  const humanSeed=seedForHuman(),probe=net.createServer();await new Promise(resolve=>probe.listen(0,'127.0.0.1',resolve));const port=probe.address().port;await new Promise(resolve=>probe.close(resolve));origin=`http://127.0.0.1:${port}`;
- const config=loadConfig({HOST:'127.0.0.1',PORT:String(port),PUBLIC_ORIGIN:origin,DATA_DIR:path.join(output,'state'),AI_PROVIDER:'demo'});config.now=()=>Date.now()+skew;config.tickMs=65;config.ai.decisionIntervalMs=250;
+ const config=loadConfig({HOST:'127.0.0.1',PORT:String(port),PUBLIC_ORIGIN:origin,DATA_DIR:path.join(output,'state'),AI_PROVIDER:'demo'});config.mapRevision=1;config.now=()=>Date.now()+skew;config.tickMs=65;config.ai.decisionIntervalMs=250;
  config.rules={tasksPerCrew:5,moveCooldownMs:200,taskCooldownMs:1200,initialKillCooldownMs:300000,killCooldownMs:15000,sabotageCooldownMs:300000,criticalDurationMs:40000,discussionMs:18000,votingMs:10000,meetingCooldownMs:1000,roamDeadlineMs:180000,maxMatchMs:900000};
  game=await createGameServer(config,{engine:{...engine,createMatch:options=>engine.createMatch({...options,taskEdition:1,seed:options.mode==='human'?humanSeed:'world-browser-spectator'})}});await new Promise(resolve=>game.server.listen(port,'127.0.0.1',resolve));
  browser=await puppeteer.launch({executablePath:process.env.CHROME_PATH||(process.platform==='win32'?'C:/Program Files/Google/Chrome/Application/chrome.exe':'/usr/bin/google-chrome'),headless:true,userDataDir:path.join(output,'chrome-profile'),args:['--no-sandbox','--disable-dev-shm-usage']});page=await browser.newPage();page.setDefaultTimeout(30000);await page.setViewport({hasTouch:true,width:1440,height:1000});instrument(page,true);

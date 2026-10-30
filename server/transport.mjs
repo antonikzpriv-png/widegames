@@ -38,6 +38,9 @@ function limiter(now) {
 
 // Optional dependencies let transport tests exercise faults without provider calls.
 export async function createGameServer(config,dependencies={}) {
+  if(Object.hasOwn(config,'mapRevision')&&![1,2].includes(config.mapRevision))throw new TypeError('Invalid map revision');
+  if(config.mapRevision===2&&config.worldMode!==true)throw new TypeError('Map revision requires world mode');
+  const mapRevision=config.worldMode===true?(config.mapRevision??1):1;
   const now=config.now||Date.now;
   const origin=validatePublicOrigin(config.publicOrigin),secure=origin.startsWith('https:');
   const engine=dependencies.engine||await import('./engine/index.mjs');
@@ -103,7 +106,7 @@ export async function createGameServer(config,dependencies={}) {
         if((features.deathPolicy==='ghost-tasks'||features.abilities)&&config.worldMode!==true)fail(400,'WORLD_REQUIRED','Optional presets require world mode.');
         let mapId;try{mapId=parseMapId(Object.hasOwn(input,'mapId')?input.mapId:config.mapId);}catch{fail(400,'INVALID_MAP','Choose an available map.');}
         if(mapId!=='beacon'&&config.worldMode!==true)fail(400,'WORLD_REQUIRED','Maps require world mode.');
-        const {room,token,identity}=await service.create(input.mode,input.name===undefined?undefined:nameInput(input.name),features,mapId);json(res,201,view(room,identity),{'Set-Cookie':cookie(room.data.id,token,secure)});return;
+        const {room,token,identity}=await service.create(input.mode,input.name===undefined?undefined:nameInput(input.name),features,mapId,mapRevision);json(res,201,view(room,identity),{'Set-Cookie':cookie(room.data.id,token,secure)});return;
       }
       if(req.method==='POST'&&url.pathname==='/api/invitations'){
         limit(`join:${ip}`,40);const input=await body(req,8192);if(Object.keys(input).some(k=>k!=='code')||typeof input.code!=='string')fail(400,'INVALID_CODE','Enter an invitation code.');
@@ -226,7 +229,7 @@ export async function createGameServer(config,dependencies={}) {
             if(next.mapId&&config.worldMode!==true)fail(400,'WORLD_REQUIRED','Maps require world mode.');
             next.startId=input.id;
             const configured=data.schema===2;
-            next.state=engine.createMatch({id:configured&&data.generation>1?`${data.id}_g${data.generation}`:data.id,mode:data.mode,humanPlayerId:'p1',now:now(),config:{...(configured?matchRules(data.settings):{}),...config.rules},world:config.worldMode===true,features:next.features,mapId:next.mapId,...(configured?{settings:data.settings,roster:data.roster,humanPlayerIds:data.identities.filter(i=>i.seatId).map(i=>i.seatId)}:{})});await commit(room,next);
+            next.state=engine.createMatch({id:configured&&data.generation>1?`${data.id}_g${data.generation}`:data.id,mode:data.mode,humanPlayerId:'p1',now:now(),config:{...(configured?matchRules(data.settings):{}),...config.rules},world:config.worldMode===true,features:next.features,mapId:next.mapId,mapRevision:next.mapRevision??1,...(configured?{settings:data.settings,roster:data.roster,humanPlayerIds:data.identities.filter(i=>i.seatId).map(i=>i.seatId)}:{})});await commit(room,next);
           } else {
             if(!identity.seatId)fail(403,'SPECTATOR','Spectators cannot act.');
             if(!data.state)fail(409,'NOT_STARTED','Start the match first.');

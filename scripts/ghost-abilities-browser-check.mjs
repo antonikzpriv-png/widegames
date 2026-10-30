@@ -10,12 +10,12 @@ import {createGameServer} from '../server/transport.mjs';
 import {loadConfig} from '../server/config.mjs';
 import {WORLD,WORLD_STATIONS,distance,findWorldPath} from '../shared/world.mjs';
 const root=path.resolve(import.meta.dirname,'..');await mkdir(path.join(root,'_artifacts'),{recursive:true});const output=await mkdtemp(path.join(root,'_artifacts/ghost-abilities-browser-'));
-const report={fixture:'Real app, HTTP, WebSocket, cookie identity, engine and persistence; seeded assignments, idle demo bots and an accelerated server clock. The fixture saboteur submits legal engine actions. No paid calls.',checks:[],errors:[],screenshots:[]};
+const report={taskEdition:1,mapRevision:1,fixture:'Real app, HTTP, WebSocket, cookie identity, engine and persistence; seeded assignments, idle demo bots and an accelerated server clock. The fixture saboteur submits legal engine actions. No paid calls.',checks:[],errors:[],screenshots:[]};
 let skew=0,fixture='ward',browser,game,page,origin;
 const features={deathPolicy:'ghost-tasks',abilities:true};
 const seeds={};
 for(let i=0;i<10000&&(!seeds.ward||!seeds.echo);i++){
- const s=engine.createMatch({id:'seed',seed:i,world:true,features});
+ const s=engine.createMatch({id:'seed',seed:i,world:true,features,mapRevision:1,taskEdition:1});
  if(s.players[0].ability?.type==='ward'&&s.players[0].tasks.some(t=>t.roomId==='bridge'))seeds.ward??=i;
  if(s.players[0].ability?.type==='echo')seeds.echo??=i;
 }
@@ -37,7 +37,7 @@ async function newWatch(){await page.locator('.harbor-play').click();await page.
 async function begin(){await press('Begin the watch');await page.waitForSelector('.lw-role-scene',{visible:true});await press('Enter the beacon');await page.waitForSelector('.lw-connection[data-connected="true"]');}
 try{
  const probe=http.createServer();await new Promise(r=>probe.listen(0,'127.0.0.1',r));const port=probe.address().port;await new Promise(r=>probe.close(r));origin=`http://127.0.0.1:${port}`;
- const config=loadConfig({HOST:'127.0.0.1',PORT:String(port),PUBLIC_ORIGIN:origin,DATA_DIR:path.join(output,'data'),AI_PROVIDER:'demo'});config.now=()=>Date.now()+skew;config.tickMs=30;config.rules={initialKillCooldownMs:1,killCooldownMs:100,meetingCooldownMs:1};
+ const config=loadConfig({HOST:'127.0.0.1',PORT:String(port),PUBLIC_ORIGIN:origin,DATA_DIR:path.join(output,'data'),AI_PROVIDER:'demo'});config.mapRevision=1;config.now=()=>Date.now()+skew;config.tickMs=30;config.rules={initialKillCooldownMs:1,killCooldownMs:100,meetingCooldownMs:1};
  game=await createGameServer(config,{engine:{...engine,createMatch:o=>engine.createMatch({...o,taskEdition:1,seed:seeds[fixture]})},aiController:{describe:()=>({mode:'demo',provider:'demo',strategy:'Idle browser fixture'}),decide:async()=>null}});await new Promise(r=>game.server.listen(port,'127.0.0.1',r));
  browser=await puppeteer.launch({executablePath:process.env.CHROME_PATH||'/usr/bin/chromium',headless:true,args:['--no-sandbox','--disable-dev-shm-usage']});page=await browser.newPage();page.setDefaultTimeout(12000);page.on('pageerror',e=>report.errors.push(e.message));await page.setViewport({width:1440,height:1000});await page.goto(origin,{waitUntil:'domcontentloaded'});
  await newWatch();await shot('01-optional-lobby');await begin();let state=await view();const roomId=state.roomId;check(state.game.features.deathPolicy==='ghost-tasks'&&state.game.features.abilities,'Lobby selections reach real persisted match');check(state.game.self.ability.type==='ward'&&state.game.self.role==='crew','Harbor Ward assignment is separate from crew faction');

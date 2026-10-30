@@ -16,7 +16,7 @@ export function validateFeatures(room){
  const f=parseFeatures({deathPolicy:s.features.deathPolicy,abilities:s.features.abilities});
  assert(f.deathPolicy==='ghost-tasks'||f.abilities);
  if(room.features)assert(room.features.deathPolicy===f.deathPolicy&&room.features.abilities===f.abilities);
- const taskRooms=getWorld(s.mapId).ROOM_LAYOUT;
+ const taskRooms=getWorld(s.mapId,s.mapRevision??1).ROOM_LAYOUT;
  const tasks=s.players.flatMap(p=>p.tasks||[]);
  assert(tasks.length===s.rules.tasksPerCrew*s.players.filter(p=>p.role==='crew').length&&new Set(tasks.map(t=>t.id)).size===tasks.length);
  assert(tasks.every(t=>object(t)&&/^t[a-f0-9]{20}$/.test(t.id)&&typeof t.completed==='boolean'&&taskRooms.some(r=>r.id===t.roomId)&&typeof t.label==='string'&&t.label.length<=200));

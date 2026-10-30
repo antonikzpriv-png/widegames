@@ -14,6 +14,9 @@ const phases = new Set(['roam','discussion','voting','ended','paused']);
 const object = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 export function validateRoom(room) {
   if (!object(room) || ![1,2].includes(room.schema) || !ROOM_ID.test(room.id) || !['human','spectator'].includes(room.mode)) throw new Error('Invalid room');
+  if(Object.hasOwn(room,'mapRevision')&&![1,2].includes(room.mapRevision))throw new Error('Invalid room map revision');
+  if(room.state&&Object.hasOwn(room.state,'mapRevision')&&(![1,2].includes(room.state.mapRevision)||room.state.schemaVersion!==2))throw new Error('Invalid match map revision');
+  if(room.state&&(room.mapRevision??1)!==(room.state.mapRevision??1))throw new Error('Inconsistent map revision');
   if(Object.hasOwn(room,'mapId'))parseMapId(room.mapId);
   if(room.state&&Object.hasOwn(room.state,'mapId')){parseMapId(room.state.mapId);if(room.state.schemaVersion!==2)throw new Error('Map requires world state');}
   if(room.state&&(room.mapId??'beacon')!==(room.state.mapId??'beacon'))throw new Error('Inconsistent room map');
@@ -37,6 +40,7 @@ export function validateRoom(room) {
     if(state.replayHistory!==undefined){
       if(state.schemaVersion!==2)throw new Error('Mixed legacy/world replay history');
       validateReplayHistory(state.replayHistory);
+      if((state.replayHistory.mapRevision??1)!==(state.mapRevision??1))throw new Error('Replay map revision mismatch');
       if(state.replayHistory.map!==(state.mapId??'lantern-wake-v1'))throw new Error('Replay map mismatch');
       if(state.replayHistory.checkpoints.some(a=>a.at<state.startedAt||a.at>state.updatedAt||a.sequence>state.replaySequence))throw new Error('Replay checkpoint exceeds match history');
     }
@@ -54,7 +58,7 @@ const roomIds=new Set(ROOM_LAYOUT.map(room=>room.id));
 const finiteTime=value=>Number.isFinite(value)&&value>=0&&value<=Number.MAX_SAFE_INTEGER;
 const point=value=>object(value)&&Number.isFinite(value.x)&&Number.isFinite(value.y);
 function validateWorldStructure(state,dynamic=false){
-  const roomIds=new Set(getWorld(state.mapId).ROOM_LAYOUT.map(r=>r.id));
+  const roomIds=new Set(getWorld(state.mapId,state.mapRevision??1).ROOM_LAYOUT.map(r=>r.id));
   if(state.worldVersion!==1||!finiteTime(state.startedAt)||!finiteTime(state.updatedAt)||state.updatedAt<state.startedAt||!Array.isArray(state.bodies))throw new Error('Invalid world match');
   const tasks=state.players.flatMap(p=>p.tasks||[]);
   if(state.mapId&&(tasks.length!==state.rules.tasksPerCrew*state.players.filter(p=>p.role==='crew').length||new Set(tasks.map(t=>t?.id)).size!==tasks.length))throw new Error('Invalid map task totals');
@@ -94,7 +98,7 @@ function validateLobby(room){
   if(!object(a)||typeof a.matchId!=='string'||!Number.isSafeInteger(a.generation)||a.generation>=room.generation||a.generation<0||a.matchId!==(a.generation<=1?room.id:`${room.id}_g${a.generation}`)||archived.has(a.generation)||!Array.isArray(a.replay)||a.replay.length>2000||Buffer.byteLength(JSON.stringify(a.replay))>1000000||a.replay.some(e=>!object(e)||!finiteTime(e.at)||typeof e.type!=='string')||!Array.isArray(a.players)||a.players.length<4||a.players.length>15||a.players.some((p,i)=>!object(p)||p.id!==`p${i+1}`||typeof p.name!=='string'||playerName(p.name)!==p.name||!PERSONAS.some(q=>q.color===p.color)||!['crew','saboteur'].includes(p.role))||a.players.filter(p=>p.role==='saboteur').length<1||a.players.filter(p=>p.role==='saboteur').length>3||a.players.filter(p=>p.role==='saboteur').length*2>=a.players.length)throw Error('Invalid archived replay');archived.add(a.generation);
  }
  if(room.state){
-  const state=room.state;const roomIds=new Set(getWorld(state.mapId).ROOM_LAYOUT.map(r=>r.id));validateSettings(state.lobbySettings);
+  const state=room.state;const roomIds=new Set(getWorld(state.mapId,state.mapRevision??1).ROOM_LAYOUT.map(r=>r.id));validateSettings(state.lobbySettings);
   if(JSON.stringify(state.lobbySettings)!==JSON.stringify(room.settings)||state.players.length!==room.roster.length||state.players.filter(p=>p.role==='saboteur').length!==room.settings.saboteurs)throw Error('Invalid locked settings');
   if(!object(state.rules)||Object.keys(state.rules).length!==Object.keys(DEFAULT_RULES).length||Object.keys(DEFAULT_RULES).some(k=>!Number.isSafeInteger(state.rules[k])||state.rules[k]<1||state.rules[k]>86400000)||state.rules.tasksPerCrew>20||state.rules.meetingsPerPlayer>10||state.rules.messagesPerDiscussion>20||state.rules.messageMaxLength>2000)throw Error('Invalid match rules');
   const taskIds=new Set();
@@ -120,7 +124,7 @@ async function worldGeometry(supplied){
 export async function validateRoomSnapshot(room,{worldGeometry:provided}={}){
   validateRoom(room);
   if(room.state?.schemaVersion===2){
-    const geometry=room.state.mapId?getWorld(room.state.mapId):await worldGeometry(provided),{WORLD,isWalkable}=geometry;
+    const geometry=room.state.mapId||room.state.mapRevision===2?getWorld(room.state.mapId,room.state.mapRevision??1):await worldGeometry(provided),{WORLD,isWalkable}=geometry;
     const validPoint=p=>point(p)&&p.x>=0&&p.y>=0&&p.x<=WORLD.width&&p.y<=WORLD.height&&isWalkable(p);
     for(const player of room.state.players){
       const m=player.motion;

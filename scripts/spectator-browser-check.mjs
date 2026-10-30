@@ -10,7 +10,6 @@ import puppeteer from 'puppeteer-core';
 import {createGameServer} from '../server/transport.mjs';
 import {loadConfig} from '../server/config.mjs';
 import * as engine from '../server/engine/index.mjs';
-import {WORLD_STATIONS,WORLD_BELL} from '../shared/world.mjs';
 import * as worlds from '../shared/world.mjs';
 
 const root=fileURLToPath(new URL('../',import.meta.url)),pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
@@ -20,7 +19,7 @@ const git=(...args)=>execFileSync('git',args,{cwd:root,encoding:'utf8'}).trim();
 const files=git('ls-files','--cached','--others','--exclude-standard','public','server','shared').split('\n').filter(Boolean);
 const hashes=()=>Promise.all(files.map(async f=>[f,createHash('sha256').update(await readFile(path.join(root,f))).digest('hex')]));
 const before=await hashes();
-const report={fixture:'Native app and HTTP/WebSocket APIs with real demo bots and deterministic engine seeds. Long legal cooldowns prevent fixture combat; no fabricated outcome, provider call or deployment. Browser timings describe this headless Cloud host, not a guarantee on every device.',checks:[],errors:[],consoleErrors:[],screenshots:[],performance:[],sourceCommit:git('rev-parse','HEAD'),runtimeFingerprints:before};
+const report={fixture:'Native app and HTTP/WebSocket APIs with real demo bots and deterministic engine seeds. Production loadConfig selects revision-2 cutaway geometry on all three maps. Native keyboard ghost controls traverse real machinery and exterior walls without sending actor input. Long legal cooldowns prevent fixture combat; no fabricated outcome, provider call or deployment. Browser timings describe this headless Cloud host, not a guarantee on every device.',checks:[],errors:[],consoleErrors:[],screenshots:[],performance:[],sourceCommit:git('rev-parse','HEAD'),runtimeFingerprints:before};
 let game,browser,page,origin;const writes=[];
 function check(value,name){report.checks.push({name,passed:!!value});assert(value,name);console.log('PASS '+name);}
 function instrument(target){target.on('pageerror',error=>report.errors.push(error.message));target.on('console',message=>{if(message.type()==='error')report.consoleErrors.push(message.text());});target.on('request',request=>{if(request.method()==='POST'&&request.url().includes('/api/rooms'))writes.push({path:new URL(request.url()).pathname,body:request.postData()});});}
@@ -35,9 +34,9 @@ async function clickWorld(position){const p=await page.$eval('.lw-world-canvas',
 async function clickClearBell(){
  const end=Date.now()+12000,offsets=[[0,0],[15,0],[-15,0],[0,15],[0,-15]];
  while(Date.now()<end){
-  const state=(await view()).game;
+  const state=(await view()).game,bell=geometryFor(state).WORLD_BELL;
   for(const [dx,dy]of offsets){
-   const target={x:WORLD_BELL.x+dx,y:WORLD_BELL.y+dy};
+   const target={x:bell.x+dx,y:bell.y+dy};
    const clear=state.players.every(actor=>!actor.position||!actor.alive||Math.abs(target.x-actor.position.x)>65||target.y<actor.position.y-105||target.y>actor.position.y+80);
    if(!clear)continue;
    const projected=await page.$eval('.lw-world-canvas',(canvas,p)=>{const r=canvas.getBoundingClientRect(),z=Number(canvas.dataset.cameraZoom),x=r.left+r.width/2+(p.x-Number(canvas.dataset.cameraX))*z,y=r.top+r.height/2+(p.y-Number(canvas.dataset.cameraY))*z;return {x,y,clear:document.elementFromPoint(x,y)===canvas};},target);
@@ -46,6 +45,28 @@ async function clickClearBell(){
   await pause(100);
  }
  throw Error('The live demo did not expose an unobscured emergency bell for the native canvas click');
+}
+const geometryFor=state=>worlds.getWorld(state.mapId||'beacon',state.mapRevision??1);
+async function driftTo(position){
+ await page.focus('.lw-world-canvas');
+ for(const axis of ['x','y']){
+  const start=await camera(),delta=position[axis]-start[axis];if(Math.abs(delta)<10)continue;
+  const direction=Math.sign(delta),key=axis==='x'?(direction>0?'d':'a'):(direction>0?'s':'w');
+  await page.keyboard.down(key);
+  try{await page.waitForFunction(({axis,target,direction})=>{const node=document.querySelector('.lw-world-canvas'),coordinate=Number(node.dataset[axis==='x'?'cameraX':'cameraY']);return direction>0?coordinate>=target-6:coordinate<=target+6;},{polling:'raf',timeout:15000},{axis,target:position[axis],direction});}
+  finally{await page.keyboard.up(key);}
+  await pause(70);
+ }
+}
+async function proveGhostTraversal(geometry){
+ const prop=geometry.WORLD_OBSTACLES.filter(p=>p.width>=80&&p.height>=70).sort((a,b)=>b.width*b.height-a.width*a.height)[0];assert(prop,'Fixture needs visible machinery with a solid interior');
+ const center={x:prop.x+prop.width/2,y:prop.y+prop.height/2};assert(!geometry.isWalkable(center));
+ await press('Free ghost');await driftTo(center);const inside=await camera();
+ check(inside.mode==='free'&&inside.x>prop.x&&inside.x<prop.x+prop.width&&inside.y>prop.y&&inside.y<prop.y+prop.height&&!geometry.isWalkable(inside),'native free ghost passes through solid '+geometry.metadata.name+' machinery');
+ await shot('ghost-inside-'+geometry.metadata.id);
+ const outside={x:28,y:28};assert(!geometry.isWalkable(outside)&&geometry.worldRoomAt(outside)===null);await driftTo(outside);const exterior=await camera();
+ check(exterior.mode==='free'&&!geometry.isWalkable(exterior)&&geometry.worldRoomAt(exterior)===null&&Math.hypot(exterior.x-outside.x,exterior.y-outside.y)<35,'native free ghost crosses the '+geometry.metadata.name+' hull into exterior space');
+ await press('Overview');await pause(100);
 }
 async function measure(label,duration=2400){
  const cdp=await page.createCDPSession();await cdp.send('Performance.enable');
@@ -68,11 +89,13 @@ try{
  browser=await puppeteer.launch({executablePath:process.env.CHROME_PATH||'/usr/bin/chromium',headless:true,userDataDir:path.join(output,'profile'),args:['--no-sandbox','--disable-dev-shm-usage']});page=await browser.newPage();page.setDefaultTimeout(20000);await page.setViewport({width:1440,height:1000});instrument(page);
  await page.goto(origin,{waitUntil:'domcontentloaded'});await page.click('.harbor-watch');await page.waitForSelector('.lw-lobby:not([hidden])');await press('Begin the watch');await page.waitForSelector('.lw-spectator:not([hidden])');
  check((await view()).game.self===null,'all-AI spectator has no playable seat');check(!(await view()).game.inspection,'all-AI spectator roles and task assignments stay private before explicit inspection opt-in');await page.click('[data-inspection-toggle]');await page.waitForFunction(async()=>{const r=await fetch('/api/rooms/'+location.pathname.split('/')[2]);return !!(await r.json()).game.inspection;});check(!!(await view()).game.inspection,'explicit AI-only observer opt-in enables authorized inspection');check(await page.$eval('.lw-ai',n=>n.textContent.includes('DEMO')),'demo execution is visibly labeled');
+ const firstGame=(await view()).game,firstGeometry=geometryFor(firstGame);check(firstGame.mapRevision===2&&firstGeometry.metadata.revision===2,'production spectator starts the redesigned revision-2 beacon');
  const spectatorRoomId=(await view()).roomId,writesAtStart=writes.length;await press('Free ghost');await page.focus('.lw-world-canvas');await pause(100);const start=await camera();
  await page.keyboard.down('d');await page.keyboard.down('s');await pause(550);await page.keyboard.up('d');await page.keyboard.up('s');const moved=await camera();
  check(moved.mode==='free'&&moved.x>start.x+30&&moved.y>start.y+30,'spectator WASD moves a local free ghost camera diagonally');
  await pause(250);const stopped=await camera();check(Math.abs(stopped.x-moved.x)<1&&Math.abs(stopped.y-moved.y)<1,'releasing WASD stops free camera movement');
  check(writes.length===writesAtStart,'free ghost WASD sends no gameplay actions or movement packets');
+ await proveGhostTraversal(firstGeometry);
  await page.select('[aria-label="Inspect world object"]','player:p2');await page.waitForSelector('.lw-inspector:not([hidden])');
  const keeper=game.rooms.get(spectatorRoomId).data.state.players.find(p=>p.id==='p2');const inspected=await page.$eval('.lw-inspector',n=>n.textContent);
  check(inspected.toLowerCase().includes(keeper.role),'authorized all-AI inspector shows the selected keeper actual role');
@@ -81,7 +104,7 @@ try{
  await shot('01-spectator-agent-inspector');
  await page.select('[aria-label="Follow a keeper"]','p2');await pause(650);check((await camera()).mode==='follow','selected keeper following remains available');
  await page.click('.lw-inspector-close');await press('Overview');await pause(150);
- const worldState=(await view()).game,station=Object.entries(WORLD_STATIONS).find(([,p])=>worldState.players.every(a=>!a.position||Math.hypot(a.position.x-p.x,a.position.y-p.y)>90));assert(station,'demo fixture must leave an unoccupied station');
+ const worldState=(await view()).game,station=Object.entries(geometryFor(worldState).WORLD_STATIONS).find(([,p])=>worldState.players.every(a=>!a.position||Math.hypot(a.position.x-p.x,a.position.y-p.y)>90));assert(station,'demo fixture must leave an unoccupied station');
  await clickWorld(station[1]);await page.waitForSelector('.lw-inspector:not([hidden])');
  check(await page.$eval('[aria-label="Inspect world object"]',(n,id)=>n.value==='station:'+id,station[0]),'clicking a drawn station opens its inspector');
  await page.click('.lw-inspector-close');await clickClearBell();await page.waitForSelector('.lw-inspector:not([hidden])');
@@ -103,10 +126,11 @@ try{
  check(humanMoved.game.players.filter(p=>p.id!=='p1').every(p=>!Object.hasOwn(p,'role')),'other players roles remain private in a human match');await measure('Human-plus-AI world');await shot('03-human-world');
  for(const map of (worlds.MAPS||[]).filter(map=>map.id!=='beacon')){
   await press('Exit');await page.waitForSelector('.harbor-watch');await page.click('.harbor-watch');await page.waitForSelector('.lw-lobby:not([hidden])');await page.select('.lw-lobby [name=mapId]',map.id);await press('Begin the watch');await page.waitForSelector('.lw-spectator:not([hidden])');
-  const privateView=await view();check(!privateView.game.inspection,'expanded-map observer starts with private assignments on '+map.name);await page.click('[data-inspection-toggle]');await page.waitForFunction(async()=>{const r=await fetch('/api/rooms/'+location.pathname.split('/')[2]);return !!(await r.json()).game.inspection;});const state=await view();check(state.game.mapId===map.id,'all-AI spectator starts the selected '+map.name+' map');const mapWrites=writes.length;
+  const privateView=await view();check(!privateView.game.inspection,'expanded-map observer starts with private assignments on '+map.name);await page.click('[data-inspection-toggle]');await page.waitForFunction(async()=>{const r=await fetch('/api/rooms/'+location.pathname.split('/')[2]);return !!(await r.json()).game.inspection;});const state=await view(),geometry=geometryFor(state.game);check(state.game.mapId===map.id,'all-AI spectator starts the selected '+map.name+' map');check(state.game.mapRevision===2&&geometry.metadata.revision===2,'production spectator uses redesigned revision-2 '+map.name);const mapWrites=writes.length;
   await press('Free ghost');await page.focus('.lw-world-canvas');const beforeCamera=await camera();await page.keyboard.down('d');await pause(Math.max(300,(1601-beforeCamera.x)/440*1000+180));await page.keyboard.up('d');const afterCamera=await camera();check(afterCamera.x>beforeCamera.x+15&&afterCamera.x>1600,'local ghost camera uses expanded bounds on '+map.name);
+  await proveGhostTraversal(geometry);
   await page.select('[aria-label="Inspect world object"]','player:p3');check(await page.$eval('.lw-inspector',n=>n.textContent.includes('Current activity')),'keeper inspection works on '+map.name);await page.click('.lw-inspector-close');await press('Overview');await pause(100);
-  const geometry=worlds.getWorld(map.id),players=(await view()).game.players;let selected=null;
+  const players=(await view()).game.players;let selected=null;
   for(const [id,position]of Object.entries(geometry.WORLD_STATIONS)){
    if(players.some(player=>player.position&&Math.hypot(player.position.x-position.x,player.position.y-position.y)<100))continue;
    const unobstructed=await page.$eval('.lw-world-canvas',(n,p)=>{const r=n.getBoundingClientRect(),z=Number(n.dataset.cameraZoom),x=r.left+r.width/2+(p.x-Number(n.dataset.cameraX))*z,y=r.top+r.height/2+(p.y-Number(n.dataset.cameraY))*z;return document.elementFromPoint(x,y)===n;},position);

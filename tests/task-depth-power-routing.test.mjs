@@ -10,12 +10,12 @@ import {MAPS,getWorld} from '../shared/world.mjs';
 import {createRoom,issueIdentity} from '../server/rooms.mjs';
 import {createRoomStore,validateRoomSnapshot} from '../server/store.mjs';
 
-for(const {id:mapId} of MAPS)test(`two-station power ${mapId}: divert routes privately, reload retains destination, acceptance requires travel`,async()=>{
+for(const mapRevision of [1,2])for(const {id:mapId} of MAPS)test(`two-station power ${mapId} revision ${mapRevision}: divert routes privately, reload retains destination, acceptance requires travel`,async()=>{
  const directory=await mkdtemp(path.join(tmpdir(),'lantern-power-route-'));let store=await createRoomStore(directory);
  try{
-  let now=10000,room=createRoom('human',now,true);issueIdentity(room,true);room.startId='power-start';room.settings={...room.settings,tasksPerCrew:8,taskMix:'equipment'};if(mapId!=='beacon')room.mapId=mapId;
-  let state,task;for(let seed=0;seed<100;seed++){state=engine.createMatch({id:room.id,world:true,mode:'human',settings:room.settings,roster:room.roster,mapId,now,seed,config:{roamDeadlineMs:900000,maxMatchMs:3600000}});if(state.players[0].role==='crew'&&(task=state.players[0].tasks.find(t=>t.kind==='power')))break;}
-  assert(task,'real assignment must include human-owned power job');const taskId=task.id,originalRoom=task.roomId,map=getWorld(mapId);let receipt=0;
+  let now=10000,room=createRoom('human',now,true);issueIdentity(room,true);room.startId='power-start';room.settings={...room.settings,tasksPerCrew:8,taskMix:'equipment'};if(mapId!=='beacon')room.mapId=mapId;if(mapRevision===2)room.mapRevision=2;
+  let state,task;for(let seed=0;seed<100;seed++){state=engine.createMatch({id:room.id,world:true,mode:'human',settings:room.settings,roster:room.roster,mapId,mapRevision,now,seed,config:{roamDeadlineMs:900000,maxMatchMs:3600000}});if(state.players[0].role==='crew'&&(task=state.players[0].tasks.find(t=>t.kind==='power')))break;}
+  assert(task,'real assignment must include human-owned power job');const taskId=task.id,originalRoom=task.roomId,map=getWorld(mapId,mapRevision);let receipt=0;
   const current=()=>state.players[0].tasks.find(t=>t.id===taskId);
   function action(type,fields,id='power-'+receipt++){const result=engine.applyAction(state,'p1',{id,type,...fields},now);state=result.state;return result;}
   function travel(roomId){const station=map.WORLD_STATIONS[roomId],route=map.findWorldPath(state.players[0].position,station);assert(route);let length=0,previous=state.players[0].position;for(const point of route){length+=map.distance(previous,point);previous=point;}const navigation=action('navigate',station);assert(navigation.accepted,JSON.stringify(navigation.error));now+=Math.ceil(length/room.settings.speed*1000)+20;state=engine.tick(state,now).state;assert.equal(state.players[0].roomId,roomId);assert(map.distance(state.players[0].position,station)<1);}

@@ -10,18 +10,18 @@ import {challenge,advanceTask} from '../server/engine/tasks.mjs';
 
 // Reconstruction fixtures use real engine-created initial checkpoints; they do
 // not manufacture playable outcomes or claim to exercise HTTP replay access.
-function recording({capacity=6,mapId='beacon',speed=180,vision=360}={}){
+function recording({capacity=6,mapId='beacon',mapRevision=1,speed=180,vision=360}={}){
  const settings=changeSettings(LOBBY_DEFAULTS,{capacity,saboteurs:capacity===15?3:1,tasksPerCrew:1,speed,vision});
- const state=createMatch({id:`task-replay-${capacity}-${mapId}-${speed}-${vision}`,settings,roster:rosterFor(capacity),world:true,mode:'spectator',mapId,now:1000,seed:'replay-settings'});
+ const state=createMatch({id:`task-replay-${capacity}-${mapId}-${mapRevision}-${speed}-${vision}`,settings,roster:rosterFor(capacity),world:true,mode:'spectator',mapId,mapRevision,now:1000,seed:'replay-settings'});
  const anchor=structuredClone(state.replayHistory.checkpoints[0]);
- const metadata={version:REPLAY_VERSION,map:mapId==='beacon'?REPLAY_MAP:mapId,matchId:state.id,anchor,coverage:{startedAt:1000,from:1000,through:10000,partial:false}};
+ const metadata={version:REPLAY_VERSION,map:mapId==='beacon'?REPLAY_MAP:mapId,...(mapRevision===2?{mapRevision:2}:{}),matchId:state.id,anchor,coverage:{startedAt:1000,from:1000,through:10000,partial:false}};
  return {state,metadata,envelope:{matchId:state.id,metadata,replay:structuredClone(state.replay)}};
 }
 
-for(const capacity of [4,6,15])for(const mapId of ['beacon','storm-foundry','tidal-observatory'])test(`task replay: ${capacity} actors reconstruct ${mapId} anchor without fixed-six omissions`,()=>{
- const f=recording({capacity,mapId,speed:300,vision:600}),profiles=f.state.players.map(p=>({id:p.id,name:`Keeper ${p.id.slice(1)}`,color:p.color,badge:p.id.slice(1)})),m=createReplayModel(f.envelope,{players:profiles,mapId});
- assert.deepEqual(f.metadata.anchor.settings,{speed:300,vision:600});validateReplayAnchor(f.metadata.anchor,f.metadata.map);
- const frame=m.at(1000);assert.equal(frame.players.length,capacity);assert.deepEqual(frame.players.map(p=>p.id),f.state.players.map(p=>p.id));assert.deepEqual(frame.settings,{speed:300,vision:600});
+for(const capacity of [4,6,15])for(const mapId of ['beacon','storm-foundry','tidal-observatory'])for(const mapRevision of [1,2])test(`task replay: ${capacity} actors reconstruct ${mapId} revision ${mapRevision} anchor without fixed-six omissions`,()=>{
+ const f=recording({capacity,mapId,mapRevision,speed:300,vision:600}),profiles=f.state.players.map(p=>({id:p.id,name:`Keeper ${p.id.slice(1)}`,color:p.color,badge:p.id.slice(1)})),m=createReplayModel(f.envelope,{players:profiles,mapId,mapRevision});
+ assert.deepEqual(f.metadata.anchor.settings,{speed:300,vision:600});validateReplayAnchor(f.metadata.anchor,f.metadata.map,mapRevision);
+ const frame=m.at(1000);assert.equal(frame.mapRevision??1,mapRevision);assert.equal(frame.players.length,capacity);assert.deepEqual(frame.players.map(p=>p.id),f.state.players.map(p=>p.id));assert.deepEqual(frame.settings,{speed:300,vision:600});
  for(const p of f.state.players){const actual=frame.players.find(q=>q.id===p.id);assert.deepEqual(actual.position,p.position);assert.equal(actual.name,`Keeper ${p.id.slice(1)}`);assert.equal(actual.badge,p.id.slice(1));}
  frame.players.at(-1).position.x=-1;frame.settings.speed=-1;assert.deepEqual(m.at(1000).players.at(-1).position,f.state.players.at(-1).position);assert.equal(m.at(1000).settings.speed,300);
 });
@@ -69,4 +69,10 @@ test('task replay: council interrupts an active transfer while a sample incubati
  actor.tasks=['transfer','sample'].map(kind=>{const task={...original,id:original.id+'_'+kind,kind,edition:3};task.progress=challenge(task);advanceTask(task,1000);return task;});
  f.envelope.replay.push({id:'r2',type:'meeting',at:1100,reason:'timeout'});const m=createReplayModel(f.envelope),before=m.at(1050).players.find(p=>p.id===actor.id),after=m.at(1150).players.find(p=>p.id===actor.id);
  assert.deepEqual(before.tasks.map(t=>t.progress.index),[1,1]);assert.equal(after.tasks[0].progress.index,0);assert.equal(after.tasks[0].progress.readyAt,0);assert.equal(after.tasks[1].progress.index,1);assert.equal(after.tasks[1].progress.readyAt,4000);
+});
+
+
+test('task replay: legacy and redesigned spawn geometry stay collision-safe for all15 keepers',()=>{
+ for(const mapId of ['beacon','storm-foundry','tidal-observatory'])for(const revision of [1,2]){const world=getWorld(mapId,revision),first=world.worldSpawn('p1'),spawns=Array.from({length:15},(_,i)=>world.worldSpawn('p'+(i+1)));for(const [i,p]of spawns.entries()){assert(world.isWalkable(p));assert.equal(world.worldRoomAt(p),'bridge');for(const q of spawns.slice(i+1))assert(world.distance(p,q)>=2*world.WORLD.bodyRadius);}spawns[0].x=-1;assert.deepEqual(world.worldSpawn('p1'),first);}
+ const legacy=getWorld('beacon'),modern=getWorld('beacon',2);assert.equal(legacy.metadata.revision??1,1);assert.equal(modern.metadata.revision,2);assert.notDeepEqual(legacy.worldSpawn('p15'),modern.worldSpawn('p15'));assert.equal(WORLD.speed,180);
 });
