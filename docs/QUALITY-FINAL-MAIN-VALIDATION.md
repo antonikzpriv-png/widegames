@@ -58,7 +58,19 @@ npm run test:maps:browser
 npm run test:illustrated:browser
 ```
 
-An installed Chrome is required; CHROME_PATH overrides the default. [Exact raw-source native reproduction](QUALITY-ILLUSTRATED-CLIENT.md) and the production guide preserve pins/commands/limits. Fixtures do not call paid providers.
+An installed Chrome is required; CHROME_PATH overrides the default. To reproduce the exact raw-source native receipt from a full Git checkout with development dependencies installed:
+
+```powershell
+node scripts/prepare-quality-source.mjs c471b154ce806a71846c25a9932f039aeab0ab15
+$prepared=Get-Content _artifacts/quality-native-source-latest.json -Raw | ConvertFrom-Json
+$env:QUALITY_BROWSER_ROOT=$prepared.root
+$env:QUALITY_BROWSER_PIN=$prepared.pin
+$env:QUALITY_BROWSER_MODE='final'
+$env:QUALITY_BROWSER_SECTION='all'
+node scripts/quality-browser-check.mjs
+```
+
+The snapshot verifies raw Git blob bytes before running. The [client receipt](QUALITY-ILLUSTRATED-CLIENT.md) records focused geometry/render controls; the production guide records its separate isolated ws-only commands and pins. Fixtures do not call paid providers.
 
 To play, npm ci then npm start; leave the terminal open and open http://localhost:3000. If an older service owns3000, stop that terminal with Ctrl+C or use $env:PORT='3001'; npm start and open http://localhost:3001. Demo needs no keys. Never run two writers against one DATA_DIR; back up the complete stopped-service directory before upgrade. [Deployment/environment](DEPLOYMENT.md).
 
