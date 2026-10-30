@@ -11,8 +11,20 @@ const point=p=>object(p)&&Object.keys(p).every(k=>k==='x'||k==='y')&&Number.isFi
 const bounded=(a,n)=>Array.isArray(a)&&a.length<=n;
 const reject=()=>{throw new Error('Invalid replay metadata');};
 const keys=(o,allowed)=>object(o)&&Object.keys(o).every(k=>allowed.includes(k));
+export function replaySequenceOf(event){
+ if(Number.isSafeInteger(event?.sequence)&&event.sequence>0)return event.sequence;
+ return typeof event?.id==='string'&&/^r\d+$/.test(event.id)?Number(event.id.slice(1)):null;
+}
+export function validReplayTaskProgress(p){
+ return keys(p,['v','kind','target','sequence','pressure','total','index','readyAt'])&&p.v===1&&['wires','tuning','sequence','pressure','repair'].includes(p.kind)&&Number.isInteger(p.target)&&p.target>=30&&p.target<=80&&bounded(p.sequence,4)&&p.sequence.length===4&&p.sequence.every(n=>Number.isInteger(n)&&n>=1&&n<=4)&&[2,3,4,6,7,8].includes(p.pressure)&&[1,2,3,4].includes(p.total)&&Number.isInteger(p.index)&&p.index>=0&&p.index<=p.total&&time(p.readyAt);
+}
+export function validReplayEffect(e){
+ return keys(e,['id','kind','playerId','createdAt','expiresAt',e?.kind==='ward'?'targetId':'position'])&&id(e.id)&&['ward','echo'].includes(e.kind)&&player(e.playerId)&&time(e.createdAt)&&time(e.expiresAt)&&e.expiresAt>e.createdAt&&(e.kind==='ward'?player(e.targetId):point(e.position));
+}
 export function validateReplayAnchor(a){
- if(!keys(a,['at','sequence','phase','players','bodies','sabotage','meeting','outcome'])||!time(a.at)||!Number.isSafeInteger(a.sequence)||a.sequence<0||!['roam','discussion','voting','ended','paused'].includes(a.phase)||!bounded(a.players,6)||a.players.length!==6||new Set(a.players.map(p=>p?.id)).size!==6)reject();
+ if(!keys(a,['at','sequence','phase','players','bodies','sabotage','meeting','outcome','features','effects'])||!time(a.at)||!Number.isSafeInteger(a.sequence)||a.sequence<0||!['roam','discussion','voting','ended','paused'].includes(a.phase)||!bounded(a.players,6)||a.players.length!==6||new Set(a.players.map(p=>p?.id)).size!==6)reject();
+ if(a.features!=null&&(!keys(a.features,['version','deathPolicy','abilities'])||a.features.version!==1||!['transfer','ghost-tasks'].includes(a.features.deathPolicy)||typeof a.features.abilities!=='boolean'))reject();
+ if(a.effects!==undefined&&(!bounded(a.effects,2)||a.effects.some(e=>!validReplayEffect(e)||e.createdAt>a.at||e.expiresAt<=a.at)||a.effects.length&&(!a.features?.abilities||a.phase!=='roam')))reject();
  // Optional for existing version-1 recordings; new terminal checkpoints retain it.
  if(Object.hasOwn(a,'outcome')){
   const o=a.outcome;
@@ -22,9 +34,10 @@ export function validateReplayAnchor(a){
  }
  let tasks=0;
  for(const p of a.players){
-  if(!keys(p,['id','role','alive','roomId','position','tasks','route'])||!player(p.id)||!['crew','saboteur'].includes(p.role)||typeof p.alive!=='boolean'||!room(p.roomId)||!point(p.position)||!bounded(p.tasks,100)||!bounded(p.route,REPLAY_LIMITS.route)||p.route.some(q=>!point(q)))reject();
+  if(!keys(p,['id','role','alive','roomId','position','tasks','route','ability'])||!player(p.id)||!['crew','saboteur'].includes(p.role)||typeof p.alive!=='boolean'||!room(p.roomId)||!point(p.position)||!bounded(p.tasks,100)||!bounded(p.route,REPLAY_LIMITS.route)||p.route.some(q=>!point(q)))reject();
+  if(p.ability!==undefined&&(!a.features?.abilities||!keys(p.ability,['type','readyAt'])||!['ward','echo'].includes(p.ability.type)||!time(p.ability.readyAt)))reject();
   tasks+=p.tasks.length;
-  for(const t of p.tasks)if(!keys(t,['id','roomId','label','completed'])||!id(t.id)||!room(t.roomId)||typeof t.label!=='string'||t.label.length>160||typeof t.completed!=='boolean')reject();
+  for(const t of p.tasks)if(!keys(t,['id','roomId','label','completed','progress'])||!id(t.id)||!room(t.roomId)||typeof t.label!=='string'||t.label.length>200||typeof t.completed!=='boolean'||t.progress!==undefined&&!validReplayTaskProgress(t.progress))reject();
  }
  if(tasks>100||a.players.filter(p=>p.role==='saboteur').length!==1||!bounded(a.bodies,6))reject();
  for(const b of a.bodies)if(!keys(b,['id','playerId','roomId','position','at','reported'])||!id(b.id)||!player(b.playerId)||!room(b.roomId)||!point(b.position)||!time(b.at)||b.at>a.at||typeof b.reported!=='boolean')reject();

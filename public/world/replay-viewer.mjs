@@ -3,6 +3,7 @@ import {createWorldScene} from './scene.mjs';
 import {createReplayModel,createReplayClock,restoreReplayTime} from './replay-model.mjs';
 import {worldReplayText} from './replay.mjs';
 import {aiNotice} from '../presentation.mjs';
+import {replaySequenceOf} from '../../shared/replay.mjs';
 
 export function recordedAiText(ai){
  if(!ai)return 'AI mode and usage were not recorded for this history.';
@@ -26,7 +27,7 @@ export function createSpatialReplay(host,response,{game,roomId}={}){
  overviewButton.setAttribute('aria-pressed','true');rolesButton.setAttribute('aria-pressed','true');rolesButton.title='Final revealed roles for postgame analysis; not what characters knew at this time.';
  toolbar.append(play,speed,follow,view,overviewButton,rolesButton);
  range.type='range';range.step='1';range.id='spatial-replay-'+game.matchId;label.htmlFor=range.id;
- const first=Math.max(0,model.events.findIndex(e=>e.at>=model.coverage.from&&(!model.metadata?.anchor||Number(e.id?.slice(1))>=model.metadata.anchor.sequence)));range.min=String(first);range.max=String(Math.max(first,model.events.length-1));index=first;eventLimit=first;
+ const first=Math.max(0,model.events.findIndex(e=>e.at>=model.coverage.from&&(!model.metadata?.anchor||(replaySequenceOf(e)??-1)>=model.metadata.anchor.sequence)));range.min=String(first);range.max=String(Math.max(first,model.events.length-1));index=first;eventLimit=first;
  function seekIndex(value){const target=Math.max(first,Math.min(model.events.length-1,value));eventLimit=target;clock.pause();const e=model.events[target];clock.seek(e?.at??model.coverage.from);paint(clock.time);setText(play,'Play');}
  function togglePlayback(){
   if(clock.playing){clock.pause();paint(clock.time);}

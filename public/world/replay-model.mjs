@@ -1,10 +1,10 @@
 import {CHARACTERS} from '../../shared/contracts.mjs';
 import {WORLD,isWalkable,moveWorldPoint,distance,canSeeWorldPoint} from '../../shared/world.mjs';
-import {REPLAY_LIMITS,validateReplayMetadata} from '../../shared/replay.mjs';
+import {REPLAY_LIMITS,validateReplayMetadata,replaySequenceOf,validReplayTaskProgress,validReplayEffect} from '../../shared/replay.mjs';
 import {replayEvents} from '../presentation.mjs';
 const copy=structuredClone;
 const point=p=>p&&Number.isFinite(p.x)&&Number.isFinite(p.y)&&isWalkable(p);
-const seq=e=>/^r\d+$/.test(e.id)?Number(e.id.slice(1)):null;
+const seq=replaySequenceOf;
 /** HTML range controls serialize doubles with fewer digits than JSON. Restore a
  * nearest recorded boundary only within that floating-point serialization error;
  * event-index seeking always uses the original number directly. */
@@ -24,7 +24,7 @@ function project(r,at){
  for(const next of r.path){const d=distance(p,next);if(budget<d)return {x:p.x+(next.x-p.x)*budget/d,y:p.y+(next.y-p.y)*budget/d};budget-=d;p=next;}
  return copy(p);
 }
-function base(roster){return {phase:'unknown',players:roster.map(p=>({id:p.id,name:p.name,color:p.color,position:null,alive:true,role:null,roomId:null,tasks:[],route:null,positionAt:null})),bodies:[],sabotage:null,meeting:null,activity:[],observations:[],claims:[],outcome:null};}
+function base(roster){return {phase:'unknown',players:roster.map(p=>({id:p.id,name:p.name,color:p.color,position:null,alive:true,role:null,roomId:null,tasks:[],route:null,positionAt:null})),features:null,effects:[],bodies:[],sabotage:null,meeting:null,activity:[],observations:[],claims:[],outcome:null};}
 export function createReplayModel(response,{matchId,roomId,players=CHARACTERS}={}){
  if(response?.roomId!==undefined&&roomId!==undefined&&response.roomId!==roomId)throw new Error('Replay belongs to another room.');
  if(response?.matchId!==undefined&&matchId!==undefined&&response.matchId!==matchId)throw new Error('Replay belongs to another match.');
@@ -41,6 +41,7 @@ export function createReplayModel(response,{matchId,roomId,players=CHARACTERS}={
   if(anchor.bodies.some(b=>!point(b.position)))throw new Error('Invalid replay metadata geometry');
   initial.phase=anchor.phase;initial.bodies=copy(anchor.bodies);initial.sabotage=copy(anchor.sabotage);initial.meeting=copy(anchor.meeting);
   initial.outcome=copy(anchor.outcome??null);
+  initial.features=copy(anchor.features??null);initial.effects=copy(anchor.effects??[]);
   if(anchor.phase==='ended'&&!initial.outcome){
    // Older version-1 terminal anchors omitted outcome. Use a retained recorded
    // outcome when available, never the unrecorded final browser view.
@@ -59,6 +60,7 @@ export function createReplayModel(response,{matchId,roomId,players=CHARACTERS}={
   time=Math.min(through,Math.max(from,Number.isFinite(time)?time:from));const s=copy(initial);
   const get=id=>s.players.find(p=>p.id===id);
   function locate(p,position,t){if(p&&point(position)){p.position=copy(position);p.positionAt=t;}}
+  function interrupt(p){for(const t of p?.tasks||[])if(t.progress?.kind==='repair'&&t.progress.index===3){t.progress.index=2;t.progress.readyAt=0;}}
   for(let i=0;i<events.length;i++){
    const e=events[i];if(e.at>time||i>limit)break;
    if(anchor&&(seq(e)!==null?seq(e)<=anchor.sequence:e.at<=anchor.at))continue;
@@ -70,17 +72,20 @@ export function createReplayModel(response,{matchId,roomId,players=CHARACTERS}={
    }
    if(e.type==='motion'||e.type==='direction'){
     locate(p,e.position,e.at);
+    if(p&&e.type==='direction'&&(e.dx||e.dy))interrupt(p);
     if(p&&(e.type==='direction'||e.reason!=='sample'))p.route=null;
-    if(p&&e.reason==='death')p.alive=false;
+    if(p&&e.reason==='death'){p.alive=false;interrupt(p);}
+    if(p&&!p.alive&&e.reason!=='death'&&(e.type==='direction'||['sample','arrived'].includes(e.reason)))p.recordedFallenMotion=true;
    }
    if(e.type==='witness'){
-    const victim=get(e.targetId);if(victim){victim.alive=false;victim.route=null;locate(victim,e.position,e.at);}
+    const victim=get(e.targetId);if(victim){victim.alive=false;victim.route=null;locate(victim,e.position,e.at);interrupt(victim);}
     if(!s.bodies.some(b=>b.playerId===e.targetId)&&point(e.position))s.bodies.push({id:'body-'+e.targetId,playerId:e.targetId,position:copy(e.position),at:e.at,reported:false});
     s.observations.push(copy(e));
    }
    if(e.type==='action'){
     locate(p,e.position,e.at);
-    if(p&&['navigate','move'].includes(a.type)){p.route=route(e.position,e.route,e.speed,e.at);if(a.roomId)p.roomId=a.roomId;}
+    if(p&&['navigate','move'].includes(a.type)){interrupt(p);p.route=route(e.position,e.route,e.speed,e.at);if(a.roomId)p.roomId=a.roomId;if(!p.alive)p.recordedFallenMotion=true;}
+    if(p&&['task','taskStep'].includes(a.type)&&validReplayTaskProgress(e.taskProgress)){const t=p.tasks.find(t=>t.id===a.taskId);if(t)t.progress=copy(e.taskProgress);}
     if(p&&a.type==='task'){const t=p.tasks.find(t=>t.id===a.taskId);if(t)t.completed=true;}
     if(a.type==='eliminate'){const victim=get(a.targetId);if(victim){victim.alive=false;victim.route=null;}}
     if(a.type==='sabotage')s.sabotage={active:true,roomId:'engine',repairsCompleted:0,repairsRequired:2};
@@ -88,8 +93,13 @@ export function createReplayModel(response,{matchId,roomId,players=CHARACTERS}={
     if(a.type==='say')s.claims.push(copy(e));
     if(a.type==='vote'&&s.meeting)s.meeting.votes.push({playerId:e.playerId,targetId:a.targetId});
    }
-   if(e.type==='tasks_reassigned')for(const assignment of e.assignments||[]){const task=p?.tasks.find(t=>t.id===assignment.taskId),owner=get(assignment.playerId);if(task&&owner){p.tasks=p.tasks.filter(t=>t!==task);owner.tasks.push(task);}}
-   if(e.type==='meeting'){s.phase='discussion';s.meeting={id:e.meetingId??e.id,votes:[],tallied:false,reason:e.reason};for(const q of s.players)q.route=null;if(e.reason==='report')for(const b of s.bodies)b.reported=true;}
+   if(e.type==='effect_started'){
+    const effect={id:e.effectId??e.id,kind:e.kind,playerId:e.playerId,createdAt:e.createdAt,expiresAt:e.expiresAt,...(e.kind==='ward'?{targetId:e.targetId}:{position:copy(e.position)})};
+    if(validReplayEffect(effect)){s.effects=s.effects.filter(f=>f.id!==effect.id);s.effects.push(effect);}
+   }
+   if(e.type==='effect_ended')s.effects=s.effects.filter(f=>f.id!==e.effectId);
+   if(e.type==='tasks_reassigned'){interrupt(p);for(const assignment of e.assignments||[]){const task=p?.tasks.find(t=>t.id===assignment.taskId),owner=get(assignment.playerId);if(task&&owner){p.tasks=p.tasks.filter(t=>t!==task);owner.tasks.push(task);}}}
+   if(e.type==='meeting'){s.phase='discussion';s.meeting={id:e.meetingId??e.id,votes:[],tallied:false,reason:e.reason};for(const q of s.players){q.route=null;interrupt(q);}if(e.reason==='report')for(const b of s.bodies)b.reported=true;}
    if(e.type==='voting')s.phase='voting';
    if(e.type==='vote_result'){s.phase='roam';s.meeting={...s.meeting,votes:copy(e.votes||[]),tallied:true,ejectedId:e.ejectedId};}
    if(e.type==='ejected'&&p){p.alive=false;p.route=null;}
@@ -97,12 +107,12 @@ export function createReplayModel(response,{matchId,roomId,players=CHARACTERS}={
    if(e.type==='paused')s.phase='paused';
    if(!['motion','direction','started'].includes(e.type)&&a.type!=='wait')s.activity.push(copy(e));
   }
-  for(const p of s.players)if(p.alive&&p.route)p.position=project(p.route,time);
-  s.activity=s.activity.slice(-12);s.replayTaskRooms=s.activity.filter(e=>e.action?.type==='task'&&time-e.at<=3000).map(e=>s.players.flatMap(p=>p.tasks).find(t=>t.id===e.action.taskId)?.roomId).filter(Boolean);s.time=time;s.events=s.bodies.filter(b=>!b.reported).map(b=>({...b,type:'body',bodyId:b.id}));
+  for(const p of s.players){p.ghost=!p.alive&&(s.features?.deathPolicy==='ghost-tasks'||!!p.recordedFallenMotion);if((p.alive||p.ghost)&&p.route)p.position=project(p.route,time);}
+  s.activity=s.activity.slice(-12);s.replayTaskRooms=s.activity.filter(e=>['task','taskStep'].includes(e.action?.type)&&time-e.at<=3000).map(e=>s.players.flatMap(p=>p.tasks).find(t=>t.id===e.action.taskId)?.roomId).filter(Boolean);s.time=time;s.events=s.bodies.filter(b=>!b.reported).map(b=>({...b,type:'body',bodyId:b.id}));
   s.self=null;s.worldVersion=1;s.matchId=matchId??response?.matchId??'legacy';s.roles=Object.fromEntries(roles);return s;
  }
  function perspective(s,id){
-  const self=s.players.find(p=>p.id===id),visible=self&&point(self.position)?s.players.filter(p=>point(p.position)&&(p.id===id||distance(self.position,p.position)<=WORLD.visibilityRadius&&canSeeWorldPoint(self.position,p.position))):[];
+  const self=s.players.find(p=>p.id===id),visible=self&&point(self.position)?s.players.filter(p=>point(p.position)&&(p.id===id||(!p.ghost||!self.alive)&&distance(self.position,p.position)<=WORLD.visibilityRadius&&canSeeWorldPoint(self.position,p.position))):[];
   return {label:'Reconstructed visibility at recorded positions; not proof of attention or model input.',visible:visible.map(p=>p.id),bodies:s.bodies.filter(b=>self&&point(self.position)&&point(b.position)&&distance(self.position,b.position)<=WORLD.visibilityRadius&&canSeeWorldPoint(self.position,b.position)).map(b=>b.id),observations:s.observations.filter(e=>Array.isArray(e.visibleTo)&&e.visibleTo.includes(id)),ownRole:self?.role??null};
  }
  function claims(s,id){return s.claims.filter(e=>!id||e.playerId===id).slice(-12).map(claim=>({claim,evidence:events.filter(e=>e.at<=s.time&&Math.abs(e.at-claim.at)<=10000&&(e.type==='witness'||e.type==='action'&&e.action?.type!=='say'&&e.action?.type!=='wait')).slice(-6),label:'Context comparison only. A public claim is not verified by nearby events; absence of evidence is not contradiction.'}));}

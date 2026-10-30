@@ -83,10 +83,11 @@ export function createWorldScene(canvas,{reduced=false,playback=false}={}){
   }
   circle(ctx,world.WORLD_BELL.x,world.WORLD_BELL.y,19,'#e1a34f');circle(ctx,world.WORLD_BELL.x,world.WORLD_BELL.y,9,'#fff0ba',undefined,2);
   for(const body of visibleBodies(game)){ctx.save();ctx.translate(body.position.x,body.position.y);ctx.rotate(-.25);const color=game.players.find(p=>p.id===body.playerId)?.color||'#d3b48b';round(ctx,-25,-10,48,24,12,color);round(ctx,-15,-8,20,13,5,'#274958',undefined,3);ctx.restore();text(ctx,'FALLEN',body.position.x,body.position.y+31,11,'#fbf1d5');}
-  const actors=lobby?CHARACTERS.map((p,i)=>({...p,position:{x:690+(i%3)*110,y:280+Math.floor(i/3)*100},alive:true})):playback?(game?.players||[]).filter(p=>p.alive&&point(p.position)):Array.from(samples.samples.values(),s=>s.player);
+  for(const effect of game?.effects||[]){const position=effect.kind==='echo'?effect.position:game.players.find(p=>p.id===effect.targetId)?.position;if(!point(position))continue;ctx.save();ctx.strokeStyle=effect.kind==='echo'?'#eaaaf0':'#a9f7e0';ctx.lineWidth=4;ctx.setLineDash(effect.kind==='echo'?[8,6]:[]);ctx.beginPath();ctx.arc(position.x,position.y,40,0,Math.PI*2);ctx.stroke();text(ctx,effect.kind==='echo'?'SIGNAL ECHO':'HARBOR WARD',position.x,position.y-48,12,'#fff4cc');ctx.restore();}
+  const actors=lobby?CHARACTERS.map((p,i)=>({...p,position:{x:690+(i%3)*110,y:280+Math.floor(i/3)*100},alive:true})):playback?(game?.players||[]).filter(p=>(p.alive||p.ghost)&&point(p.position)):Array.from(samples.samples.values(),s=>s.player);
   for(const player of actors.sort((a,b)=>a.position.y-b.position.y)){
    const p=lobby||playback?player.position:samples.at(player.id,time,reduced);if(!p)continue;
-   drawKeeper(ctx,player,p.x,p.y,{selected:player.id===(followId||game?.self?.id),step:!reduced&&player.moving&&(player.id===game?.self?.id||time-(samples.samples.get(player.id)?.at||0)<300)?time/95:0,scale:1.02});
+   drawKeeper(ctx,player,p.x,p.y,{selected:player.id===(followId||game?.self?.id),step:!reduced&&player.moving&&(player.id===game?.self?.id||time-(samples.samples.get(player.id)?.at||0)<300)?time/95:0,scale:1.02,ghost:player.alive===false});
    if(playback&&game.replayRoles&&player.role)text(ctx,player.role.toUpperCase(),p.x,p.y+53,11,player.role==='saboteur'?'#ffb8a1':'#e3f4d2');
   }
   ctx.restore();

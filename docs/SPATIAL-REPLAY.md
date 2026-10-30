@@ -16,7 +16,7 @@ The authenticated `GET /api/rooms/:roomId/replay` response retains `roomId` and 
   map: 'lantern-wake-v1',
   matchId,
   coverage: { startedAt, from, through, partial },
-  anchor: { at, sequence, phase, players, bodies, sabotage, meeting, outcome } // or null
+  anchor: { at, sequence, phase, players, bodies, sabotage, meeting, outcome, features, effects } // or null
 }
 ```
 
@@ -82,3 +82,12 @@ Observed cloud qualification: **101 modules checked; 444 tests passed, zero fail
 - [Following a recorded route](world-screenshots/spatial-replay-follow.png)
 - [Historical perspective, claims and ballots](world-screenshots/spatial-replay-perspective.png)
 - [Mobile playback](world-screenshots/spatial-replay-mobile.png)
+
+
+## Current task and optional-feature integration
+
+The refreshed main's authoritative `taskStep` records retain their confirmed progress, including all five station types. New checkpoints optionally retain task progress, preset flags, ability assignments and at most two active ward/echo effects. These fields are bounded and allowlisted; fallen chat remains absent. New events include an independent numeric `sequence` because effect records retain their own `fx-...` IDs. Older `r...` event IDs remain readable. Chronology still sorts only by numeric timestamp with stable causal ties.
+
+The replay renders recorded ghost motion separately from its stationary corpse and reconstructs ward/echo start, block and expiry events. Character-perspective visibility hides ghosts from living characters, while the postgame overview can inspect recorded fallen movement. Legacy recordings without preset metadata identify fallen movement only when it was actually recorded. No final-state positions or private chat are substituted.
+
+The [merge audit](SPATIAL-REPLAY-AUDIT.md) records the validation of this combination and preserves the earlier qualification above.
