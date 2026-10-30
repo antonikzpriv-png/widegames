@@ -11,7 +11,7 @@ import {STATION_TASK_KINDS} from '../../shared/station-contract.mjs';
 import {taskService} from '../features/tasks/index.mjs';
 import {abilityService,getAbilityView,deathPolicy} from '../features/abilities/index.mjs';
 import {captureReplaySnapshot,getReplaySnapshots as replaySnapshots} from '../features/replay/index.mjs';
-import {getMap} from '../../shared/maps/index.mjs';
+import {getMap,MAP_CATALOG} from '../../shared/maps/index.mjs';
 import {TACTICAL_PRESET,DEFAULT_TACTICAL_BEACON_RULES} from '../../shared/tactical.mjs';
 const geometry=await import(process.env.WORLD_ENGINE_GEOMETRY_MODULE||'../../shared/world.mjs');
 const worldEngine=worldRuntime(geometry),spatialEngine=createSpatialWorld(geometry);
@@ -23,6 +23,13 @@ const mapGeometry=state=>state.map?getMap(state.map).geometry:geometry;
 const layoutFor=state=>state.map?getMap(state.map).roomLayout:ROOM_LAYOUT;
 const spatialFor=state=>{if(!state.map)return spatialEngine;const map=getMap(state.map),key=map.id+':'+map.version;if(!mapRuntimes.has(key))mapRuntimes.set(key,createSpatialWorld(map.geometry));return mapRuntimes.get(key);};
 const runtime=state=>isBeacon(state)?spatialFor(state):worldEngine;
+const preparedNavigation=new Set();
+/** Warm immutable navigation before accepting players; no match/AI state exists here. */
+export function prepareNavigation(references=MAP_CATALOG.map(({id,version})=>({id,version}))){
+ if(!Array.isArray(references)||references.length>8)throw new TypeError('Invalid navigation preparation');
+ const result=[];for(const reference of references){const map=getMap(reference),key=map.id+':'+map.version;let warmed=false;if(!preparedNavigation.has(key)){const g=map.geometry,start=g.worldSpawn('p1'),target=Object.values(g.WORLD_STATIONS).sort((a,b)=>g.distance(start,b)-g.distance(start,a))[0];const state={map:{id:map.id,version:map.version},systems:{doors:[],transit:{}}};const route=spatialFor(state).navigation({id:'prepare',alive:true,position:start},target,0,state);if(!route)throw new Error('Registered map navigation is unavailable');preparedNavigation.add(key);warmed=true;}result.push({id:map.id,version:map.version,warmed});}return result;
+}
+
 const nearby=(state,p,target,range=mapGeometry(state).WORLD.interactionRadius)=>runtime(state).nearby(p.position,target,range,state,p.id);
 const sees=(state,p,target)=>runtime(state).sees(p.position,target,state,state.players.includes(p)?p.id:null);
 const context=state=>({record,publicEvent,nearby,sees,geometry:mapGeometry(state),stop:(s,p,at,reason)=>runtime(s).stop(s,p,at,reason,record)});
