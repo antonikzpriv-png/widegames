@@ -19,10 +19,12 @@ function rules(source,queries=[],output=[]){
  }return output;
 }
 const all=rules(game+'\n'+scoped);
-function media(query,{width,height}){return query.split(',').some(branch=>branch.split(/\s+and\s+/).every(part=>{
+function media(query,{width,height,forcedColors=false}){return query.split(',').some(branch=>branch.split(/\s+and\s+/).every(part=>{
  const m=part.trim().match(/^\((min|max)-(width|height):\s*(\d+)px\)$/);if(m){const value=m[2]==='width'?width:height;return m[1]==='min'?value>=+m[3]:value<=+m[3];}
  if(/\((?:hover:none|pointer:coarse)\)/.test(part))return true;
  if(/prefers-reduced-motion/.test(part))return false;
+ if(/forced-colors\s*:\s*active/.test(part))return forcedColors;
+ if(/forced-colors\s*:\s*none/.test(part))return !forcedColors;
  throw Error('Unsupported media contract: '+part);
 }));}
 const node=(classes,parent=null)=>({classes:classes.split(' '),parent});

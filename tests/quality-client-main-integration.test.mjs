@@ -69,7 +69,7 @@ test('beacon ability actions require exact owner-safe descriptors',()=>{
  const g={...ghostView(),beaconVersion:1};g.self.alive=true;g.self.ghost=false;g.self.ability={type:'ward'};g.interactions=[{id:'ward-other',type:'protect',fields:{targetId:'other'},enabled:true},{id:'echo-own',type:'decoy',fields:{x:g.self.position.x,y:g.self.position.y},enabled:true}];const c=contexts(g,getMap(g.map).geometry);assert.deepEqual(c.protect.fields,{targetId:'other'});assert.equal(c.protect.enabled,true);assert.equal(c.decoy.enabled,true);g.interactions=[];assert.equal(contexts(g,getMap(g.map).geometry).protect.enabled,false);
 });
 test('mobile equipment CSS reserves status/exit and scrolls all tall panel controls',()=>{
- const css=readFileSync(new URL('public/game.css',root),'utf8');const tail=css.slice(css.indexOf('/* Equipment stays below'));
+ const css=readFileSync(new URL('public/game.css',root),'utf8');const start=css.indexOf('/* Equipment stays below'),next=css.indexOf('/*',start+2);assert(start>=0);const tail=css.slice(start,next<0?undefined:next); // Scope this contract to equipment, not unrelated spectator hiding rules.
  assert.match(tail,/max-width:700px/);assert.match(tail,/max-height:540px/);assert.match(tail,/\.lw-scene-overlay:has\(\.lw-task-modal:not\(\[hidden\]\)\)\{display:block;padding-top:105px/);assert.match(tail,/max-height:calc\(100dvh - 181px\);overflow:auto/);assert.match(tail,/\.lw-modal-title\{position:sticky;top:0/);assert.doesNotMatch(tail,/display:none|visibility:hidden/);
  for(const [width,height]of [[320,740],[390,844],[844,390]]){const top=105,rail=60,gap=16,max=height-181;assert.ok(max>=180,`${width} panel remains usable`);assert.equal(top+max+rail+gap,height);assert.ok(top>=66);}
 });
