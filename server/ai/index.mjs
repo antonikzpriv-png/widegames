@@ -70,6 +70,7 @@ export function createAiController({ config = {} } = {}) {
   }
   function envelope(action, view, memory) {
     if (!action) return null;
+    if (action.type === 'ghostSay') memory.ghostSpoken=true;
     if (action.type === 'say') memory.discussionCount = (memory.discussionCount ?? 0) + 1;
     if (view.worldVersion === 1 && action.type === 'repair') memory.worldRepairDeadline = view.sabotage?.deadlineAt;
     if (action.type === 'move' || action.type === 'navigate') memory.patrol = (memory.patrol ?? 0) + 1;
@@ -78,7 +79,7 @@ export function createAiController({ config = {} } = {}) {
   }
   return {
     async decide({ view, player, context, signal, commitReservation, getCurrentView } = {}) {
-      if (signal?.aborted || !record(context) || !view?.self || !view.self.alive || typeof view.matchId !== 'string' || !Number.isFinite(view.serverNow) || !['roam', 'discussion', 'voting'].includes(view.phase)) return null;
+      if (signal?.aborted || !record(context) || !view?.self || (!view.self.alive&&!view.self.ghost) || typeof view.matchId !== 'string' || !Number.isFinite(view.serverNow) || !['roam', 'discussion', 'voting'].includes(view.phase)) return null;
       const publicEntry = (view.players ?? []).slice(0, 24).find(p => p.id === player?.id);
       const validPublicName = typeof publicEntry?.name === 'string' && publicEntry.name.trim().length > 0 && publicEntry.name.length <= 80 && !/[\u0000-\u001f\u007f]/u.test(publicEntry.name);
       const actor = CHARACTERS.find(p => p.id === player?.id) ?? (publicEntry && /^[A-Za-z0-9_-]{1,40}$/.test(publicEntry.id) && validPublicName ? { id: publicEntry.id, name: publicEntry.name, persona: 'A keeper aboard the beacon.' } : null);
@@ -96,9 +97,11 @@ export function createAiController({ config = {} } = {}) {
       try {
         observe(view, memory);
         if (settings.strategy === 'strategic' && view.worldVersion === 1) remember(view, memory);
-        const strategic = settings.strategy === 'strategic' && state.mode === 'live' && view.phase === 'roam' && view.worldVersion === 1;
+        const strategic = settings.strategy === 'strategic' && state.mode === 'live' && !view.self.ghost && view.phase === 'roam' && view.worldVersion === 1;
         const localChoices = candidates(view, memory);
-        if (view.phase !== 'roam') delete memory.intention;
+        if (view.phase !== 'roam' || view.self.ghost) delete memory.intention;
+        // Retain optional local ability behavior without introducing model calls.
+        if (view.self.alive && ['protect', 'decoy'].includes(localChoices[0]?.type)) return envelope(localChoices[0], view, memory);
         if (strategic) {
           const continued = execute(view, memory);
           if (continued) return envelope(continued, view, memory);
@@ -110,7 +113,7 @@ export function createAiController({ config = {} } = {}) {
         if (!choices.length) return null;
         const demo = () => envelope(localChoices[0], view, memory);
         // Ordinary hybrid roaming stays local; strategic intentions use this same budget path.
-        if ((!strategic && view.phase === 'roam') || (choices.length === 1 && choices[0].type === 'wait')) return demo();
+        if (view.self.ghost || (!strategic && view.phase === 'roam') || (choices.length === 1 && choices[0].type === 'wait')) return demo();
         if (state.mode === 'live' && view.phase === 'discussion' && (memory.discussionCount ?? 0) >= 2) return null;
         if (state.mode !== 'live') return demo();
         if (typeof commitReservation !== 'function') { fallback(context, state, 'reservation_required'); return demo(); }

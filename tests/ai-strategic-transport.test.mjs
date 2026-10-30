@@ -8,7 +8,7 @@ import * as actualEngine from '../server/engine/index.mjs';
 const origin='http://strategic-audit.test';
 const delay=ms=>new Promise(r=>setTimeout(r,ms));
 async function until(check,label){for(let n=0;n<300;n++){if(check())return;await delay(10);}assert.fail('Timed out: '+label);}
-async function fixture(t,{roamDeadlineMs=100000,maxMatchMs=900000}={}){
+async function fixture(t,{roamDeadlineMs=100000,maxMatchMs=900000,features}={}){
  const directory=await mkdtemp('/tmp/strategic-transport-');let now=1000,seen,release,apiCalls=0,captured,decisions=0;
  const seed=Array.from({length:100},(_,i)=>i).find(seed=>actualEngine.createMatch({id:'probe',seed,now}).players[0].role==='saboteur');assert.notEqual(seed,undefined);
  const realFetch=globalThis.fetch;
@@ -17,7 +17,7 @@ async function fixture(t,{roamDeadlineMs=100000,maxMatchMs=900000}={}){
   apiCalls++;assert.equal(apiCalls,1);seen=JSON.parse(options.body);
   return await new Promise(resolve=>{release=()=>resolve(new Response(JSON.stringify({stop_reason:'tool_use',content:[{type:'tool_use',name:'pick_action',input:{choice:0}}],usage:{input_tokens:100,output_tokens:20}})));});
  });
- const config={dataDir:directory,publicOrigin:origin,worldMode:true,tickMs:10,now:()=>now,rules:{initialKillCooldownMs:1,roamDeadlineMs,maxMatchMs,discussionMs:100,votingMs:100},ai:{provider:'anthropic',apiKey:'offline',strategy:'strategic',maxTokens:250000,maxDailyCostUsd:5,decisionIntervalMs:100}};
+ const config={dataDir:directory,publicOrigin:origin,worldMode:true,features,tickMs:10,now:()=>now,rules:{initialKillCooldownMs:1,roamDeadlineMs,maxMatchMs,discussionMs:100,votingMs:100},ai:{provider:'anthropic',apiKey:'offline',strategy:'strategic',maxTokens:250000,maxDailyCostUsd:5,decisionIntervalMs:100}};
  const real=createAiController({config});
  const wrapper={describe:real.describe,async decide(args){if(decisions++)return null;captured=args;return real.decide(args);}};
  const engine={...actualEngine,createMatch:args=>actualEngine.createMatch({...args,seed})};
@@ -31,9 +31,9 @@ async function fixture(t,{roamDeadlineMs=100000,maxMatchMs=900000}={}){
  assert.equal(real.describe(before).calls,1);assert.equal(Object.keys(ledger.reservations).length,1);
  return {game,room,host,route,request,before,ledger,directory,config,engine,get captured(){return captured;},get apiCalls(){return apiCalls;},advance(ms){now+=ms;},release:()=>release(),settled:()=>until(()=>!room.aiBusy,'stale provider result settles')};
 }
-for(const transition of ['meeting','death','pause'])test(`real strategic transport: pending result fenced on ${transition}; durable charge remains`,{timeout:10000},async t=>{
- const f=await fixture(t,{...(transition==='meeting'?{roamDeadlineMs:100}:{}),...(transition==='pause'?{maxMatchMs:100}: {})});
- if(transition==='death'){
+for(const transition of ['meeting','death','ghost-death','pause'])test(`real strategic transport: pending result fenced on ${transition}; durable charge remains`,{timeout:10000},async t=>{
+ const f=await fixture(t,{...(transition==='meeting'?{roamDeadlineMs:100}:{}),...(transition==='pause'?{maxMatchMs:100}: {}),...(transition==='ghost-death'?{features:{deathPolicy:'ghost-tasks',abilities:false}}:{})});
+ if(transition.endsWith('death')){
   const destination=f.room.data.state.players.find(p=>p.id==='p2').position;
   assert.equal((await f.request(f.route+'/action',{id:'human-approach',type:'navigate',...destination},f.host.cookie)).status,200);
   f.advance(100);const r=await f.request(f.route+'/action',{id:'human-eliminate',type:'eliminate',targetId:'p2'},f.host.cookie);assert.equal(r.status,200,JSON.stringify(r.body));

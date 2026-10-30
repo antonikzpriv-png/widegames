@@ -123,8 +123,10 @@ Transport obtains a fresh actor view before sending and applying a result. A
 room-local generation changes on match/phase/meeting/life transitions; stale
 results cannot persist their context into a later generation. Each retry retains
 its own durable authorization and uncertain reservations. Valid travel proceeds
-without a model call. This implementation uses the existing engine's living-seat
-permissions; it adds no ghost abilities.
+without a model call. The controller preserves the existing engine's life
+permissions. Authorized ghost tasks/chat stay local even with strategic mode
+configured; optional Ward/Echo behavior also retains its local policy and engine
+validation. These local actions never reserve or send model requests.
 
 World task execution also honors the merged authoritative equipment protocol:
 local and strategic bots share the same safe-view task action helper. It submits

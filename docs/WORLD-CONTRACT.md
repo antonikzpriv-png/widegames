@@ -35,3 +35,7 @@ Reviewer owns server/ai and world-ai tests/docs in its isolated branch. Use own 
 ## Verification
 
 Preserve old evidence. New real-world engine/transport tests must cover collision, speed, ranges, input sequencing/expiry/restart, phases/deadlines and hidden coordinates. Real browser qualification must use worldMode true, movement and stations rather than old dashboard buttons, plus both complete match modes and replay. Do not run paid/live model calls. Frontend holds the development Chrome lease until explicitly released. Manager integrates inspected commits and runs final combined checks; no main, deploy or changes to the original running data.
+
+## Optional ghost/ability extension
+
+New optional `features` metadata is separate from numeric rules and does not change absent-metadata saves. Host start freezes a validated death policy and optional ward/echo assignment. World movement/persistence/AI/UI may accept a dead actor only under the ghost preset, while living-only interaction checks remain intact. Per-recipient views redact ghost coordinates from living/public clients and omit fallen chat except for dead authenticated actors; active visual effects reveal neither issuer nor faction. [Wire/storage rules and complete semantics](GHOST-ABILITIES.md).

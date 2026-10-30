@@ -200,3 +200,30 @@ test('strategic repair equipment persists semantic steps and waits for the autho
  }
  assert(completed);assert(restarted);assert.equal(steps,4);assert(waits>0);assert.equal(mock.mock.callCount(),1);
 });
+
+test('strategic configuration keeps authorized ghost tasks and fallen chat local through restart',async t=>{
+ let state=engine.createMatch({id:'strategic-ghost',mode:'spectator',world:true,seed:1,now:1000,features:{deathPolicy:'ghost-tasks',abilities:false},config:{initialKillCooldownMs:1}});
+ const sab=state.players.find(p=>p.role==='saboteur'),victim=state.players.find(p=>p.role==='crew'),player=CHARACTERS.find(p=>p.id===victim.id);
+ let r=engine.applyAction(state,sab.id,{id:'approach-victim',type:'navigate',...victim.position},1000);assert(r.accepted);state=engine.tick(r.state,5000).state;
+ r=engine.applyAction(state,sab.id,{id:'make-ghost',type:'eliminate',targetId:victim.id},5001);assert(r.accepted);state=r.state;
+ const body=structuredClone(state.bodies[0]),types=new Set();let controller=c(),context={},restarted=false;
+ t.mock.method(globalThis,'fetch',()=>assert.fail('ghosts never invoke strategic models'));
+ for(let now=5002;now<90000;now+=250){state=engine.tick(state,now).state;const view=engine.getPlayerView(state,player.id,now);assert(view.self.ghost);assert.equal(view.self.alive,false);if(view.self.tasks.every(t=>t.completed))break;
+  const action=await controller.decide({view,player,context,commitReservation:()=>assert.fail('ghost actions never reserve model spend')});if(!action)continue;
+  assert(['ghostSay','navigate','taskStep','task','wait'].includes(action.type));types.add(action.type);const applied=engine.applyAction(state,player.id,action,now);assert(applied.accepted,JSON.stringify(applied.error));state=applied.state;
+  if(!restarted&&action.type==='taskStep'){state=JSON.parse(JSON.stringify(state));context=JSON.parse(JSON.stringify(context));controller=c();restarted=true;}
+ }
+ assert(restarted);assert(state.players.find(p=>p.id===victim.id).tasks.every(t=>t.completed));assert(types.has('ghostSay'));assert(types.has('taskStep'));assert.deepEqual(state.bodies[0],body);assert.equal(controller.describe(context).calls,0);
+ assert.equal(engine.getPlayerView(state,null,90000).ghostChat,undefined);assert.equal(engine.getPlayerView(state,sab.id,90000).ghostChat,undefined);
+});
+
+test('strategic configuration preserves optional local ward and echo with no extra planning request',async t=>{
+ let state=engine.createMatch({id:'strategic-abilities',mode:'spectator',world:true,seed:1,now:1000,features:{deathPolicy:'transfer',abilities:true}});const context={},controller=c();
+ t.mock.method(globalThis,'fetch',()=>assert.fail('local abilities must not make provider requests'));
+ for(const type of ['ward','echo']){
+  const owner=state.players.find(p=>p.ability?.type===type);assert(owner);const player=CHARACTERS.find(p=>p.id===owner.id),view=engine.getPlayerView(state,player.id,1000);
+  const action=await controller.decide({view,player,context,commitReservation:()=>assert.fail('local abilities must not reserve spend')});assert.equal(action.type,type==='ward'?'protect':'decoy');
+  const applied=engine.applyAction(state,player.id,action,1000);assert(applied.accepted,JSON.stringify(applied.error));state=applied.state;
+ }
+ assert.equal(state.effects.length,2);assert.equal(controller.describe(context).calls,0);
+});

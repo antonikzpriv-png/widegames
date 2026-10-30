@@ -1,7 +1,7 @@
 # Strategic AI verification and follow-up audit
 
-Cloud workspace `/workspace/widegames`, Node v24.19.0. Current main is the audited
-`90bb6e8`; it was fetched again before handoff. These are author checks, not an
+Cloud workspace `/workspace/widegames`, Node v24.19.0. The original audited baseline is
+`90bb6e8`; later main integrations and their superseding results are recorded below. These are author checks, not an
 independent review. No live/paid provider requests or deployment occurred.
 
 The first implementation passed its original tests, but the deeper audit found
@@ -156,3 +156,34 @@ All four sustained fixtures remain in strategic mode until the real outcome:
 The six-call fallback fixtures also still finish, now at 51/89 seconds for all-AI
 (tasks/ejection), and 111/115 seconds for idle-human (saboteur parity). Every
 proposed taskStep and completion is accepted by the actual integrated engine.
+
+## Integration with ghost/ability main (fa7aaa0)
+
+Main advanced again to `fa7aaa0` before merge. Preserved its optional feature
+configuration, lobby/UI, ghost scheduler, task retention, private fallen channel,
+abilities, engine, storage validation and expanded CI workflow. Conflict resolution
+retains strategic status/configuration and deadline-aware browser progression.
+
+Ghost tasks/chat always use the feature's local policy, even when strategic mode
+is configured. The living-model gate remains living-only, while transport permits
+fresh authorized ghost proposals. A living-to-ghost transition changes the room
+generation and discards the originating model result. Optional local Ward/Echo
+behavior is retained before planning; these ability actions do not buy a model
+request. Real engine controls prove ghost task completion and fallen chat remain
+local across restart, and Ward/Echo actions remain legal with zero model calls.
+A real HTTP ghost-death case retains the earlier reservation while rejecting the
+late living result. No engine, store, shared-feature or task rules were replaced.
+
+Final combined local validation:
+
+- `npm run check`: 105 modules.
+- `npm test`: 514 tests; 508 passed, zero failed, six existing opt-in skips.
+- Standard five-task browser suite passed: `_artifacts/world-browser-bprNYT/`.
+- Optional ghost/abilities browser suite passed:
+  `_artifacts/ghost-abilities-browser-9S1xPc/`.
+- Opt-in world UI browser suite passed without skips:
+  `_artifacts/world-ui-6KIzOY/`.
+- `git diff --check` passed and all merge conflicts are resolved.
+
+Earlier counts and receipts remain historical evidence. These combined results
+supersede them for the merge. No paid/live model request or deployment occurred.

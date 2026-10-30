@@ -52,3 +52,9 @@ Navigation and actions still execute locally through the authoritative engine.
 The default `AI_STRATEGY=hybrid` keeps roaming credential-free and uses models only
 for council. Both live modes share the existing budgets and labeled demo fallback.
 See [strategic configuration and behavior](docs/AI.md#optional-strategic-gameplay-cloud-integration).
+
+## Optional ghosts and ability roles
+
+The host can select **Ghost tasks + fallen chat** and **Optional ability roles** in the lobby before beginning. Classic task transfer and no abilities remain the defaults. Fallen crew in the ghost preset retain their tasks, walk with normal collisions and use the same station puzzles, while remaining dead and excluded from living votes, repair, reports and parity. Only fallen seated keepers receive the private fallen chat.
+
+**Harbor Ward** gives one crew keeper a nearby one-hit protection ability; **Signal Echo** gives the saboteur a clearly labeled distraction. Server defaults use `GAME_DEATH_POLICY=ghost-tasks` and `GAME_ABILITIES=true`. [Complete rules, privacy, configuration and screenshots](docs/GHOST-ABILITIES.md). Run `npm run test:features:browser` for the real browser fixture. No live model support is required.
