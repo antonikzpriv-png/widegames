@@ -1,12 +1,11 @@
 import {isGhost} from '../shared/features.mjs';
-import {ROOM_LAYOUT} from '../shared/contracts.mjs';
+import {getWorld} from '../shared/world.mjs';
 import {taskProgress} from './engine/tasks.mjs';
 
 const point=value=>value&&Number.isFinite(value.x)&&Number.isFinite(value.y)?{x:value.x,y:value.y}:null;
 const actions=Object.freeze({navigate:'Set a walking destination',move:'Set a room route',taskStep:'Completed a station step',task:'Completed a task',eliminate:'Eliminated a keeper',report:'Reported a body',say:'Made a public claim',vote:'Cast a ballot',sabotage:'Started sabotage',repair:'Contributed to repair',meeting:'Called council',wait:'Waited',protect:'Activated a ward',decoy:'Created a signal echo'});
 const cooldownKeys=['moveAt','taskAt','killAt','sabotageAt','meetingAt'];
 const goals=Object.freeze({task:'Work on an assigned task',task_route:'Visit assigned tasks in order',repair:'Contribute to critical repair',follow:'Follow a keeper',avoid:'Keep distance from a keeper',isolate:'Find an isolated target',sabotage:'Look for a sabotage opportunity',report:'Approach a recorded body to report it',fake_work:'Appear to work at a station',alibi:'Position near a station for an alibi',investigate:'Investigate a previous sighting',position:'Move to a station'});
-const roomIds=new Set(ROOM_LAYOUT.map(room=>room.id));
 
 /** Summarize a structural selected goal, never free-form model text. Even a
  * time-valid saved intention may await replanning, so it is explicitly historical
@@ -21,7 +20,7 @@ function selectedPlan(state,player,context,now){
   plan.startedAt<state.startedAt||plan.startedAt>now||plan.expiresAt<=now||plan.expiresAt>plan.startedAt+30000||memory.planProgress?.failures>=3)return null;
  const result={goal:plan.goal,label:goals[plan.goal],source:'recorded-controller-state',recordedAt:plan.startedAt,expiresAt:plan.expiresAt,status:'last-selected',notice:'Last selected plan; may no longer be current. This is not private thoughts.'};
  if(['task','repair','fake_work','alibi','position','investigate'].includes(plan.goal)){
-  if(!roomIds.has(plan.roomId))return null;result.roomId=plan.roomId;
+  if(!getWorld(state.mapId).WORLD_ROOMS.some(room=>room.id===plan.roomId))return null;result.roomId=plan.roomId;
  }
  if(plan.goal==='task'){
   if(player.role!=='crew'||!player.tasks.some(task=>task.id===plan.taskId&&task.roomId===plan.roomId&&!task.completed))return null;

@@ -43,7 +43,7 @@ function fixture() {
   }
   document.createElement = tag => new Node(tag); document.body = new Node('body'); document.activeElement = document.body;
   const win = { ...events(), setInterval: () => 1, clearInterval() {} }, calls = [];
-  const context = vm.createContext({ document, window: win, world, isWalkable: world.isWalkable, CHARACTERS, console, Date, performance: { now: () => 100 }, matchMedia: () => ({ matches: true }), requestAnimationFrame: () => 1, cancelAnimationFrame() {},
+  const context = vm.createContext({ document, window: win, world, isWalkable: world.isWalkable, getWorld:world.getWorld, CHARACTERS, console, Date, performance: { now: () => 100 }, matchMedia: () => ({ matches: true }), requestAnimationFrame: () => 1, cancelAnimationFrame() {},
     // This fixture exercises human task ownership; observer UI is inert.
     observerAgents: () => [], createSpectatorInput: () => ({step(){},stop(){},dispose(){}}), createSpectatorInspector: () => ({node:document.createElement('aside'),update(){},reset(){}}),
     drawKeeper() {}, createWorldScene: () => ({ update() {}, draw() {}, toWorld() { return { x: 0, y: 0 }; }, dispose() {} }), replayText: event => event.type, replayEvents: value => value.replay ?? [], outcomeText: reason => reason });

@@ -76,3 +76,18 @@ test('human visibility mask and task glow reuse cached rasters across movement f
   assert.equal(f.staticCalls.length,built,'movement does not rebuild task shadows or visibility gradient');
  }finally{f.scene.dispose();}
 });
+
+
+test('expanded-map ghost extents, station picking and bounded map rasters use each selected map',()=>{
+ for(const mapId of ['storm-foundry','tidal-observatory']){
+  const f=surface({bitmap:true}),geometry=world.getWorld(mapId);f.view.game.mapId=mapId;f.view.game.players[0].position=geometry.worldSpawn('p1');
+  try{
+   f.scene.update(f.view,0);f.scene.draw(10,{overview:true});
+   assert.deepEqual(f.scene.getCamera(),{x:geometry.WORLD.width/2,y:geometry.WORLD.height/2});
+   assert(f.image.width<=2048&&f.image.height<=2048,'expanded map cache dimensions are capped');
+   assert.deepEqual(f.click(geometry.WORLD_STATIONS.engine),{type:'station',id:geometry.WORLD_STATIONS.engine.id,roomId:'engine'});
+   f.scene.draw(20,{camera:{x:5000,y:5000},spectatorGhost:true});assert.deepEqual(f.scene.getCamera(),{x:geometry.WORLD.width,y:geometry.WORLD.height});
+   f.scene.draw(30,{camera:{x:1600,y:1200},spectatorGhost:true});assert.deepEqual(f.scene.getCamera(),{x:1600,y:1200},'free camera remains valid beyond the old beacon boundary');
+  }finally{f.scene.dispose();}
+ }
+});

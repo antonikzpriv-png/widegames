@@ -11,6 +11,7 @@ import {createGameServer} from '../server/transport.mjs';
 import {loadConfig} from '../server/config.mjs';
 import * as engine from '../server/engine/index.mjs';
 import {WORLD_STATIONS,WORLD_BELL} from '../shared/world.mjs';
+import * as worlds from '../shared/world.mjs';
 
 const root=fileURLToPath(new URL('../',import.meta.url)),pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 await mkdir(path.join(root,'_artifacts'),{recursive:true});
@@ -82,6 +83,20 @@ try{
  const humanStart=await view();check(humanStart.seatId==='p1'&&!humanStart.game.inspection,'human player receives no observer inspection payload');await page.focus('.lw-world-canvas');await page.keyboard.down('d');await pause(450);await page.keyboard.up('d');await pause(200);const humanMoved=await view();
  check(humanMoved.game.self.position.x>humanStart.game.self.position.x+15,'human WASD moves its authoritative keeper');check(writes.slice(writesAtStart).some(w=>w.path.endsWith('/input')),'human movement still uses validated authoritative input');
  check(humanMoved.game.players.filter(p=>p.id!=='p1').every(p=>!Object.hasOwn(p,'role')),'other players roles remain private in a human match');await measure('Human-plus-AI world');await shot('03-human-world');
+ for(const map of (worlds.MAPS||[]).filter(map=>map.id!=='beacon')){
+  await press('Exit');await page.waitForSelector('.harbor-watch');await page.click('.harbor-watch');await page.waitForSelector('.lw-lobby:not([hidden])');await page.select('[aria-label="Choose a map"]',map.id);await press('Begin the watch');await page.waitForSelector('.lw-spectator:not([hidden])');
+  const state=await view();check(state.game.mapId===map.id,'all-AI spectator starts the selected '+map.name+' map');const mapWrites=writes.length;
+  await press('Free ghost');await page.focus('.lw-world-canvas');const beforeCamera=await camera();await page.keyboard.down('d');await pause(250);await page.keyboard.up('d');const afterCamera=await camera();check(afterCamera.x>beforeCamera.x+15,'local ghost camera moves on '+map.name);
+  await page.select('[aria-label="Inspect world object"]','player:p3');check(await page.$eval('.lw-inspector',n=>n.textContent.includes('Current activity')),'keeper inspection works on '+map.name);await page.click('.lw-inspector-close');await press('Overview');await pause(100);
+  const geometry=worlds.getWorld(map.id),players=(await view()).game.players;let selected=null;
+  for(const [id,position]of Object.entries(geometry.WORLD_STATIONS)){
+   if(players.some(player=>player.position&&Math.hypot(player.position.x-position.x,player.position.y-position.y)<100))continue;
+   const unobstructed=await page.$eval('.lw-world-canvas',(n,p)=>{const r=n.getBoundingClientRect(),z=Number(n.dataset.cameraZoom),x=r.left+r.width/2+(p.x-Number(n.dataset.cameraX))*z,y=r.top+r.height/2+(p.y-Number(n.dataset.cameraY))*z;return document.elementFromPoint(x,y)===n;},position);
+   if(unobstructed){selected={id,position};break;}
+  }
+  assert(selected,'fixture must expose a visible unoccupied station on '+map.id);await clickWorld(selected.position);await page.waitForSelector('.lw-inspector:not([hidden])');check(await page.$eval('[aria-label="Inspect world object"]',(n,id)=>n.value==='station:'+id,selected.id),'canvas station picking uses '+map.name+' geometry');
+  await measure(map.name+' all-AI world',1800);await shot('04-spectator-'+map.id);check(writes.length===mapWrites,'inspection and camera on '+map.name+' send no gameplay input');
+ }
  const expectedConflicts=report.consoleErrors.filter(m=>m==='Failed to load resource: the server responded with a status of 409 (Conflict)');check(report.errors.length===0&&report.consoleErrors.length===expectedConflicts.length&&expectedConflicts.length===1,'no browser exceptions or unexpected console errors');
  check(JSON.stringify(before)===JSON.stringify(await hashes()),'runtime source remains unchanged during browser qualification');report.browser=await browser.version();report.passed=true;
 }catch(error){report.failure=error.stack;process.exitCode=1;console.error(error);if(page)await shot('failure').catch(()=>{});}

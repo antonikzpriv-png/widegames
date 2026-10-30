@@ -1,3 +1,4 @@
+import {parseMapId} from '../shared/world.mjs';
 import {parseFeatures} from '../shared/features.mjs';
 import {randomBytes,createHash} from 'node:crypto';
 import {ROOM_ID,validateRoom} from './store.mjs';
@@ -54,7 +55,7 @@ export function createRooms({store,engine,ai,now=Date.now,maxActiveRooms=12,room
     const at=now(),game=data.state?engine.getPlayerView(data.state,identity.seatId,at):null;
     const inspection=spectatorInspection(data.state,{mode:data.mode,seatId:identity.seatId,now:at,context:data.aiContext});
     if(game&&inspection)game.inspection=inspection;
-    return {...(data.features?{features:structuredClone(data.features)}:{}),roomId:data.id,mode:data.mode,isHost:identity.host,seatId:identity.seatId,phase:data.state?.phase||'lobby',connection:'connected',game,ai:safeAi,notices,createdAt:data.createdAt};
+    return {...(data.mapId?{mapId:data.mapId}:{}),...(data.features?{features:structuredClone(data.features)}:{}),roomId:data.id,mode:data.mode,isHost:identity.host,seatId:identity.seatId,phase:data.state?.phase||'lobby',connection:'connected',game,ai:safeAi,notices,createdAt:data.createdAt};
   }
   async function restore() {
     for(const data of await store.load()) {
@@ -68,10 +69,10 @@ export function createRooms({store,engine,ai,now=Date.now,maxActiveRooms=12,room
     }
     if(rooms.size>maxActiveRooms)throw new Error('Persisted rooms exceed configured room limit');
   }
-  async function create(mode,features) {
+  async function create(mode,features,mapId) {
     const work=creationQueue.catch(()=>{}).then(async()=>{
       if(rooms.size>=maxActiveRooms)fail(429,'ROOM_LIMIT','All room slots are in use.');
-      const data=createRoom(mode,now());if(features!==undefined)data.features=parseFeatures(features);const issued=issueIdentity(data,true);await store.save(data);
+      const data=createRoom(mode,now());const selectedMap=parseMapId(mapId);if(selectedMap!=='beacon')data.mapId=selectedMap;if(features!==undefined)data.features=parseFeatures(features);const issued=issueIdentity(data,true);await store.save(data);
       const room=entry(data);rooms.set(data.id,room);return {room,...issued};
     });creationQueue=work;return work;
   }

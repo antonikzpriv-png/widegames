@@ -62,3 +62,11 @@ See [strategic configuration and behavior](docs/AI.md#optional-strategic-gamepla
 The host can select **Ghost tasks + fallen chat** and **Optional ability roles** in the lobby before beginning. Classic task transfer and no abilities remain the defaults. Fallen crew in the ghost preset retain their tasks, walk with normal collisions and use the same station puzzles, while remaining dead and excluded from living votes, repair, reports and parity. Only fallen seated keepers receive the private fallen chat.
 
 **Harbor Ward** gives one crew keeper a nearby one-hit protection ability; **Signal Echo** gives the saboteur a clearly labeled distraction. Server defaults use `GAME_DEATH_POLICY=ghost-tasks` and `GAME_ABILITIES=true`. [Complete rules, privacy, configuration and screenshots](docs/GHOST-ABILITIES.md). Run `npm run test:features:browser` for the real browser fixture. No live model support is required.
+
+## Larger maps and CAPTCHA equipment
+
+Choose a map in the lobby before **Begin the watch**. **Storm Foundry** has 12 rooms and **Tidal Observatory** has 14, each with larger looping decks, detailed machinery, distinct stations and 60 crew tasks (12 per crew keeper). The original six-room beacon remains available with its original defaults.
+
+Six new original CAPTCHA-style equipment puzzles add glyph selection, counting, ascending order, rotation, odd-one-out and code transcription to the existing five station puzzles. Every stage is checked by the server; native keyboard/touch controls, saved progress, ghosts, abilities, bots and spatial replay work on the new maps. These are local game puzzles and require no external CAPTCHA service.
+
+Server defaults can use `GAME_MAP=storm-foundry` or `GAME_MAP=tidal-observatory`; hosts choose the final map in the lobby. Run `npm run test:maps:browser` for the real expanded-map browser qualification. [Maps, puzzle rules and screenshots](docs/EXPANDED-MAPS.md).

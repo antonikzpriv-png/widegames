@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {getWorld,MAPS} from '../shared/world.mjs';
 import {createSpectatorInput,describeSpectatorSelection,observerAgents} from '../public/world/spectator.mjs';
 
 class Events{
@@ -47,4 +48,14 @@ test('selected strategic plan is labeled as last recorded controller state, and 
  const data=game();assert.match(JSON.stringify(describeSpectatorSelection(data,{type:'player',id:'p1'})),/No selected plan recorded/);
  data.inspection.agents[0].plan={goal:'doTask',label:'Work on a recorded task',source:'recorded-controller-state',recordedAt:10.5,expiresAt:20.75,status:'last-selected',notice:'Last selected plan; may no longer be current. This is not private thoughts.'};
  const description=JSON.stringify(describeSpectatorSelection(data,{type:'player',id:'p1'}));assert.match(description,/Selected plan \(recorded controller state\)/);assert.match(description,/10.5/);assert.match(description,/20.75/);assert.match(description,/may no longer be current/);assert.match(description,/not private thoughts/);
+});
+
+test('spectator inspection uses each selected map’s real room, station and bell geometry',()=>{
+ for(const map of MAPS){
+  const geometry=getWorld(map.id),data=game();data.mapId=map.id;data.rooms=geometry.ROOM_LAYOUT;const room=geometry.WORLD_ROOMS.at(-1),name=geometry.ROOM_LAYOUT.find(entry=>entry.id===room.id).name;
+  data.players[0].roomId=room.id;data.inspection.agents[0].roomId=room.id;data.inspection.agents[0].tasks[0].roomId=room.id;
+  assert.equal(describeSpectatorSelection(data,{type:'room',id:room.id}).title,name);const station=describeSpectatorSelection(data,{type:'station',id:geometry.WORLD_STATIONS[room.id].id});assert.equal(station.title,`${name} station`);assert.deepEqual(station.facts.find(([key])=>key==='Position'),['Position',`${geometry.WORLD_STATIONS[room.id].x}, ${geometry.WORLD_STATIONS[room.id].y}`]);
+  if(geometry.WORLD_DECOR?.length){const detail=geometry.WORLD_DECOR[0];assert.ok(describeSpectatorSelection(data,{type:'decor',id:detail.id||'decor-0'}));}
+  const bell=describeSpectatorSelection(data,{type:'bell',id:'bell'}),bellRoom=geometry.ROOM_LAYOUT.find(entry=>entry.id===geometry.worldRoomAt(geometry.WORLD_BELL));assert.deepEqual(bell.facts.find(([key])=>key==='Location'),['Location',bellRoom.name]);assert.match(JSON.stringify(describeSpectatorSelection(data,{type:'player',id:'p1'})),new RegExp(name));
+ }
 });

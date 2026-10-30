@@ -1,4 +1,4 @@
-import {isWalkable} from '../../shared/world.mjs';
+import {getWorld} from '../../shared/world.mjs';
 /** Pure presentation rules. Inputs are redacted views, never engine state. */
 export const point = p => p && Number.isFinite(p.x) && Number.isFinite(p.y);
 export const distance = (a,b) => point(a)&&point(b)?Math.hypot(a.x-b.x,a.y-b.y):Infinity;
@@ -43,7 +43,7 @@ export function contexts(game,world){
   sabotage:{type:'sabotage',label:'Sabotage',fields:{},enabled:self?.role==='saboteur'&&allowed('sabotage'),hint:'Sabotage is unavailable or cooling down.'}
  };
 }
-function receivedSegment(from,to){
+function receivedSegment(from,to,isWalkable){
  // Geometry-free fixtures and legacy maps retain their existing display rules.
  if(!from||!isWalkable(from)||!isWalkable(to))return true;
  const steps=Math.max(1,Math.ceil(distance(from,to)/7));
@@ -56,8 +56,10 @@ function receivedSegment(from,to){
  * There is no extrapolation, and newly hidden actors are removed immediately.
  */
 export class ActorSamples{
- constructor(){this.samples=new Map();this.delayMs=100;}
+ constructor(){this.samples=new Map();this.delayMs=100;this.mapId=null;}
  update(game,at){
+  const mapId=game?.mapId??'beacon';if(this.mapId!==mapId){this.samples.clear();this.mapId=mapId;}
+  const {isWalkable}=getWorld(mapId);
   const seen=new Set();
   for(const player of visiblePlayers(game)){
    seen.add(player.id);const old=this.samples.get(player.id);
@@ -65,7 +67,7 @@ export class ActorSamples{
    const position={...player.position},history=old?.history||[];
    if(old&&old.receivedAt>history.at(-1).at)history.push({at:old.receivedAt,position:old.to,interpolate:true});
    const replace=history.length&&at<=history.at(-1).at,prior=history.at(replace?-2:-1)?.position;
-   const snapshot={at,position,interpolate:receivedSegment(prior,position)};
+   const snapshot={at,position,interpolate:receivedSegment(prior,position,isWalkable)};
    if(replace)history[history.length-1]=snapshot;
    else history.push(snapshot);
    while(history.length>8)history.shift();

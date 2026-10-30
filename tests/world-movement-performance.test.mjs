@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {ActorSamples} from '../public/world/model.mjs';
 import {createMatch,tick,applyInput,applyAction} from '../server/engine/index.mjs';
-import {WORLD} from '../shared/world.mjs';
+import {WORLD,getWorld} from '../shared/world.mjs';
 
 const fixture=()=>({phase:'roam',players:[{id:'p1',name:'Iona',alive:true,position:{x:700,y:272}}],self:{id:'p1',moving:true}});
 
@@ -88,4 +88,29 @@ test('moving state copies preserve unknown fractional replay data, causal ties a
  assert.deepEqual(source,before,'no returned mutable replay, checkpoint, task or request may alias the input');
  const actionable=applyAction(source,'p1',{id:'wait-after-motion',type:'wait'},100);assert.equal(actionable.accepted,true);assert.deepEqual(source,before);
  const steered=applyInput(source,'p1',{seq:2,dx:-1,dy:0},100);assert.equal(steered.accepted,true);assert.deepEqual(source,before);
+});
+
+test('expanded-map movement preflight uses its own runtime and still settles exact speed and deadlines',()=>{
+ for(const mapId of ['storm-foundry','tidal-observatory']){
+  const geometry=getWorld(mapId),initial=createMatch({id:'moving-'+mapId,world:true,mapId,mode:'human',seed:'map-perf',now:0,config:{roamDeadlineMs:1000}});
+  assert.equal(tick(initial,100).state,initial);
+  const moving=applyInput(initial,'p1',{seq:1,dx:1,dy:0},0).state;
+  const next=tick(moving,100).state;assert.equal(next.mapId,mapId);assert.ok(geometry.isWalkable(next.players[0].position));
+  assert.ok(Math.abs(next.players[0].position.x-moving.players[0].position.x-geometry.WORLD.speed*.1)<1e-6,mapId+' authoritative speed');
+  assert.equal(tick(next,1000).state.phase,'discussion',mapId+' deadline');
+ }
+});
+
+test('each map uses its own interpolation collisions and switching maps drops old coordinates',()=>{
+ const samples=new ActorSamples();
+ for(const mapId of ['storm-foundry','tidal-observatory']){
+  const geometry=getWorld(mapId);
+  const blocked=geometry.WORLD_OBSTACLES.map(o=>({from:{x:o.x-20,y:o.y+o.height/2},to:{x:o.x+o.width+20,y:o.y+o.height/2}})).find(({from,to})=>geometry.isWalkable(from)&&geometry.isWalkable(to));
+  assert.ok(blocked,'valid observed endpoints around an obstacle in '+mapId);
+  const game=fixture();game.mapId=mapId;game.players[0].position=blocked.from;samples.update(game,1000);
+  assert.deepEqual(samples.at('p1',1000),blocked.from,'map switch cannot animate across unrelated coordinates');
+  game.players[0].position=blocked.to;samples.update(game,1100);
+  assert.deepEqual(samples.at('p1',1150),blocked.from,'hold across '+mapId+' collider');
+  assert.deepEqual(samples.at('p1',1200),blocked.to);
+ }
 });

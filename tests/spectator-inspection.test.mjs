@@ -78,6 +78,22 @@ test('selected plans disappear across stale match/phase/death/completion/fallbac
  for(const invalidate of invalidators){const f=plannedFixture();invalidate(f);assert.equal(f.inspect().plan,undefined,String(invalidate));}
 });
 
+test('expanded-map inspection preserves CAPTCHA step progress and validates selected goals against that match map',()=>{
+ for(const mapId of ['storm-foundry','tidal-observatory']){
+  const state=engine.createMatch({id:`observer-${mapId}`,mode:'spectator',world:true,mapId,now:1000,seed:3}),player=state.players.find(p=>p.role==='crew'),task=player.tasks[0],memory={};
+  install(memory,{type:'intend',goal:'task',taskId:task.id,roomId:task.roomId},engine.getPlayerView(state,player.id,1000));
+  const context={activeMatchId:state.id,matches:{[`match:${state.id}`]:{mode:'live',memories:{[`actor:${player.id}`]:memory}}}},inspect=()=>spectatorInspection(state,{mode:'spectator',seatId:null,context,now:1001}).agents.find(p=>p.id===player.id);
+  assert.equal(inspect().plan.roomId,task.roomId,`${mapId} room is accepted`);
+  memory.intention={...memory.intention,goal:'position',roomId:mapId==='storm-foundry'?'foundry':'charts'};
+  assert.equal(inspect().plan.roomId,memory.intention.roomId,'new room outside the original six is accepted');
+  for(const agent of spectatorInspection(state,{mode:'spectator',seatId:null,context,now:1001}).agents)for(const item of agent.tasks){
+   assert.deepEqual(Object.keys(item.progress).sort(),['index','kind','readyAt','total']);
+   for(const key of ['target','sequence','pressure','code','input','challenge'])assert(!Object.hasOwn(item.progress,key));
+  }
+  memory.intention.roomId=mapId==='storm-foundry'?'charts':'foundry';assert.equal(inspect().plan,undefined,'another map room cannot masquerade as a valid station');
+ }
+});
+
 async function fixture(t,{instrument=false}={}){
  const directory=await mkdtemp(join(tmpdir(),'lw-observer-'));let now=100000;
  const observed=[],decisions=[];

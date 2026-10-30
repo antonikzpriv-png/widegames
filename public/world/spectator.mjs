@@ -3,7 +3,6 @@ import * as world from '../../shared/world.mjs';
 const directions=new Map([['w',[0,-1]],['arrowup',[0,-1]],['s',[0,1]],['arrowdown',[0,1]],['a',[-1,0]],['arrowleft',[-1,0]],['d',[1,0]],['arrowright',[1,0]]]);
 const clamp=(value,min,max)=>Math.max(min,Math.min(max,value));
 const point=value=>value&&Number.isFinite(value.x)&&Number.isFinite(value.y);
-const roomName=id=>world.WORLD_ROOMS.find(room=>room.id===id)?.id.replace(/^./,c=>c.toUpperCase())||'In transit';
 const title=value=>String(value||'Unknown').replaceAll('-',' ').replace(/^./,c=>c.toUpperCase());
 const element=(tag,className,text)=>{const node=document.createElement(tag);if(className)node.className=className;if(text!==undefined)node.textContent=text;return node;};
 
@@ -31,6 +30,8 @@ export function observerAgents(game){return !game?.self&&game?.inspection?.mode=
 /** Pure descriptions also power keyboard object selection; no raw model context is read. */
 export function describeSpectatorSelection(game,selection){
  if(!game||game.self||!selection)return null;
+ const geometry=typeof world.getWorld==='function'?world.getWorld(game.mapId||'beacon'):world;
+ const roomName=id=>geometry.ROOM_LAYOUT?.find(room=>room.id===id)?.name||game.rooms?.find(room=>room.id===id)?.name||geometry.WORLD_ROOMS.find(room=>room.id===id)?.name||(geometry.WORLD_ROOMS.some(room=>room.id===id)?title(id):'In transit');
  const agents=observerAgents(game),player=game.players?.find(p=>p.id===selection.id),agent=agents.find(p=>p.id===selection.id),facts=[],sections=[];
  const result={title:'World object',description:'Read-only observation.',facts,sections};
  if(selection.type==='player'){
@@ -59,23 +60,24 @@ export function describeSpectatorSelection(game,selection){
   return result;
  }
  if(selection.type==='station'){
-  const id=selection.id.replace(/^station-/,''),station=world.WORLD_STATIONS[id];if(!station)return null;result.title=`${roomName(id)} station`;result.description='Task equipment. Observing cannot solve or submit tasks.';
+  const id=selection.id.replace(/^station-/,''),station=geometry.WORLD_STATIONS[id];if(!station)return null;result.title=`${roomName(id)} station`;result.description='Task equipment. Observing cannot solve or submit tasks.';
   const tasks=agents.flatMap(p=>(p.tasks||[]).filter(task=>task.roomId===id).map(task=>`${game.players.find(q=>q.id===p.id)?.name||p.id} · ${task.label} · ${task.completed?'complete':'pending'}`));
   facts.push(['Room',roomName(id)],['Position',`${station.x}, ${station.y}`]);
   if(game.sabotage?.active&&game.sabotage.roomId===id)facts.push(['Critical repairs',`${game.sabotage.repairsCompleted}/${game.sabotage.repairsRequired}`]);
   sections.push({title:'Assigned tasks',lines:tasks.length?tasks:['No task assignments available in this observer view.']});return result;
  }
  if(selection.type==='room'){
-  const room=world.WORLD_ROOMS.find(p=>p.id===selection.id);if(!room)return null;result.title=roomName(room.id);result.description='A room of the storm beacon.';
-  const occupants=(game.players||[]).filter(p=>p.roomId===room.id&&point(p.position));facts.push(['Visible keepers',occupants.map(p=>p.name).join(', ')||'None'],['Task station',`${world.WORLD_STATIONS[room.id].x}, ${world.WORLD_STATIONS[room.id].y}`]);return result;
+  const room=geometry.WORLD_ROOMS.find(p=>p.id===selection.id);if(!room)return null;result.title=roomName(room.id);result.description=`A room of ${geometry.metadata?.name||'the storm beacon'}.`;
+  const occupants=(game.players||[]).filter(p=>p.roomId===room.id&&point(p.position));facts.push(['Visible keepers',occupants.map(p=>p.name).join(', ')||'None'],['Task station',`${geometry.WORLD_STATIONS[room.id].x}, ${geometry.WORLD_STATIONS[room.id].y}`]);return result;
  }
- if(selection.type==='bell'){result.title='Emergency bell';result.description='Living keepers can call council from the Bridge. Observers cannot ring the bell.';facts.push(['Location','Bridge'],['Council',game.meeting?title(game.phase):'Not in session']);return result;}
+ if(selection.type==='bell'){result.title='Emergency bell';const bellRoom=roomName(geometry.worldRoomAt(geometry.WORLD_BELL));result.description=`Living keepers can call council from ${bellRoom}. Observers cannot ring the bell.`;facts.push(['Location',bellRoom],['Council',game.meeting?title(game.phase):'Not in session']);return result;}
  if(selection.type==='body'){
   const event=(game.events||[]).find(event=>event.bodyId===selection.id||event.id===selection.id),id=event?.playerId||selection.playerId;result.title=`${game.players.find(p=>p.id===id)?.name||'Fallen keeper'} · body`;result.description='A recorded fallen keeper. The body stays at its recorded position.';if(event?.at!==undefined)facts.push(['Recorded at',String(event.at)]);return result;
  }
  if(selection.type==='effect'){
   const effect=(game.effects||[]).find(effect=>effect.id===selection.id);if(!effect)return null;result.title=effect.kind==='ward'?'Harbor Ward':'Signal Echo';result.description='A visible ability effect. An effect does not establish its issuer’s faction.';facts.push(['Type',title(effect.kind)]);if(Number.isFinite(effect.expiresAt))facts.push(['Recorded expiry',String(effect.expiresAt)]);return result;
  }
+ if(selection.type==='decor'){const detail=(geometry.WORLD_DECOR||[]).find((item,index)=>(item.id||`decor-${index}`)===selection.id);if(!detail)return null;result.title=detail.text||title(detail.id||detail.kind);result.description='A visible map detail. Inspection does not interact with the match.';facts.push(['Type',title(detail.kind)],['Location',roomName(geometry.worldRoomAt(detail))]);return result;}
  if(selection.type==='obstacle'||selection.type==='prop'){result.title=title(selection.id);result.description='Fixed beacon furniture. Spectator ghosts pass freely through walls and furniture.';return result;}
  return null;
 }
