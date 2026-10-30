@@ -1,5 +1,7 @@
 # Expanded-map qualification
 
+The subsequent user-authorized main merge has a [fresh independent audit and complete validation record](merge-validation.md).
+
 Implemented on current main `43c0799` (including audited ghost gameplay, authoritative tasks, strategic AI and spatial replay). Six requested subagents contributed the two maps, CAPTCHA engine/UI, map UI, replay integration and independent validation/authority audit. Existing checkouts and feature branches were preserved; no worktree, deployment, provider spend or external CAPTCHA service was used.
 
 ## Current integrated results
