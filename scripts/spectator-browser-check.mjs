@@ -29,6 +29,24 @@ async function camera(){return page.$eval('.lw-world-canvas',n=>({x:Number(n.dat
 async function press(text,target=page){await target.locator(`button::-p-text(${text})`).click();}
 async function shot(name){const file=name+'.png';await page.screenshot({path:path.join(output,file),fullPage:true});report.screenshots.push(file);}
 async function clickWorld(position){const p=await page.$eval('.lw-world-canvas',(n,p)=>{const r=n.getBoundingClientRect(),z=Number(n.dataset.cameraZoom);return {x:r.left+r.width/2+(p.x-Number(n.dataset.cameraX))*z,y:r.top+r.height/2+(p.y-Number(n.dataset.cameraY))*z};},position);await page.mouse.click(p.x,p.y);}
+// A keeper's drawn sprite can legitimately cover the bell. Wait for a visible
+// bell point instead of asserting that a click through a keeper picks furniture.
+// The margin also covers the renderer's bounded interpolation delay.
+async function clickClearBell(){
+ const end=Date.now()+12000,offsets=[[0,0],[15,0],[-15,0],[0,15],[0,-15]];
+ while(Date.now()<end){
+  const state=(await view()).game;
+  for(const [dx,dy]of offsets){
+   const target={x:WORLD_BELL.x+dx,y:WORLD_BELL.y+dy};
+   const clear=state.players.every(actor=>!actor.position||!actor.alive||Math.abs(target.x-actor.position.x)>65||target.y<actor.position.y-105||target.y>actor.position.y+80);
+   if(!clear)continue;
+   const projected=await page.$eval('.lw-world-canvas',(canvas,p)=>{const r=canvas.getBoundingClientRect(),z=Number(canvas.dataset.cameraZoom),x=r.left+r.width/2+(p.x-Number(canvas.dataset.cameraX))*z,y=r.top+r.height/2+(p.y-Number(canvas.dataset.cameraY))*z;return {x,y,clear:document.elementFromPoint(x,y)===canvas};},target);
+   if(projected.clear){await page.mouse.click(projected.x,projected.y);return;}
+  }
+  await pause(100);
+ }
+ throw Error('The live demo did not expose an unobscured emergency bell for the native canvas click');
+}
 async function measure(label,duration=2400){
  const cdp=await page.createCDPSession();await cdp.send('Performance.enable');
  const metrics=async()=>Object.fromEntries((await cdp.send('Performance.getMetrics')).metrics.map(m=>[m.name,m.value]));const initial=await metrics();
@@ -66,7 +84,7 @@ try{
  const worldState=(await view()).game,station=Object.entries(WORLD_STATIONS).find(([,p])=>worldState.players.every(a=>!a.position||Math.hypot(a.position.x-p.x,a.position.y-p.y)>90));assert(station,'demo fixture must leave an unoccupied station');
  await clickWorld(station[1]);await page.waitForSelector('.lw-inspector:not([hidden])');
  check(await page.$eval('[aria-label="Inspect world object"]',(n,id)=>n.value==='station:'+id,station[0]),'clicking a drawn station opens its inspector');
- await page.click('.lw-inspector-close');await clickWorld(WORLD_BELL);await page.waitForSelector('.lw-inspector:not([hidden])');
+ await page.click('.lw-inspector-close');await clickClearBell();await page.waitForSelector('.lw-inspector:not([hidden])');
  check(await page.$eval('.lw-inspector',n=>n.dataset.selection==='bell:bell'),'clicking the drawn emergency bell opens its inspector');
  await page.click('.lw-inspector-close');await page.select('[aria-label="Follow a keeper"]','p2');await pause(800);
  // Click the visible followed keeper, rather than an authoritative position
@@ -84,7 +102,7 @@ try{
  check(humanMoved.game.self.position.x>humanStart.game.self.position.x+15,'human WASD moves its authoritative keeper');check(writes.slice(writesAtStart).some(w=>w.path.endsWith('/input')),'human movement still uses validated authoritative input');
  check(humanMoved.game.players.filter(p=>p.id!=='p1').every(p=>!Object.hasOwn(p,'role')),'other players roles remain private in a human match');await measure('Human-plus-AI world');await shot('03-human-world');
  for(const map of (worlds.MAPS||[]).filter(map=>map.id!=='beacon')){
-  await press('Exit');await page.waitForSelector('.harbor-watch');await page.click('.harbor-watch');await page.waitForSelector('.lw-lobby:not([hidden])');await page.select('[aria-label="Choose a map"]',map.id);await press('Begin the watch');await page.waitForSelector('.lw-spectator:not([hidden])');
+  await press('Exit');await page.waitForSelector('.harbor-watch');await page.click('.harbor-watch');await page.waitForSelector('.lw-lobby:not([hidden])');await page.select('.lw-lobby [name=mapId]',map.id);await press('Begin the watch');await page.waitForSelector('.lw-spectator:not([hidden])');
   const privateView=await view();check(!privateView.game.inspection,'expanded-map observer starts with private assignments on '+map.name);await page.click('[data-inspection-toggle]');await page.waitForFunction(async()=>{const r=await fetch('/api/rooms/'+location.pathname.split('/')[2]);return !!(await r.json()).game.inspection;});const state=await view();check(state.game.mapId===map.id,'all-AI spectator starts the selected '+map.name+' map');const mapWrites=writes.length;
   await press('Free ghost');await page.focus('.lw-world-canvas');const beforeCamera=await camera();await page.keyboard.down('d');await pause(Math.max(300,(1601-beforeCamera.x)/440*1000+180));await page.keyboard.up('d');const afterCamera=await camera();check(afterCamera.x>beforeCamera.x+15&&afterCamera.x>1600,'local ghost camera uses expanded bounds on '+map.name);
   await page.select('[aria-label="Inspect world object"]','player:p3');check(await page.$eval('.lw-inspector',n=>n.textContent.includes('Current activity')),'keeper inspection works on '+map.name);await page.click('.lw-inspector-close');await press('Overview');await pause(100);
