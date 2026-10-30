@@ -7,6 +7,7 @@ import {PERSONAS,validateSettings,ACTOR_ID,matchRules} from '../../shared/lobby.
 import {initializeFeatures,isGhost,nextEffectAt,clearEffects,featureDenial,activateFeature,safeEffects} from './features.mjs';
 import {worldRuntime} from './world-runtime.mjs';
 import {checkpointReplay,replayMetadata} from './replay-history.mjs';
+import {copyState} from './state-copy.mjs';
 const defaultRuntime=worldRuntime(await import(process.env.WORLD_ENGINE_GEOMETRY_MODULE||'../../shared/world.mjs'));
 const runtimes=new Map([['beacon',defaultRuntime]]);
 function worldFor(state){const id=state.mapId??'beacon';if(!runtimes.has(id))runtimes.set(id,worldRuntime(getWorld(id)));return runtimes.get(id);}
@@ -216,7 +217,10 @@ function denial(state,p,a,now,hint=false) {
 
 export function tick(input,now=Date.now()) {
   if (!finiteTime(now) || now<input.updatedAt) return {state:input,events:[]};
-  const state=clone(input),seq=state.sequence;
+  if (['ended','paused'].includes(input.phase)) return {state:input,events:[]};
+  const deadline=Math.min(input.sabotage?.active?input.sabotage.deadlineAt:Infinity,input.startedAt+input.rules.maxMatchMs,input.deadlineAt??Infinity,nextEffectAt(input));
+  if(deadline>now&&(!isWorld(input)||!worldFor(input).pending(input,Math.min(deadline,now))))return {state:input,events:[]};
+  const state=copyState(input),seq=state.sequence;
   if (!advance(state,now)) return {state:input,events:[]};
   state.version++;
   checkpointReplay(state);
@@ -237,7 +241,7 @@ export function applyAction(input,playerId,action,now=Date.now()) {
     return {state,events:timed.events,accepted:prior.accepted,...(prior.error?{error:clone(prior.error)}:{}),duplicate:true};
   }
   if(state.requests[playerId].length>=MAX_REQUESTS)return reject(fail('REQUEST_LIMIT','This keeper has reached the match request limit. Existing requests remain idempotent.'));
-  state=clone(state);
+  if(state===input)state=copyState(state);
   const p=state.players.find(p=>p.id===playerId);
   let error=denial(state,p,action,now);
   let path,target;
@@ -301,7 +305,7 @@ export function applyAction(input,playerId,action,now=Date.now()) {
     state.meeting.messages.push(message);publicEvent(state,'said',now,message);
   }
   if (action.type==='vote') state.meeting.votes.push({playerId:p.id,targetId:action.targetId});
-  if(!privateAction)record(state,'action',now,{playerId:p.id,action:clone(action),...(['taskStep','task'].includes(action.type)&&isWorld(state)?{taskProgress:clone(taskProgress(p.tasks.find(t=>t.id===action.taskId)))}:{}),...(isWorld(state)?{position:clone(p.position),...(['navigate','move'].includes(action.type)&&path.length<=128?{route:clone(path),speed:worldFor(state).WORLD.speed}:{})}:{})});
+  if(!privateAction)record(state,'action',now,{playerId:p.id,action:clone(action),...(['taskStep','task'].includes(action.type)&&isWorld(state)?{taskProgress:clone(taskProgress(p.tasks.find(t=>t.id===action.taskId)))}:{}),...(isWorld(state)?{position:clone(p.position),...(['navigate','move'].includes(action.type)&&path.length<=128?{route:clone(path),speed:state.lobbySettings?.speed??worldFor(state).WORLD.speed}:{})}:{})});
   victory(state,now);
   checkpointReplay(state);
   return {state,events:[...timed.events,...clone(state.events.filter(e=>Number(e.id.slice(1))>seq))],accepted:true};
@@ -367,7 +371,7 @@ export function applyInput(input,playerId,request,now=Date.now()) {
     return {state,events:timed.events,accepted:!motion.error,...(motion.error?{error:clone(motion.error)}:{}),duplicate:true};
   }
   const error=['ended','paused'].includes(state.phase)?fail('MATCH_INACTIVE','This match is not active.'):!actor.alive&&!isGhost(state,actor)?fail('PLAYER_DEAD','Eliminated keepers cannot move.'):state.phase!=='roam'?fail('WRONG_PHASE','Movement requires roaming.'):null;
-  state=clone(state);const p=state.players.find(p=>p.id===playerId);
+  if(state===input)state=copyState(state);const p=state.players.find(p=>p.id===playerId);
   if(error){p.motion.seq=request.seq;p.motion.dx=request.dx;p.motion.dy=request.dy;p.motion.error=error;state.version++;state.updatedAt=now;return {state,events:timed.events,accepted:false,error:clone(error)};}
   if(request.dx||request.dy)interruptTasks({players:[p]});
   if(worldFor(state).input(p,request,now))record(state,'direction',now,{playerId:p.id,dx:request.dx,dy:request.dy,position:clone(p.position)});

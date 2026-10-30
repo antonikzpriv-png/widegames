@@ -1,6 +1,6 @@
 # Spatial replay and the AI watch
 
-On the all-AI watch, choose a keeper to follow or switch to an overview. This uses the same safe public positions as the live spectator view. Roles remain hidden until completion, and private model reasoning is never displayed.
+On the all-AI watch, drift with WASD/arrows as a local spectator ghost, choose a keeper to follow, or switch to an overview. Click agents and world objects to inspect them. The all-AI observatory reveals roles through a separately authorized inspection projection; human-room observers retain live role privacy. Private model reasoning is never displayed. See [spectator controls and contract](SPECTATOR.md).
 
 After a completed watch, **Open the role-revealed replay** opens the illustrated map. Play/pause, 0.25×–4× speed, event and time sliders, event bookmarks, overview and character-following controls all operate locally. The renderer's explicit playback mode reads reconstructed positions directly and cannot translate pointer coordinates into actions. Playback has no action or input callback. The live game's input controller remains disabled in terminal phases.
 

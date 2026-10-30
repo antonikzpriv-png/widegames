@@ -23,6 +23,7 @@ export function validateRoom(room) {
   for (const identity of room.identities) {
     if (!object(identity) || !/^[a-f0-9]{64}$/.test(identity.hash) || seen.has(identity.hash) || typeof identity.host !== 'boolean' || !(identity.seatId===null||(room.schema===2?ACTOR_ID.test(identity.seatId):identity.seatId==='p1'))) throw new Error('Invalid identity');
     if (room.schema===1&&identity.seatId && (!identity.host || room.mode !== 'human')) throw new Error('Invalid seat');
+    if(Object.hasOwn(identity,'inspection')&&(typeof identity.inspection!=='boolean'||identity.inspection&&identity.seatId))throw Error('Invalid inspection consent');
     seen.add(identity.hash);
   }
   if (room.identities.filter(i=>i.host).length !== 1 || (room.schema===1&&room.identities.filter(i=>i.seatId).length !== (room.mode === 'human' ? 1 : 0))) throw new Error('Invalid host');

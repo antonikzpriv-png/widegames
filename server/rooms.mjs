@@ -3,6 +3,7 @@ import {parseFeatures} from '../shared/features.mjs';
 import {randomBytes,createHash} from 'node:crypto';
 import {LOBBY_DEFAULTS,rosterFor} from '../shared/lobby.mjs';
 import {ROOM_ID,validateRoom} from './store.mjs';
+import {spectatorInspection} from './spectator.mjs';
 
 export class ServiceError extends Error {
   constructor(status,code,message){super(message);this.status=status;this.code=code;}
@@ -54,7 +55,12 @@ export function createRooms({store,engine,ai,now=Date.now,maxActiveRooms=12,room
     const notices=Array.isArray(data.aiContext.notices)?data.aiContext.notices.filter(x=>typeof x==='string').slice(-10).map(x=>x.slice(0,240)):[];
     if(safeAi.mode==='live')notices.push(safeAi.strategy==='strategic'?'Strategic AI: model plans and council; local legal execution.':'Hybrid AI: live model council; navigation and deck actions use local policy.');
     if(room.aiBlocked)notices.push('AI paused because durable storage or budget reservation failed.');
-    return {...(data.mapId?{mapId:data.mapId}:{}),...(data.features?{features:structuredClone(data.features)}:{}),roomId:data.id,...(data.schema===2?{generation:data.generation,revision:data.revision,inviteCode:data.inviteCode,settings:structuredClone(data.settings),ready:identity.ready,seats:data.roster.map(p=>({...p,persona:undefined,human:data.identities.some(i=>i.seatId===p.id),ready:data.identities.some(i=>i.seatId===p.id&&i.ready&&!i.revoked),revoked:data.identities.some(i=>i.seatId===p.id&&i.revoked),host:data.identities.some(i=>i.seatId===p.id&&i.host)})),archives:data.archives.map(a=>({matchId:a.matchId,generation:a.generation}))}:{}),mode:data.mode,isHost:identity.host,seatId:identity.seatId,phase:data.state?.phase||'lobby',connection:'connected',game:data.state?engine.getPlayerView(data.state,identity.seatId,now()):null,ai:safeAi,notices,createdAt:data.createdAt};
+    const inspectionAvailable=!!data.state&&data.mode==='spectator'&&!identity.seatId&&!data.state.players.some(p=>p.human);
+    const inspectionEnabled=inspectionAvailable&&identity.inspection===true;
+    const at=now(),game=data.state?engine.getPlayerView(data.state,identity.seatId,at):null;
+    const inspection=inspectionEnabled?spectatorInspection(data.state,{mode:data.mode,seatId:identity.seatId,now:at,context:data.aiContext}):null;
+    if(game&&inspection)game.inspection=inspection;
+    return {inspectionAvailable,inspectionEnabled,...(data.mapId?{mapId:data.mapId}:{}),...(data.features?{features:structuredClone(data.features)}:{}),roomId:data.id,...(data.schema===2?{generation:data.generation,revision:data.revision,inviteCode:data.inviteCode,settings:structuredClone(data.settings),ready:identity.ready,seats:data.roster.map(p=>({...p,persona:undefined,human:data.identities.some(i=>i.seatId===p.id),ready:data.identities.some(i=>i.seatId===p.id&&i.ready&&!i.revoked),revoked:data.identities.some(i=>i.seatId===p.id&&i.revoked),host:data.identities.some(i=>i.seatId===p.id&&i.host)})),archives:data.archives.map(a=>({matchId:a.matchId,generation:a.generation}))}:{}),mode:data.mode,isHost:identity.host,seatId:identity.seatId,phase:data.state?.phase||'lobby',connection:'connected',game,ai:safeAi,notices,createdAt:data.createdAt};
   }
   async function restore() {
     for(const data of await store.load()) {
