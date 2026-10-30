@@ -69,6 +69,12 @@ Earlier independently reproduced interpolation through colliders and draw-cadenc
 
 Earlier final-run attempts are retained, not passes:3c stopped before acknowledged collider reversal; fec stopped on an introduced missing drain helper;6b passed nineteen checks but selected self Ward before the rendered permission list refreshed. Final runner now requires actual stop ACK/displacement and rendered target permission, preserving positive effect-target assertions. An older f9 archive's line-ending-only differences led to the stronger raw Git-blob verifier. No false telemetry, invented model source or relaxed engine permission was used to obtain green checks.
 
+### Final-head CI response-lifecycle correction
+
+[Run41045145382](https://github.com/antonikzpriv-png/widegames/actions/runs/41045145382) at2141aec passed the full offline suite and completed both normal-browser task victories/replays, then failed its final error fence with one CDP ProtocolError: unavailable response body. It inspected1610 safe views; the unavailable body was not inspected. The old normal-browser listener had no request-generation or explicit observer-close attribution, so this is not claimed to prove that missing body safe. ZIP/report/screenshots remain in _artifacts/quality-ci78-evidence; ZIP SHA2561507733c6c632f821ba3feec8a4c827053fd1f6c4c3316a61e109c7c768eddbc.
+
+The normal/retained-task driver now reuses the already peer-reviewed createPageBodyAudit helper, marking its own observer close and recording cancellations separately. Only a recognized unavailable-body error after main-frame navigation or owned teardown can cancel; active-view errors, malformed JSON, and all available-body privacy assertions still fail. No gameplay/assertion/deadline/budget changes. Six lifecycle units pass. The final PR head must pass its normal CI before review readiness; this failed run is preserved rather than counted as success.
+
 ## Reproduce final raw-source native check
 
 Use Node24, an installed Chrome/Chromium and a full Git checkout. From the task repository on D: (PowerShell):
