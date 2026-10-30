@@ -5,7 +5,7 @@ import {REPLAY_LIMITS,validReplayTaskProgress} from './replay-common.mjs';
 const object=v=>v!==null&&typeof v==='object'&&!Array.isArray(v),keys=(o,a)=>object(o)&&Object.keys(o).every(k=>a.includes(k));
 const time=n=>Number.isFinite(n)&&n>=0&&n<=Number.MAX_SAFE_INTEGER,id=s=>typeof s==='string'&&/^[A-Za-z0-9:_-]{1,100}$/.test(s),player=s=>typeof s==='string'&&/^[A-Za-z][A-Za-z0-9_-]{0,31}$/.test(s)&&!['constructor','prototype','__proto__'].includes(s),bounded=(a,n)=>Array.isArray(a)&&a.length<=n;
 const check=v=>{if(!v)throw new Error('Invalid map-aware replay metadata');};
-export function replayMap(ref){check(keys(ref,['id','version'])&&Object.keys(ref).length===2);return getMap(ref);}
+export function replayMap(ref){check(keys(ref,['id','version'])&&Object.keys(ref).length===2);const map=getMap(ref);check(map.tactical!==false);return map;}
 export function validateMappedReplayAnchor(a,ref){
  const map=replayMap(ref),g=map.geometry,room=r=>map.roomLayout.some(x=>x.id===r),point=p=>keys(p,['x','y'])&&Object.keys(p).length===2&&Number.isFinite(p.x)&&Number.isFinite(p.y)&&g.isWalkable(p);
  check(keys(a,['at','sequence','phase','players','bodies','sabotage','meeting','outcome','features','effects'])&&time(a.at)&&Number.isSafeInteger(a.sequence)&&a.sequence>=0&&['roam','discussion','voting','ended','paused'].includes(a.phase)&&bounded(a.players,12)&&a.players.length>=4&&new Set(a.players.map(p=>p?.id)).size===a.players.length);

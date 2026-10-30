@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {getMap,mapFor,MAP_CATALOG,TACTICAL_MAP_CATALOG} from '../shared/maps/index.mjs';
 import {getWorld} from '../shared/world.mjs';
+import {replayMap} from '../shared/replay-v2.mjs';
 test('latest main maps preserve exact geometry and independently scoped task protocol',()=>{
  assert.equal(MAP_CATALOG.length,4);assert.deepEqual(TACTICAL_MAP_CATALOG.map(m=>m.id),['beacon','stormbreak-annex']);
  for(const id of ['storm-foundry','tidal-observatory']){
@@ -13,4 +14,9 @@ test('legacy absence, exact beacon versions and incompatible identity pairs stay
  assert.equal(mapFor({}),getMap({id:'beacon',version:1}));assert.equal(mapFor({map:{id:'beacon',version:2},mapId:'beacon'}),getMap('beacon'));
  assert.throws(()=>mapFor({map:{id:'beacon',version:2},mapId:'storm-foundry'}),/Conflicting/);
  for(const mapId of [null,12,{},'unknown'])assert.throws(()=>mapFor({mapId}));
+});
+
+test('tactical recording protocol cannot authorize expanded world2 maps',()=>{
+ for(const id of ['storm-foundry','tidal-observatory'])assert.throws(()=>replayMap({id,version:1}));
+ assert.equal(replayMap({id:'beacon',version:2}),getMap('beacon'));
 });
