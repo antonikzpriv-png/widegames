@@ -61,3 +61,40 @@ These failures are preserved in full logs. Core did not rewrite other-owner runt
 No merge commit or unrelated main files are committed on this branch. Its parent is exact manager047. Main43 source additions/nonconflicting changes remain uncommitted TEMPORARY staging for cross-owner linkage. Review/apply only the owned commits or the combined047?final owned patch under _artifacts/quality-main-engine-owned.patch, with per-file patches/manifest under _artifacts/quality-main-engine-patches/. They include only engine/index, world-runtime, tasks, features, replay-history, feature-validation, owned world modules, the new test and this receipt. Never import the whole working directory as a production merge.
 
 No Chrome, paid/live providers, main/push/merge publication, user-data operations or other-worktree edits. Exact source pins and all negative evidence are preserved. Manager must independently review the owned transition and complete/qualify the owner gaps above before claiming the Group2+quality integration.
+
+## Bounded main-merge fixture closure (2026-10-30)
+
+Reviewed and executed exact coordinator **2dbdf42ccfb5880a378a08eb728d9e94bc6852c1**, after main merge7d8532a and postgame ghost projection fix520cc3c. The earlier integration-gap section above is historical; this check uses the actual composed manager runtime, not the earlier temporary merge. No engine, store, shared, AI or UI runtime file was changed. Existing branches, dirty fixture staging and the completed prior worktree remain preserved.
+
+The raw Git archive is `_artifacts/quality-main-engine-2dbdf42/`; `_artifacts/quality-main-engine-2dbdf42-manifest.json` records all **419** blobs with Git OID, length and SHA256. All419 hashes were rechecked unchanged after execution. The three updated tests are copied into a separate `_artifacts/quality-main-engine-2dbdf42-overlay/tests/` fixture. Only their `../server/` and `../shared/` import prefixes are rebound to the exact archive; `_artifacts/quality-main-engine-2dbdf42-overlay.json` records test/overlay hashes and that transformation. Dependencies resolve from this worker's existing local node_modules; no new install.
+
+Original evidence is retained:
+
+- `quality-main-engine-2dbdf42-original.txt`: **23 tests,16 pass,7 fail,0 skip**. All seven failures are Windows ENOENT for the two hardcoded /tmp prefixes: six strategic transport cases and one actual task-disk restoration case.
+- `quality-main-engine-2dbdf42-slow-ledger-original.txt`: original late-ack test **0/1 pass**, reproducing the exact `reservedUsd > 0` failure. An ignored preload wraps only the late-ack fixture ledger's real FileHandle.sync with350ms latency. Provider fetch stays mocked, budget reserve/sync/rename are real. This deliberately models slow durable I/O; it is not evidence of an ordinary-runtime fsync duration or a new runtime defect.
+
+Owned changes preserve all existing semantic assertions:
+
+- Strategic HTTP and task-store fixtures mkdir their checkout-local `_artifacts/test-temp/`, create unique mkdtemp children, and assert path.relative containment before recursive cleanup. Strategic cleanup is registered before server creation; task cleanup also closes a surviving store on failure. Paths are derived from import.meta.url and node:path, so neither Windows drive roots nor Linux /tmp are assumed. Windows on D: was exercised; Linux was not separately run.
+- Late acknowledgement now captures the actual commitReservation promise and awaits its completion after releasing the gate, bounded by5s and an enclosing10s test timeout. The existing150ms provider timeout, no-send, one-call and positive-budget assertions remain. Saved reservation ID, exact amount and ledger total are additionally checked. No arbitrary delay increase and no budget refund relaxation. Cleanup cannot delete this fixture while a successful reservation is still unacknowledged.
+
+Focused exact-runtime results:
+
+- `quality-main-engine-2dbdf42-focused.txt`: **23/23 pass,0 skip**,5054.3854ms. Strategic6/6 includes actual authenticated native HTTP, pending-result fences across meeting/death/ghost-death/pause, closure and uncertain-budget restart. Tasks7/7 includes actual disk save/reopen, progress and invalid-progress rejection. Provider10/10 uses mocked provider responses and actual durable budget files.
+- `quality-main-engine-2dbdf42-slow-ledger-fixed.txt`: **1/1 pass,0 skip**,716.6969ms total, same350ms delayed-fsync control. Reservation is durable and retained; no provider request starts after timeout.
+- Both archive and overlay `_artifacts/test-temp` directories were empty after checks. No real runtime failure remains in these bounded controls. This is not a full-suite or final production qualification, and it does not relabel other reported full-suite failures.
+
+Commands, from D:/Widegames-work/ship-quality-main-engine-20261030, with TEMP/TMP=D:/Widegames-work/temp:
+
+```powershell
+node _artifacts/archive-current-tests.mjs
+node --test _artifacts/quality-main-engine-2dbdf42/tests/ai-strategic-transport.test.mjs _artifacts/quality-main-engine-2dbdf42/tests/world-tasks.test.mjs _artifacts/quality-main-engine-2dbdf42/tests/audit-boundaries-20261029-provider.test.mjs
+node --import ./_artifacts/quality-main-engine-slow-ledger.mjs --test --test-name-pattern='late persistence acknowledgement' _artifacts/quality-main-engine-2dbdf42/tests/audit-boundaries-20261029-provider.test.mjs
+node _artifacts/prepare-assigned-overlay.mjs
+node --test _artifacts/quality-main-engine-2dbdf42-overlay/tests/ai-strategic-transport.test.mjs _artifacts/quality-main-engine-2dbdf42-overlay/tests/world-tasks.test.mjs _artifacts/quality-main-engine-2dbdf42-overlay/tests/audit-boundaries-20261029-provider.test.mjs
+node --import ./_artifacts/quality-main-engine-slow-ledger.mjs --test --test-name-pattern='late persistence acknowledgement' _artifacts/quality-main-engine-2dbdf42-overlay/tests/audit-boundaries-20261029-provider.test.mjs
+```
+
+The first archive script refuses to replace an existing archive; preserve it and the two original red logs. After manager integration the ordinary command is `node --test tests/ai-strategic-transport.test.mjs tests/world-tasks.test.mjs tests/audit-boundaries-20261029-provider.test.mjs`, with no preload required. No Chrome, full-suite repetition, paid provider call, runtime edit, main change, push or publication occurred.
+
+These two incoming test files were previously untracked in this worker's preserved047-based staging tree; the focused commit necessarily adds them here, while manager already tracks them. For conflict-free manager application, `_artifacts/quality-main-engine-2dbdf42-test-delta.patch` contains only the three test modifications relative to exact2dbdf42, not the old merge fixture or runtime. Apply that delta and this appended receipt; do not import the dirty staging tree wholesale.
