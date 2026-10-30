@@ -12,7 +12,7 @@ const copy=value=>structuredClone(value),frozen=value=>{if(value&&typeof value==
 // Author module fixture, not a played match. All positions derive from the
 // selected immutable packaged map; ctx delegates dynamic LOS to the real Core.
 function fixture(mapId='beacon',kind='cameras',legacy=false){
- const map=getMap(mapId),device=map.fixtures.devices.find(d=>d.kind===kind),world=createSpatialWorld(map.geometry);
+ const map=getMap({id:mapId,version:1}),device=map.fixtures.devices.find(d=>d.kind===kind),world=createSpatialWorld(map.geometry);
  assert(device);const first=map.fixtures.cameras[0];
  const players=Array.from({length:12},(_,i)=>({id:'keeper-'+i,role:i===11?'saboteur':'crew',alive:true,roomId:device.roomId,position:copy(i===0?device.position:first.position),motion:{manual:false,path:[],destination:null,leaseUntil:0}}));
  const state={id:'tactical-module-fixture',schemaVersion:legacy?3:4,...(legacy?{}:{tacticalVersion:1,map:{id:map.id,version:map.version}}),worldVersion:1,beaconVersion:1,phase:'roam',updatedAt:0,players,beaconRules:{...DEFAULT_BEACON_RULES,deviceReadMs:100,deviceCooldownMs:50},systems:{lights:{active:false},communications:{active:false},doors:[],transit:{}},replay:[]};
@@ -64,7 +64,7 @@ for(const {id:mapId} of MAP_CATALOG){
 
 test('legacy schema3 record/session/frame fields are unchanged; tactical map identity is required and unknown versions fail',()=>{
  const f=fixture('beacon','cameras',true);f.start();f.advance(100);const sample=f.view().observations[0];assert.deepEqual(Object.keys(sample).sort(),['at','data','deviceId','id','kind']);assert.equal(sample.data.frames[0].field,undefined);assert.equal(f.view().session.map,undefined);assert.equal(investigation.validateInvestigationState(JSON.parse(JSON.stringify(f.state))),true);
- for(const map of [undefined,{id:'beacon',version:2},{id:'missing',version:1},{id:'beacon',version:1,extra:true},'beacon']){const s=copy(f.state);s.schemaVersion=4;s.tacticalVersion=1;s.map=map;assert.throws(()=>investigation.validateInvestigationState(s));}
+ for(const map of [undefined,{id:'beacon',version:999},{id:'missing',version:1},{id:'beacon',version:1,extra:true},'beacon']){const s=copy(f.state);s.schemaVersion=4;s.tacticalVersion=1;s.map=map;assert.throws(()=>investigation.validateInvestigationState(s));}
 });
 
 test('map-derived hints and safe views are pure defensive projections with no foreign fixtures',()=>{
