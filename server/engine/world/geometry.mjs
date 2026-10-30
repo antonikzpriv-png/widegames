@@ -17,6 +17,7 @@ export function spatialGeometry(geometry){
   const closed=state=>fixtures.doors.filter(d=>state?.systems?.doors?.some(s=>s.id===d.id&&s.closed===true));
   const checker=state=>{const doors=closed(state);return p=>valid(p)&&isWalkable(p)&&!doors.some(r=>{const x=Math.max(r.x,Math.min(p.x,r.x+r.width)),y=Math.max(r.y,Math.min(p.y,r.y+r.height));return Math.hypot(p.x-x,p.y-y)<WORLD.bodyRadius||inside(p,r);});};
   const walkable=(p,state)=>checker(state)(p);
+  const motionGeometry=state=>closed(state).map(d=>d.id).sort().join("|");
   const segment=(a,b,walk)=>{if(!valid(a)||!valid(b))return false;const n=Math.max(1,Math.ceil(distance(a,b)/4));for(let i=0;i<=n;i++)if(!walk({x:a.x+(b.x-a.x)*i/n,y:a.y+(b.y-a.y)*i/n}))return false;return true;};
   // Validate the accepted polyline itself, never a newly computed alternate path.
   function routeClear(start,waypoints,state){
@@ -43,10 +44,27 @@ export function spatialGeometry(geometry){
   function move(from,dx,dy,amount,state,slide=true){
     const walk=checker(state);if(!walk(from)||![dx,dy,amount].every(Number.isFinite)||amount<0)return point(from);
     const norm=Math.hypot(dx,dy);if(!norm)return point(from);
-    const length=Math.min(amount,WORLD.width+WORLD.height),n=Math.max(1,Math.ceil(length/4)),stepX=dx/Math.max(1,norm)*length/n,stepY=dy/Math.max(1,norm)*length/n;let current=point(from);
+    const length=Math.min(amount,WORLD.width+WORLD.height),n=Math.max(1,Math.ceil(length/4)),unitX=dx/Math.max(1,norm),unitY=dy/Math.max(1,norm);let current=point(from),contacted=false,stepX=0,stepY=0;
+    // Reach contact rather than dropping a whole substep; project onto the
+    // tangent of rounded props so diagonal input does not snag their corners.
+    const solids=[...WORLD_OBSTACLES,...closed(state)];
+    function normalAt(p){
+      for(const r of solids){const x=p.x-Math.max(r.x,Math.min(p.x,r.x+r.width)),y=p.y-Math.max(r.y,Math.min(p.y,r.y+r.height)),d=Math.hypot(x,y);if(d>0&&d<WORLD.bodyRadius+.001)return {x:x/d,y:y/d};}
+      const x=stepX&&!walk({x:p.x+Math.sign(stepX)*.001,y:p.y})?-Math.sign(stepX):0,y=stepY&&!walk({x:p.x,y:p.y+Math.sign(stepY)*.001})?-Math.sign(stepY):0,d=Math.hypot(x,y);
+      return d?{x:x/d,y:y/d}:null;
+    }
+    function advance(a,x,y){if(!x&&!y)return {position:a,fraction:1};const next={x:a.x+x,y:a.y+y};if(walk(next))return {position:next,fraction:1};let low=0,high=1;for(let j=0;j<14;j++){const t=(low+high)/2;if(walk({x:a.x+x*t,y:a.y+y*t}))low=t;else high=t;}return {position:{x:a.x+x*low,y:a.y+y*low},fraction:low};}
     for(let i=0;i<n;i++){
-      const next={x:current.x+stepX,y:current.y+stepY};if(walk(next)){current=next;continue;}if(!slide)break;
-      const horizontal={x:current.x+stepX,y:current.y};if(walk(horizontal))current=horizontal;const vertical={x:current.x,y:current.y+stepY};if(walk(vertical))current=vertical;
+      stepX=unitX*Math.min(4,length-i*4);stepY=unitY*Math.min(4,length-i*4);
+      const before=current,normal=slide&&contacted?normalAt(current):null,dot=normal?Math.min(0,stepX*normal.x+stepY*normal.y):0;
+      const x=stepX-(normal?.x??0)*dot,y=stepY-(normal?.y??0)*dot,moved=advance(current,x,y);current=moved.position;
+      if(moved.fraction<1){
+        if(!slide)break;contacted=true;
+        const hit=normalAt(current),remaining=1-moved.fraction;
+        if(hit){const inward=Math.min(0,x*hit.x+y*hit.y);current=advance(current,(x-hit.x*inward)*remaining,(y-hit.y*inward)*remaining).position;}
+        else{current=advance(current,x*remaining,0).position;current=advance(current,0,y*remaining).position;}
+      }else contacted=!!normal;
+      if(distance(before,current)<1e-8)break;
     }
     return current;
   }
@@ -69,5 +87,5 @@ export function spatialGeometry(geometry){
   const spawnRoomId=geometry.WORLD_SPAWN_ROOM??(WORLD_ROOMS.some(r=>r.id==='bridge')?'bridge':geometry.ROOM_LAYOUT?.[0]?.id??WORLD_ROOMS[0]?.id);
   const spawnRoom=WORLD_ROOMS.find(r=>r.id===spawnRoomId);if(!spawnRoom)throw new TypeError('Invalid spatial spawn room');
   const viewpoint=point(geometry.WORLD_VIEWPOINT??spawnRoom.center??worldSpawn('p2'));if(!isWalkable(viewpoint))throw new TypeError('Spatial viewpoint must be walkable');
-  return {WORLD,point,valid,floor,inTransit,walkable,move,path,routeClear,sees,nearby,radius,station,bell:WORLD_BELL?.position??WORLD_BELL,worldRoomAt,worldSpawn,distance,viewpoint,staticWalkable:isWalkable,rooms:WORLD_ROOMS,spawnRoom,fixtures,viewpointMode:spawnRoom.id==='bridge'?'bridge':'viewpoint'};
+  return {WORLD,point,valid,floor,inTransit,walkable,motionGeometry,move,path,routeClear,sees,nearby,radius,station,bell:WORLD_BELL?.position??WORLD_BELL,worldRoomAt,worldSpawn,distance,viewpoint,staticWalkable:isWalkable,rooms:WORLD_ROOMS,spawnRoom,fixtures,viewpointMode:spawnRoom.id==='bridge'?'bridge':'viewpoint'};
 }
