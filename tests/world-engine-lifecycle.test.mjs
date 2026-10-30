@@ -1,4 +1,5 @@
-﻿import test from 'node:test';
+import {taskProgress,taskInput} from '../server/engine/tasks.mjs';
+import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createMatch,applyAction,applyInput,tick,getPlayerView,getReplay} from '../server/engine/index.mjs';
 const {WORLD,WORLD_STATIONS,WORLD_BELL,worldSpawn,worldRoomAt,isWalkable,findWorldPath,canSeeWorldPoint,distance}=await import(process.env.WORLD_ENGINE_GEOMETRY_MODULE||'../shared/world.mjs');
@@ -10,6 +11,7 @@ function game(config={}){
  return {get state(){return state;},set state(s){state=s;},get now(){return now;},set now(n){now=n;},p(id){return state.players.find(p=>p.id===id);},act(id,type,fields={},at=now){now=at;const r=applyAction(state,id,{id:`action_${++serial}`,type,...fields},now);state=r.state;return r;},input(id,seq,dx,dy,at=now){now=at;const r=applyInput(state,id,{seq,dx,dy},now);state=r.state;return r;},tick(at){now=at;state=tick(state,now).state;},travel(id,target){const p=state.players.find(p=>p.id===id),path=findWorldPath(p.position,target);assert.ok(path);let cost=0,last=p.position;for(const q of path){cost+=distance(last,q);last=q;}accept(this.act(id,'navigate',{x:target.x,y:target.y}));this.tick(now+Math.ceil(cost/WORLD.speed*1000)+1);assert.ok(distance(this.p(id).position,target)<.01);}};
 }
 
+function solve(g,id,task){for(let i=0;i<4;i++){const c=taskProgress(g.p(id).tasks.find(t=>t.id===task.id));if(c.index===c.total)break;accept(g.act(id,'taskStep',{taskId:task.id,step:c.index,input:taskInput(g.p(id).tasks.find(t=>t.id===task.id))},Math.max(g.now,c.readyAt)));}}
 test('meeting-denied sequence is acknowledged and cannot become movement after council',()=>{
  const g=game();accept(g.input('p2',1,1,0,0));accept(g.act('p2','meeting',{},10));
  const denied=g.input('p2',2,-1,0,11);assert.equal(denied.accepted,false);assert.equal(denied.error.code,'WRONG_PHASE');g.tick(31);assert.equal(g.state.phase,'roam');
@@ -24,7 +26,7 @@ test('manual movement collides with props and outer walls without tunneling',()=
 test('task station and emergency bell require real 92-unit proximity, not room labels',()=>{
  const g=game(),task=g.p('p1').tasks[0],station=WORLD_STATIONS[task.roomId];assert.equal(g.act('p1','task',{taskId:task.id}).accepted,false);
  g.travel('p1',{x:station.x,y:station.y+93});assert.equal(g.act('p1','task',{taskId:task.id}).accepted,false);
- g.travel('p1',{x:station.x,y:station.y+92});accept(g.act('p1','task',{taskId:task.id}));assert.equal(g.p('p1').tasks.find(t=>t.id===task.id).completed,true);assert.equal(g.act('p2','task',{taskId:task.id}).accepted,false);
+ g.travel('p1',{x:station.x,y:station.y+92});solve(g,'p1',task);accept(g.act('p1','task',{taskId:task.id}));assert.equal(g.p('p1').tasks.find(t=>t.id===task.id).completed,true);assert.equal(g.act('p2','task',{taskId:task.id}).accepted,false);
  const bell=game();bell.travel('p1',{x:WORLD_BELL.x,y:WORLD_BELL.y+93});assert.equal(bell.p('p1').roomId,'bridge');assert.equal(bell.act('p1','meeting').accepted,false);
  bell.travel('p1',{x:WORLD_BELL.x,y:WORLD_BELL.y+92});accept(bell.act('p1','meeting'));assert.equal(bell.state.phase,'discussion');
 });
@@ -75,7 +77,7 @@ test('more than 2048 steering packets use bounded latest-sequence state and coar
 });
 
 test('world task, parity, and ejection victories are reachable through physical authoritative actions',()=>{
- const tasks=game({roamDeadlineMs:600000,maxMatchMs:700000});for(const id of ['p1','p2','p3','p4','p5'])while(true){const task=tasks.p(id).tasks.find(t=>!t.completed);if(!task)break;tasks.travel(id,WORLD_STATIONS[task.roomId]);accept(tasks.act(id,'task',{taskId:task.id}));}
+ const tasks=game({roamDeadlineMs:600000,maxMatchMs:700000});for(const id of ['p1','p2','p3','p4','p5'])while(true){const task=tasks.p(id).tasks.find(t=>!t.completed);if(!task)break;tasks.travel(id,WORLD_STATIONS[task.roomId]);solve(tasks,id,task);accept(tasks.act(id,'task',{taskId:task.id}));}
  assert.equal(tasks.state.outcome.reason,'tasks');assert.equal(tasks.state.outcome.winner,'crew');assert.ok(getReplay(tasks.state).some(e=>e.type==='motion'));
  const parity=game();for(const id of ['p1','p2','p3','p4']){parity.travel('p6',parity.p(id).position);accept(parity.act('p6','eliminate',{targetId:id}));}assert.equal(parity.state.outcome.reason,'parity');
  const council=game();accept(council.act('p2','meeting',{},2));council.tick(12);for(const p of council.state.players)accept(council.act(p.id,'vote',{targetId:'p6'}));council.tick(22);assert.equal(council.state.outcome.reason,'ejection');assert.ok(getPlayerView(council.state,null,22).players.every(p=>p.role));
@@ -84,7 +86,7 @@ test('world task, parity, and ejection victories are reachable through physical 
 test('JSON restart resumes only remaining navigation distance and actions settle motion before proximity checks',()=>{
  const g=game(),task=g.p('p1').tasks[0],target=WORLD_STATIONS[task.roomId],route=findWorldPath(g.p('p1').position,target);let length=0,previous=g.p('p1').position;for(const p of route){length+=distance(previous,p);previous=p;}
  accept(g.act('p1','navigate',{x:target.x,y:target.y}));g.tick(100);const saved=JSON.parse(JSON.stringify(g.state)),finish=Math.ceil(length/WORLD.speed*1000)+2;
- const restored=applyAction(saved,'p1',{id:'restart:task',type:'task',taskId:task.id},finish);assert.equal(restored.accepted,true);assert.ok(distance(restored.state.players.find(p=>p.id==='p1').position,target)<.01);
+ const restored=applyAction(saved,'p1',{id:'restart:task',type:'task',taskId:task.id},finish);assert.equal(restored.error.code,'TASK_INCOMPLETE');assert.ok(distance(restored.state.players.find(p=>p.id==='p1').position,target)<.01);
  const uninterrupted=applyAction(g.state,'p1',{id:'restart:task',type:'task',taskId:task.id},finish);assert.deepEqual(restored,uninterrupted);
 });
 
