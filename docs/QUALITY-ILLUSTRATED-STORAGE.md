@@ -46,3 +46,8 @@ node --test --test-isolation=none _artifacts/illustrated-storage/core8f/tests/ma
 ```
 
 source-manifest.json records exact pins and SHA256s for owned/dependency sources. Syntax checks and git diff --check pass. Earlier four-selection/current-version1 catalog fixtures now need their owners to pin exact old maps or assert five latest selections; they are not silently rewritten here. Coordinator/Core/Frontend composition and final combined tests remain required. No Chrome, full suite, live provider, production build, main write, push, merge, deployment or user-data migration is performed.
+
+
+## Bounded spectator follow-up
+
+Storage implementation committed asf3c3711686e018f1ad43c84fa37f8b8d29db0f75. Frontend5a00a398ac40b6b44dcb9a36183b5791f1422585 became available immediately afterward. Its exact public/world/spectator.mjs was copied only into the ignored fixture, not tracked runtime; the three unchanged spectator-revision2 controls now pass3/3,0 skips (spectator-5a-followup-green.txt). The fix supplies actual prop position/footprint facts. The source manifest records this separate follow-up pin/hash; it does not relabel the historical37-test run. Four client replay cases remain pending the separately documented Frontend replay revision adaptation. No additional broad suite or browser run was performed.
