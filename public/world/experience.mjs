@@ -1,4 +1,4 @@
-﻿import {createLocalSound} from './sound.mjs';
+import {createLocalSound} from './sound.mjs';
 import {getMap} from '../../shared/maps/index.mjs';
 import {mapKey,equipmentOwner,roomName as mapRoomName} from './map-model.mjs';
 import {createLobbyMapSelector} from './lobby-map.mjs';
@@ -18,7 +18,7 @@ const setText=(el,text)=>{if(el.textContent!==text)el.textContent=text;};
 let instance=0;
 
 /** A safe-view-only game surface. The owner supplies networking and request IDs. */
-export function createWorldExperience(host,callbacks,{mapResolver=getMap}={}){
+export function createWorldExperience(host,callbacks,{mapResolver=getMap,motionFactory}={}){
  if(document.head&&!document.querySelector('link[data-beacon-style]')){const link=make('link');link.rel='stylesheet';link.href='/world/beacon.css';link.setAttribute('data-beacon-style','');document.head.append(link);}
  let mapError='',lastScope=null,actionGeneration=0,lastActionKey=null;
  const actionKey=view=>view?.game?.beaconVersion===1?viewKey(view):equipmentOwner(view);
@@ -45,6 +45,7 @@ export function createWorldExperience(host,callbacks,{mapResolver=getMap}={}){
  const joystick=make('div','lw-joystick'),knob=make('div','lw-joystick-knob');joystick.append(knob);joystick.setAttribute('aria-hidden','true');
  const mapToggle=button('Map  M',()=>toggleMap(),'lw-map-toggle');mapToggle.setAttribute('aria-expanded','false');
  const mapPane=make('section','lw-map-pane'),mapHeading=make('h2','','Platform map'),mapCanvas=make('canvas','lw-mini-map');mapPane.hidden=true;mapPane.id=`${uid}-map`;mapToggle.setAttribute('aria-controls',mapPane.id);mapCanvas.setAttribute('role','img');mapCanvas.setAttribute('aria-label','Known platform layout and currently visible keepers');mapPane.append(mapHeading,mapCanvas,make('p','','Map shows only positions supplied by the server.'));
+ const mapLegend=make('ol','lw-map-legend');mapLegend.setAttribute('aria-label','Map room key');mapPane.append(mapLegend);let legendKey=null;
  const lobby=make('section','lw-lobby'),lobbyTitle=make('h1','','KEEP THE LIGHT.'),lobbySub=make('p','','Keep the beacon alive. Hidden saboteurs may be aboard.'),roster=make('div','lw-lobby-roster'),start=button('Begin the watch',()=>request(()=>callbacks.start()),'lw-primary');
  const lobbyRows=new Map(),lobbyMap=createLobbyMapSelector({id:uid,settings:callbacks.settings,change:()=>render()});
  const lobbyNote=make('p','lw-lobby-note'),lobbyEyebrow=make('p','lw-eyebrow');lobby.append(lobbyEyebrow,lobbyTitle,lobbySub,roster,lobbyMap.node,start,lobbyNote);
@@ -58,8 +59,8 @@ export function createWorldExperience(host,callbacks,{mapResolver=getMap}={}){
  const seenEjections=new Set();
  let beaconPanel=null;
  let room=null,options={now:Date.now(),connected:false,pending:false,feedback:''},disposed=false,localPending=0,lastRoom=null,raf=0,mapOpen=false,localFeedback='',lastFeedback='',lastRole=null;
- const reduced=matchMedia('(prefers-reduced-motion: reduce)'),scene=createWorldScene(canvas,{reduced:reduced.matches,mapResolver}),mini=createWorldScene(mapCanvas,{reduced:true,mapResolver}),revealed=new Set();
- const input=createWorldInput({target:canvas,joystick,knob,getState:()=>({enabled:movementAllowed(),inputAllowed:room?.game?.phase==='roam'&&room?.game?.self?.alive&&!room?.game?.systems?.selfTransit&&!room?.game?.self?.transit,position:room?.game?.self?.position,inputSeq:room?.game?.self?.inputSeq||0}),onInput:value=>{if(value.dx||value.dy)navigationEpoch++;return callbacks.input(value);},onClick:e=>{
+ const reduced=matchMedia('(prefers-reduced-motion: reduce)'),scene=createWorldScene(canvas,{reduced:reduced.matches,mapResolver,motionFactory}),mini=createWorldScene(mapCanvas,{reduced:true,mapResolver,motionFactory}),revealed=new Set();
+ const input=createWorldInput({target:canvas,joystick,knob,getState:()=>({enabled:movementAllowed(),inputAllowed:room?.game?.phase==='roam'&&room?.game?.self?.alive&&!room?.game?.systems?.selfTransit&&!room?.game?.self?.transit,position:room?.game?.self?.position,inputSeq:room?.game?.self?.inputSeq||0}),onInput:value=>{scene.setIntent?.(value,performance.now());if(value.dx||value.dy)navigationEpoch++;return callbacks.input(value);},onClick:e=>{
   const target=scene.toWorld(e.clientX,e.clientY),position=room?.game?.self?.position,pin=room?.roomId,match=room?.game?.matchId,intent=++navigationEpoch;
   if(!world.findWorldPath(position,target)){setFeedback('That route is blocked. Choose a clear part of the deck.');return null;}
   // Acknowledged stop precedes navigation so a late zero cannot cancel the new route.
@@ -78,19 +79,25 @@ export function createWorldExperience(host,callbacks,{mapResolver=getMap}={}){
  function closeConfirmation(restore=true){confirmTarget=null;render();if(restore)restoreTrigger(actionButtons.eliminate);}
  function closeTask(restore=true){const current=puzzle;puzzle=null;taskSession=null;current?.dispose();render();if(restore)restoreTrigger(actionButtons.use);}
  function openTask(task){
-  taskSession={taskId:task.id,roomId:room.roomId,matchId:room.game.matchId,mapKey:mapKey(room.game.map??room.map),location:room.game.self.roomId};
-  puzzle=createTaskPuzzle({id:uid,task,kind:taskKind(task,room.game.self.tasks.indexOf(task)),onClose:()=>closeTask(),onSubmit:async()=>{
+  taskSession={taskId:task.id,roomId:room.roomId,matchId:room.game.matchId,mapKey:mapKey(room.game.map??room.map),location:room.game.self.roomId,...(task.kind==='station'?{challengeKey:JSON.stringify([task.challenge?.version,task.challenge?.kind,task.challenge?.puzzle])}:{})};
+  puzzle=createTaskPuzzle({id:uid,task,kind:taskKind(task,room.game.self.tasks.indexOf(task)),onClose:()=>closeTask(),onSubmit:async stationInput=>{
+   if(document.hidden)return;
    if(!validTaskSession(taskSession,room,world)){closeTask();setFeedback('Station closed: the task or your location changed.');return;}
    const current=puzzle,session=taskSession,taskId=session.taskId,submissionGeneration=actionGeneration,submissionKey=actionKey(room);
    const ownsEquipment=()=>!disposed&&puzzle===current&&taskSession===session&&validTaskSession(session,room,world);
    const ownsSubmission=()=>submissionGeneration===actionGeneration&&submissionKey===actionKey(room)&&ownsEquipment();
    current.setPending(true);
    try{
-    await perform('task',{taskId});
+    const station=task.kind==='station';
+    const response=await perform(station?'taskInteract':'task',station?{taskId,interactionId:stationInput.interactionId,value:stationInput.value}:{taskId});
+    if(station){
+     if(ownsSubmission()){const accepted=response?.room??response;if(accepted?.roomId===session.roomId&&accepted.game?.matchId===session.matchId&&mapKey(accepted.game.map??accepted.map)===session.mapKey)api.update(accepted,options);}
+     if(ownsEquipment())current.setPending(false);return;
+    }
     if(ownsSubmission()){closeTask();setFeedback('Task submitted. The server confirms your progress.');}else if(ownsEquipment())current.setPending(false);
    }catch(error){
     if(!ownsSubmission()){if(ownsEquipment())current.setPending(false);return;}
-    if(error?.name!=='AbortError')setFeedback(error?.message||'Task could not be sent.');current.setPending(false);
+    if(error?.name!=='AbortError')setFeedback(error?.message||'Task could not be sent.');current.setPending(false);if(task.kind==='station')throw error;
    }
   }});input.stop();overlay.append(puzzle.node);render();puzzle.focus();
  }
@@ -124,6 +131,7 @@ export function createWorldExperience(host,callbacks,{mapResolver=getMap}={}){
   shell.dataset.phase=game?.phase||'lobby';lobby.hidden=!isLobby;assignment.hidden=isLobby;progress.hidden=isLobby;actions.hidden=isLobby||game.phase!=='roam'||!game.self?.alive;joystick.hidden=!movementAllowed();
   setText(mode,aiLabel(room.ai));setText(status,options.connected?'● Connected':'○ Reconnecting');status.dataset.connected=String(!!options.connected);
   const lastNotice=room.notices?.at(-1),noticeText=typeof lastNotice==='string'?lastNotice:lastNotice?.message||'';setText(aiNotice,noticeText);aiNotice.hidden=!noticeText;setText(lobbyNote,`${room.isHost?`You host this room. ${keepers.length} keepers are aboard.`:'You are observing. The host will begin the watch.'}${noticeText?' '+noticeText:''}`);start.disabled=!room.isHost||pending()||!options.connected||lobbyMap.pending;
+  const nextLegend=JSON.stringify([selectedMap.id,selectedMap.version]);if(legendKey!==nextLegend){legendKey=nextLegend;mapLegend.replaceChildren(...selectedMap.roomLayout.map(r=>make('li','',r.name)));}
   lobbyMap.update(room,options);setText(mapHeading,`${selectedMap.name} map`);setText(lobbyEyebrow,`${selectedMap.id==='beacon'?'STORM BEACON':selectedMap.name.toUpperCase()} · KEEPER WATCH`);setText(revealClose,selectedMap.id==='beacon'?'Enter the beacon':`Enter ${selectedMap.name}`);
   setText(role,roleLabel(game));role.dataset.role=game?.self?.role||'spectator';setText(location,game?.self?`${game.self.alive?'':'Fallen · '}${roomName(game.self.roomId)}`:`Public observation · roles ${game?.phase==='ended'?'revealed':'hidden'}`);
   setText(help,canWalk?'WASD / arrows to walk · E use · R report · Q eliminate · M map':'Observe the watch · M map');
@@ -136,7 +144,8 @@ export function createWorldExperience(host,callbacks,{mapResolver=getMap}={}){
   const current=contexts(game,world);
   for(const [key,b]of Object.entries(actionButtons)){const c=current[key];b.hidden=['eliminate','sabotage'].includes(key)&&game?.self?.role!=='saboteur';b.setAttribute('aria-disabled',String(!c.enabled||pending()||!options.connected));b.title=c.enabled?c.label:c.hint;b.setAttribute('aria-label',`${c.label}${key==='use'?' (E / Space)':key==='report'?' (R)':key==='eliminate'?' (Q)':''}`);}
   canvas.setAttribute('aria-label',isLobby?`${keepers.length} raincoat keepers gathered on ${selectedMap.id==='beacon'?'the storm beacon':selectedMap.name}.`:`${roomName(game?.self?.roomId)}. Visible keepers: ${visiblePlayers(game).map(p=>p.name).join(', ')||'none'}. ${canWalk?'Use keyboard or click the deck to walk.':'Observation only. Open the map to view the platform.'}`);
-  if(puzzle&&!validTaskSession(taskSession,room,world)){const old=puzzle;puzzle=null;old.dispose();const completed=game?.matchId===taskSession?.matchId&&game?.self?.tasks?.some(task=>task.id===taskSession?.taskId&&task.completed);setFeedback(completed?'Task complete.':'Station closed: the watch state or your location changed.');taskSession=null;}
+  if(puzzle&&!validTaskSession(taskSession,room,world)){const old=puzzle,stationFocus=old.node.className.split(' ').includes('lw-station-modal')&&old.node.contains(document.activeElement);puzzle=null;old.dispose();const completed=game?.matchId===taskSession?.matchId&&game?.self?.tasks?.some(task=>task.id===taskSession?.taskId&&task.completed);setFeedback(completed?'Task complete.':'Station closed: the watch state or your location changed.');taskSession=null;if(stationFocus&&completed&&game.phase==='roam'&&!document.hidden)canvas.focus();}
+  if(puzzle?.update){const currentTask=game?.self?.tasks?.find(t=>t.id===taskSession?.taskId);if(currentTask)puzzle.update(currentTask,{pending:pending(),connected:options.connected});}
   if(confirmTarget&&!validElimination()){confirmTarget=null;setFeedback('That keeper is no longer in reach.');}
   if(game?.phase!=='roam')ejectionKey=null;
   const recentEjection=(game?.events||[]).filter(event=>event.type==='vote_result'&&event.ejectedId).at(-1);
@@ -166,11 +175,11 @@ export function createWorldExperience(host,callbacks,{mapResolver=getMap}={}){
   input.sync();
  }
  function frame(now){raf=0;if(disposed||document.hidden)return;scene.draw(now);if(mapOpen)mini.draw(now,{overview:true});raf=requestAnimationFrame(frame);}
- function blur(){navigationEpoch++;actionGeneration++;beaconPanel?.suspend();lobbyMap.suspend();sound.suspend();}
+ function blur(){scene.suspend?.();mini.suspend?.();navigationEpoch++;actionGeneration++;beaconPanel?.suspend();lobbyMap.suspend();sound.suspend();}
  window.addEventListener('blur',blur);
- function visibility(){navigationEpoch++;actionGeneration++;beaconPanel?.suspend();lobbyMap.suspend();sound.suspend();if(document.hidden){cancelAnimationFrame(raf);raf=0;input.stop();}else if(!disposed&&!raf){scene.draw(performance.now());raf=requestAnimationFrame(frame);}}
+ function visibility(){navigationEpoch++;actionGeneration++;beaconPanel?.suspend();lobbyMap.suspend();sound.suspend();if(document.hidden){scene.suspend?.();mini.suspend?.();cancelAnimationFrame(raf);raf=0;input.stop();}else if(!disposed&&!raf){scene.update(room,performance.now());mini.update(room,performance.now());scene.draw(performance.now());raf=requestAnimationFrame(frame);}}
  document.addEventListener('visibilitychange',visibility);if(!document.hidden)raf=requestAnimationFrame(frame);
- return {update(next,nextOptions={}){
+ const api={update(next,nextOptions={}){
   if(disposed)return;let nextMap;
   try{nextMap=mapResolver(next.game?.map??next.map);}catch(error){navigationEpoch++;actionGeneration++;input.stop();puzzle?.dispose();puzzle=null;taskSession=null;confirmTarget=null;beaconPanel?.suspend();sound.suspend();room=next;options={...options,...nextOptions};mapError=error?.message||'Unsupported map/version.';render();unavailableTitle.focus();return;}
   const nextActionKey=actionKey(next);if(lastActionKey!==null&&lastActionKey!==nextActionKey)actionGeneration++;lastActionKey=nextActionKey;const scope=equipmentOwner(next);
@@ -178,5 +187,5 @@ export function createWorldExperience(host,callbacks,{mapResolver=getMap}={}){
   const changed=selectedMap.id!==nextMap.id||selectedMap.version!==nextMap.version;
   if(lastRoom&&(lastRoom!==next.roomId||changed||room?.game?.matchId!==next.game?.matchId||room?.game?.self?.id!==next.game?.self?.id)){ejectionKey=null;seenEjections.clear();revealed.clear();localFeedback='';lastRole=null;}
   lastScope=scope;lastRoom=next.roomId;mapError='';selectedMap=nextMap;world=selectedMap.geometry;room=next;options={...options,...nextOptions};scene.update(room,performance.now());mini.update(room,performance.now());sound.update(room);render();
- },dispose(){if(disposed)return;input.dispose();disposed=true;cancelAnimationFrame(raf);document.removeEventListener('visibilitychange',visibility);window.removeEventListener('blur',blur);scene.dispose();mini.dispose();lobbyMap.dispose();sound.dispose();beaconPanel?.dispose();puzzle?.dispose();results.dispose();shell.remove();}};
+ },dispose(){if(disposed)return;input.dispose();disposed=true;cancelAnimationFrame(raf);document.removeEventListener('visibilitychange',visibility);window.removeEventListener('blur',blur);scene.dispose();mini.dispose();lobbyMap.dispose();sound.dispose();beaconPanel?.dispose();puzzle?.dispose();results.dispose();shell.remove();}};return api;
 }
