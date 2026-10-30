@@ -3,7 +3,7 @@ import {ROOM_LAYOUT} from '../contracts.mjs';
 import {BEACON_DOORS,BEACON_VENTS,BEACON_REPAIRS,BEACON_DEVICES,BEACON_CAMERAS} from '../beacon.mjs';
 import {deepFreeze} from './freeze.mjs';
 import {STORMBREAK_ANNEX} from './stormbreak-annex.mjs';
-import {BEACON_V2} from './beacon-v2.mjs';
+import {BEACON_V2} from './beacon-tactical-v2.mjs';
 export {deepFreeze};
 export const DEFAULT_MAP_ID='beacon';
 const fixtures=deepFreeze(structuredClone({doors:BEACON_DOORS,vents:BEACON_VENTS,repairs:BEACON_REPAIRS,devices:BEACON_DEVICES,cameras:BEACON_CAMERAS}));
