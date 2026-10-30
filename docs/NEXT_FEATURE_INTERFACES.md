@@ -1,6 +1,6 @@
 # Gameplay-quality handoff additions
 
-The working baseline now includes six authoritative station interactions rather than local completion for new matches. Reuse [QUALITY-INTERFACES.md](QUALITY-INTERFACES.md), the existing task service and server/ai/world.mjs safe proposal path; do not create competing task or navigation loops. Interactive task, strategic AI, multiplayer, ability and replay reservations below remain. This does not merge unfinished Group2 branches.
+The working baseline now includes six authoritative station interactions rather than local completion for new matches. Reuse [QUALITY-INTERFACES.md](QUALITY-INTERFACES.md), the existing task service and server/ai/world.mjs safe proposal path; do not create competing task or navigation loops. Interactive task, strategic AI, multiplayer, ability and replay reservations below remain. Actual main43c0799 has now been merged into this branch: reuse its taskStep progress, strategic intentions, ghost/ability and spatial replay modules alongside the station extensions. Unmerged branches are not prerequisites.
 
 # Tactical integration addendum
 

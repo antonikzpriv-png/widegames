@@ -1,3 +1,5 @@
+Current-main integration43c079999506785196ab85750105ceb102ba9314 is included. Optional features retain version1, taskStep remains supported for world2 progress, and map-aware replay2 is documented in [QUALITY-MAIN-REPLAY-CONTRACT.md](QUALITY-MAIN-REPLAY-CONTRACT.md). Saved start request IDs bind their accepted feature settings; conflicting reuse returns409. New histories must match their actual map, actors and clocks.
+
 # Current gameplay-quality contract
 
 New normal startup opts into room schema4 / match schema5 / stationTasksVersion1. Exact old formats1..4 remain supported. [QUALITY-CONTRACT.md](QUALITY-CONTRACT.md) specifies ownership and pure station payloads; [QUALITY-INTERFACES.md](QUALITY-INTERFACES.md) lists the executable additions. getMap(string) chooses the latest registered version, while getMap({id,version}) must resolve the exact retained version; getMap(undefined) remains legacy Beacon1. No live hidden-state projection, provider budget or seat identity contract is relaxed.

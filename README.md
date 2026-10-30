@@ -9,7 +9,7 @@ npm ci
 npm start
 ```
 
-Open **http://localhost:3000**. Choose **PLAY AS A KEEPER** for a human seat with five AI keepers, or **WATCH THE AI** for six AI keepers. All seats are filled automatically. Choose **Storm Beacon** or **Stormbreak Annex** in the host lobby, then press **Begin the watch**. Your role appears privately before entering your selected map. Map selection is fixed once started; a new room chooses independently.
+Keep the terminal running and open **http://localhost:3000** in your browser. Choose **PLAY AS A KEEPER** for a human seat with five AI keepers, or **WATCH THE AI** for six AI keepers. All seats are filled automatically. Choose **Storm Beacon** or **Stormbreak Annex** in the host lobby, then press **Begin the watch**. Your role appears privately before entering your selected map. Map selection is fixed once started; a new room chooses independently.
 
 New watches use the gameplay-quality preset: the original fourteen-room **Storm Beacon v2** (3200x2400 world units), or eight-room **Stormbreak Annex v1**. Both have map-specific stations, colliding furniture, detailed equipment and alternate routes. Older Beacon v1 saves retain their exact map. New crew receive four different station jobs. The preset includes map-specific sabotage, temporary doors, maintenance passages and timed investigation consoles. Stormbreak Annex has eight rooms, interlocking loops and an isolated observatory, with original copper/slate environmental art. **Systems & evidence** lists your server-permitted actions, cooldowns and historical samples. **E/Space/USE** opens nearby equipment and hatch destination choices.
 
@@ -21,7 +21,7 @@ Council switches to a dedicated discussion and voting scene. Describe what you o
 
 **WATCH THE AI** includes an overview and keeper-following camera while live roles remain hidden. Completed matches have a spatial replay with play/pause, 0.25×–4× playback, time/event scrubbing, bookmarks, following, role and ballot overlays, and character-perspective history. Public claims, recorded witnesses and reconstructed visibility are labeled separately. Truncated/old recordings show their coverage limits; missing positions are never invented from the final state. [Replay controls, recording format, privacy and validation](docs/SPATIAL-REPLAY.md).
 
-Crew wins by completing every required task or ejecting the saboteur. The saboteur wins at parity with surviving crew, or when a critical countdown expires. Unfinished tasks transfer from fallen crew to surviving crew. Critical repairs require two distinct living crew in Engine. Unique highest vote wins; a tie, winning skip or no votes ejects nobody. Missing votes abstain. Meetings do not stop a critical countdown. Each keeper has one emergency call; reports are separate.
+Crew wins by completing every required task or ejecting the saboteur. The saboteur wins at parity with surviving crew, or when a critical countdown expires. Unfinished tasks transfer from fallen crew to surviving crew. Critical repairs require two distinct living crew in Engine. Unique highest vote wins; a tie, winning skip or no votes ejects nobody. Missing votes abstain. Meetings do not stop a critical countdown. Each keeper has one emergency call; reports are separate. The optional ghost preset keeps fallen crew's owned jobs and private fallen chat; Ward/Echo and strategic intentions from current main are retained.
 
 Crew wins by completing every required task or ejecting the saboteur. The saboteur wins at parity with surviving crew, or when a critical countdown expires. New watches redistribute unfinished tasks at meeting muster; an undiscovered death is not globally announced. Power and flood repairs each require two distinct living crew at two distinct marked sites. Unique highest vote wins; a tie, winning skip or no votes ejects nobody. Missing votes abstain. Meetings do not stop a critical countdown. Each keeper has one emergency call; reports are separate.
 
@@ -37,7 +37,7 @@ Demo is credential-free and visibly labeled. For live **hybrid** play, copy `.en
 node --env-file=.env server/main.mjs
 ```
 
-The real Anthropic adapter uses the pinned Haiku model for council speech and votes; movement and deck actions remain local. Each model sees only its character's permitted view, observations and recent in-game dialogue. API keys, private memories and model reasoning never appear in browser responses. Live play sends that permitted game content to Anthropic. Missing credentials, provider failure or exhausted budgets explicitly select labeled demo for the match. No live provider test is implied by offline qualification. [AI setup, official API references and limits](docs/AI.md).
+The real Anthropic adapter uses the pinned Haiku model for council speech and votes; movement and deck actions remain local. Each model sees only its character's permitted view, observations and recent in-game dialogue. API keys, private memories and model reasoning never appear in browser responses. Live play sends that permitted game content to Anthropic. Missing credentials, provider failure or exhausted budgets explicitly select labeled demo for the match. Use a workspace-scoped Anthropic key; unscoped keys require a workspace header that this adapter does not configure. No live provider test is implied by offline qualification. [AI setup, official API references and limits](docs/AI.md).
 
 Calls, conservative token/cost reservations and retries are bounded per match; a separate persisted UTC-day cap bounds the deployment. Configure `MAX_AI_CALLS`, `MAX_AI_TOKENS`, `MAX_AI_COST_USD`, `MAX_DAILY_AI_COST_USD` and `MAX_ACTIVE_ROOMS` on the server. Counters are reserved ceilings, not an invoice. Never commit keys or serve the private `data/` directory.
 
@@ -47,7 +47,11 @@ Calls, conservative token/cost reservations and retries are bounded per match; a
 npm test
 npm run check
 npm run test:browser
+npm run test:task-browser
+npm run test:tactical-browser
 npm run test:beacon-browser
+npm run test:features:browser
+npm run test:spatial-browser
 ```
 
 The first two run offline engine, AI, authorization, persistence and presentation regressions. Audit suites require a full Git checkout with historical commits; CI fetches that history. Browser qualification requires an installed Chrome/Chromium; `CHROME_PATH` overrides its location. On Windows the default is the standard Google Chrome installation; on Linux it is `/usr/bin/google-chrome`. It starts its own real local server and fresh private fixture, exercises both complete match modes and writes screenshots/report under `_artifacts/world-browser-*/`. These are explicitly seeded, accelerated demo fixtures, with no paid provider calls. The tactical browser audit additionally exercises both maps and checks sabotage, devices, hidden deaths, hatches, private notes, reconnect and native mobile equipment controls through real routes. See [tactical rules](docs/TACTICAL-RULES.md), [exact working interfaces](docs/TACTICAL-INTERFACES.md) and [tactical qualification](docs/TACTICAL-VERIFICATION.md). [Prior Group1 verification](docs/BEACON-VERIFICATION.md) and [earlier verification](docs/VERIFICATION.md) remain historical evidence, not qualification of the tactical revision.

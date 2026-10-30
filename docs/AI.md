@@ -1,6 +1,6 @@
 # Station and navigation integration
 
-For match5, local worldCandidates uses nextStationInput on only its character's projected puzzle clues, then proposes ordinary validated taskInteract actions. All six original puzzle kinds are playable without credentials. Geometry caches contain only immutable public walkability/edge data, bounded to four closed-door signatures per registered map; actors, routes and model memory are not cached there. Server startup prepares selected-map navigation before accepting requests. Council models, budgets, identities and explicit demo/hybrid labels remain as below.
+For match5, local worldCandidates uses nextStationInput on only its character's projected puzzle clues, then proposes ordinary validated taskInteract actions. All six original puzzle kinds are playable without credentials. Geometry caches contain only immutable public walkability/edge data, bounded to four closed-door signatures per registered map; actors, routes and model memory are not cached there. Server startup prepares selected-map navigation before accepting requests. Budgets, identities and explicit demo/hybrid/strategic labels remain as below. Current main's optional strategic intentions are retained through the same bounded reservation path. Exact canonical public identities keep their six original safe persona descriptions; arbitrary supplied persona getters/private state are not read.
 
 # Lantern Wake AI
 
@@ -139,3 +139,7 @@ local and strategic bots share the same safe-view task action helper. It submits
 one semantic `taskStep` per local decision, waits for the server diagnostic timer,
 and submits `task` only when all confirmed steps are complete. Task steps and
 waits do not make model calls or grant fake-work progress.
+
+## Current provider setup qualification
+
+The offline official-contract review dated 2026-10-30 supports workspace-scoped Anthropic API keys. The adapter does not configure the workspace header required for unscoped keys; use a scoped key. See [official authentication documentation](https://platform.claude.com/docs/en/manage-claude/authentication) and the exact links/receipt in [QUALITY-MAIN-AI.md](QUALITY-MAIN-AI.md). No live account, model availability or paid call was tested. Tactical unknown/device instructions are included only for beacon views; retained world2 prompts keep the existing budget contract. The default 120000-token ceiling was preserved, not raised to accommodate prompt overhead.

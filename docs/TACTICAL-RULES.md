@@ -1,4 +1,4 @@
-﻿# Tactical gameplay rules
+# Tactical gameplay rules
 
 This section describes fresh tactical watches (match schema4, tacticalVersion1, preset tactical/version1). Earlier board/schema1, walking/schema2 and Group1/schema3 watches retain their original rules, map and identities. A fresh lobby is required for this preset. No unfinished Group2 branch is needed.
 
@@ -24,7 +24,7 @@ One critical failure, lights, communications and at most two reserved door slots
 
 Lights last45s or until a crew repair at that map's lighting relay. Communications lasts35s or until the radio relay is repaired. It blocks new device reads and cancels active ones; older samples remain dated evidence. Council discussion remains available.
 
-A tactical door warns for1s. At the exact warning boundary it closes only if its threshold is clear of living non-transit keepers and actual unreported bodies, including body-radius contact. Otherwise it jams open for the remainder of the attempt. It does not retry closure when the occupant leaves, move anyone, disclose an occupant identity or make hidden occupancy affect pre-closure permission hints. Reported body coordinates and ejected keepers are historical, not physical obstructions.
+A tactical door warns for1s. At the exact warning boundary it closes only if its threshold is clear of living non-transit keepers, authorized physical task ghosts and actual unreported bodies, including body-radius contact. Otherwise it jams open for the remainder of the attempt. It does not retry closure when the occupant leaves, move anyone, disclose an occupant identity or make hidden occupancy affect pre-closure permission hints. Reported body coordinates and non-ghost dead-player coordinates are historical, not physical obstructions; walking task ghosts have their own physical position.
 
 The normal tactical closure lasts25s after the warning; the slot expires26s after activation. This permits two attempts to overlap under the shared20s cooldown. Pending, closed and jammed slots all count toward the limit of two. Any living keeper can reopen/reset from an accessible exterior face panel, or wait for expiry. Earlier schema3 doors retain their12s behavior. Restored effects keep their original timestamps; repairs/cancellation do not refund faction cooldowns.
 
