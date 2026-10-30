@@ -82,8 +82,10 @@ export function createAiController({ config = {} } = {}) {
       if (signal?.aborted || !record(context) || !view?.self || (!view.self.alive&&!(view.self.ghost===true&&view.self.role==='crew')) || typeof view.matchId !== 'string' || !Number.isFinite(view.serverNow) || !['roam', 'discussion', 'voting'].includes(view.phase)) return null;
       const publicEntry=(view.players??[]).slice(0,24).find(p=>p.id===player?.id);
       const validName=typeof publicEntry?.name==='string'&&publicEntry.name.trim().length>0&&publicEntry.name.length<=80&&!/[\u0000-\u001f\u007f]/u.test(publicEntry.name);
-      // Public roster wins over canonical defaults; never consume a supplied hidden persona.
-      const actor=publicEntry&&/^[A-Za-z][A-Za-z0-9_-]{0,63}$/.test(publicEntry.id)&&validName?{id:publicEntry.id,name:publicEntry.name,color:publicEntry.color,persona:'A keeper aboard the beacon.'}:null;
+      // Only an exact public identity may use the safe canonical traits.
+      // Never consume supplied player/roster persona fields or private state.
+      const canonical=CHARACTERS.find(p=>p.id===publicEntry?.id&&p.name===publicEntry?.name);
+      const actor=publicEntry&&/^[A-Za-z][A-Za-z0-9_-]{0,63}$/.test(publicEntry.id)&&validName?{id:publicEntry.id,name:publicEntry.name,color:publicEntry.color,persona:canonical?.persona??'A keeper aboard the beacon.'}:null;
       if (!actor || actor.id !== view.self.id) return null;
       const state = getState(context, view.matchId);
       const actorKey = `actor:${actor.id}`;

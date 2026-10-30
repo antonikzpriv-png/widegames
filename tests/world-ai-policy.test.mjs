@@ -13,7 +13,7 @@ const controller = extra => createAiController({ config: { provider: 'demo', dec
 const live = extra => controller({ provider: 'anthropic', apiKey: 'offline-fixture-secret', model: 'claude-haiku-4-5-20251001', maxTokens: 250000, maxCostUsd: .5, ...extra });
 function fixture() {
   return { matchId: 'world-safe-fixture', worldVersion: 1, version: 1, phase: 'roam', serverNow: 1000,
-    rooms: structuredClone(ROOM_LAYOUT), players: CHARACTERS.map(p => ({ id: p.id, alive: true, roomId: p.id === 'p1' ? 'bridge' : null, position: p.id === 'p1' ? worldSpawn('p1') : null })),
+    rooms: structuredClone(ROOM_LAYOUT), players: CHARACTERS.map(p => ({ id: p.id, name: p.name, color: p.color, alive: true, roomId: p.id === 'p1' ? 'bridge' : null, position: p.id === 'p1' ? worldSpawn('p1') : null })),
     self: { id: 'p1', role: 'crew', alive: true, roomId: 'bridge', position: worldSpawn('p1'), inputSeq: 0, moving: false, destination: null,
       tasks: [{ id: 'task-bridge', roomId: 'bridge', completed: false }], cooldowns: {}, meetingsRemaining: 1 },
     tasks: { total: 15, completed: 0 }, sabotage: null, events: [], meeting: null,
