@@ -1,0 +1,75 @@
+# Ghost spectator and all-AI observatory
+
+Choose **WATCH THE AI**, then **Begin the watch**. Press **Free ghost** or start
+using **WASD/arrows** or the touch joystick to drift around the entire map,
+including through walls and furniture. Moving manually exits following/overview.
+**Free ghost**, **Overview**, and the keeper selector switch camera modes.
+The ghost is a camera marker, not an engine player: it cannot act, vote, interfere
+with tasks, or appear in another visitor's game.
+
+Click a keeper, task station, room floor, bell, body, visible ability effect or
+solid furniture to open the inspector. The **Inspect world object** selector
+provides a keyboard alternative. Selecting an agent and **Follow this keeper**
+centres the camera on its interpolated observed position.
+
+In all-AI rooms, authenticated seatless observers can inspect roles, task steps,
+cooldowns, abilities, destination, recent accepted actions and public claims.
+Recorded activity describes state, not private thoughts. A selected strategic
+plan, when available, is identified as controller state with its recording time;
+it is not a transcript of private reasoning. Demo controllers may have no model
+plan. Missing data is identified as unavailable rather than guessed.
+
+Human-player rooms retain redacted public spectator views. Player and AI views
+never receive another agent's private role, tasks or destination through this
+feature. An all-AI room's completion or inspection entitlement grants no access
+to another room. Full replay remains unavailable in unfinished and paused matches.
+
+## Data boundary
+
+`createRooms.view` adds `game.inspection` only when both the room and match have
+`mode: spectator`, the authenticated identity has no player seat, and the match
+is a world match. The engine's existing player/AI projection stays separate.
+Inspection includes its match ID; the browser rejects a mismatched generation.
+The server uses explicit field allowlists, with bounded action/task lists.
+Raw AI contexts, unrestricted memories, prompts, provider errors, credentials and
+the private fallen chat are excluded. Recorded public claims remain claims,
+not truth verdicts. Human-room observers cannot use the inspector to infer roles.
+
+Local input has no action/network callback. Typing, dialogs, modifier keys and IME
+do not move the ghost. Blur, page hiding, leaving, room/match changes and disposal
+clear held inputs and stop rendering as appropriate. Inspection is read-only.
+
+## Movement and rendering
+
+Actors use a bounded received-position timeline one server tick behind receipt,
+rather than restarting a long easing curve for every update. Following uses the
+same interpolated point and damping based on elapsed time. Newly hidden actors
+are removed immediately. Geometry checks prevent missing samples being drawn
+as shortcuts through walls; no unseen motion is extrapolated.
+
+The renderer shares a bounded static-map image across the main view, minimap and
+replay. Moving actors, effects and activity remain dynamic. Local camera movement
+does not trigger server work. Server ticks skip full replay cloning when there
+is no pending motion or due deadline. Transport avoids cloning a whole old state
+immediately before replacing it, and builds an AI view only for the scheduled
+actor. Durable saves, budgets, collision authority and replay retention remain
+in effect. Engine state copying preserves independent nested histories and
+unknown event fields; it never shares mutable replay records with callers.
+
+## Verification
+
+Use demo fixtures; no paid provider calls are needed:
+
+```sh
+npm ci --ignore-scripts --no-audit --no-fund
+npm run check
+npm test
+CHROME_PATH=/path/to/chrome npm run test:spectator:browser
+npm run perf:spectator
+```
+
+`scripts/spectator-render-benchmark.mjs` compares the renderer with audited main
+`43c0799` in the same Chromium process. `SPECTATOR_BASELINE_ROOT` optionally points
+the engine benchmark at a preserved baseline checkout. Timing receipts describe
+the measured host and fixtures, not a frame-rate guarantee on every device.
+Earlier replay and browser evidence remains preserved.

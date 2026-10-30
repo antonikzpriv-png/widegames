@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import {readFileSync} from 'node:fs';
 import * as model from '../public/world/model.mjs';
+import * as world from '../shared/world.mjs';
+import {observerAgents} from '../public/world/spectator.mjs';
 import {CHARACTERS} from '../shared/contracts.mjs';
 
 // Actual experience render with a small DOM and inert drawing/input/phase panes.
@@ -13,14 +15,15 @@ function fixture(){
   constructor(tag){this.tagName=tag;this.children=[];this.attrs={};this.dataset={};this.style={};this.text='';this.hidden=false;Object.assign(this,events());}
   setAttribute(key,value){this.attrs[key]=String(value);}getAttribute(key){return this.attrs[key];}
   append(...nodes){for(const node of nodes){node.remove();node.parent=this;this.children.push(node);}}
+  replaceChildren(...nodes){for(const child of this.children)child.parent=null;this.children=[];this.text='';this.append(...nodes);}
   remove(){if(this.parent)this.parent.children=this.parent.children.filter(node=>node!==this);this.parent=null;}
   set textContent(value){this.text=String(value);this.children=[];}get textContent(){return this.text+this.children.map(node=>node.textContent).join('');}
   focus(){}getContext(){return {clearRect(){}};}
  }
  const document={...events(),hidden:false,createElement:tag=>new Node(tag)};
  const pane=()=>({node:new Node('section'),update(){},focus(){},dispose(){}});
- const world={WORLD:{interactionRadius:92,killRadius:70,reportRadius:130},WORLD_STATIONS:{bridge:{x:100,y:100}},WORLD_BELL:{x:200,y:100}};
  const context=vm.createContext({...model,world,CHARACTERS,document,window:events(),Date,performance:{now:()=>100},matchMedia:()=>({matches:true}),requestAnimationFrame:()=>1,cancelAnimationFrame(){},
+  observerAgents,createSpectatorInput:()=>({stop(){},step(){},dispose(){}}),createSpectatorInspector:()=>({node:new Node('aside'),update(){},reset(){}}),
   drawKeeper(){},createWorldScene:()=>({update(){},draw(){},dispose(){}}),createWorldInput:()=>({stop(){},sync(){},dispose(){}}),createCouncil:pane,createResults:pane,restoreTrigger(){},trapDialog(){}});
  const source=readFileSync(new URL('../public/world/experience.mjs',import.meta.url),'utf8').replace(/^\uFEFF/,'').replace(/^import .*$/gm,'').replace(/^export /gm,'');
  const create=vm.runInContext(`(()=>{${source};return createWorldExperience;})()`,context),host=new Node('main');
@@ -34,6 +37,7 @@ function room({alive=true,spectator=false,ended=false}={}){
 }
 function labels(f){return {help:f.find('lw-help').textContent,canvas:f.find('lw-world-canvas').getAttribute('aria-label'),location:f.find('lw-location').textContent};}
 function assertObserving(f){const text=labels(f);assert.doesNotMatch(text.help,/walk|WASD|arrows|E use|R report|Q eliminate/i);assert.doesNotMatch(text.canvas,/keyboard|click the deck|to walk/i);assert.match(text.help,/observ|map/i);assert.match(text.canvas,/observ/i);assert.equal(f.find('lw-map-toggle').hidden,false,'map remains available to observers');}
+function assertSpectatorGhost(f){const text=labels(f);assert.match(text.help,/WASD.*arrows.*drift.*click to inspect/i);assert.match(text.canvas,/WASD.*arrows.*spectator ghost.*inspect/i);assert.doesNotMatch(text.help,/to walk|E use|R report|Q eliminate/i);assert.doesNotMatch(text.canvas,/click the deck to walk/i);assert.equal(f.find('lw-map-toggle').hidden,false,'map remains available while drifting');}
 
 test('living keeper in roam retains walking and contextual keyboard prompts',()=>{
  const f=fixture();try{f.update(room());const text=labels(f);assert.match(text.help,/WASD.*arrows.*walk/);assert.match(text.help,/E use.*R report.*Q eliminate.*M map/);assert.match(text.canvas,/keyboard or click the deck to walk/);assert.equal(text.location,'Bridge');}finally{f.experience.dispose();}
@@ -41,8 +45,14 @@ test('living keeper in roam retains walking and contextual keyboard prompts',()=
 test('fallen keeper receives observation guidance without unavailable walking prompts',()=>{
  const f=fixture();try{f.update(room({alive:false}));assertObserving(f);assert.match(labels(f).location,/Fallen.*Bridge/);}finally{f.experience.dispose();}
 });
-test('active spectator sees observation guidance and truthful pre-end role privacy',()=>{
- const f=fixture();try{f.update(room({spectator:true}));assertObserving(f);assert.match(labels(f).location,/Public observation.*roles hidden/);assert.doesNotMatch(labels(f).location,/roles revealed/);}finally{f.experience.dispose();}
+test('active public spectator sees ghost camera guidance and truthful pre-end role privacy',()=>{
+ const f=fixture();try{f.update(room({spectator:true}));assertSpectatorGhost(f);assert.match(labels(f).location,/Public observation.*roles hidden/);assert.doesNotMatch(labels(f).location,/roles revealed/);}finally{f.experience.dispose();}
+});
+test('authorized all-AI observatory labels revealed observer roles and ghost camera controls',()=>{
+ const f=fixture();try{const watch=room({spectator:true});watch.game.inspection={mode:'all-ai-observer',matchId:watch.game.matchId,agents:CHARACTERS.map(player=>({id:player.id,role:player.id==='p2'?'saboteur':'crew'}))};f.update(watch);assertSpectatorGhost(f);assert.match(labels(f).location,/All-AI observatory.*roles revealed/);assert.doesNotMatch(labels(f).location,/roles hidden/);}finally{f.experience.dispose();}
+});
+test('stale all-AI inspection cannot change active public role privacy labels',()=>{
+ const f=fixture();try{const watch=room({spectator:true});watch.game.inspection={mode:'all-ai-observer',matchId:'other-match',agents:[{id:'p2',role:'saboteur'}]};f.update(watch);assertSpectatorGhost(f);assert.match(labels(f).location,/Public observation.*roles hidden/);assert.doesNotMatch(labels(f).location,/All-AI observatory|roles revealed/);}finally{f.experience.dispose();}
 });
 test('ended spectator sees roles revealed and no walking instructions',()=>{
  const f=fixture();try{f.update(room({spectator:true,ended:true}));assert.match(labels(f).location,/Public observation.*roles revealed/);assertObserving(f);assert.doesNotMatch(labels(f).location,/roles hidden/);}finally{f.experience.dispose();}

@@ -26,6 +26,9 @@ jobs:
       - run: node scripts/spatial-replay-browser-check.mjs
         env:
           CHROME_PATH: /usr/bin/google-chrome
+      - run: npm run test:spectator:browser
+        env:
+          CHROME_PATH: /usr/bin/google-chrome
       - run: node --test tests/world-ui-browser.test.mjs
         env:
           CHROME_PATH: /usr/bin/google-chrome
@@ -46,3 +49,5 @@ jobs:
             _artifacts/ghost-abilities-browser-*/*.png
             _artifacts/spatial-browser-*/report.json
             _artifacts/spatial-browser-*/*.png
+            _artifacts/spectator-browser-*/report.json
+            _artifacts/spectator-browser-*/*.png
