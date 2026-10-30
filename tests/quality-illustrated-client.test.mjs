@@ -67,3 +67,17 @@ test('Escape closes only an open current map, restores its trigger and removes i
   api.dispose();assert.equal(f.win.handlers.get('keydown').size,0);f.win.emit('keydown',{key:'Escape'});assert.equal(actions.length,0);
  }finally{api.dispose();f.dispose();}
 });
+
+
+test('a real council transition owns Escape and focus while an older map remains behind it',()=>{
+ const f=domFixture(),g=getWorld('beacon',2),actions=[];let state=engine.createMatch({id:'map-council-escape',world:true,mapRevision:2,seed:3,now:1000,config:{meetingCooldownMs:1}});
+ const api=createWorldExperience(f.host,{action:(...a)=>actions.push(a),input:async()=>{},start:async()=>{},leave(){},loadReplay:async()=>({})});
+ const room=()=>({roomId:state.id,mode:'human',isHost:true,game:engine.getPlayerView(state,'p1',state.updatedAt),ai:{mode:'demo'}});
+ try{
+  api.update(room(),{connected:true,now:1000});f.host.querySelector('.lw-role-scene').querySelector('button').emit('click');f.host.querySelector('.lw-map-toggle').emit('click');assert.equal(f.host.querySelector('.lw-map-pane').hidden,false);
+  const move=engine.applyAction(state,'p1',{id:'map-council-walk',type:'navigate',x:g.WORLD_BELL.x,y:g.WORLD_BELL.y},state.updatedAt);assert(move.accepted,JSON.stringify(move.error));state=move.state;
+  let length=0,last=state.players[0].position;for(const q of state.players[0].motion.path){length+=g.distance(last,q);last=q;}state=engine.tick(state,state.updatedAt+Math.ceil(length/g.WORLD.speed*1000)+1).state;
+  const meeting=engine.applyAction(state,'p1',{id:'map-council-bell',type:'meeting'},state.updatedAt+1);assert(meeting.accepted,JSON.stringify(meeting.error));state=meeting.state;assert.equal(state.phase,'discussion');api.update(room(),{connected:true,now:state.updatedAt});
+  const chat=f.host.querySelector('.lw-chat-form').querySelector('textarea');chat.focus();f.win.emit('keydown',{key:'Escape',target:chat});assert.equal(f.document.activeElement,chat);assert.equal(f.host.querySelector('.lw-map-pane').hidden,false);assert.equal(actions.length,0);
+ }finally{api.dispose();f.dispose();}
+});
