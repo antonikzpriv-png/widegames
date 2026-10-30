@@ -36,3 +36,12 @@ test('real staggered offline controller seed3 finishes default Beacon2 and progr
  const receipt={seed:3,fixture:'Real engine and AI controller; serialized earliest-due simulation, not native HTTP scheduler qualification',cadenceMs:500,counts,denials,auxTaskInputs,completed:state.players.flatMap(p=>p.tasks).filter(t=>t.completed).length,phase:state.phase,outcome:state.outcome,trace,cpuElapsedMs:performance.now()-started};t.diagnostic(JSON.stringify(receipt));
  assert.equal(state.phase,'ended',JSON.stringify(receipt));assert(counts.taskInteract>0);assert(auxTaskInputs>0);assert(restarted);assert.equal(ai.describe(context).calls,0);assert.equal(external.mock.callCount(),0);assert.equal(ai.describe(context).costUsd,0);
 });
+
+for(const id of ['beacon','stormbreak-annex'])test('critical repair remains urgent ahead of an enabled owned station: '+id,async t=>{
+ const fetch=t.mock.method(globalThis,'fetch',()=>{throw Error('Offline only');});
+ let state=engine.createMatch({id:'critical-job-'+id,tactical:true,stationTasks:true,map:{id,version:id==='beacon'?2:1},mode:'spectator',now:1000,seed:3});
+ const map=getMap(state.map),site=map.fixtures.repairs.power.find(site=>state.players.some(p=>p.role==='crew'&&p.tasks.some(task=>task.roomId===site.roomId)));assert(site);
+ const crew=state.players.find(p=>p.role==='crew'&&p.tasks.some(task=>task.roomId===site.roomId)),sab=state.players.find(p=>p.role==='saboteur');let now=1000;({state,now}=arrive(state,crew.id,site.position,now));now=Math.max(now,sab.cooldowns.sabotageAt);
+ state=apply(state,sab.id,{type:'systemSabotage',kind:'power',targetId:'beacon'},now);const view=engine.getPlayerView(state,crew.id,now);assert(view.sabotage.active);assert(view.interactions.some(h=>h.enabled&&h.type==='systemRepair'&&h.fields.systemId==='power'));
+ const ai=createAiController({config:{provider:'demo',decisionIntervalMs:1800,maxCalls:0}}),context={},action=await ai.decide({view,player:view.players.find(p=>p.id===crew.id),context});assert.equal(action.type,'systemRepair');assert.equal(action.systemId,'power');assert(engine.applyAction(state,crew.id,action,now).accepted);assert.equal(fetch.mock.callCount(),0);
+});
