@@ -98,3 +98,53 @@ Reviewed exact **70972b9f6bcd8e173b4b8dce3f013a54bfec8f02**, parent4cd9aa77fa9f3
 - Disposed change handlers return immediately; stale button activation also checks disposed before dispatch. Existing cleanup removes input/visibility/frame work and detaches the shell. The patch does not introduce deferred Ward callbacks, shared mutable selection or hidden-state inputs, and changes no server/shared/private-state path.
 
 Inspected the added8 tests: actual engine-generated descriptors and genuine accepted Ward effects cover selected-other/default-self, permission removal/return, no-descriptor fail-closed behavior, reordering/node/focus, pending/disconnect/reconnect, legacy schema2 and disposal. The adversarial permission projections are correctly labeled; the minimal DOM is not native select/browser approval. Also traced actual beacon-model actionDescriptors/hasActionDescriptor/viewKey, model beaconContexts, map-model equipmentOwner and experience request/update/dispose. Commands: git show --stat70972b9, git show70972b9 -- public/tests, and git show70972b9:<these actual paths>. No production refresh should run until the manager supplies the final immutable UI/CSS source pin.
+
+## Final frozen production refresh:25ce070
+
+Qualified exact **25ce0700fb16320fdd40f4192ef94b32fe3fb824**, including Ward selection, council CSS, fallen-chat collapseQ-F1 and physical ghost-door fixes. This section supersedes f9 as the current package receipt; every earlier archive/report/failed preparation artifact remains preserved. Own branch/worktree unchanged: codex/ship-quality-production-final-20261030 in D:/Widegames-work/ship-quality-production-final-20261030. Only the standalone harness default pin and this receipt change; **all30 checks/assertions/bounds are unchanged** from the successful f9 harness.
+
+**30/30 pass on the first/only qualification run;22,243ms.** Fresh clean git archive verifies **429 raw committed blobs**,91 runtime files and57 served public/shared assets. Every asset was fetched byte-exact. All218 literal local module edges and5 additional browser references resolve within shipped groups. Ordinary offline production npm ci added only ws8.22.0; Puppeteer/Puppeteer-core are absent and unresolvable. No real counterexample or packaging blocker was found.
+
+Actual unmodified main instances20888 and12588 both exited code0/signal null through the real single SIGTERM handler, releasing service/recovery locks; the second acquired a fresh ownership token on the same synthetic DATA_DIR. Windows IPC emits process SIGTERM, so this is main cleanup/restart qualification rather than POSIX signal-delivery qualification. Actual totals: **0 provider fetch attempts,0 outbound attempts,0 forced stops,0 socket privacy errors**. Demo and deployment/provider budgets stayed zero; all child outbound paths were blocked before importing main.
+
+Normal authenticated HTTP starts on both maps retained room4/match5/stations1, default Beacon2 and features transfer/abilitiesfalse. Owner/spectator HTTP and WS, legal input/stop, exact role/position/knowledge/note scopes, forbidden private paths/origins/identities, settings/action retries and restart all pass. The actual Beacon2 crew owner had four distinct job kinds/rooms; one glyph input step followed an879.3122284377272-unit normal-speed route. Incorrect/remote/direct-completion and duplicate/restarted station paths retained their original strict assertions. This is not a performance claim or complete-match/browser test.
+
+Valid paused legacy1/2/3/4/5 files with wait receipts remain byte-identical across both mains. Ended optional-preset history1/schema2 and history2/schema5 fixtures still use genuine short-deadline engine transitions. Their authenticated, match-bound HTTP metadata/events/snapshots match engine exports before and after restart, with exact map identities and chronology. New normal Beacon2 and Annex1 saved histories are both version2 with their own maps. Six future room/match/history/features/challenge/map versions refuse through real store setup guards, retain original bytes without quarantine and release locks. The labeled uncertain daily0.01 reservation remains byte-exact, with no provider send or refund. Fixture provenance/limits in the f9 section continue to apply unchanged.
+
+Exact source comparison f9 ->25ce changes only four runtime/asset paths: public/world/beacon.css; public/world/experience.mjs; server/ai/anthropic.mjs; server/engine/systems/tactical-doors.mjs. The adapter difference conditionally omits beacon-specific observation wording from historical non-beacon prompts; no provider request was exercised. shared, package.json, package-lock.json, Dockerfile and .dockerignore are unchanged. Movement/station/map geometry and cache are unchanged. Script/test/doc differences are outside the served runtime graph. Source comparison details and computed graph fingerprint are saved with the receipt. A later handoff HEAD is compatible only if its runtime/served graph remains exact; this receipt does not automatically approve future runtime changes.
+
+Commands (D: worker root, TEMP/TMP=D:/Widegames-work/temp, npm cache D:/Widegames-work/npm-cache):
+
+```powershell
+node _artifacts/archive-production-25ce070.mjs
+npm ci --omit=dev --offline --no-audit --no-fund --cache D:/Widegames-work/npm-cache --prefix _artifacts/quality-production-25ce070-raw
+node --check tests/quality-production-review.mjs
+$env:QUALITY_PRODUCTION_REVIEW_PIN='25ce0700fb16320fdd40f4192ef94b32fe3fb824'
+$env:QUALITY_PRODUCTION_REVIEW_ROOT='D:/Widegames-work/ship-quality-production-final-20261030/_artifacts/quality-production-25ce070-raw'
+node tests/quality-production-review.mjs
+node _artifacts/receipt-production-25ce070-source.mjs
+git diff --check
+```
+
+The fresh archive again uses command-local core.autocrlf=false/core.eol=lf. Extracted bytes match git cat-file and canonical blob OIDs; all source SHA256 values are checked before and after execution. Normal npm ci does not use --ignore-scripts and cannot fall back online. The harness default is now exact25ce070; prior f9 executed harness bytes remain separately preserved. No source overlay or runtime mutation.
+
+Copyable paths, relative to this D: worktree:
+
+- Archive: _artifacts/quality-production-25ce070-raw/
+- Raw tar: _artifacts/quality-production-25ce070-raw.tar
+- Manifest: _artifacts/quality-production-25ce070-raw-manifest.json
+- Final report: _artifacts/quality-production-25ce070-run-D4pzNg/report.json
+- Executed harness: _artifacts/quality-production-25ce070-run-D4pzNg/harness-executed.mjs
+- Source/graph/hash receipt: _artifacts/quality-production-25ce070-source-audit.json
+- Logs: _artifacts/quality-production-25ce070-raw-archive.txt, _artifacts/quality-production-25ce070-raw-install.txt, _artifacts/quality-production-25ce070-first.txt
+- Synthetic files: _artifacts/quality-production-25ce070-run-D4pzNg/private-data/
+
+| Artifact | SHA256 |
+| --- | --- |
+| Raw tar | 5953d64d1ae732ff19460d993f15425154af3845db1ddb1c591453d4950934b1 |
+| Manifest | d82f81279d41a02e8cb623126c21a38ec1d931f65322eb9e26fbcfcafce2deb3 |
+| Report | f060f10c8a11f2d2f576f0ab55bc7c41f26b8ba9158f781f6edbd8ad25dc36b2 |
+| Executed harness | 029c8aa7c7601002f28ce9d2fee0df5d472774960fab488bc73ef2ae23efa969 |
+| Runtime/served graph (ordered file,SHA256 pairs) | d0b6e6aadba2d60dabd85f01c86f985f921aec9ac32f4ca6aba7aa0697b959e9 |
+
+No Chrome, full suite, profiling, live/paid model, real user data, Docker execution, other-owner edit, main/push/deployment or updater/installer claim. Manager/Reviewer retain independent frozen-source native/browser qualification. This bounded exact-source production refresh is complete.
