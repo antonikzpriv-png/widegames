@@ -153,7 +153,7 @@ export function createWorldExperience(host,callbacks,{mapResolver=getMap,motionF
  function pending(){return options.pending||localPending>0;}
  function setFeedback(message){if(disposed)return;localFeedback=String(message||'');setText(feedback,localFeedback);}
  async function request(fn){if(disposed||mapError||pending()||lobbyMap.pending)return;const generation=actionGeneration,key=actionKey(room);localPending++;render();try{return await fn();}catch(error){if(!disposed&&!document.hidden&&generation===actionGeneration&&key===actionKey(room)&&error?.name!=='AbortError')setFeedback(error?.message||'The request failed. Try again.');}finally{if(!disposed){localPending--;render();}}}
- function toggleMap(){setGhostChatOpen(false);mapOpen=!mapOpen;mapPane.hidden=!mapOpen;mapToggle.setAttribute('aria-expanded',String(mapOpen));if(mapOpen){mini.update(room,performance.now());mini.draw(performance.now(),{overview:true});}}
+ function toggleMap(){setGhostChatOpen(false);mapOpen=!mapOpen;mapPane.hidden=!mapOpen;mapToggle.setAttribute('aria-expanded',String(mapOpen));if(mapOpen){mini.update(room,performance.now());mini.draw(performance.now(),{overview:true});}else mini.suspend?.();}
  function enabledWardHints(){const game=room?.game;return game?.phase==='roam'&&game.self?.alive&&!game.systems?.selfTransit&&!game.self.transit?actionDescriptors(game).filter(h=>h.type==='protect'&&h.enabled===true):[];}
  function actionContext(key){
   const context=contexts(room?.game,world)[key];

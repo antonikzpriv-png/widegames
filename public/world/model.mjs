@@ -9,7 +9,7 @@ export const distance = (a,b) => point(a)&&point(b)?Math.hypot(a.x-b.x,a.y-b.y):
 export const clamp = (n,min,max) => Math.min(max,Math.max(min,n));
 export function remaining(deadline,now){return Math.max(0,Math.ceil(((deadline||now)-now)/1000));}
 export function clock(deadline,now){const n=remaining(deadline,now);return `${Math.floor(n/60)}:${String(n%60).padStart(2,'0')}`;}
-export function visiblePlayers(game){game=observerGame(game);return (game?.players||[]).filter(p=>((game?.beaconVersion===1?knowledge(game,p)==='alive':p.alive)||(game?.self?.ghost===true&&p.id===game.self.id))&&point(p.position));}
+export function visiblePlayers(game){const inspected=observerAgents(game).length>0;game=observerGame(game);return (game?.players||[]).filter(p=>((game?.beaconVersion===1?knowledge(game,p)==='alive':p.alive)||(game?.self?.ghost===true&&p.id===game.self.id)||(inspected&&p.ghost===true))&&point(p.position));}
 export function visibleBodies(game){return (game?.events||[]).filter(e=>e.type==='body'&&e.bodyId&&point(e.position));}
 export function roleLabel(game){if(game?.self?.ghost)return 'Ghost · '+(game.self.role==='crew'?'Crew':'Saboteur');return !game?.self?'Spectator':game.self.role==='saboteur'?'Saboteur':'Crew';}
 export function aiLabel(ai){return ai?.mode==='live'&&ai.strategy==='strategic'?'STRATEGIC · model plans / local execution':ai?.mode==='live'?'HYBRID · live council / local navigation':ai?.mode==='demo'?'DEMO · local keepers':'AI mode pending';}

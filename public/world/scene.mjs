@@ -66,8 +66,21 @@ function paintSceneEnvironment(ctx,map,bounds){
  for(const prop of map.geometry.WORLD_OBSTACLES)if(intersects(prop,bounds,16))mapObstacle(ctx,prop,0,true);
  for(const item of map.geometry.WORLD_DECOR||[])if(intersects({x:item.x-100,y:item.y-32,width:(item.width||0)+200,height:(item.height||0)+64},bounds))mapDecor(ctx,item,0,true);
 }
+// At most two shared viewport-sized static overview textures (8MiB total).
+// They contain only public map art, never actors, roles, claims or server state.
+const overviewLayers=new Set(),overviewLimit=2;
+function acquireOverview(canvas,map,bounds,width,height){
+ for(const entry of overviewLayers)if(entry.map===map&&entry.width===width&&entry.height===height){entry.users++;return entry;}
+ if(overviewLayers.size>=overviewLimit)return null;
+ const w=Math.min(1024,Math.ceil(width)),h=Math.min(1024,Math.ceil(height));
+ const image=typeof OffscreenCanvas!=='undefined'?new OffscreenCanvas(w,h):canvas.ownerDocument?.createElement?.('canvas');
+ const ctx=image?.getContext?.('2d');if(!ctx)return null;image.width=w;image.height=h;
+ ctx.setTransform(w/bounds.width,0,0,h/bounds.height,-bounds.x*w/bounds.width,-bounds.y*h/bounds.height);paintSceneEnvironment(ctx,map,bounds);
+ const entry={map,width,height,image,users:1,bytes:w*h*4};overviewLayers.add(entry);return entry;
+}
+function releaseOverview(entry){if(entry&&--entry.users===0){overviewLayers.delete(entry);entry.image.width=entry.image.height=0;}}
 export function createWorldScene(canvas,{reduced=false,playback=false,mapResolver=getMap,motionFactory}={}){
- const ctx=canvas.getContext('2d'),samples=motionFactory?motionFactory({mapResolver}):new ActorSamples({mapResolver,world:true});let map=mapResolver(),world=map.geometry;let room=null,lastKey=null,camera={x:800,y:400},view={width:1,height:1,zoom:1},stopped=false,lastOwner=null,lastAt=-Infinity,lastVersion=-1,paintedActors=[];
+ const ctx=canvas.getContext('2d'),samples=motionFactory?motionFactory({mapResolver}):new ActorSamples({mapResolver,world:true});let map=mapResolver(),world=map.geometry;let room=null,lastKey=null,camera={x:800,y:400},view={width:1,height:1,zoom:1},stopped=false,lastOwner=null,lastAt=-Infinity,lastVersion=-1,paintedActors=[],overviewLayer=null;
  const cameraTrack=new ObservedCamera();
  const cache=createStaticLayer({paint:paintSceneEnvironment,makeCanvas:(w,h)=>{if(typeof OffscreenCanvas!=='undefined')return new OffscreenCanvas(w,h);return canvas.ownerDocument?.createElement?.('canvas')||globalThis.document?.createElement?.('canvas');}});
  function update(next,at){
@@ -98,7 +111,11 @@ export function createWorldScene(canvas,{reduced=false,playback=false,mapResolve
   if(overview)camera={x:world.WORLD.width/2,y:world.WORLD.height/2};view={width,height,zoom,camera:{...camera}};if(canvas.dataset){canvas.dataset.cameraX=String(camera.x);canvas.dataset.cameraY=String(camera.y);canvas.dataset.cameraZoom=String(zoom);canvas.dataset.cameraMode=overview?'overview':free?'free':'follow';}
   ctx.save();ctx.translate(width/2,height/2);ctx.scale(zoom,zoom);ctx.translate(-camera.x,-camera.y);
   const bounds=viewportBounds(camera,width,height,zoom,0);
-  if(overview)paintSceneEnvironment(ctx,map,bounds);else cache.draw(ctx,map,bounds);
+  if(overview){
+   if(overviewLayer&&(overviewLayer.map!==map||overviewLayer.width!==width||overviewLayer.height!==height)){releaseOverview(overviewLayer);overviewLayer=null;}
+   overviewLayer??=acquireOverview(canvas,map,bounds,width,height);
+   if(overviewLayer)ctx.drawImage(overviewLayer.image,bounds.x,bounds.y,bounds.width,bounds.height);else paintSceneEnvironment(ctx,map,bounds);
+  }else{releaseOverview(overviewLayer);overviewLayer=null;cache.draw(ctx,map,bounds);}
   drawRoomLabels(ctx,map,bounds,{overview,zoom});
   for(const r of world.WORLD_ROOMS){const station=world.WORLD_STATIONS[r.id];if(!station||!intersects({x:station.x-40,y:station.y-40,width:80,height:80},bounds))continue;
    const task=game?.self?.tasks?.find(t=>!t.completed&&t.roomId===r.id)||(playback&&game?.replayTaskRooms?.includes(r.id)?{kind:'recorded'}:null),critical=game?.beaconVersion!==1&&game?.sabotage?.active&&game.sabotage.roomId===r.id;
@@ -145,5 +162,5 @@ export function createWorldScene(canvas,{reduced=false,playback=false,mapResolve
   for(const [index,item]of (world.WORLD_DECOR||[]).entries()){if(!Number.isFinite(item.x)||!Number.isFinite(item.y))continue;const width=item.width||20,height=item.height||20;if(target.x>=item.x-10&&target.x<=item.x+width+10&&target.y>=item.y-10&&target.y<=item.y+height+10)return {type:'decor',id:item.id||`decor-${index}`,roomId:world.worldRoomAt(target),kind:item.kind};}
   const roomId=world.worldRoomAt(target);return roomId?{type:'room',id:roomId,roomId}:null;
  }
- return {update,draw,pick,screenToWorld,worldToScreen,getCamera(){return {...(view.camera||cameraTrack.at(lastAt,true)||world.WORLD_VIEWPOINT)};},setIntent(input,at){return samples.setIntent?.(input,at)||false;},suspend(){paintedActors=[];samples.clear();cameraTrack.clear();lastKey=null;},toWorld(clientX,clientY){if(playback)return null;const r=canvas.getBoundingClientRect();return {x:(clientX-r.left-view.width/2)/view.zoom+view.camera.x,y:(clientY-r.top-view.height/2)/view.zoom+view.camera.y};},stats(){return cache.stats();},dispose(){stopped=true;paintedActors=[];samples.clear();cameraTrack.clear();cache.dispose();}};
+ return {update,draw,pick,screenToWorld,worldToScreen,getCamera(){return {...(view.camera||cameraTrack.at(lastAt,true)||world.WORLD_VIEWPOINT)};},setIntent(input,at){return samples.setIntent?.(input,at)||false;},suspend(){releaseOverview(overviewLayer);overviewLayer=null;paintedActors=[];samples.clear();cameraTrack.clear();lastKey=null;},toWorld(clientX,clientY){if(playback)return null;const r=canvas.getBoundingClientRect();return {x:(clientX-r.left-view.width/2)/view.zoom+view.camera.x,y:(clientY-r.top-view.height/2)/view.zoom+view.camera.y};},stats(){return {...cache.stats(),overviewBytes:overviewLayer?.bytes||0,overviewSharedBytes:[...overviewLayers].reduce((n,e)=>n+e.bytes,0),maxOverviewBytes:8*1024*1024};},dispose(){stopped=true;releaseOverview(overviewLayer);overviewLayer=null;paintedActors=[];samples.clear();cameraTrack.clear();cache.dispose();}};
 }
