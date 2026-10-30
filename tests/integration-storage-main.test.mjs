@@ -12,9 +12,10 @@ import {LOBBY_DEFAULTS,rosterFor} from '../shared/lobby.mjs';
 import * as engine from '../server/engine/index.mjs';
 
 const quietAi={describe:()=>({mode:'demo'}),decide:async()=>null};
-async function fixture(t){
+async function fixture(t,configure=()=>{}){
  const dir=await mkdtemp(path.join(tmpdir(),'lw-integrated-storage-'));
  const config={...loadConfig({}),dataDir:dir,publicOrigin:'http://localhost:3000',now:()=>100000,tickMs:1000000};
+ configure(config);
  let app;
  async function open(){app=await createGameServer(config,{aiController:quietAi});await new Promise(r=>app.server.listen(0,'127.0.0.1',r));return app;}
  await open();t.after(async()=>{await app.close();await rm(dir,{recursive:true,force:true});});
@@ -98,4 +99,21 @@ test('named creation retains the actual HTTP profile and the historical configur
  const directory=await mkdtemp(path.join(tmpdir(),'lw-named-schema2-')),store=await createRoomStore(directory);
  const service=createRooms({store,engine,ai:quietAi,now:()=>100000,configurable:true,lobbyConfig:true});
  try{const legacy=await service.create('human','Legacy named keeper');assert.equal(legacy.room.data.schema,2);assert.equal(legacy.room.data.lobby,undefined);assert.equal(legacy.room.data.roster[0].name,'Legacy named keeper');await validateRoomSnapshot(legacy.room.data);}finally{await store.close();await rm(directory,{recursive:true,force:true});}
+});
+
+test('configured schema5 honors legacy systemsMode with three authenticated humans while explicit walking maps and old schema2 stay unchanged',async t=>{
+ const f=await fixture(t,config=>{config.tacticalMode=false;config.stationTasksMode=false;delete config.mapId;delete config.mapRevision;});
+ const created=await f.request('/api/rooms',{mode:'human'}),route='/api/rooms/'+created.body.roomId;
+ const guests=[];for(const name of ['Systems second','Systems third']){const joined=await f.request(route+'/join',{intent:'play',name});assert.equal(joined.status,200);guests.push(joined);assert.equal((await f.request(route+'/ready',{generation:1,ready:true},joined.cookie)).status,200);}
+ const started=await f.request(route+'/start',{generation:1,id:'legacy:systems:start'},created.cookie);assert.equal(started.status,200,JSON.stringify(started.body));
+ const original=structuredClone(f.app.rooms.get(created.body.roomId).data);assert.equal(original.schema,5);assert.equal(original.map,undefined);assert.equal(original.state.schemaVersion,3);assert.equal(original.state.beaconVersion,1);assert.equal(original.state.configuration.humanPlayerIds.length,3);assert(original.state.players.flatMap(p=>p.tasks).some(task=>task.edition===3));assert(started.body.game.systems);assert(started.body.game.investigation);
+ const bytes=await readFile(path.join(f.dir,`room-${original.id}.json`));await f.reload();assert.deepEqual(f.app.rooms.get(original.id).data,original);assert.deepEqual(await readFile(path.join(f.dir,`room-${original.id}.json`)),bytes);
+ for(const [i,human]of [created,...guests].entries()){
+  const view=await f.request(route,undefined,human.cookie);assert.equal(view.status,200);assert.equal(view.body.game.self.id,`p${i+1}`);assert(view.body.game.systems);assert.equal(view.body.game.inspection,undefined);assert(view.body.game.players.filter(p=>p.id!==view.body.game.self.id).every(p=>!Object.hasOwn(p,'role')));
+  assert.equal((await f.request(route+'/input',{generation:1,seq:1,dx:0,dy:0},human.cookie)).status,200);
+ }
+ const walking=await f.request('/api/rooms',{mode:'human',mapId:'beacon-illustrated'}),walkStarted=await f.request('/api/rooms/'+walking.body.roomId+'/start',{id:'explicit:walking',generation:1},walking.cookie);assert.equal(walkStarted.status,200,JSON.stringify(walkStarted.body));assert.equal(f.app.rooms.get(walking.body.roomId).data.state.schemaVersion,2);assert.equal(walkStarted.body.game.systems,undefined);
+ // A historical configurable schema2 without map metadata already meant ordinary walking; the new server flag cannot reprofile it.
+ await f.app.close();const writer=await createRoomStore(f.dir),old=createRoom('human',100000,true),issued=issueIdentity(old,true);try{await writer.save(old);}finally{await writer.close();}await f.reload();
+ const oldStarted=await f.request('/api/rooms/'+old.id+'/start',{id:'old:walking',generation:1},`lw_${old.id}=${issued.token}`);assert.equal(oldStarted.status,200,JSON.stringify(oldStarted.body));assert.equal(f.app.rooms.get(old.id).data.state.schemaVersion,2);assert.equal(oldStarted.body.game.systems,undefined);
 });
