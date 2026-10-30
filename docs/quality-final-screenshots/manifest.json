@@ -1,48 +1,53 @@
 {
-  "sourceCommit": "c471b154ce806a71846c25a9932f039aeab0ab15",
-  "sourceManifestSha256": "a22722696c19d44154a76404c5cc786a73928d3b21d0ef825f8ec449c23d668b",
-  "sourceFileCount": 566,
-  "reportSha256": "52e1e9acd8b2053181317aed7d65f818588cdadc6cc9f3384f5f5428fb99cb16",
+  "sourceCommit": "14ad207d1065a90ce141b75e1b26900684aeabb6",
+  "sourceManifestSha256": "7bb5e66f67cf8ff314323efdec0ace72b5f347ce4e13ce4ef51d04e149b821af",
+  "sourceFileCount": 574,
+  "reportSha256": "9dadc0e06c7d7af3ee39b42b5a32871f6412fc474be0817a1129692977c1a26d",
   "summary": {
     "status": "passed",
     "passed": 22,
     "failed": 0
   },
   "safeViews": {
-    "http": 1617,
-    "websocket": 1293
+    "http": 1505,
+    "websocket": 1078
   },
-  "fixture": "Unedited Windows Chrome captures from exact raw Git source; seeded/accelerated offline fixtures. Some equipment/council/ghost actors are explicitly staged with legal engine actions. Autonomous DEMO matches use the real controller and unchanged deadlines. No paid providers, screenshot editing, artificial winner or render-only mock.",
+  "canceledAuditReads": {
+    "count": 1,
+    "reason": "consumer_closed",
+    "excludedFromInspectedCount": true
+  },
+  "fixture": "Unedited Windows Chrome captures from exact raw Git source; seeded/accelerated offline fixtures. Equipment/council/ghost cases stage legal engine actions; autonomous DEMO outcomes use real controllers and original deadlines. No model calls, image editing or artificial winners.",
   "files": [
     {
-      "file": "desktop-beacon2-start.png",
-      "bytes": 510041,
-      "sha256": "f15bde3a58fb780f4e1ae0a882e1f8b6738b7ad99801baf6d0ad20449f1f9911"
-    },
-    {
-      "file": "desktop-whole-map-fourteen-room-key.png",
-      "bytes": 541211,
-      "sha256": "496afafbb70f21c08bc5c430dcbcb5b426d2323ed3de0a38b178379765a982c8"
-    },
-    {
-      "file": "watch1-glyph-grid-390x844.png",
-      "bytes": 47162,
-      "sha256": "95ee05ed0fe632fb30ee0b465d2b03b3c154d23457c0f0da455bf3167d224b41"
+      "file": "autonomous-spectator-role-revealed-replay.png",
+      "bytes": 328160,
+      "sha256": "c335965cda9c8544f4bb333a446e963e5b77af8b5271c29d3cd4ef46e2dc6252"
     },
     {
       "file": "council-voting-844x390.png",
-      "bytes": 54408,
-      "sha256": "0c8822b9c7be9ac582f1cf305c5352340897d52c7500a5e0794aeeff907d50ca"
+      "bytes": 54468,
+      "sha256": "f9fc25fa287a99d969a0788a7538a21e13b670ab57ada3e2a66e0f11a0092d38"
+    },
+    {
+      "file": "desktop-beacon2-start.png",
+      "bytes": 509323,
+      "sha256": "ab5cb54c7571d83ae5935d5ef1b3c382a06d89cb9f873e01854dd83eb6ec4c09"
+    },
+    {
+      "file": "desktop-whole-map-fourteen-room-key.png",
+      "bytes": 541377,
+      "sha256": "25fced8d016cddc1ee75fcea584a682203b492d26a85657aa07b625f852ca5e3"
     },
     {
       "file": "mobile-private-fallen-chat.png",
-      "bytes": 92407,
-      "sha256": "7ad35998955425e2f7d23489b247db698c050303e8234d1e6fe2c1a6a06bb647"
+      "bytes": 92551,
+      "sha256": "be5c5824c492bd0572c57722e05ac8fd1a535c0242168f2220d67e612078cb36"
     },
     {
-      "file": "autonomous-spectator-role-revealed-replay.png",
-      "bytes": 329598,
-      "sha256": "2462c0cd132f478a82671c8a3bedaae2a56bcc32cb394ff0380444c6c9e4173f"
+      "file": "watch1-glyph-grid-390x844.png",
+      "bytes": 47212,
+      "sha256": "eb14d841d76e19296bd73b2c921611f328d77c40c305ad88775f58a06023ced6"
     }
   ]
 }
