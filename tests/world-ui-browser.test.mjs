@@ -25,7 +25,7 @@ test('world UI: real room APIs, walking leases, three task puzzles, council focu
  await mkdir(path.join(root,'_artifacts'),{recursive:true});
  const evidence=await mkdtemp(path.join(root,'_artifacts/world-ui-'));
  const report={checkout:git(root,'rev-parse','HEAD'),modifiedPaths:git(root,'status','--short'),runtimeCheckout:git(runtime,'rev-parse','HEAD'),runtimeModifiedPaths:git(runtime,'status','--short'),fixture:'Real transport, cookies, WS and engine. Seeded roles/tasks, idle AI scheduling and a controlled clock; no API responses mocked. Long transit uses real navigate actions. Critical-council preconditions use legal engine actions by fixture AI seats; this is not a full demo-AI match or performance claim.',checks:[],errors:[],screenshots:[],cleanup:{}};
- const before={frontend:await hashes(root,['public/world','public/game.css']),runtime:await hashes(runtime,['server','shared','public/app.mjs','public/index.html','public/styles.css','public/world-input-envelope.mjs'])};
+ const before={frontend:await hashes(root,['public/world','public/game.css']),runtime:await hashes(runtime,['server','shared','public'])};
  await writeFile(path.join(evidence,'source-before.json'),JSON.stringify(before,null,2));await writeFile(path.join(evidence,'browser-driver.mjs'),await readFile(fileURLToPath(import.meta.url)));
  const dataDir=path.join(evidence,'data'),profile=path.join(evidence,'profile');await mkdir(dataDir);await mkdir(profile);
  let browser,server,offset=0,fixture='crew';const stamp=()=>Date.now()+offset,seeds={};
@@ -134,7 +134,7 @@ test('world UI: real room APIs, walking leases, three task puzzles, council focu
  finally{
   if(browser){await browser.close();report.cleanup.browserClosed=true;}
   if(server){await server.close();report.cleanup.serverClosed=true;}
-  const after={frontend:await hashes(root,['public/world','public/game.css']),runtime:await hashes(runtime,['server','shared','public/app.mjs','public/index.html','public/styles.css','public/world-input-envelope.mjs'])};
+  const after={frontend:await hashes(root,['public/world','public/game.css']),runtime:await hashes(runtime,['server','shared','public'])};
   await writeFile(path.join(evidence,'source-after.json'),JSON.stringify(after,null,2));report.sourceUnchanged=JSON.stringify(before)===JSON.stringify(after);
   // Remove only this fresh fixture's owned profile/state, preserve every receipt/screenshot.
   for(const dir of [profile,dataDir]){assert.equal(path.dirname(dir),evidence);await rm(dir,{recursive:true,force:true});}report.cleanup.ownedDataRemoved=true;
