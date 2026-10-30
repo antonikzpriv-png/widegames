@@ -1,0 +1,11 @@
+# Physical map revisions
+
+New production rooms use the illustrated revision-2 layouts for Lantern Wake, Storm Foundry and Tidal Observatory. Map selection still uses `beacon`, `storm-foundry` or `tidal-observatory`; hosts do not choose geometry versions. Existing saved rooms keep their original physical layout, so a saved keeper, corpse, task route or replay is never moved into a newly placed wall. Exit an old room and create a new one to play the redesigned layout.
+
+`loadConfig()` supplies trusted server configuration `mapRevision:2`. The direct test/embedding constructor defaults to revision 1 when that configuration is absent, matching the existing opt-in world-mode compatibility pattern. Programmatic `createMatch()` also keeps its original behavior unless explicitly passed `world:true,mapRevision:2`. Only integer revisions 1 and 2 are supported; a non-world match cannot select revision 2. Revision metadata is not accepted in HTTP create/start/action/input payloads.
+
+New room configuration, engine state and recipient-safe views carry `mapRevision:2`. Room and state revisions must agree during restore. Absent metadata means revision 1, and version-1 saves retain their old field shapes. Geometry, path caches, task proximity, ghost movement, effects, bot plans and public room names resolve from the particular match's map ID and revision; no mutable global current map exists.
+
+Replay history and postgame metadata carry the same optional `mapRevision:2`. The snapshot validator binds recording and match revisions, checks each saved point against that revision's geometry, and rejects malformed/mismatched metadata. Playback resolves geometry from the recording and rejects a conflicting expected revision. Old recordings without revision metadata continue to use their original geometry.
+
+The redesign changes geometry and artwork without changing base factions, task identities/progress, private recipient filtering, death policies, ability counters or victory rules. `tests/map-revision-integration.test.mjs` covers revision validation, per-map authoritative task work and restart receipts, genuine ejection recordings, playback binding, trusted HTTP configuration and restoration across a changed server default.
