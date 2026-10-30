@@ -1,0 +1,272 @@
+{
+  "validatedRuntimeCommit": "d362acaf6df039e0386b07cf970ad7b4b0f93b6b",
+  "integratedMain": "41b4c6e2ddfce65882ac635c6dc5b7e4cf1fc4ef",
+  "dependencies": "npm ci --ignore-scripts --no-audit --no-fund --cache /workspace/.cache/npm passed; dependency versions unchanged by map integration",
+  "syntax": {
+    "command": "npm run check",
+    "modules": 139,
+    "result": "passed"
+  },
+  "tests": {
+    "command": "npm test",
+    "total": 626,
+    "passed": 620,
+    "failed": 0,
+    "skipped": 6
+  },
+  "browsers": [
+    {
+      "suite": "primary",
+      "result": "passed",
+      "checks": 42,
+      "report": "_artifacts/world-browser-2DYGjx/report.json",
+      "browserExceptions": 0
+    },
+    {
+      "suite": "features",
+      "result": "passed",
+      "checks": 19,
+      "report": "_artifacts/ghost-abilities-browser-86IA2s/report.json",
+      "browserExceptions": 0
+    },
+    {
+      "suite": "maps",
+      "result": "passed",
+      "checks": 39,
+      "report": "_artifacts/maps-captcha-browser-EVDb37/report.json",
+      "browserExceptions": 0
+    },
+    {
+      "suite": "replay",
+      "result": "passed",
+      "checks": 21,
+      "report": "_artifacts/spatial-browser-xMVjzh/report.json",
+      "browserExceptions": 0
+    },
+    {
+      "suite": "independent",
+      "result": "passed",
+      "checks": 19,
+      "report": "_artifacts/world-ui-74NXb5/report.json",
+      "browserExceptions": 0
+    },
+    {
+      "suite": "spectator",
+      "result": "passed",
+      "checks": 37,
+      "report": "docs/spectator-browser-qualification.json",
+      "browserExceptions": 0
+    }
+  ],
+  "engineEquivalence": "docs/spectator-engine-equivalence.json",
+  "rendererComparison": "docs/spectator-render-benchmark.json",
+  "engineTiming": "docs/spectator-engine-performance.json",
+  "noPaidCalls": true,
+  "deployment": false,
+  "runtimeFingerprints": [
+    [
+      "public/api.mjs",
+      "86e58d5c18377a2d69012346f7608611257e95ce376466cd69c7740bb387ea81"
+    ],
+    [
+      "public/app.mjs",
+      "3018a3ff9799abdc7165fb20d749a67873189a3ed5c9130126f2570c03b05744"
+    ],
+    [
+      "public/favicon.svg",
+      "6502f813f8a3f0973f28c7fd3d08c8814829cc32832aa326cd57b9daaa1d6c59"
+    ],
+    [
+      "public/game.css",
+      "3ab89af9cec83513893933fe18db9a150ba8879fa2f4428f7e23295e831a9c2a"
+    ],
+    [
+      "public/harbor.mjs",
+      "2fd11c4458764ed1a4d7146e979b20bf077723118e2d97a19ab5d12f91f71e7a"
+    ],
+    [
+      "public/index.html",
+      "11ca293daa6cde4c0308d248b37c9f6129d307b82553b1bcc0484254a397d7f5"
+    ],
+    [
+      "public/panels.mjs",
+      "e0fab17f6e478687932bdf197b5f03d69121f67683f58360c8ea9caf645254d2"
+    ],
+    [
+      "public/presentation.mjs",
+      "d3a98f5d191e2df0e4ea3255e49261f2f4be6385f162d1421449d650ce15c3dc"
+    ],
+    [
+      "public/styles.css",
+      "335d5670e89500451202f07d60812638a49358ed0dc852af271e3272b8c5ee02"
+    ],
+    [
+      "public/ui.mjs",
+      "60498216e8715ec284ac4ca2e7d3cd5248283d6059016b79b8b5d6fa5a4e1a8f"
+    ],
+    [
+      "public/world-input-envelope.mjs",
+      "5ff82433cebfd15abc549923632a0c862c82a3bbd031b43397159584a4a4cfcc"
+    ],
+    [
+      "public/world/captcha.css",
+      "be77de2ce8cc345fa29d42c2d3f3ba3091472bd8b6a9a6b0d8340c9a216ec081"
+    ],
+    [
+      "public/world/dom.mjs",
+      "96f1b4358301984548cba35f147acd233b8ae9974799210f68a69f0441ba0012"
+    ],
+    [
+      "public/world/experience.mjs",
+      "e0e762efdbc24d16199f53da78ce6550fe459a9be7887f73080edc5aa300706e"
+    ],
+    [
+      "public/world/input.mjs",
+      "31d4c845f18a84280ec219ade3b0038daf130f4300bdd7fe115244c14c3018d0"
+    ],
+    [
+      "public/world/model.mjs",
+      "57a5169f2423fed9851af4beb754c6fe30dbe8cdafb81310f60ff9e8d58a7049"
+    ],
+    [
+      "public/world/phases.mjs",
+      "a7a83c070bf0e13fd343a515ddf618078afa1cf2776d59be6da3f2fd7f17e813"
+    ],
+    [
+      "public/world/puzzles.mjs",
+      "a4c9a18189ac7de674e8800e17f1c6e01799cfc1fb0d9eda5a11bf7cfe72127c"
+    ],
+    [
+      "public/world/replay-model.mjs",
+      "7b555590f4b6b44f31071bdf6b459d6f00b9c9766e92938f533db1158589461e"
+    ],
+    [
+      "public/world/replay-viewer.mjs",
+      "b4b159c905120a8def4609bbc10b3cfa9009aa3e3abf398ff01fceae103fc9fa"
+    ],
+    [
+      "public/world/replay.mjs",
+      "20daa39224c8893861f3fab2b1cc2b779d1bfcd070c5ffdb20e5dfcba6390ea3"
+    ],
+    [
+      "public/world/scene.mjs",
+      "a3d0217d1950128679588a3c9c63c4eabff9bfd6db7fc77e6cc5f44e5ee79e7f"
+    ],
+    [
+      "public/world/spectator.mjs",
+      "d94cadce3887a905dc54ed1ba661ee0cd067c10017bca07590dbfcd2eb2a6765"
+    ],
+    [
+      "server/ai/anthropic.mjs",
+      "e09eda9115995d3eb09a481d71f61f399d4c0edc31c7e3cdbdeb0e47402ac66c"
+    ],
+    [
+      "server/ai/demo.mjs",
+      "d69ce8b120ce46f8a7d3a885866c547dfe254d05d66e8fe2aecd9561738e5009"
+    ],
+    [
+      "server/ai/index.mjs",
+      "6b33ac25dcaa694a804f77966dd52f10dcf577268d7975acf507e4d11084f326"
+    ],
+    [
+      "server/ai/strategic.mjs",
+      "f30a178917cefdb41ae72319bf385e20d472538f6b8e2a09db47104be1f26463"
+    ],
+    [
+      "server/ai/world.mjs",
+      "6613339d710bf8af3f2a9fc924c87e57073e55be6f7ffa631ea43fc8d6fe620e"
+    ],
+    [
+      "server/budget.mjs",
+      "20ca2be9c4a6187419a64b7b90b9101739557b276f0fe404edb536ada6345990"
+    ],
+    [
+      "server/config.mjs",
+      "d02f88588e1fca53a1121b88b6325b4d55109e18988d3995c14c79790966517d"
+    ],
+    [
+      "server/engine/features.mjs",
+      "fd1a2cf42e75014a370700bd9f1816206dc2dd0031dd24efb9d7a19edba446b3"
+    ],
+    [
+      "server/engine/index.mjs",
+      "b109e61b502cd3ad92df644c6ccdd97bc074a84a152c06fa549a54ae95fcb6af"
+    ],
+    [
+      "server/engine/replay-history.mjs",
+      "766e000b99e64311a378dfa5c4b32bee1f5fa6942c88d7469a3d2dffcb915029"
+    ],
+    [
+      "server/engine/state-copy.mjs",
+      "06c25b40bcf91d4d9bbda5785090eb7b7814c090c4f15bd0ee6ae9adf2412ebf"
+    ],
+    [
+      "server/engine/tasks.mjs",
+      "434705c37b0cca9460fb4fd8b61b7a545dd4280ff285e867a6e96df6d4c89b78"
+    ],
+    [
+      "server/engine/world-runtime.mjs",
+      "56d1623e201edb54121dc954701dbbb2159b2e3c5ad3a99a349d9d1406dcb683"
+    ],
+    [
+      "server/feature-validation.mjs",
+      "88256fbda44aad059b4586e83529fcfc3247b94de3bd248b954e88c6a72bd7c6"
+    ],
+    [
+      "server/main.mjs",
+      "1835fb6d7e44e264c137e2a77fc320f986560546ce03404bec58fd67c90b1019"
+    ],
+    [
+      "server/origin.mjs",
+      "6ebdcb4f65cc3f44411ae1de1cbed6fb8618791674e5b550bcb3555ddad67cbe"
+    ],
+    [
+      "server/rooms.mjs",
+      "e7a43b4f91fc16ad1c85d79d9c5b7b0155dc80e9f0d536501a60f5f27d81d902"
+    ],
+    [
+      "server/spectator.mjs",
+      "a8622ee9bd7d229e1f77fe5215962de5c2b3f6c5a2620d2f57e21a610bf2d69f"
+    ],
+    [
+      "server/static.mjs",
+      "cd832f9facdf467bdd2e3129fdaf4281ed92e4f8286a9bfadfe0e25185db974f"
+    ],
+    [
+      "server/store.mjs",
+      "e5d58ab78aa0c9e9db3e5707caafbb51e5dc6f2539d2ea308ded2cddb1f3e655"
+    ],
+    [
+      "server/transport.mjs",
+      "faff9745bcab96bbbd4699f8cdc479f0b3aaddce1775370ebd61ecf12442917f"
+    ],
+    [
+      "shared/captcha.mjs",
+      "43ce676f540daba8d0a572ca8c97227e6d2437a9e608b31dfa3e22e74c785631"
+    ],
+    [
+      "shared/contracts.mjs",
+      "e432d31a70f7b41288abb6ad67c00c36dde27eb1dfc47d99f822a8d2f4a4d5f9"
+    ],
+    [
+      "shared/features.mjs",
+      "9279383ace5c705e29eff3395446c9a5cef99a824217ef78133e33be5bbdea0d"
+    ],
+    [
+      "shared/maps/storm-foundry.mjs",
+      "b5720f44c41e40b800785ded9c5507208789652a4c076508730d1240d8c5d547"
+    ],
+    [
+      "shared/maps/tidal-observatory.mjs",
+      "a1fd0dddaccf9233c3743760abd492a274b3b024dc996afb063556588a354f88"
+    ],
+    [
+      "shared/replay.mjs",
+      "c085ac5f4d047231541e5f3294f8258f6f64fda7a2d3ed9db9d2eadad3931b03"
+    ],
+    [
+      "shared/world.mjs",
+      "ad45586a051e64cae649566d6b129b2abf0b9f1662686b575563bbfba7b2e798"
+    ]
+  ]
+}

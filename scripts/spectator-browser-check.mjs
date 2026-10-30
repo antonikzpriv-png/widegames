@@ -20,7 +20,7 @@ const git=(...args)=>execFileSync('git',args,{cwd:root,encoding:'utf8'}).trim();
 const files=git('ls-files','--cached','--others','--exclude-standard','public','server','shared').split('\n').filter(Boolean);
 const hashes=()=>Promise.all(files.map(async f=>[f,createHash('sha256').update(await readFile(path.join(root,f))).digest('hex')]));
 const before=await hashes();
-const report={fixture:'Native app and HTTP/WebSocket APIs with real demo bots and deterministic engine seeds. Long legal cooldowns prevent fixture combat; no fabricated outcome, provider call or deployment. Browser timings describe this headless Cloud host, not a guarantee on every device.',checks:[],errors:[],consoleErrors:[],screenshots:[],performance:[],sourceCommit:git('rev-parse','HEAD')};
+const report={fixture:'Native app and HTTP/WebSocket APIs with real demo bots and deterministic engine seeds. Long legal cooldowns prevent fixture combat; no fabricated outcome, provider call or deployment. Browser timings describe this headless Cloud host, not a guarantee on every device.',checks:[],errors:[],consoleErrors:[],screenshots:[],performance:[],sourceCommit:git('rev-parse','HEAD'),runtimeFingerprints:before};
 let game,browser,page,origin;const writes=[];
 function check(value,name){report.checks.push({name,passed:!!value});assert(value,name);console.log('PASS '+name);}
 function instrument(target){target.on('pageerror',error=>report.errors.push(error.message));target.on('console',message=>{if(message.type()==='error')report.consoleErrors.push(message.text());});target.on('request',request=>{if(request.method()==='POST'&&request.url().includes('/api/rooms'))writes.push({path:new URL(request.url()).pathname,body:request.postData()});});}
@@ -86,7 +86,7 @@ try{
  for(const map of (worlds.MAPS||[]).filter(map=>map.id!=='beacon')){
   await press('Exit');await page.waitForSelector('.harbor-watch');await page.click('.harbor-watch');await page.waitForSelector('.lw-lobby:not([hidden])');await page.select('[aria-label="Choose a map"]',map.id);await press('Begin the watch');await page.waitForSelector('.lw-spectator:not([hidden])');
   const state=await view();check(state.game.mapId===map.id,'all-AI spectator starts the selected '+map.name+' map');const mapWrites=writes.length;
-  await press('Free ghost');await page.focus('.lw-world-canvas');const beforeCamera=await camera();await page.keyboard.down('d');await pause(250);await page.keyboard.up('d');const afterCamera=await camera();check(afterCamera.x>beforeCamera.x+15,'local ghost camera moves on '+map.name);
+  await press('Free ghost');await page.focus('.lw-world-canvas');const beforeCamera=await camera();await page.keyboard.down('d');await pause(Math.max(300,(1601-beforeCamera.x)/440*1000+180));await page.keyboard.up('d');const afterCamera=await camera();check(afterCamera.x>beforeCamera.x+15&&afterCamera.x>1600,'local ghost camera uses expanded bounds on '+map.name);
   await page.select('[aria-label="Inspect world object"]','player:p3');check(await page.$eval('.lw-inspector',n=>n.textContent.includes('Current activity')),'keeper inspection works on '+map.name);await page.click('.lw-inspector-close');await press('Overview');await pause(100);
   const geometry=worlds.getWorld(map.id),players=(await view()).game.players;let selected=null;
   for(const [id,position]of Object.entries(geometry.WORLD_STATIONS)){

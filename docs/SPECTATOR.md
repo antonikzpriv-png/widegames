@@ -73,3 +73,20 @@ npm run perf:spectator
 the engine benchmark at a preserved baseline checkout. Timing receipts describe
 the measured host and fixtures, not a frame-rate guarantee on every device.
 Earlier replay and browser evidence remains preserved.
+
+The integrated browser qualification passed 37 checks across all three maps.
+Mean frame times on the cloud Chromium fixture were 16.67 ms for AI watch,
+16.78 ms for human play, 17.14 ms for Storm Foundry and 18.56 ms for Tidal
+Observatory. These measurements include real demo updates. The separate renderer
+comparison against `43c0799`, using the same explicit software canvas backend,
+measured 26.1% less draw time in overview, 24.6% less when following and 73.3%
+less for the human view. Raw rounds and source fingerprints are retained:
+
+- [Browser qualification](spectator-browser-qualification.json)
+- [Renderer benchmark](spectator-render-benchmark.json)
+- [Engine equivalence against current map main](spectator-engine-equivalence.json)
+- [Ghost and agent inspector](world-screenshots/spectator-ghost-inspector.png)
+- [Mobile inspector](world-screenshots/spectator-ghost-mobile.png)
+- [Human view](world-screenshots/spectator-optimized-human.png)
+- [Storm Foundry spectator](world-screenshots/spectator-storm-foundry.png)
+- [Tidal Observatory spectator](world-screenshots/spectator-tidal-observatory.png)

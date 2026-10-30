@@ -1,0 +1,151 @@
+{
+  "baseline": "43c079999506785196ab85750105ceb102ba9314",
+  "sourceCommit": "d362acaf6df039e0386b07cf970ad7b4b0f93b6b",
+  "runtimeFingerprints": [
+    [
+      "public/world/model.mjs",
+      "57a5169f2423fed9851af4beb754c6fe30dbe8cdafb81310f60ff9e8d58a7049"
+    ],
+    [
+      "public/world/scene.mjs",
+      "a3d0217d1950128679588a3c9c63c4eabff9bfd6db7fc77e6cc5f44e5ee79e7f"
+    ],
+    [
+      "shared/contracts.mjs",
+      "e432d31a70f7b41288abb6ad67c00c36dde27eb1dfc47d99f822a8d2f4a4d5f9"
+    ],
+    [
+      "shared/maps/storm-foundry.mjs",
+      "b5720f44c41e40b800785ded9c5507208789652a4c076508730d1240d8c5d547"
+    ],
+    [
+      "shared/maps/tidal-observatory.mjs",
+      "a1fd0dddaccf9233c3743760abd492a274b3b024dc996afb063556588a354f88"
+    ],
+    [
+      "shared/world.mjs",
+      "ad45586a051e64cae649566d6b129b2abf0b9f1662686b575563bbfba7b2e798"
+    ]
+  ],
+  "fixture": "Identical 1440×1000 fresh software canvas per round, six visible moving keepers, same headless Chromium process and geometry. Alternating baseline/current rounds, 12 warm-up and 72 measured draws; willReadFrequently fixes the backend and 1px readback flushes deferred paint. Measures scene draw+flush CPU time, excluding full-app layout/network. No provider calls.",
+  "runs": [
+    {
+      "version": "baseline",
+      "mode": "overview",
+      "frames": 72,
+      "meanMs": 12.12222222238779,
+      "medianMs": 11.099999994039536,
+      "p95Ms": 19.30000000447035
+    },
+    {
+      "version": "current",
+      "mode": "overview",
+      "frames": 72,
+      "meanMs": 9.397222222139439,
+      "medianMs": 8.399999998509884,
+      "p95Ms": 15.199999995529652
+    },
+    {
+      "version": "current",
+      "mode": "overview",
+      "frames": 72,
+      "meanMs": 12.872222221663428,
+      "medianMs": 10.899999998509884,
+      "p95Ms": 26.299999997019768
+    },
+    {
+      "version": "baseline",
+      "mode": "overview",
+      "frames": 72,
+      "meanMs": 18.031944444506532,
+      "medianMs": 17.200000002980232,
+      "p95Ms": 33.29999999701977
+    },
+    {
+      "version": "baseline",
+      "mode": "follow",
+      "frames": 72,
+      "meanMs": 22.41527777755012,
+      "medianMs": 11,
+      "p95Ms": 103.60000000149012
+    },
+    {
+      "version": "current",
+      "mode": "follow",
+      "frames": 72,
+      "meanMs": 10.295833333291942,
+      "medianMs": 7.899999998509884,
+      "p95Ms": 18.299999997019768
+    },
+    {
+      "version": "current",
+      "mode": "follow",
+      "frames": 72,
+      "meanMs": 23.291666666770148,
+      "medianMs": 17.100000001490116,
+      "p95Ms": 48.399999998509884
+    },
+    {
+      "version": "baseline",
+      "mode": "follow",
+      "frames": 72,
+      "meanMs": 22.105555555886692,
+      "medianMs": 20.5,
+      "p95Ms": 40.80000000447035
+    },
+    {
+      "version": "baseline",
+      "mode": "human",
+      "frames": 72,
+      "meanMs": 35.924999999606776,
+      "medianMs": 33.30000000447035,
+      "p95Ms": 63.399999998509884
+    },
+    {
+      "version": "current",
+      "mode": "human",
+      "frames": 72,
+      "meanMs": 8.268055555824604,
+      "medianMs": 7.800000004470348,
+      "p95Ms": 12.399999998509884
+    },
+    {
+      "version": "current",
+      "mode": "human",
+      "frames": 72,
+      "meanMs": 7.92638888872332,
+      "medianMs": 7.399999998509884,
+      "p95Ms": 10.799999997019768
+    },
+    {
+      "version": "baseline",
+      "mode": "human",
+      "frames": 72,
+      "meanMs": 24.74444444405122,
+      "medianMs": 14.799999997019768,
+      "p95Ms": 104
+    }
+  ],
+  "browser": "Chrome/154.0.8037.57",
+  "summary": [
+    {
+      "mode": "overview",
+      "baselineMeanMs": 15.077083333447161,
+      "currentMeanMs": 11.134722221901434,
+      "reductionPercent": 26.14803556069728
+    },
+    {
+      "mode": "follow",
+      "baselineMeanMs": 22.260416666718406,
+      "currentMeanMs": 16.793750000031046,
+      "reductionPercent": 24.557791296245522
+    },
+    {
+      "mode": "human",
+      "baselineMeanMs": 30.334722221828997,
+      "currentMeanMs": 8.097222222273963,
+      "reductionPercent": 73.30708300850316
+    }
+  ],
+  "passed": true
+}
