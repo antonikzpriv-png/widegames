@@ -1,4 +1,4 @@
-import {parseFeatures} from '../shared/features.mjs';
+import {parseFeatures,isGhost} from '../shared/features.mjs';
 import http from 'node:http';
 import {WebSocketServer,WebSocket} from 'ws';
 import {serveStatic} from './static.mjs';
@@ -118,7 +118,7 @@ export async function createGameServer(config,dependencies={}) {
           if(typeof engine.applyInput!=='function')fail(409,'INPUT_UNAVAILABLE','Continuous movement is not available for this match.');
           const result=engine.applyInput(structuredClone(data.state),identity.seatId,input,now());
           if(!object(result)||typeof result.accepted!=='boolean'||!object(result.state)||result.state.id!==data.state.id||result.state.mode!==data.state.mode||result.state.schemaVersion!==data.state.schemaVersion||!Number.isSafeInteger(result.state.version)||result.state.version<data.state.version)throw new Error('Invalid engine input result');
-          const next=structuredClone(data);next.state=result.state;
+          const next={...data,state:result.state};
           // Validate even an inert result before considering a durable update.
           service.validate(next);
           if(result.accepted&&[2,3,4,5].includes(result.state.schemaVersion)&&result.state.players.find(player=>player.id===identity.seatId)?.motion.seq!==input.seq)throw new Error('Invalid engine input sequence');
@@ -147,8 +147,8 @@ export async function createGameServer(config,dependencies={}) {
             if(!identity.seatId||(data.state&&!data.state.players.some(p=>p.id===identity.seatId&&p.human)))fail(403,'SPECTATOR','Spectators cannot act.');
             if(!data.state)fail(409,'NOT_STARTED','Start the match first.');
             const result=engine.applyAction(data.state,identity.seatId,input,now());
-            if(!result.accepted){if(result.state.version!==data.state.version){const next=structuredClone(data);next.state=result.state;await commit(room,next);broadcast(room);}const error=result.error||{};fail(409,typeof error.code==='string'?error.code:'ACTION_REJECTED',typeof error.message==='string'?error.message:'Action rejected.');}
-            const next=structuredClone(data);next.state=result.state;await commit(room,next);
+            if(!result.accepted){if(result.state.version!==data.state.version){const next={...data,state:result.state};await commit(room,next);broadcast(room);}const error=result.error||{};fail(409,typeof error.code==='string'?error.code:'ACTION_REJECTED',typeof error.message==='string'?error.message:'Action rejected.');}
+            const next={...data,state:result.state};await commit(room,next);
           }
         });
         broadcast(room);json(res,200,view(room,identity));return;
@@ -171,16 +171,20 @@ export async function createGameServer(config,dependencies={}) {
       });
     }catch(error){const safe=safeError(error),payload=JSON.stringify({error:safe.error});socket.end(`HTTP/1.1 ${safe.status} Rejected\r\nContent-Type: application/json\r\nConnection: close\r\nContent-Length: ${Buffer.byteLength(payload)}\r\n\r\n${payload}`);}
   });
+  // Engine operations preserve their input. These envelopes share unchanged fields
+  // only until commit validates and saves; publication follows durable success.
   function scheduleAi(room) {
     if(closing||room.aiBusy||room.aiBlocked||room.removed||!room.data.state||['ended','paused'].includes(room.data.state.phase))return;
     const canScheduleActor=actor=>{
-      const state=room.data.state,v=engine.getPlayerView(state,actor.id,now());
-      if(v.self?.alive)return true;
-      if(!v.self?.ghost||v.phase!=='roam')return false;
-      if(v.self.role==='crew'&&v.self.tasks.some(t=>!t.completed))return true;
+      // Eligibility needs authoritative local fields, not a full view per NPC.
+      // Keep every fallen faction's one local message and stop idle planning.
+      const state=room.data.state,player=state.players.find(p=>p.id===actor.id);
+      if(player?.alive)return true;
+      if(!player||!isGhost(state,player)||state.phase!=='roam')return false;
+      if(player.role==='crew'&&player.tasks.some(t=>!t.completed))return true;
       // A fallen observer may send one local message, then needs no idle planner.
       const memory=room.data.aiContext?.matches?.['match:'+state.id]?.memories?.['actor:'+actor.id];
-      return v.availableActions.includes('ghostSay')&&!memory?.ghostSpoken&&!(state.ghostChat??[]).some(message=>message.playerId===actor.id);
+      return !memory?.ghostSpoken&&!(state.ghostChat??[]).some(message=>message.playerId===actor.id);
     };
     const player=aiRoster(room.data.state).filter(p=>(room.nextDecision.get(p.id)||0)<=now()&&canScheduleActor(p)).sort((a,b)=>(room.nextDecision.get(a.id)||0)-(room.nextDecision.get(b.id)||0))[0];
     if(!player)return;
@@ -194,7 +198,7 @@ export async function createGameServer(config,dependencies={}) {
         const commitReservation=async({id,amountUsd})=>{
           if(closing||room.abort.signal.aborted||!valid())throw new Error('AI stopped');
           if(typeof id!=='string'||!/^[A-Za-z0-9:._-]{1,150}$/.test(id)||!Number.isFinite(amountUsd)||amountUsd<0)throw new Error('Invalid AI reservation');
-          await run(room,async data=>{if(!valid())throw new Error('AI stopped');const next=structuredClone(data);next.aiContext=structuredClone(context);await commit(room,next);});
+          await run(room,async data=>{if(!valid())throw new Error('AI stopped');const next={...data,aiContext:structuredClone(context)};await commit(room,next);});
           // Ordering is essential: match reservation, then deployment reservation, then send.
           await daily.reserve({id:`${room.data.id}:${id}`,amount:amountUsd});
         };
@@ -202,7 +206,7 @@ export async function createGameServer(config,dependencies={}) {
         if(closing||room.abort.signal.aborted)return;
         await run(room,async data=>{
           if(!valid())return;
-          const next=structuredClone(data);next.aiContext=structuredClone(context);
+          const next={...data,aiContext:structuredClone(context)};
           if(proposal&&!['ended','paused'].includes(next.state.phase)) {
             const result=engine.applyAction(next.state,player.id,proposal,now());next.state=result.state;
           }
@@ -221,7 +225,7 @@ export async function createGameServer(config,dependencies={}) {
           await run(room,async data=>{
             if(!data.state||['ended','paused'].includes(data.state.phase))return;
             const result=engine.tick(data.state,now());
-            if(result.state.version!==data.state.version){const next=structuredClone(data);next.state=result.state;await commit(room,next);broadcast(room);}
+            if(result.state.version!==data.state.version){const next={...data,state:result.state};await commit(room,next);broadcast(room);}
           });scheduleAi(room);
         }catch {room.aiBlocked=true;}
       }));
