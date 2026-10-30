@@ -119,7 +119,15 @@ try{
  const message='I checked the signal. <img src=x onerror=alert(1)> is just text.';await page.type('.lw-chat-form textarea',message,{delay:15});await pause(550);check(await page.$eval('.lw-chat-form textarea',node=>node.value)===message,'Council draft and focus survive physical-world snapshots');await press('Send message');await until(r=>r.game.meeting.messages.some(m=>m.text===message),'public message');check(!(await page.$('.lw-chat-log img')),'Council dialogue renders literal text');await shot('05-council');
  const humanId=(await view()).roomId,context=await browser.createBrowserContext(),observer=await context.newPage();instrument(observer);await observer.setViewport({width:390,height:844});await observer.goto(origin+'/r/'+humanId,{waitUntil:'networkidle0'});const seen=await view(observer);check(seen.seatId===null&&seen.game.self===null&&!seen.isHost,'Shared room opens a role-private public spectator');await drain();await context.close();
  await drain();await page.reload({waitUntil:'domcontentloaded'});await page.waitForSelector('.lw-connection[data-connected="true"]');room=await view();check(room.seatId==='p1'&&room.game.self.role==='crew','Reload restores the same world identity and private role');
- room=await view();skew+=Math.max(0,room.game.deadlineAt-room.game.serverNow)+1;await until(r=>r.game.phase==='voting','voting phase');await press('Skip ejection');await until(r=>r.game.meeting.votes.some(v=>v.playerId==='p1'),'skip ballot');await shot('06-vote');room=await view();skew+=Math.max(0,room.game.deadlineAt-room.game.serverNow)+1;
+ // Browser work consumes real time too. Advance only the remaining deadline;
+ // adding the full phase duration after a slow reload can skip voting entirely.
+ room=await view();
+ if(room.game.phase==='discussion')skew+=Math.max(0,room.game.deadlineAt-(Date.now()+skew))+100;
+ else assert.equal(room.game.phase,'voting','Reload must retain the active council');
+ await until(r=>r.game.phase==='voting','voting phase');await press('Skip ejection');await until(r=>r.game.meeting.votes.some(v=>v.playerId==='p1'),'skip ballot');await shot('06-vote');
+ room=await view();
+ if(room.game.phase==='voting')skew+=Math.max(0,room.game.deadlineAt-(Date.now()+skew))+100;
+ else assert.equal(room.game.phase,'roam','A cast ballot must proceed to roaming');
  await until(r=>r.game.phase==='roam','roaming resumes after skip');await page.waitForFunction(()=>document.querySelector('.lw-world')?.dataset.phase==='roam');if(await page.$('.lw-role-scene:not([hidden])'))await press('Enter the beacon');if(await page.$('.lw-ejection:not([hidden])'))await press('Return to watch');await solveTask(bridgeTask);
  check(new Set(report.puzzleKinds).size===5,'Five real generated equipment minigames complete through UI and server acknowledgement');
  await finish();await page.waitForSelector('.lw-results',{visible:true});await press('Open the role-revealed replay');await page.waitForSelector('.lw-replay',{visible:true});check(true,'Human-plus-AI world reaches a rules-based victory and attributed replay');await chronologicalReplay('Human-plus-AI');await shot('07-human-replay');

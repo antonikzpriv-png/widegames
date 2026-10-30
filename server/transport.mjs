@@ -159,22 +159,27 @@ export async function createGameServer(config,dependencies={}) {
       const v=engine.getPlayerView(room.data.state,actor.id,now());
       return v.self?.alive||(v.self?.ghost&&v.phase==='roam'&&v.self.role==='crew'&&v.self.tasks.some(t=>!t.completed));
     };
-    const player=CHARACTERS.filter(p=>(room.data.mode==='spectator'||p.id!=='p1')&&(room.nextDecision.get(p.id)||0)<=now()&&canScheduleActor(p)).sort((a,b)=>(room.nextDecision.get(a.id)||0)-(room.nextDecision.get(b.id)||0))[0];
+    const roster=(room.data.state.players??CHARACTERS).slice(0,24).map(p=>({id:p.id,name:p.name,color:p.color}));
+    const player=roster.filter(p=>(room.data.mode==='spectator'||p.id!=='p1')&&(room.nextDecision.get(p.id)||0)<=now()&&canScheduleActor(p)).sort((a,b)=>(room.nextDecision.get(a.id)||0)-(room.nextDecision.get(b.id)||0))[0];
     if(!player)return;
     room.nextDecision.set(player.id,now()+Math.max(100,config.ai?.decisionIntervalMs??1800));room.aiBusy=true;
     track((async()=>{
+      const originState=room.data.state,generation=room.aiGeneration;
       const context=structuredClone(room.data.aiContext),snapshot=engine.getPlayerView(room.data.state,player.id,now());
+      const freshView=()=>room.aiGeneration===generation&&!room.removed&&room.data.state?.id===originState.id?engine.getPlayerView(room.data.state,player.id,now()):null;
+      const valid=()=>{const v=freshView();return room.aiGeneration===generation&&!room.removed&&v?.matchId===snapshot.matchId&&v.phase===snapshot.phase&&v.meeting?.id===snapshot.meeting?.id&&(v.self?.alive||v.self?.ghost);};
       try {
         const commitReservation=async({id,amountUsd})=>{
-          if(closing||room.abort.signal.aborted||['ended','paused'].includes(room.data.state?.phase))throw new Error('AI stopped');
+          if(closing||room.abort.signal.aborted||!valid())throw new Error('AI stopped');
           if(typeof id!=='string'||!/^[A-Za-z0-9:._-]{1,150}$/.test(id)||!Number.isFinite(amountUsd)||amountUsd<0)throw new Error('Invalid AI reservation');
-          await run(room,async data=>{const next=structuredClone(data);next.aiContext=structuredClone(context);await commit(room,next);});
+          await run(room,async data=>{if(!valid())throw new Error('AI stopped');const next=structuredClone(data);next.aiContext=structuredClone(context);await commit(room,next);});
           // Ordering is essential: match reservation, then deployment reservation, then send.
           await daily.reserve({id:`${room.data.id}:${id}`,amount:amountUsd});
         };
-        const proposal=await ai.decide({view:snapshot,player,context,signal:room.abort.signal,commitReservation});
+        const proposal=await ai.decide({view:snapshot,player,context,signal:room.abort.signal,commitReservation,getCurrentView:freshView});
         if(closing||room.abort.signal.aborted)return;
         await run(room,async data=>{
+          if(!valid())return;
           const next=structuredClone(data);next.aiContext=structuredClone(context);
           if(proposal&&!['ended','paused'].includes(next.state.phase)) {
             const result=engine.applyAction(next.state,player.id,proposal,now());next.state=result.state;

@@ -34,7 +34,7 @@ function visibleBodies(view) {
   for (const event of view.events ?? []) {
     if (event.bodyId && event.roomId === view.self.roomId && !event.reported) found.set(event.bodyId, event.bodyId);
   }
-  return [...found.values()].slice(0, 6);
+  return [...found.values()].slice(0, 24);
 }
 
 function suspect(view, memory) {
@@ -59,7 +59,7 @@ const VOICES = Object.freeze({
 
 function dialogue(view, memory) {
   const target = suspect(view, memory);
-  const name = CHARACTERS.find(p => p.id === target)?.name;
+  const name = (view.players ?? []).find(p => p.id === target)?.name ?? CHARACTERS.find(p => p.id === target)?.name;
   const room = rooms.get(view.self.roomId)?.name ?? 'my station';
   const number = Math.min(memory.discussionCount ?? 0, 2);
   const voice = VOICES[view.self.id] ?? VOICES.p1;
@@ -70,7 +70,7 @@ function dialogue(view, memory) {
   ][number];
   const witness = memory.witnesses?.[target];
   if (witness && number < 2) {
-    const victim = CHARACTERS.find(p => p.id === witness.targetId)?.name;
+    const victim = (view.players ?? []).find(p => p.id === witness.targetId)?.name ?? CHARACTERS.find(p => p.id === witness.targetId)?.name;
     const where = rooms.get(witness.roomId)?.name;
     return voice[number] + ' I saw ' + name + ' attack ' + victim + ' in ' + where + '. That is firsthand; I will vote for ' + name + '.';
   }
@@ -89,12 +89,15 @@ export function observe(view, memory) {
     memory.meetingId = phaseKey;
     memory.discussionCount = 0;
   }
+  const rosterIds = new Set((view.players ?? []).slice(0, 24).map(p => p.id));
+  for (const field of ['witnesses', 'suspicion']) if (memory[field]) memory[field] = Object.fromEntries(Object.entries(memory[field]).filter(([id]) => rosterIds.has(id)).slice(0, 24));
   for (const event of view.events ?? []) {
-    if (event.type === 'witness' && event.playerId !== view.self.id && event.playerId !== event.targetId && CHARACTERS.some(p => p.id === event.playerId) && CHARACTERS.some(p => p.id === event.targetId) && rooms.has(event.roomId)) {
+    if (event.type === 'witness' && event.playerId !== view.self.id && event.playerId !== event.targetId && rosterIds.has(event.playerId) && rosterIds.has(event.targetId) && rooms.has(event.roomId)) {
       memory.witnesses ??= {};
       memory.witnesses[event.playerId] = { targetId: event.targetId, roomId: event.roomId, at: Number.isFinite(event.at) ? event.at : view.serverNow };
     }
   }
+  if (memory.observation && (!Array.isArray(memory.observation.nearby) || !Array.isArray(memory.observation.dead))) delete memory.observation;
   const dead = new Set((view.players ?? []).filter(p => !p.alive).map(p => p.id));
   if (memory.observation?.roomId === view.self.roomId) {
     const newlyDead = memory.observation.nearby.filter(id => dead.has(id) && !memory.observation.dead.includes(id));
@@ -106,9 +109,10 @@ export function observe(view, memory) {
     }
   }
   memory.observation = {
+    at: view.serverNow,
     roomId: view.self.roomId,
-    nearby: (view.players ?? []).filter(p => p.id !== view.self.id && p.alive && (view.worldVersion === 1 ? visibleWorldPlayer(view, p) : p.roomId === view.self.roomId)).map(p => p.id).slice(0, 6),
-    dead: [...dead].slice(0, 6)
+    nearby: (view.players ?? []).filter(p => p.id !== view.self.id && p.alive && (view.worldVersion === 1 ? visibleWorldPlayer(view, p) : p.roomId === view.self.roomId)).map(p => p.id).slice(0, 24),
+    dead: [...dead].slice(0, 24)
   };
 }
 
