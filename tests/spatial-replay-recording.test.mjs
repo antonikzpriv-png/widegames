@@ -29,6 +29,16 @@ test('event-cap eviction without started still has a valid authoritative reconst
  assert.equal(m.events.some(e=>e.type==='started'),false);
 });
 
+test('a terminal checkpoint reconstructs the recorded outcome even when all retained events precede its cutoff',()=>{
+ const f=spatialFixture(),state=structuredClone(f.state);delete state.replayHistory;checkpointReplay(state);
+ const metadata=engine.getReplayMetadata(state);assert.equal(metadata.anchor.phase,'ended');assert.equal(metadata.anchor.sequence,state.replaySequence);
+ const m=createReplayModel({...f.envelope,metadata});assert.deepEqual(m.at(metadata.coverage.from).outcome,state.outcome);
+ assert.deepEqual(m.at(metadata.coverage.through).outcome,state.outcome);
+ const anchorOnly=createReplayModel({...f.envelope,replay:[],metadata});assert.deepEqual(anchorOnly.at(metadata.coverage.from).outcome,state.outcome);
+ const legacy=structuredClone(metadata);delete legacy.anchor.outcome;assert.deepEqual(createReplayModel({...f.envelope,metadata:legacy}).at(metadata.coverage.from).outcome,state.outcome);
+ for(const mutate of [o=>o.at++,o=>o.winner='invented',o=>o.providerError='private-error']){const bad=structuredClone(metadata);mutate(bad.anchor.outcome);assert.throws(()=>validateReplayMetadata(bad,state.id),/metadata/);}
+});
+
 test('checkpoint retention is bounded and malformed or secret-bearing metadata fails closed',()=>{
  const f=spatialFixture(),s=structuredClone(f.initial);
  for(let n=1;n<=40;n++){s.updatedAt=1000+n;s.replaySequence=1024*n+1;checkpointReplay(s);}

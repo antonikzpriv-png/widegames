@@ -40,6 +40,13 @@ export function createReplayModel(response,{matchId,roomId,players=CHARACTERS}={
  if(anchor){
   if(anchor.bodies.some(b=>!point(b.position)))throw new Error('Invalid replay metadata geometry');
   initial.phase=anchor.phase;initial.bodies=copy(anchor.bodies);initial.sabotage=copy(anchor.sabotage);initial.meeting=copy(anchor.meeting);
+  initial.outcome=copy(anchor.outcome??null);
+  if(anchor.phase==='ended'&&!initial.outcome){
+   // Older version-1 terminal anchors omitted outcome. Use a retained recorded
+   // outcome when available, never the unrecorded final browser view.
+   const ended=events.find(e=>e.type==='ended'&&e.at<=anchor.at&&(seq(e)===null||seq(e)<=anchor.sequence));
+   if(ended)initial.outcome={winner:ended.winner,reason:ended.reason,at:ended.at};
+  }
   for(const p of anchor.players){if(!point(p.position)||p.route.some(q=>!point(q)))throw new Error('Invalid replay metadata geometry');const target=initial.players.find(q=>q.id===p.id);Object.assign(target,copy(p),{route:route(p.position,p.route,WORLD.speed,anchor.at),positionAt:anchor.at});}
  }
  const from=metadata?.coverage.from??events[0]?.at??0,through=metadata?.coverage.through??events.at(-1)?.at??from;
@@ -86,7 +93,7 @@ export function createReplayModel(response,{matchId,roomId,players=CHARACTERS}={
    if(e.type==='voting')s.phase='voting';
    if(e.type==='vote_result'){s.phase='roam';s.meeting={...s.meeting,votes:copy(e.votes||[]),tallied:true,ejectedId:e.ejectedId};}
    if(e.type==='ejected'&&p){p.alive=false;p.route=null;}
-   if(e.type==='ended'){s.phase='ended';s.outcome={winner:e.winner,reason:e.reason};for(const q of s.players)q.route=null;}
+   if(e.type==='ended'){s.phase='ended';s.outcome={winner:e.winner,reason:e.reason,at:e.at};for(const q of s.players)q.route=null;}
    if(e.type==='paused')s.phase='paused';
    if(!['motion','direction','started'].includes(e.type)&&a.type!=='wait')s.activity.push(copy(e));
   }

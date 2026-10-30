@@ -3,6 +3,7 @@ const copy=structuredClone;
 /** Snapshot only reconstructible gameplay, never requests, AI context or credentials. */
 function snapshot(state){
  return {at:state.phase==='ended'?state.outcome.at:state.updatedAt,sequence:state.replaySequence,phase:state.phase,
+  outcome:state.outcome?{winner:state.outcome.winner,reason:state.outcome.reason,at:state.outcome.at}:null,
   players:state.players.map(p=>({id:p.id,role:p.role,alive:p.alive,roomId:p.roomId,position:copy(p.position),tasks:p.tasks.map(t=>({id:t.id,label:t.label,roomId:t.roomId,completed:t.completed})),route:p.motion.path.length<=REPLAY_LIMITS.route?copy(p.motion.path):[]})),
   bodies:state.bodies.map(b=>({id:b.id,playerId:b.playerId,roomId:b.roomId,position:copy(b.position),at:b.at,reported:b.reported})),
   sabotage:state.sabotage?{active:state.sabotage.active,roomId:state.sabotage.roomId,deadlineAt:state.sabotage.deadlineAt,repairsCompleted:state.sabotage.repairsCompleted,repairsRequired:state.sabotage.repairsRequired}:null,

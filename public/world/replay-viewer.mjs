@@ -13,8 +13,8 @@ export function recordedAiText(ai){
 }
 export function createSpatialReplay(host,response,{game,roomId}={}){
  const model=createReplayModel(response,{matchId:game.matchId,roomId,players:game.players});
- let disposed=false,selected='',perspective='',overview=true,roles=true,index=0,lastPaint=-Infinity,snapshot;
- const canvas=dom('canvas','lw-replay-canvas'),coverage=dom('p','lw-replay-coverage',model.coverage.description),limits=dom('p','lw-replay-limits','Recorded routes use map geometry. Manual movement and missing routes use held recorded samples; travel between samples is unknown. Unrecognized events stay in the log; their spatial effects may be unavailable.'),usage=dom('p','lw-replay-usage',recordedAiText(response.ai)),toolbar=dom('div','lw-replay-toolbar'),play=control('Play',()=>{if(clock.playing)clock.pause();else{if(clock.time>=model.coverage.through)clock.seek(model.coverage.from);clock.play();}setText(play,clock.playing?'Pause':'Play');}),speed=dom('select'),follow=dom('select'),view=dom('select'),overviewButton=control('Overview',()=>{overview=!overview;overviewButton.setAttribute('aria-pressed',String(overview));paint(clock.time);}),rolesButton=control('Postgame roles',()=>{roles=!roles;rolesButton.setAttribute('aria-pressed',String(roles));paint(clock.time);}),range=dom('input'),seek=dom('input','lw-replay-seek'),label=dom('label'),eventText=dom('p','lw-replay-event'),timeText=dom('p','lw-replay-time'),history=dom('div','lw-replay-history'),ballots=dom('p','lw-replay-ballots'),bookmarks=dom('select'),details=dom('details','lw-replay-log'),log=dom('ol'),controls=dom('div','lw-replay-controls');
+ let disposed=false,selected='',perspective='',overview=true,roles=true,index=0,eventLimit=Infinity,lastPaint=-Infinity,snapshot;
+ const canvas=dom('canvas','lw-replay-canvas'),coverage=dom('p','lw-replay-coverage',model.coverage.description),limits=dom('p','lw-replay-limits','Recorded routes use map geometry. Manual movement and missing routes use held recorded samples; travel between samples is unknown. Unrecognized events stay in the log; their spatial effects may be unavailable.'),usage=dom('p','lw-replay-usage',recordedAiText(response.ai)),toolbar=dom('div','lw-replay-toolbar'),play=control('Play',togglePlayback),speed=dom('select'),follow=dom('select'),view=dom('select'),overviewButton=control('Overview',()=>{overview=!overview;overviewButton.setAttribute('aria-pressed',String(overview));paint(clock.time);}),rolesButton=control('Postgame roles',()=>{roles=!roles;rolesButton.setAttribute('aria-pressed',String(roles));paint(clock.time);}),range=dom('input'),seek=dom('input','lw-replay-seek'),label=dom('label'),eventText=dom('p','lw-replay-event'),timeText=dom('p','lw-replay-time'),history=dom('div','lw-replay-history'),ballots=dom('p','lw-replay-ballots'),bookmarks=dom('select'),details=dom('details','lw-replay-log'),log=dom('ol'),controls=dom('div','lw-replay-controls');
  canvas.setAttribute('role','img');canvas.setAttribute('aria-label','Recorded storm-beacon positions. Playback does not control the game.');
  const scene=createWorldScene(canvas,{playback:true,reduced:true});
  const clock=createReplayClock({...model.coverage,onFrame:time=>{if(time-lastPaint>=70||time<lastPaint||time>=model.coverage.through){lastPaint=time;paint(time);}setText(play,clock.playing&&time<model.coverage.through?'Pause':'Play');}});
@@ -26,9 +26,19 @@ export function createSpatialReplay(host,response,{game,roomId}={}){
  overviewButton.setAttribute('aria-pressed','true');rolesButton.setAttribute('aria-pressed','true');rolesButton.title='Final revealed roles for postgame analysis; not what characters knew at this time.';
  toolbar.append(play,speed,follow,view,overviewButton,rolesButton);
  range.type='range';range.step='1';range.id='spatial-replay-'+game.matchId;label.htmlFor=range.id;
- const first=Math.max(0,model.events.findIndex(e=>e.at>=model.coverage.from&&(!model.metadata?.anchor||Number(e.id?.slice(1))>=model.metadata.anchor.sequence)));range.min=String(first);range.max=String(Math.max(first,model.events.length-1));index=first;
- function seekIndex(value){index=Math.max(first,Math.min(model.events.length-1,value));clock.pause();const e=model.events[index];clock.seek(e?.at??model.coverage.from);paint(e?.at??model.coverage.from,index);setText(play,'Play');}
- seek.type='range';seek.min=String(model.coverage.from);seek.max=String(model.coverage.through);seek.step='any';seek.setAttribute('aria-label','Seek recorded time');seek.addEventListener('input',()=>{clock.pause();clock.seek(restoreReplayTime(Number(seek.value),model.events));paint(clock.time);setText(play,'Play');});
+ const first=Math.max(0,model.events.findIndex(e=>e.at>=model.coverage.from&&(!model.metadata?.anchor||Number(e.id?.slice(1))>=model.metadata.anchor.sequence)));range.min=String(first);range.max=String(Math.max(first,model.events.length-1));index=first;eventLimit=first;
+ function seekIndex(value){const target=Math.max(first,Math.min(model.events.length-1,value));eventLimit=target;clock.pause();const e=model.events[target];clock.seek(e?.at??model.coverage.from);paint(clock.time);setText(play,'Play');}
+ function togglePlayback(){
+  if(clock.playing){clock.pause();paint(clock.time);}
+  else{
+   const finishTie=clock.time>=model.coverage.through&&eventLimit<model.events.length-1;
+   eventLimit=Infinity;lastPaint=-Infinity;
+   if(finishTie)paint(clock.time);
+   else{if(clock.time>=model.coverage.through)clock.seek(model.coverage.from);clock.play();}
+  }
+  setText(play,clock.playing?'Pause':'Play');
+ }
+ seek.type='range';seek.min=String(model.coverage.from);seek.max=String(model.coverage.through);seek.step='any';seek.setAttribute('aria-label','Seek recorded time');seek.addEventListener('input',()=>{eventLimit=Infinity;clock.pause();clock.seek(restoreReplayTime(Number(seek.value),model.events));paint(clock.time);setText(play,'Play');});
  range.addEventListener('input',()=>seekIndex(Number(range.value)));eventText.setAttribute('aria-live','polite');
  const prev=control('Previous event',()=>seekIndex(index-1)),next=control('Next event',()=>seekIndex(index+1));controls.append(prev,next);
  bookmarks.setAttribute('aria-label','Event bookmarks');const empty=dom('option','','Jump to a recorded event');empty.value='';bookmarks.append(empty);
@@ -39,9 +49,9 @@ export function createSpatialReplay(host,response,{game,roomId}={}){
  bookmarks.addEventListener('change',()=>{if(bookmarks.value!=='')seekIndex(Number(bookmarks.value));});
  details.append(dom('summary','','Read the complete attributed log'),log);
  host.append(dom('h2','','SPATIAL · ROLE-REVEALED REPLAY'),coverage,limits,usage,toolbar,canvas,label,range,dom('label','','Recorded time'),seek,timeText,eventText,controls,bookmarks,ballots,history,details);
- function paint(time,limit=Infinity){
+ function paint(time,limit=eventLimit){
   if(disposed)return;snapshot=model.at(time,limit);
-  if(limit===Infinity){index=first;for(let i=first;i<model.events.length&&model.events[i].at<=time;i++)index=i;}
+  if(limit===Infinity){index=first;for(let i=first;i<model.events.length&&model.events[i].at<=time;i++)index=i;}else index=limit;
   const e=model.events[index];range.value=String(index);seek.value=String(time);setText(label,`Event ${model.events.length?index+1:0} of ${model.events.length}`);setText(eventText,e?worldReplayText(e,game):'No recorded events.');setText(timeText,`Recorded timestamp ${time} · ${snapshot.phase}`);host.dataset.replayTime=String(time);host.dataset.replayPhase=snapshot.phase;
   prev.disabled=index<=first;next.disabled=index>=model.events.length-1;
   const perspectiveState=perspective?model.perspective(snapshot,perspective):null;
@@ -57,6 +67,6 @@ export function createSpatialReplay(host,response,{game,roomId}={}){
  function name(id){return game.players.find(p=>p.id===id)?.name||id||'unknown';}
  const visibility=()=>{if(document.hidden){clock.pause();setText(play,'Play');}};
  document.addEventListener('visibilitychange',visibility);clock.seek(model.coverage.from);paint(model.coverage.from,first);
- const refresh=()=>paint(clock.time,index);globalThis.addEventListener?.('resize',refresh);
+ const refresh=()=>paint(clock.time);globalThis.addEventListener?.('resize',refresh);
  return {model,clock,range,refresh,pause(){clock.pause();setText(play,'Play');},dispose(){if(disposed)return;disposed=true;clock.dispose();scene.dispose();globalThis.removeEventListener?.('resize',refresh);document.removeEventListener('visibilitychange',visibility);host.replaceChildren();}};
 }

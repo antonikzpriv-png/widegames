@@ -16,11 +16,13 @@ The authenticated `GET /api/rooms/:roomId/replay` response retains `roomId` and 
   map: 'lantern-wake-v1',
   matchId,
   coverage: { startedAt, from, through, partial },
-  anchor: { at, sequence, phase, players, bodies, sabotage, meeting } // or null
+  anchor: { at, sequence, phase, players, bodies, sabotage, meeting, outcome } // or null
 }
 ```
 
 New schema-2 recordings save an initial gameplay checkpoint and periodic checkpoints outside the event ring, at completed engine transaction boundaries after all actors have settled. Checkpoints contain only selected gameplay fields: positions, roles, living status, tasks, bounded remaining routes, bodies, sabotage and current ballots. They exclude input receipts, requests, cooldowns, raw AI contexts, memories, provider errors and credentials. Metadata/history versions, map, shapes, times, sequences, sizes and geometry are validated. Returned metadata and event records are defensive copies.
+
+New checkpoints also retain the bounded terminal outcome (`winner`, `reason`, exact numeric `at`), or null before completion. `outcome` is optional when reading earlier version-1 checkpoints. For an old terminal checkpoint, the viewer recovers the outcome only from a retained recorded `ended` event; it never substitutes the final browser view. A terminal checkpoint can reconstruct its outcome even if no event follows its sequence cutoff.
 
 Retention is bounded by 12,000 records and a 2 MiB serialized-event budget, whichever fills first. At most 14 checkpoints are kept, normally spaced 1,024 records apart. If eviction would leave no valid checkpoint, the next completed transaction supplies one. Each checkpoint is limited to six characters, 100 total tasks, six bodies/ballots, 128 waypoints per route and 64 KiB of JSON characters. The room's existing 8 MiB hard storage limit remains enforced. This bounds the new recording overhead; existing request and private-context storage still shares that room budget.
 
@@ -31,6 +33,8 @@ Old recordings with a complete `started` record can reconstruct from its recorde
 ## Time and movement accuracy
 
 Timestamps remain numeric, including fractional arrivals. Stable numeric sorting retains causal append order for equal times. Event scrubbing and bookmarks use both the timestamp and event index, so equal-time stages remain individually inspectable. Playback and repeated backward/forward seeks derive from the same anchor and reducer.
+
+An event-index seek pins that causal prefix through camera, role, perspective and resize redraws. Time scrubbing uses continuous time and includes all events through that timestamp. Playing a selected prefix at the terminal timestamp first consumes its remaining equal-time events; another Play from the completed replay restarts it.
 
 New navigation records include the accepted route (at most 128 waypoints) and authoritative speed. Playback validates segments against the matching map and follows those waypoints; it never blends endpoints directly through walls. Routes absent from an old record, excessive routes, and manual steering use held recorded samples. Unrecorded travel between those samples is explicitly unknown. HTML range controls may serialize a double with fewer digits than JSON; only a nearest recorded boundary within floating-point serialization error is restored. Original records are never rounded or retimed.
 

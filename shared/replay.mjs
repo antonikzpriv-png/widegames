@@ -12,7 +12,14 @@ const bounded=(a,n)=>Array.isArray(a)&&a.length<=n;
 const reject=()=>{throw new Error('Invalid replay metadata');};
 const keys=(o,allowed)=>object(o)&&Object.keys(o).every(k=>allowed.includes(k));
 export function validateReplayAnchor(a){
- if(!keys(a,['at','sequence','phase','players','bodies','sabotage','meeting'])||!time(a.at)||!Number.isSafeInteger(a.sequence)||a.sequence<0||!['roam','discussion','voting','ended','paused'].includes(a.phase)||!bounded(a.players,6)||a.players.length!==6||new Set(a.players.map(p=>p?.id)).size!==6)reject();
+ if(!keys(a,['at','sequence','phase','players','bodies','sabotage','meeting','outcome'])||!time(a.at)||!Number.isSafeInteger(a.sequence)||a.sequence<0||!['roam','discussion','voting','ended','paused'].includes(a.phase)||!bounded(a.players,6)||a.players.length!==6||new Set(a.players.map(p=>p?.id)).size!==6)reject();
+ // Optional for existing version-1 recordings; new terminal checkpoints retain it.
+ if(Object.hasOwn(a,'outcome')){
+  const o=a.outcome;
+  if(a.phase==='ended'){
+   if(!keys(o,['winner','reason','at'])||!['crew','saboteur'].includes(o.winner)||typeof o.reason!=='string'||!/^[A-Za-z0-9_:-]{1,100}$/.test(o.reason)||!time(o.at)||o.at>a.at)reject();
+  }else if(o!==null)reject();
+ }
  let tasks=0;
  for(const p of a.players){
   if(!keys(p,['id','role','alive','roomId','position','tasks','route'])||!player(p.id)||!['crew','saboteur'].includes(p.role)||typeof p.alive!=='boolean'||!room(p.roomId)||!point(p.position)||!bounded(p.tasks,100)||!bounded(p.route,REPLAY_LIMITS.route)||p.route.some(q=>!point(q)))reject();

@@ -48,3 +48,18 @@ test('hiding during fetch aborts it and ignores a response even when its promise
  const env=dom(),pending=deferred();let signal;const results=createResults({id:'lifecycle',feedback:()=>assert.fail('stale feedback'),isCurrent:()=>true,loadReplay:options=>{signal=options.signal;return pending.promise;}});
  results.update(f.game,{roomId:f.state.id});const task=button(results.node,'Open the role-revealed replay').dispatch('click');env.hide();assert(signal.aborted);document.hidden=false;pending.resolve(f.envelope);await task;assert(!walk(results.node).some(n=>n.className==='lw-replay-canvas'));results.dispose();assert.equal(env.listeners,0);
 });
+
+test('equal-time event selection survives clock callbacks, camera/perspective toggles and resize refresh',async t=>{
+ const env=dom();const results=createResults({id:'audit-ties',feedback:e=>assert.fail(e),isCurrent:()=>true,loadReplay:async()=>f.envelope});
+ t.after(()=>results.dispose());results.update(f.game,{roomId:f.state.id});await button(results.node,'Open the role-revealed replay').dispatch('click');
+ const pane=walk(results.node).find(n=>n.className==='lw-replay'),range=walk(pane).find(n=>n.tagName==='input'&&n.className!=='lw-replay-seek');
+ const index=f.replay.findIndex(e=>e.type==='vote_result');assert.equal(f.replay[index].at,f.replay.at(-1).at);
+ range.value=String(index);range.dispatch('input');
+ assert.equal(Number(range.value),index,'A clock seek must not replace the selected event with the last event at that time');
+ assert.equal(pane.dataset.replayPhase,'roam','The terminal outcome has not occurred at this causal event prefix');
+ const follow=walk(pane).find(n=>n.attrs['aria-label']==='Follow keeper');follow.value='p2';follow.dispatch('change');assert.equal(Number(range.value),index);
+ const perspective=walk(pane).find(n=>n.attrs['aria-label']==='Historical character perspective');perspective.value='p2';perspective.dispatch('change');assert.equal(Number(range.value),index);
+ for(const title of ['Overview','Postgame roles']){button(pane,title).dispatch('click');assert.equal(Number(range.value),index);assert.equal(pane.dataset.replayPhase,'roam');}
+ button(pane,'Next event').dispatch('click');assert.equal(Number(range.value),index+1);button(pane,'Previous event').dispatch('click');assert.equal(Number(range.value),index);
+ button(pane,'Play').dispatch('click');assert.equal(Number(range.value),f.replay.length-1,'Playing the remaining terminal tie should finish it before restarting');assert.equal(pane.dataset.replayPhase,'ended');assert.equal(env.frames.size,0);
+});
