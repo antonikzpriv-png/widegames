@@ -1,3 +1,7 @@
+# Integrated inspection permission boundary
+
+Only the authenticated host of an all-AI room receives the omniscient inspection projection. A joined public viewer receives the normal limited player projection, without inspection roles, hidden coordinates, jobs or ghost details. Human rooms never receive inspection. The server derives permission from the room cookie identity; frontend controls do not grant it. This private owner capability preserves the current-main inspector while maintaining public role secrecy. The following upstream guide is historical where it implies broader access; the integrated boundary above controls.
+
 # Ghost spectator and all-AI observatory
 
 Choose **WATCH THE AI**, then **Begin the watch**. Press **Free ghost** or start

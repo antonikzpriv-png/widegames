@@ -81,3 +81,8 @@ The host can select **Ghost tasks + fallen chat** and **Optional ability roles**
 The lobby also offers **Storm Foundry** (12 rooms) and **Tidal Observatory** (14 rooms), preserved from main41b4c6e. These use their authored world2/taskStep protocol: twelve jobs per crew keeper, covering the original five puzzles plus glyph selection, counting, ascending order, rotation, odd-one-out and code transcription. Progress is authoritative and saved; no external CAPTCHA service or model call is required. Their original mapId-based saved games and replay geometry remain distinct from tactical station watches.
 
 Beacon2 and Stormbreak Annex retain their tactical systems and six station challenge kinds. Original Beacon1 and prior map/protocol versions remain readable. Server defaults may use GAME_MAP; the host chooses the final map through the same lobby. Run npm run test:maps:browser for the expanded-map native fixture. [Authored map details and screenshots](docs/EXPANDED-MAPS.md), [newest integration qualification](docs/QUALITY-LATEST-MAIN-INTEGRATION.md).
+
+
+## Private all-AI inspection
+
+The authenticated host of a WATCH THE AI room can inspect the simulated keepers: recorded positions, ghost state, task progress, cooldowns, claims and bounded structural controller plans. This is an omniscient owner view; a recorded plan is not private thoughts or verified intent. Human rooms and public joined spectators retain the original limited, role-private feed. Keys, prompts, model reasoning, provider errors, memories and fallen chat are excluded. [Inspection controls and permissions](docs/SPECTATOR.md). Run npm run test:spectator:browser for the real inspection fixture; npm run perf:spectator is an optional measured benchmark, not an FPS promise.

@@ -18,7 +18,9 @@
     "test:features:browser": "node scripts/ghost-abilities-browser-check.mjs",
     "test:spatial-browser": "node scripts/spatial-replay-browser-check.mjs",
     "test:task-browser": "node scripts/task-progress-browser-check.mjs",
-    "test:maps:browser": "node scripts/maps-captcha-browser-check.mjs"
+    "test:maps:browser": "node scripts/maps-captcha-browser-check.mjs",
+    "test:spectator:browser": "node scripts/spectator-browser-check.mjs",
+    "perf:spectator": "node scripts/spectator-performance-check.mjs"
   },
   "dependencies": {
     "ws": "8.22.0"
