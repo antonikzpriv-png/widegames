@@ -54,3 +54,25 @@ The timing receipt compares candidate88 with current engine:120 idle ticks,30 mo
 ## Coordinator/Frontend handoff
 
 The four client interpolation failures remain assigned to Frontend; do not weaken the assertions without reviewing MotionTrack context/collision semantics. The engine six controls are green separately. The incoming unadapted server/spectator.mjs also needs owner integration: selectedPlan resolves room validity through getWorld(state.mapId), which cannot represent exact tactical Beacon2/Annex rooms; task rows use legacy taskProgress(task), which does not project station challenge kind/completion. Inspection must use the exact map and station-specific progress without feeding omniscient inspection into AI views. That module is outside this worker's ownership and was not edited. Full composed/native/browser approval remains pending coordinator and independent Reviewer gates. No Chrome, live model/provider, main write, push or deployment.
+
+## Narrow audit closure after0c800da
+
+A subsequent independent source audit identified two remaining loops. This follow-up is based on preserved0c800da6dd494b50891488c0a3b8961ba92b6c07, not a replacement of its historical native match/timing evidence.
+
+- Optional investigation now uses one conservative three-proposal counter across goal and fallback paths. Both update lastTerminalAt and tacticalReads through the same local helper; capped goal candidates are discarded before optional travel. This is a bounded local AI policy, not an engine permission cap: an enabled console remains manually usable, and Saboteur patrol/fake-work and legal device permissions remain intact. No crew tasks are invented for Saboteurs, and no strategic planner or transport code changes.
+- The only systems-module change is the explicitly assigned getSystemsView projection: when critical exists and the viewer resolves to an actor, critical.selfContributed is the authoritative boolean c.repairers.includes(actor.id). It is absent for a public/unknown viewer. The engine already uses this projection for both safe view systems.critical and sabotage. No repairer list, repairedBy, repairedAt or other identity is added to public sites. No persistence schema changes: restart recomputes the boolean from validated authoritative state.
+- Crew with active critical/selfContributed:true skip critical repair goal selection, resume owned work, or wait when no owned work remains. This uses only the projected authoritative flag, with no optimistic proposal-memory inference. Noncontributors retain critical repair priority. Existing system validation still rejects a second contribution.
+
+The legal-action fixtures on both maps first reproduce4/4 intended failures in _artifacts/spectator-narrow-closure-original-red.txt: owner flag absent after an accepted repair, and3 actual completed terminal reads leave the old fallback counter at2. Earlier fixture-debug logs are retained separately; an idle tick can legitimately leave state.updatedAt unchanged, so the valid fixture tracks its monotonic server clock independently rather than assuming updatedAt equals now. No engine defect is inferred from that setup mistake.
+
+Final owned controls4/4 pass,0 skips (_artifacts/spectator-narrow-closure-final.txt). They use real navigation, station challenge inputs, critical sabotage, accepted repair, actual terminal reads, views and fresh controllers. They verify pre-contribution false; owner true/other crew false/Saboteur false/public absent; no raw repairer/site identities; owner taskInteract accepted twice across JSON restart without another repair; two goal reads plus a30-second fallback share the three-read cap; three completed owner samples survive JSON; capped local permission remains enabled while optional read/travel stops; and a nearby allowed console cannot detour unfinished owned work even below the cap. The device fixture uses controlled idle other actors and an explicit600-second roam solely to isolate three reads; it is not default autonomous outcome evidence. Zero provider fetches. No positions, deaths, completed jobs or winners are assigned.
+
+Targeted retained nearby-job and urgent critical positives plus initial closure controls pass8/8,0 skips (_artifacts/spectator-narrow-closure-green.txt):
+
+```powershell
+$env:TEMP='D:/Widegames-work/temp'; $env:TMP=$env:TEMP
+node --test --test-isolation=none --test-name-pattern='owner-only knowledge|optional terminal cap|nearby structured job|critical repair remains urgent' tests/latest-spectator-engine-closure.test.mjs tests/latest-spectator-engine-ai.test.mjs
+node --test --test-isolation=none tests/latest-spectator-engine-closure.test.mjs
+```
+
+No Chrome, provider/model calls, full suite, native-match rerun, benchmark, strategic planner/transport/client edit, main write or push. The0c800da native37-second result remains historical; the coordinator owns fresh combined native/browser qualification after integration.

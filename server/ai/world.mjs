@@ -126,6 +126,9 @@ function beaconCandidates(view,memory,suspect){
  const self=view.self,allowed=new Set(view.availableActions??[]),wait=()=>allowed.has('wait')?[{type:'wait'}]:[];
  if(!point(self?.position)||self.transit)return wait();
  const controls=(view.interactions??[]).filter(a=>a.enabled),proposal=d=>({type:d.type,...d.fields});
+ // One conservative proposal budget for all optional terminal paths/factions.
+ const canRead=(memory.tacticalReads??0)<3;
+ const read=device=>{memory.lastTerminalAt=view.serverNow;memory.tacticalReads=(memory.tacticalReads??0)+1;return [proposal(device)];};
  const navigate=target=>{const a=localNavigationIntent(view,target);if(a.type==='wait'&&view.tacticalVersion===1){const door=controls.find(h=>h.type==='systemRepair'&&h.fields.systemId==='door');if(door)return[proposal(door)];}return a.type==='wait'?wait():[a];};
  if(view.tacticalVersion===1)memory.tacticalStartedAt??=view.serverNow;
  if(view.investigation?.session?.status==='reading'&&!view.sabotage?.active)return wait();
@@ -136,10 +139,12 @@ function beaconCandidates(view,memory,suspect){
   // Critical safety interrupts any job. Auxiliary disruptions and optional
   // consoles must not repeatedly erase progress on a multi-input station.
   const critical=view.sabotage?.active===true;
+  const needsCritical=critical&&view.sabotage.selfContributed!==true;
   const repair=controls.find(a=>a.type==='systemRepair'&&(!critical||a.fields.systemId===view.sabotage.kind));
-  if(critical&&repair)return [proposal(repair)];
+  if(needsCritical&&repair)return [proposal(repair)];
   const unfinished=(self.tasks??[]).filter(t=>!t.completed&&WORLD_STATIONS[t.roomId]);
-  const goal=critical||!unfinished.length?localGoals.select(view,memory):null;
+  let goal=needsCritical||!critical&&!unfinished.length?localGoals.select(view,memory):null;
+  if(goal?.goalId==='investigate'&&!canRead)goal=null;
   if(goal?.goalId==='repair'){memory.goal={id:goal.goalId,at:view.serverNow};return navigate(goal.target);}
   const optional=featureCandidates(view,memory);if(optional)return optional;
   const task=controls.find(h=>h.type==='task');if(task&&ready(view,'taskAt')){const own=self.tasks.find(t=>t.id===task.fields.taskId);return own?[worldTaskAction(view,own)]:wait();}
@@ -154,7 +159,8 @@ function beaconCandidates(view,memory,suspect){
    if(next){if(distance(self.position,next.target)<=WORLD.interactionRadius&&task)return wait();return navigate(next.target);}
    return wait();
   }
-  if(goal?.goalId==='investigate'){const device=controls.find(h=>h.type==='investigate'&&h.fields.deviceId===goal.deviceId);if(device){memory.lastTerminalAt=view.serverNow;memory.tacticalReads=(memory.tacticalReads??0)+1;return [proposal(device)];}return navigate(goal.target);}
+  if(critical&&!needsCritical)return wait();
+  if(goal?.goalId==='investigate'){const device=controls.find(h=>h.type==='investigate'&&h.fields.deviceId===goal.deviceId);if(device)return read(device);return navigate(goal.target);}
   if(goal){memory.goal={id:goal.goalId,at:view.serverNow};return navigate(goal.target);}
  }else{
   const optional=featureCandidates(view,memory);if(optional)return optional;
@@ -166,7 +172,7 @@ function beaconCandidates(view,memory,suspect){
   if(ready(view,'killAt')&&targets.length){targets.sort((a,b)=>distance(self.position,a.position)-distance(self.position,b.position));return navigate(targets[0].position);}
  }
  if(self.moving)return wait();
- const terminal=controls.find(a=>a.type==='investigate');if(terminal&&view.serverNow-(memory.lastTerminalAt??-Infinity)>30000){memory.lastTerminalAt=view.serverNow;return [proposal(terminal)];}
+ const terminal=controls.find(a=>a.type==='investigate');if(canRead&&terminal&&view.serverNow-(memory.lastTerminalAt??-Infinity)>30000)return read(terminal);
  if(view.investigation?.session?.status==='reading')return wait();
  const doors=controls.find(a=>a.type==='systemRepair'&&a.fields.systemId==='door');if(doors)return [proposal(doors)];
  const offset=(view.players??[]).findIndex(p=>p.id===self.id);for(let step=0;step<ROOM_LAYOUT.length;step++){const station=WORLD_STATIONS[ROOM_LAYOUT[((memory.patrol??0)+Math.max(0,offset)+step)%ROOM_LAYOUT.length].id];if(point(station)&&!at(view,station,WORLD.interactionRadius))return navigate(station);}
