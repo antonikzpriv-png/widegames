@@ -28,12 +28,13 @@ async function fixture(t,{instrument=false,native=false}={}){
 
 
 const ownerOptions={mode:'spectator',seatId:null,identity:{host:true,seatId:null},now:1001};
-function worldFixture(map,seed=3){return engine.createMatch({id:'inspection-fixture',mode:'spectator',world:true,now:1000,seed,...(typeof map==='string'?{mapId:map}:{tactical:true,stationTasks:true,map})});}
+function worldFixture(map,seed=3){return engine.createMatch({id:'inspection-fixture',mode:'spectator',world:true,now:1000,seed,...(typeof map==='string'?{mapId:map}:Object.hasOwn(map,'mapId')?{mapId:map.mapId,mapRevision:map.revision}:{tactical:true,stationTasks:true,map})});}
 
-test('inspection resolves exact Beacon1 plus all four current maps, summarizes six station and eleven step kinds without puzzle payloads',()=>{
+test('inspection resolves exact Beacon1 plus all five current maps, summarizes six station and eleven step kinds without puzzle payloads',()=>{
  const stationKinds=new Set(),stepKinds=new Set();
- for(const map of [{id:'beacon',version:1},{id:'beacon',version:2},{id:'stormbreak-annex',version:1},'storm-foundry','tidal-observatory'])for(const seed of [3,7,11]){
+ for(const map of [{id:'beacon',version:1},{id:'beacon',version:2},{id:'stormbreak-annex',version:1},{mapId:'storm-foundry',revision:2},{mapId:'tidal-observatory',revision:2},{mapId:'beacon',revision:2}])for(const seed of [3,7,11]){
   const state=worldFixture(map,seed),before=structuredClone(state),out=spectatorInspection(state,ownerOptions);
+  if(Object.hasOwn(map,'mapId')){assert.equal(state.mapRevision,map.revision);assert.equal(state.mapId??'beacon',map.mapId);}else assert.deepEqual(state.map,map);
   assert.equal(out.agents.length,state.players.length);
   for(const player of state.players){
    const agent=out.agents.find(a=>a.id===player.id);assert.deepEqual(agent.position,player.position);
@@ -41,7 +42,7 @@ test('inspection resolves exact Beacon1 plus all four current maps, summarizes s
    for(const task of player.tasks){
     const summary=agent.tasks.find(t=>t.id===task.id);assert.deepEqual(Object.keys(summary.progress).sort(),['index','kind','readyAt','total']);
     if(task.challenge){const expected=stationProgress(task.challenge);stationKinds.add(task.challenge.kind);assert.deepEqual(summary.progress,{kind:task.challenge.kind,index:expected.progress,total:expected.total,readyAt:0});}
-    else{stepKinds.add(task.kind);assert.equal(summary.progress.kind,task.kind);assert(summary.progress.total>0);}
+    else{const expectedKind=task.kind??({bridge:'wires',lantern:'tuning',archive:'sequence',galley:'pressure',workshop:'repair',engine:'pressure'})[task.roomId];stepKinds.add(expectedKind);assert.equal(summary.progress.kind,expectedKind);assert(summary.progress.total>0);}
     assert.equal(summary.challenge,undefined);assert.equal(summary.progress.target,undefined);assert.equal(summary.progress.values,undefined);
    }
   }
@@ -90,11 +91,11 @@ test('room envelope durable failure never publishes engine state or private rese
 });
 
 
-test('native four-map HTTP inspection is owner-only through durable commits; public catalog and normal engine projections stay redacted',async t=>{
+test('native five-map HTTP inspection is owner-only through durable commits; public catalog and normal engine projections stay redacted',async t=>{
  const f=await fixture(t,{native:true});
- for(const mapId of ['beacon','stormbreak-annex','storm-foundry','tidal-observatory']){
+ for(const mapId of ['beacon','stormbreak-annex','storm-foundry','tidal-observatory','beacon-illustrated']){
   const created=await f.request('/api/rooms',{body:{mode:'spectator',mapId}});assert.equal(created.status,201);
-  assert.equal(created.body.availableMaps.length,4);for(const item of created.body.availableMaps)assert.deepEqual(Object.keys(item).sort(),['description','id','name','theme','version']);
+  assert.equal(created.body.availableMaps.length,5);for(const item of created.body.availableMaps)assert.deepEqual(Object.keys(item).sort(),['description','id','name','theme','version']);
   const route='/api/rooms/'+created.body.roomId,started=await f.request(route+'/start',{cookie:created.cookie,body:{id:'owner:start'}});assert.equal(started.status,200);
   const state=f.service.rooms.get(created.body.roomId).data.state;assert.equal(started.body.game.inspection.agents.length,state.players.length);
   assert.equal(state.schemaVersion,['beacon','stormbreak-annex'].includes(mapId)?5:2);

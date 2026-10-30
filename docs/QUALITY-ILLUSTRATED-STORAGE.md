@@ -51,3 +51,24 @@ source-manifest.json records exact pins and SHA256s for owned/dependency sources
 ## Bounded spectator follow-up
 
 Storage implementation committed asf3c3711686e018f1ad43c84fa37f8b8d29db0f75. Frontend5a00a398ac40b6b44dcb9a36183b5791f1422585 became available immediately afterward. Its exact public/world/spectator.mjs was copied only into the ignored fixture, not tracked runtime; the three unchanged spectator-revision2 controls now pass3/3,0 skips (spectator-5a-followup-green.txt). The fix supplies actual prop position/footprint facts. The source manifest records this separate follow-up pin/hash; it does not relabel the historical37-test run. Four client replay cases remain pending the separately documented Frontend replay revision adaptation. No additional broad suite or browser run was performed.
+
+
+## Final storage test adaptation at77cbf18, 2026-10-30
+
+Fresh separate D:/Widegames-work/ship-quality-final-storage-tests-20261030, branch codex/ship-quality-final-storage-tests-20261030, based exactly on coordinator77cbf18c8e5faa0ef83cad5c5c8e7565c131bdd6. Only tests/latest-main-storage-contract.test.mjs, tests/latest-main-storage-integration.test.mjs, tests/latest-spectator-boundary-inspection.test.mjs and this appended receipt change. No third-party commits or runtime/shared sources are integrated; prior worktrees and coordinator's final-combined-tests.txt are untouched.
+
+Reproduced the three owned files before editing:10 registered,5 pass/5 fail,0 skips,5.457s (_artifacts/final-storage-tests/original-red.txt). Failures are the obsolete four-selection count, expanded current version1 expectation, two historical checkpoint fixtures selecting latest revision2 while their engine state correctly defaults to revision1, and a four-selection public inspector catalog count. No genuine source defect was reproduced by these controls.
+
+The current catalog now explicitly includes tactical Beacon2, Annex1, Foundry2, Observatory2 and Illustrated Beacon2. Historical expanded save fixtures select exact {id,version:1} and additionally assert absent room/state mapRevision; old schemas1..5, exact Beacon1 and both task protocols remain exercised. Native HTTP/settings/restart and owner-only inspector loops now cover all five current choices; illustrated Beacon retains canonical beacon/mapRevision2,15 tasks, whereas expanded maps have60 and station maps20. Inspector fixtures explicitly distinguish tactical exact references and legacy {mapId,revision:2}, asserting the actual engine identity before projecting all six station and eleven step kinds. Metadata-free illustrated tasks retain the original room-derived kind expectations.
+
+All original identity/cookie/host/origin/private-context/role/puzzle/fallen-chat, accepted-ID conflict, malformed-input/sequence, durable-failure, exact-map backup/restart, immutable state, future rejection/no-quarantine/file-preservation and daily/match-budget assertions remain. No tests are skipped, negative assertions removed, or runtime validation relaxed.
+
+Final ordinary isolated run, no source overlays or root override:
+
+```powershell
+$env:TEMP='D:/Widegames-work/temp'
+$env:TMP=$env:TEMP
+node --test --test-concurrency=2 tests/latest-main-storage-contract.test.mjs tests/latest-main-storage-integration.test.mjs tests/latest-spectator-boundary-inspection.test.mjs
+```
+
+10/10 pass,0 fail/skip,9.675s (_artifacts/final-storage-tests/final-targeted-green.txt). The preceding adapted non-isolated run also passed10/10 in5.707s; all evidence remains ignored in the new worktree. Syntax checks and git diff --check pass. Only existing offline ws8.22.0 was copied to ignored node_modules, with no installation. Source hashes are retained in source-manifest.json. No Chrome, paid/provider requests, full suite, main change, push, merge or deployment; coordinator owns final composed qualification.
