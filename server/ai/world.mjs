@@ -9,7 +9,7 @@ import {localGoals,localNavigationIntent} from '../features/strategy/index.mjs';
 
 const navigators=new Map();
 export function worldGeometry(view){return getMap(view.map).geometry;}
-export function worldRoute(view,target){const self=view.self;if(!self?.position||self.transit||view.systems?.selfTransit||(!self.alive&&!(self.ghost===true&&self.role==='crew')))return null;const map=getMap(view.map),key=map.id+':'+map.version;if(!navigators.has(key))navigators.set(key,createSpatialWorld(map.geometry));return navigators.get(key).navigation({id:self.id,alive:true,position:self.position},target,view.serverNow,{systems:{doors:view.systems?.doors??[],transit:{}}});}
+export function worldRoute(view,target){const self=view.self;if(!self?.position||self.transit||view.systems?.selfTransit||(!self.alive&&!(self.ghost===true)))return null;const map=getMap(view.map),key=map.id+':'+map.version;if(!navigators.has(key))navigators.set(key,createSpatialWorld(map.geometry));return navigators.get(key).navigation({id:self.id,alive:true,position:self.position},target,view.serverNow,{systems:{doors:view.systems?.doors??[],transit:{}}});}
 export function worldTaskAction(view,task){if(!task||task.completed)return {type:'wait'};if(task.kind==='station'){const input=nextStationInput(task.challenge);return input?{type:'taskInteract',taskId:task.id,...input}:{type:'wait'};}if(task.progress&&typeof task.progress==='object'){const p=task.progress;if(p.kind==='repair'&&p.index===3&&view.serverNow<p.readyAt)return {type:'wait'};return p.index<p.total?{type:'taskStep',taskId:task.id,step:p.index,input:taskInput(task)}:{type:'task',taskId:task.id};}return {type:'task',taskId:task.id};}
 
 const ordered = values => [...values].sort((a, b) => a.id.localeCompare(b.id));
@@ -161,8 +161,9 @@ function featureCandidates(view,memory){
  const self=view.self,allowed=new Set(view.availableActions??[]),geo=worldGeometry(view),wait=()=>allowed.has('wait')?[{type:'wait'}]:[];
  if(!self?.position||self.transit||view.systems?.selfTransit)return null;
  const navigate=target=>{const route=worldRoute(view,target);if(!allowed.has('navigate')||!route||self.moving&&self.destination&&geo.distance(self.destination,target)<1)return wait();return [{type:'navigate',x:target.x,y:target.y}];};
- if(!self.alive&&self.ghost===true&&self.role==='crew'){
-  if(allowed.has('ghostSay')&&!memory.ghostSpoken)return [{type:'ghostSay',text:'Fallen channel: I will finish my remaining jobs. The living cannot hear this.'}];
+ if(!self.alive&&self.ghost===true){
+  if(allowed.has('ghostSay')&&!memory.ghostSpoken)return [{type:'ghostSay',text:self.role==='crew'?'Fallen channel: I will finish my remaining jobs. The living cannot hear this.':'Fallen channel: I am out of the watch. The living cannot hear this.'}];
+  if(self.role!=='crew')return wait();
   const tasks=ordered((self.tasks??[]).filter(t=>!t.completed));
   const here=tasks.find(t=>geo.WORLD_STATIONS[t.roomId]&&geo.distance(self.position,geo.WORLD_STATIONS[t.roomId])<=geo.WORLD.interactionRadius);
   if(here&&ready(view,'taskAt')&&(allowed.has('task')||allowed.has('taskStep')||allowed.has('taskInteract')))return [worldTaskAction(view,here)];

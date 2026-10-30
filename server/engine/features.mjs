@@ -1,6 +1,6 @@
 import {randomBytes} from 'node:crypto';
-import {parseFeatures,ABILITY_RULES as R} from '../../shared/features.mjs';
-export const isGhost=(state,p)=>state?.features?.deathPolicy==='ghost-tasks'&&p?.alive===false&&p.role==='crew';
+import {parseFeatures,isGhost,ABILITY_RULES as R} from '../../shared/features.mjs';
+export {isGhost};
 export const canWorldAct=(state,p)=>!!p&&(p.alive||isGhost(state,p));
 export function initializeFeatures(state,options,random){
  if(options===undefined)return;

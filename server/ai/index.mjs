@@ -2,6 +2,7 @@ import { randomUUID, createHash } from 'node:crypto';
 import { CHARACTERS } from '../../shared/contracts.mjs';
 import { intentions, remember, install, execute, situation } from './strategic.mjs';
 import { candidates, observe } from './demo.mjs';
+import { worldCandidates } from './world.mjs';
 import { AiFailure, MODEL, makeRequest, send } from './anthropic.mjs';
 
 const REASONS = new Set(['demo_configured', 'missing_credentials', 'unsupported_provider', 'unsupported_model', 'reservation_required', 'reservation_failed', 'budget_calls', 'budget_tokens', 'budget_cost', 'provider_unavailable', 'provider_response', 'provider_usage', 'prompt_limit', 'output_limit', 'timeout', 'invalid_context']);
@@ -79,7 +80,7 @@ export function createAiController({ config = {} } = {}) {
   }
   return {
     async decide({ view, player, context, signal, commitReservation, getCurrentView } = {}) {
-      if (signal?.aborted || !record(context) || !view?.self || (!view.self.alive&&!(view.self.ghost===true&&view.self.role==='crew')) || typeof view.matchId !== 'string' || !Number.isFinite(view.serverNow) || !['roam', 'discussion', 'voting'].includes(view.phase)) return null;
+      if (signal?.aborted || !record(context) || !view?.self || (!view.self.alive&&!(view.self.ghost===true)) || typeof view.matchId !== 'string' || !Number.isFinite(view.serverNow) || !['roam', 'discussion', 'voting'].includes(view.phase)) return null;
       const publicEntry=(view.players??[]).slice(0,24).find(p=>p.id===player?.id);
       const validName=typeof publicEntry?.name==='string'&&publicEntry.name.trim().length>0&&publicEntry.name.length<=80&&!/[\u0000-\u001f\u007f]/u.test(publicEntry.name);
       // Only an exact public identity may use the safe canonical traits.
@@ -101,7 +102,8 @@ export function createAiController({ config = {} } = {}) {
         observe(view, memory);
         if (settings.strategy === 'strategic' && view.worldVersion === 1) remember(view, memory);
         const strategic = settings.strategy === 'strategic' && state.mode === 'live' && !view.self.ghost && view.phase === 'roam' && view.worldVersion === 1;
-        const localChoices = candidates(view, memory);
+        // Fallen factions execute locally; legacy demo entry guards remain separate.
+        const localChoices = view.self.ghost&&view.worldVersion===1 ? (view.phase==='roam'?worldCandidates(view,memory,'skip'):[]) : candidates(view, memory);
         if (view.phase !== 'roam' || view.self.ghost) delete memory.intention;
         // Retain optional local ability behavior without introducing model calls.
         if (view.self.alive && ['protect', 'decoy'].includes(localChoices[0]?.type)) return envelope(localChoices[0], view, memory);
