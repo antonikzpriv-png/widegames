@@ -63,8 +63,8 @@ export function contexts(game,world){
 }
 /** Rendering blends only two received positions. Missing actors are removed immediately. */
 export class ActorSamples{
- constructor(options={}){this.track=new MotionTrack(options);this.legacy=new Map();this.usingWorld=false;this.forceWorld=options.world===true;}
- get samples(){return this.usingWorld?this.track.samples:this.legacy;}
+ constructor(options={}){this.track=new MotionTrack({...options,timelineDelayMs:options.timelineDelayMs??100,allowRawFixtures:options.world!==true});this.legacy=new Map();this.usingWorld=false;this.forceWorld=options.world===true;}
+ get samples(){return this.track.samples;}
  get intent(){return this.usingWorld?this.track.intent:null;}
  setIntent(input,at){return this.usingWorld?this.track.setIntent(input,at):false;}
  update(game,at){
@@ -73,19 +73,12 @@ export class ActorSamples{
   // Only historical unit-only Cartesian fixtures lack all these identifiers.
   const realWorld=this.forceWorld||game?.beaconVersion===1||game?.map!==undefined||!!game?.worldVersion&&(Number.isFinite(game.version)||Array.isArray(game.rooms));
   const privateObserver=observerAgents(game).length>0;
-  if(realWorld){let map;try{map=this.track.resolveMap(mapReference({game}));}catch{this.clear();return;}const owner=JSON.stringify([game?.matchId,map.id,map.version,game?.self?.id]);if(this.track.owner===owner&&(at<this.track.receivedAt||Number.isFinite(game?.version)&&game.version<this.track.version))return;game={...game,map:{id:map.id,version:map.version}};}
+  if(realWorld){let map;try{map=this.track.resolveMap(mapReference({game}));}catch{this.clear();return;}const owner=JSON.stringify([game?.matchId,mapKey(map),game?.self?.id]);if(this.track.owner===owner&&(at<this.track.receivedAt||Number.isFinite(game?.version)&&game.version<this.track.version))return;game={...game,map:map.reference??{id:map.id,version:map.version}};}
   if(realWorld!==this.usingWorld||privateObserver!==this.privateObserver){this.clear();this.usingWorld=realWorld;this.privateObserver=privateObserver;}
-  if(realWorld){this.track.update(game,at);this.observerGhostIds=new Set();if(this.track.receivedAt===at)for(const a of observerAgents(game)){if(!a.ghost||!point(a.position)||!this.track.walk(a.position))continue;const p=game.players?.find(p=>p.id===a.id);if(!p)continue;const to={x:a.position.x,y:a.position.y};this.track.samples.set(a.id,{from:to,to,at,player:{...p,position:to,ghost:true,moving:!!a.moving}});this.observerGhostIds.add(a.id);}if(game?.self?.ghost===true&&point(game.self.position)&&this.track.receivedAt===at){const p=game.players?.find(p=>p.id===game.self.id);if(p){const to={...game.self.position};this.track.samples.set(p.id,{from:to,to,at,player:{...p,position:to,ghost:true,moving:!!game.self.moving}});this.ghostId=p.id;}}else this.ghostId=null;return;}
-  const seen=new Set();
-  for(const player of visiblePlayers(game)){
-   seen.add(player.id);const old=this.samples.get(player.id);
-   if(old&&distance(old.to,player.position)<.001){old.player={...player,moving:player.id===game.self?.id?game.self.moving:old.player.moving};continue;}
-   const prior=old?this.at(player.id,at):player.position;
-   this.samples.set(player.id,{from:prior,to:{...player.position},at,player:{...player,moving:player.id===game.self?.id?game.self.moving:!!old}});
-  }
-  for(const id of this.samples.keys())if(!seen.has(id))this.samples.delete(id);
+  {this.track.update(game,at);this.observerGhostIds=new Set();if(this.track.receivedAt===at)for(const a of observerAgents(game)){if(!a.ghost||!point(a.position)||!this.track.walk(a.position))continue;const p=game.players?.find(p=>p.id===a.id);if(!p)continue;const to={x:a.position.x,y:a.position.y};this.track.samples.set(a.id,{from:to,to,at,player:{...p,position:to,ghost:true,moving:!!a.moving}});this.observerGhostIds.add(a.id);}if(game?.self?.ghost===true&&point(game.self.position)&&this.track.receivedAt===at){const p=game.players?.find(p=>p.id===game.self.id);if(p){const to={...game.self.position};this.track.samples.set(p.id,{from:to,to,at,player:{...p,position:to,ghost:true,moving:!!game.self.moving}});this.ghostId=p.id;}}else this.ghostId=null;return;}
  }
- at(id,now,reduced=false){if(this.usingWorld){if(id===this.ghostId||this.observerGhostIds?.has(id)){const p=this.track.samples.get(id)?.to;return p?{...p}:null;}return this.track.at(id,now,reduced);}const sample=this.samples.get(id);if(!sample)return null;const t=reduced?1:clamp((now-sample.at)/140,0,1);return {x:sample.from.x+(sample.to.x-sample.from.x)*t,y:sample.from.y+(sample.to.y-sample.from.y)*t};}
+
+ at(id,now,reduced=false){if(id===this.ghostId||this.observerGhostIds?.has(id)){const p=this.track.samples.get(id)?.to;return p?{...p}:null;}return this.track.at(id,now,reduced);}
  clear(){this.privateObserver=null;this.observerGhostIds=new Set();this.track.clear();this.legacy.clear();this.ghostId=null;this.usingWorld=false;}
 }
 export function validTaskSession(session,room,world){
@@ -93,7 +86,7 @@ export function validTaskSession(session,room,world){
  const current=!!session&&room.roomId===session.roomId&&game?.matchId===session.matchId&&game.phase==='roam'&&canViewAct(game)&&!game.systems?.selfTransit&&!game.self?.transit&&task&&!task.completed&&game.self.roomId===session.location;
  if(current&&session.progressKey!==undefined&&session.progressKey!==JSON.stringify([task.progress?.v,task.progress?.kind,task.progress?.target,task.progress?.sequence,task.progress?.pressure,task.progress?.total]))return false;
  if(current&&session.challengeKey!==undefined&&session.challengeKey!==JSON.stringify([task.challenge?.version,task.challenge?.kind,task.challenge?.puzzle]))return false;
- if(!current||session.mapKey!==undefined&&session.mapKey!==mapKey(game.map??room.map))return false;
+ if(!current||session.mapKey!==undefined&&session.mapKey!==mapKey(mapReference(room)))return false;
  if(game.beaconVersion===1)return hasActionDescriptor(game,'task',{taskId:session.taskId});
  return task.roomId===session.location&&distance(game.self.position,world.WORLD_STATIONS[task.roomId])<=world.WORLD.interactionRadius&&game.availableActions?.includes('task');
 }

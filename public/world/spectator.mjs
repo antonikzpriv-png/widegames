@@ -89,7 +89,7 @@ export function describeSpectatorSelection(game,selection){
   const effect=(game.effects||[]).find(effect=>effect.id===selection.id);if(!effect)return null;result.title=effect.kind==='ward'?'Harbor Ward':'Signal Echo';result.description='A visible ability effect. An effect does not establish its issuer’s faction.';facts.push(['Type',title(effect.kind)]);if(Number.isFinite(effect.expiresAt))facts.push(['Recorded expiry',String(effect.expiresAt)]);return result;
  }
  if(selection.type==='decor'){const detail=(geometry.WORLD_DECOR||[]).find((item,index)=>(item.id||`decor-${index}`)===selection.id);if(!detail)return null;result.title=detail.text||title(detail.id||detail.kind);result.description='A visible map detail. Inspection does not interact with the match.';facts.push(['Type',title(detail.kind)],['Location',roomName(geometry.worldRoomAt(detail))]);return result;}
- if(selection.type==='obstacle'||selection.type==='prop'){result.title=title(selection.id);result.description='Fixed beacon furniture. Spectator ghosts pass freely through walls and furniture.';return result;}
+ if(selection.type==='obstacle'||selection.type==='prop'){const prop=geometry.WORLD_OBSTACLES.find(p=>p.id===selection.id);if(!prop)return null;result.title=prop.label||title(prop.id);result.description='Fixed beacon furniture. Spectator ghosts pass freely through walls and furniture.';facts.push(['Equipment',title(prop.kind||'furniture')],['Position',`${prop.x}, ${prop.y}`],['Footprint',`${prop.width} × ${prop.height}`]);const room=geometry.worldRoomAt({x:prop.x+prop.width/2,y:prop.y+prop.height/2});if(room)facts.push(['Room',roomName(room)]);return result;}
  return null;
 }
 

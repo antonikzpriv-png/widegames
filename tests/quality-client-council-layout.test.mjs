@@ -18,9 +18,11 @@ function rules(source,queries=[],output=[]){
   for(const selector of head.split(','))output.push({selector:selector.trim(),queries,declarations});
  }return output;
 }
-function media(query,{width,height}){return query.split(',').some(branch=>branch.split(/\s+and\s+/).every(part=>{
+function media(query,{width,height,forcedColors=false}){return query.split(',').some(branch=>branch.split(/\s+and\s+/).every(part=>{
  const m=part.trim().match(/^\((min|max)-(width|height):\s*(\d+)px\)$/);if(m){const value=m[2]==='width'?width:height;return m[1]==='min'?value>=+m[3]:value<=+m[3];}
  if(/\((?:hover:none|pointer:coarse)\)/.test(part))return true;
+ if(part==='(forced-colors:active)')return forcedColors;
+ if(part==='(forced-colors:none)')return !forcedColors;
  if(/prefers-reduced-motion/.test(part))return false;
  throw Error('Unsupported media contract: '+part);
 }));}

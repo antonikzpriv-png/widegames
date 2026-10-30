@@ -1,5 +1,6 @@
+import {drawInterior,drawInteriorLabels,drawInteriorLights} from './interior-art.mjs';
 import {observerAgents,observerGame} from './spectator.mjs';
-import {mapReference} from './map-model.mjs';
+import {mapReference,mapKey} from './map-model.mjs';
 import {ObservedCamera,viewportBounds,intersects} from './camera.mjs';
 import {createStaticLayer} from './static-layer.mjs';
 import {paintEnvironment,drawRoomLabels,drawStation,drawForeground} from './environment.mjs';
@@ -60,6 +61,7 @@ function mapDecor(ctx,item,time,reduced){
 // Expanded world2 maps have no tactical fixtures. Their authored static art
 // shares the bounded quality tile cache rather than allocating a whole-map bitmap.
 function paintSceneEnvironment(ctx,map,bounds){
+ if(map.geometry.metadata?.revision===2){drawInterior(ctx,map.geometry,{cache:false,bounds});return;}
  paintEnvironment(ctx,map,bounds);
  if(!['storm-foundry','tidal-observatory'].includes(map.id))return;
  for(const r of map.geometry.WORLD_ROOMS)if(intersects(r,bounds)&&r.palette){ctx.save();ctx.globalAlpha=.18;ctx.fillStyle=r.palette[1];ctx.fillRect(r.x+12,r.y+16,r.width-24,r.height-30);ctx.restore();}
@@ -80,19 +82,19 @@ function acquireOverview(canvas,map,bounds,width,height){
 }
 function releaseOverview(entry){if(entry&&--entry.users===0){overviewLayers.delete(entry);entry.image.width=entry.image.height=0;}}
 export function createWorldScene(canvas,{reduced=false,playback=false,mapResolver=getMap,motionFactory}={}){
- const ctx=canvas.getContext('2d'),samples=motionFactory?motionFactory({mapResolver}):new ActorSamples({mapResolver,world:true});let map=mapResolver(),world=map.geometry;let room=null,lastKey=null,camera={x:800,y:400},view={width:1,height:1,zoom:1},stopped=false,lastOwner=null,lastAt=-Infinity,lastVersion=-1,paintedActors=[],overviewLayer=null;
+ const ctx=canvas.getContext('2d'),samples=motionFactory?motionFactory({mapResolver,timelineDelayMs:100}):new ActorSamples({mapResolver,world:true});let map=mapResolver(),world=map.geometry;let room=null,lastKey=null,camera={x:800,y:400},view={width:1,height:1,zoom:1},stopped=false,lastOwner=null,lastAt=-Infinity,lastVersion=-1,paintedActors=[],overviewLayer=null;
  const cameraTrack=new ObservedCamera();
  const cache=createStaticLayer({paint:paintSceneEnvironment,makeCanvas:(w,h)=>{if(typeof OffscreenCanvas!=='undefined')return new OffscreenCanvas(w,h);return canvas.ownerDocument?.createElement?.('canvas')||globalThis.document?.createElement?.('canvas');}});
  function update(next,at){
   const nextMap=mapResolver(mapReference(next)),game=observerGame(next?.game);
-  const owner=JSON.stringify([next?.roomId,game?.matchId,nextMap.id,nextMap.version,game?.self?.id]);
+  const owner=JSON.stringify([next?.roomId,game?.matchId,mapKey(nextMap),game?.self?.id]);
   if(!playback&&owner===lastOwner&&(at<lastAt||Number.isFinite(game?.version)&&game.version<lastVersion))return;
   const key=JSON.stringify([owner,game?.phase,game?.self?.alive,!!(game?.self?.transit||game?.systems?.selfTransit),game?.vision?.mode,observerAgents(game).length>0]);
   map=nextMap;world=map.geometry;
   const target=!game?{x:world.WORLD_VIEWPOINT.x,y:world.WORLD_VIEWPOINT.y+25}:(visionFrame(game,map)?.origin||game?.self?.position||world.WORLD_VIEWPOINT);
   if(key!==lastKey){paintedActors=[];samples.clear();cameraTrack.reset(target,at);lastKey=key;}else cameraTrack.update(target,at);
   lastOwner=owner;lastAt=at;lastVersion=Number.isFinite(game?.version)?game.version:-1;
-  room=next;samples.update(game?{...game,map:{id:map.id,version:map.version}}:game,at);
+  room=next;samples.update(game?{...game,map:map.reference??{id:map.id,version:map.version}}:game,at);
  }
 
  function draw(time,{overview=false,follow:followId=null,camera:freeCamera=null,spectatorGhost=false}={}){
@@ -116,7 +118,7 @@ export function createWorldScene(canvas,{reduced=false,playback=false,mapResolve
    overviewLayer??=acquireOverview(canvas,map,bounds,width,height);
    if(overviewLayer)ctx.drawImage(overviewLayer.image,bounds.x,bounds.y,bounds.width,bounds.height);else paintSceneEnvironment(ctx,map,bounds);
   }else{releaseOverview(overviewLayer);overviewLayer=null;cache.draw(ctx,map,bounds);}
-  drawRoomLabels(ctx,map,bounds,{overview,zoom});
+  if(world.metadata?.revision===2){drawInteriorLights(ctx,world,time,reduced);drawInteriorLabels(ctx,world,zoom);}else drawRoomLabels(ctx,map,bounds,{overview,zoom});
   for(const r of world.WORLD_ROOMS){const station=world.WORLD_STATIONS[r.id];if(!station||!intersects({x:station.x-40,y:station.y-40,width:80,height:80},bounds))continue;
    const task=game?.self?.tasks?.find(t=>!t.completed&&t.roomId===r.id)||(playback&&game?.replayTaskRooms?.includes(r.id)?{kind:'recorded'}:null),critical=game?.beaconVersion!==1&&game?.sabotage?.active&&game.sabotage.roomId===r.id;
    const kind=task?.challenge?.kind||map.taskKinds?.[r.id]||({bridge:'circuit',workshop:'circuit',lantern:'signal',engine:'alignment',archive:'sequence',galley:'manifolds'})[r.id]||'glyphs';
@@ -135,7 +137,7 @@ export function createWorldScene(canvas,{reduced=false,playback=false,mapResolve
    if(playback&&game.replayRoles&&player.role)text(ctx,player.role.toUpperCase(),p.x,p.y+53,11,player.role==='saboteur'?'#ffb8a1':'#e3f4d2');
   }
   if(free&&spectatorGhost&&!overview)drawKeeper(ctx,{name:'Local observer',color:'#c7eef0'},camera.x,camera.y,{ghost:true,selected:true,step:reduced?0:time/190});
-  drawForeground(ctx,map,bounds);
+  if(world.metadata?.revision!==2)drawForeground(ctx,map,bounds);
   ctx.restore();
   if(!overview&&((vision&&!vision.ended)||game?.beaconVersion!==1&&game?.self&&point(game.self.position))){
    const origin=vision?.origin||game.self.position,sx=(origin.x-camera.x)*zoom+width/2,sy=(origin.y-camera.y)*zoom+height/2,radius=Math.max(.01,(vision?vision.radius:world.WORLD.visibilityRadius)*zoom);
