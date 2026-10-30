@@ -48,3 +48,10 @@ Candidate88b9646 is the semantic integration foundation for three isolated D: wo
 Read-only source audit identified recurring auxiliary repair preemption, optional device fallback bypassing the three-read cap, and already-contributed critical actors selecting another site despite authority denying a second contribution. Core's bounded task is to fix those real local-policy loops with permitted evidence, not change the winner, seeds or engine deadlines. The scheduler itself rotates oldest-due actors fairly; no provider-latency cause is asserted.
 
 Native raw44 evidence remains a failure21/22, with zero browser/console errors and no external/provider calls, because the all-AI match paused. Production raw44 failed after4 preparation checks on its invalid legacy fixture map pairing; actual source/asset checks before that passed. These are explicitly not final qualification. Final full suite, prepared assets and nine normal browser gates must pass on the completed composition before the user-authorized main merge. No deployment is authorized.
+
+
+## Owner inspection composition
+
+Integrated storage3a27483 as66810df. Real HTTP/WebSocket isolation, four-map inspection, private owner projections, prior reservations, ghost factions and stable start/restore controls pass27/27 (0skips). The adapted original eight inspector tests are kept in spectator-inspection.test.mjs; four distinct additional boundary tests remain in latest-spectator-boundary-inspection.test.mjs, avoiding duplicate execution. Both files together pass12/12,0skips. Public/nonhost inspection positives are replaced with explicit denial/absence checks while retaining real authenticated-owner positives; no generic player/AI view exposes the inspection.
+
+Integrated engineec9d51c as9b98576. Initial engine/deadline/map tests pass15/19; four presentation-timeline assertions await the separate client model integration and remain red. A failed check is not counted as partial approval. Bot priority and real controller outcome qualification is still in progress; no changed seed, winner or deadline is authorized to hide a stalled match.

@@ -1,6 +1,6 @@
 # Integrated inspection permission boundary
 
-Only the authenticated host of an all-AI room receives the omniscient inspection projection. A joined public viewer receives the normal limited player projection, without inspection roles, hidden coordinates, jobs or ghost details. Human rooms never receive inspection. The server derives permission from the room cookie identity; frontend controls do not grant it. This private owner capability preserves the current-main inspector while maintaining public role secrecy. The following upstream guide is historical where it implies broader access; the integrated boundary above controls.
+Only the authenticated host of an all-AI room receives the omniscient inspection projection. A joined public viewer receives the normal limited player projection, without inspection roles, hidden coordinates, jobs or ghost details. Human rooms never receive inspection. The server derives permission from the room cookie identity; frontend controls do not grant it. This private owner capability preserves the current-main inspector while maintaining public role secrecy. Inspection is an explicitly private owner capability; it does not grant a player or public visitor another keeper's information.
 
 # Ghost spectator and all-AI observatory
 
@@ -16,7 +16,7 @@ solid furniture to open the inspector. The **Inspect world object** selector
 provides a keyboard alternative. Selecting an agent and **Follow this keeper**
 centres the camera on its interpolated observed position.
 
-In all-AI rooms, authenticated seatless observers can inspect roles, task steps,
+In all-AI rooms, only the authenticated room host with no player seat can inspect roles, task steps,
 cooldowns, abilities, destination, recent accepted actions and public claims.
 Recorded activity describes state, not private thoughts. A selected strategic
 plan, when available, is identified as controller state with its recording time;
@@ -31,7 +31,7 @@ to another room. Full replay remains unavailable in unfinished and paused matche
 ## Data boundary
 
 `createRooms.view` adds `game.inspection` only when both the room and match have
-`mode: spectator`, the authenticated identity has no player seat, and the match
+`mode: spectator`, the authenticated cookie identity is the host and has no player seat, and the match
 is a world match. The engine's existing player/AI projection stays separate.
 Inspection includes its match ID; the browser rejects a mismatched generation.
 The server uses explicit field allowlists, with bounded action/task lists.
@@ -78,7 +78,9 @@ the engine benchmark at a preserved baseline checkout. Timing receipts describe
 the measured host and fixtures, not a frame-rate guarantee on every device.
 Earlier replay and browser evidence remains preserved.
 
-The integrated browser qualification passed 37 checks across all three maps.
+## Historical main-aa qualification
+
+The following receipts qualify their recorded earlier main sources, not the later combined quality integration. The main-aa browser qualification passed 37 checks across its three authored map selections.
 Mean frame times on the cloud Chromium fixture were 16.67 ms for AI watch,
 16.78 ms for human play, 17.14 ms for Storm Foundry and 18.56 ms for Tidal
 Observatory. These measurements include real demo updates. The separate renderer
