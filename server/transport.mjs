@@ -80,7 +80,7 @@ export async function createGameServer(config,dependencies={}) {
         if((features.deathPolicy==='ghost-tasks'||features.abilities)&&config.worldMode!==true)fail(400,'WORLD_REQUIRED','Optional presets require world mode.');
         let selectedMap=config.tacticalMode!==true&&(!config.mapId||config.mapId==='beacon')&&!Object.hasOwn(input,'mapId')?null:config.mapId;
         if(Object.hasOwn(input,'mapId')){try{if(typeof input.mapId!=='string')throw new TypeError();selectedMap=getMap(input.mapId).id;}catch{fail(400,'INVALID_MAP','Choose an available map.');}}
-        if(selectedMap!==undefined&&config.worldMode!==true){if(getMap(selectedMap).id!=='beacon')fail(400,'WORLD_REQUIRED','Maps require world mode.');selectedMap=null;}
+        if(selectedMap!==undefined&&selectedMap!==null&&config.worldMode!==true){if(getMap(selectedMap).id!=='beacon')fail(400,'WORLD_REQUIRED','Maps require world mode.');selectedMap=null;}
         const {room,token,identity}=await service.create(input.mode,features,selectedMap);json(res,201,view(room,identity),{'Set-Cookie':cookie(room.data.id,token,secure)});return;
       }
       const match=/^\/api\/rooms\/([A-Za-z0-9_-]+)(?:\/(join|start|settings|action|input|replay|socket))?$/.exec(url.pathname);

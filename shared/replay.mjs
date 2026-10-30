@@ -55,7 +55,7 @@ export function validateReplayAnchor(a,map=REPLAY_MAP){
  for(const b of a.bodies)if(!keys(b,['id','playerId','roomId','position','at','reported'])||!id(b.id)||!actor(b.playerId)||!room(b.roomId)||!point(b.position)||!time(b.at)||b.at>a.at||typeof b.reported!=='boolean')reject();
  if(a.sabotage!==null&&(!keys(a.sabotage,['active','roomId','deadlineAt','repairsCompleted','repairsRequired'])||!room(a.sabotage.roomId)||typeof a.sabotage.active!=='boolean'||!time(a.sabotage.deadlineAt)||!Number.isInteger(a.sabotage.repairsCompleted)||a.sabotage.repairsCompleted<0||a.sabotage.repairsCompleted>6||a.sabotage.repairsRequired!==2))reject();
  if(a.meeting!==null){const m=a.meeting;if(!keys(m,['id','votes','eligibleVoters','tallied'])||!id(m.id)||!bounded(m.votes,12)||!bounded(m.eligibleVoters,12)||new Set(m.eligibleVoters).size!==m.eligibleVoters.length||new Set(m.votes.map(v=>v?.playerId)).size!==m.votes.length||m.eligibleVoters.some(p=>!actor(p))||m.votes.some(v=>!keys(v,['playerId','targetId'])||!actor(v.playerId)||!(v.targetId==='skip'||actor(v.targetId)))||typeof m.tallied!=='boolean')reject();}
- if(JSON.stringify(a).length>256*1024)reject();
+ if(JSON.stringify(a).length>65536)reject();
  return a;
 }
 export function validateReplayHistory(h){

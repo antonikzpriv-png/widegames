@@ -1,4 +1,4 @@
-import {mapReference as persistedMapReference} from './map-model.mjs';
+import {mapReference} from './map-model.mjs';
 import {canViewAct} from '../../shared/features.mjs';
 import {createLocalSound} from './sound.mjs';
 import {getMap} from '../../shared/maps/index.mjs';
@@ -242,7 +242,7 @@ export function createWorldExperience(host,callbacks,{mapResolver=getMap,motionF
  document.addEventListener('visibilitychange',visibility);if(!document.hidden)raf=requestAnimationFrame(frame);
  const api={update(next,nextOptions={}){
   if(disposed)return;let nextMap;
-  try{nextMap=mapResolver(persistedMapReference(next));if(next.game?.map===undefined&&next.game?.mapId!==undefined){next={...next,game:{...next.game,map:{id:nextMap.id,version:nextMap.version}}};}else if(!next.game&&next.map===undefined&&next.mapId!==undefined)next={...next,map:{id:nextMap.id,version:nextMap.version}};}catch(error){setGhostChatOpen(false);navigationEpoch++;actionGeneration++;input.stop();puzzle?.dispose();puzzle=null;taskSession=null;confirmTarget=null;beaconPanel?.suspend();sound.suspend();room=next;options={...options,...nextOptions};mapError=error?.message||'Unsupported map/version.';render();unavailableTitle.focus();return;}
+  try{nextMap=mapResolver(mapReference(next));if(next.game?.map===undefined&&next.game?.mapId!==undefined){next={...next,game:{...next.game,map:{id:nextMap.id,version:nextMap.version}}};}else if(!next.game&&next.map===undefined&&next.mapId!==undefined)next={...next,map:{id:nextMap.id,version:nextMap.version}};}catch(error){setGhostChatOpen(false);navigationEpoch++;actionGeneration++;input.stop();puzzle?.dispose();puzzle=null;taskSession=null;confirmTarget=null;beaconPanel?.suspend();sound.suspend();room=next;options={...options,...nextOptions};mapError=error?.message||'Unsupported map/version.';render();unavailableTitle.focus();return;}
   if((nextMap.taskProtocol==='taskStep'||next.game?.self?.tasks?.some(t=>t.progress?.v===2))&&document.head&&!document.querySelector('link[data-captcha-style]')){const link=make('link');link.rel='stylesheet';link.href='/world/captcha.css';link.setAttribute('data-captcha-style','');document.head.append(link);}
   const nextActionKey=actionKey(next);if(lastActionKey!==null&&lastActionKey!==nextActionKey)actionGeneration++;lastActionKey=nextActionKey;const scope=equipmentOwner(next);
   if(lastScope&&lastScope!==scope){setGhostChatOpen(false);ghostGeneration++;navigationEpoch++;input.stop();puzzle?.dispose();puzzle=null;taskSession=null;confirmTarget=null;beaconPanel?.suspend();}

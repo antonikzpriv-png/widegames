@@ -1,4 +1,4 @@
-import {mapReference as persistedMapReference} from './map-model.mjs';
+import {mapReference} from './map-model.mjs';
 import {ObservedCamera,viewportBounds,intersects} from './camera.mjs';
 import {createStaticLayer} from './static-layer.mjs';
 import {paintEnvironment,drawRoomLabels,drawStation,drawForeground} from './environment.mjs';
@@ -70,7 +70,7 @@ export function createWorldScene(canvas,{reduced=false,playback=false,mapResolve
  const cameraTrack=new ObservedCamera();
  const cache=createStaticLayer({paint:paintSceneEnvironment,makeCanvas:(w,h)=>{if(typeof OffscreenCanvas!=='undefined')return new OffscreenCanvas(w,h);return canvas.ownerDocument?.createElement?.('canvas')||globalThis.document?.createElement?.('canvas');}});
  function update(next,at){
-  const nextMap=mapResolver(persistedMapReference(next)),game=next?.game;
+  const nextMap=mapResolver(mapReference(next)),game=next?.game;
   const owner=JSON.stringify([next?.roomId,game?.matchId,nextMap.id,nextMap.version,game?.self?.id]);
   if(!playback&&owner===lastOwner&&(at<lastAt||Number.isFinite(game?.version)&&game.version<lastVersion))return;
   const key=JSON.stringify([owner,game?.phase,game?.self?.alive,!!(game?.self?.transit||game?.systems?.selfTransit),game?.vision?.mode]);

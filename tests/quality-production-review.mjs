@@ -87,7 +87,7 @@ try{
  try{
   const budget=await createDailyBudget({directory:data,maxCostUsd:1});await budget.reserve(reservation);
   for(const schema of [1,2,3,4,5]){
-   const at=Date.now(),r=createRoom('human',at,schema>=3?{}:undefined,{tactical:schema>=4,stationTasks:schema===5,mapId:{id:'beacon',version:1}});issueIdentity(r,true);r.startId='production:legacy:start';
+   const at=Date.now(),r=createRoom('human',at,schema>=3?{}:undefined,{tactical:schema>=4,stationTasks:schema===5,...(schema>=4?{mapId:{id:'beacon',version:1}}:{})});assert.equal(r.schema,schema>=4?schema-1:schema>=3?2:1);issueIdentity(r,true);r.startId='production:legacy:start';
    let state=engine.createMatch({id:r.id,mode:'human',now:at,seed:'production-legacy-'+schema,world:schema>=2,systems:schema>=3,tactical:schema>=4,stationTasks:schema===5,...(schema>=4?{map:r.map}:{}),config:{maxMatchMs:1}});
    const waited=engine.applyAction(state,'p1',{id:'production:legacy:wait',type:'wait'},at);assert.equal(waited.accepted,true);state=engine.tick(waited.state,at+1).state;assert.equal(state.schemaVersion,schema);assert.equal(state.phase,'paused');assert.equal(state.outcome,null);r.state=state;r.updatedAt=at+1;
    if(schema>=2)assert.equal(state.replayHistory.version,schema===2?1:2);await seedStore.save(r);const file=path.join(data,'room-'+r.id+'.json');legacy.push({file,bytes:await readFile(file),schema});if(schema===5)futureTemplate=copy(r);
@@ -95,7 +95,7 @@ try{
   // Labeled short-deadline engine fixtures exercise ended transport/history only,
   // not complete demo matches or altered production defaults.
   for(const schema of [2,5]){
-   const at=Date.now(),r=createRoom('human',at,schema===5?{}:undefined,{tactical:schema===5,stationTasks:schema===5,mapId:{id:'stormbreak-annex',version:1}}),issued=issueIdentity(r,true);r.startId='production:replay:start';r.features={deathPolicy:'ghost-tasks',abilities:true};
+   const at=Date.now(),r=createRoom('human',at,schema===5?{}:undefined,{tactical:schema===5,stationTasks:schema===5,...(schema===5?{mapId:{id:'stormbreak-annex',version:1}}:{})}),issued=issueIdentity(r,true);r.startId='production:replay:start';r.features={deathPolicy:'ghost-tasks',abilities:true};
    let state=engine.createMatch({id:r.id,mode:'human',now:at,seed:'production-replay-'+schema,world:true,systems:schema===5,tactical:schema===5,stationTasks:schema===5,...(schema===5?{map:r.map}:{}),features:r.features,config:{sabotageCooldownMs:1,criticalDurationMs:1}});
    assert.equal(engine.getReplay(state),null);assert.equal(engine.getReplayMetadata(state),null);
    const guardian=state.players.find(p=>p.ability?.type==='ward'),saboteur=state.players.find(p=>p.role==='saboteur');
