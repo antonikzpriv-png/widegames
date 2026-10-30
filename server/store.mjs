@@ -15,25 +15,32 @@ import {validateInvestigationState} from './engine/investigation/index.mjs';
 import {createSpatialWorld} from './engine/world/index.mjs';
 import * as defaultGeometry from '../shared/world.mjs';
 import {validateStationChallenge,stationComplete} from '../shared/station-challenges.mjs';
-import {getMap} from '../shared/maps/index.mjs';
+import {getMap,getLegacyMap,mapFor,mapIdentity} from '../shared/maps/index.mjs';
 import {hasTacticalFixtures} from './config.mjs';
 import {TACTICAL_PRESET,validateMapSelection} from '../shared/tactical.mjs';
 const spatialValidator=createSpatialWorld(defaultGeometry);
 const extended=state=>[3,4,5].includes(state.schemaVersion);
 function savedMap(value){
-  let reference;
-  if(Object.hasOwn(value,'map'))reference=validateMapSelection(value.map);
-  if(Object.hasOwn(value,'mapId')){
-    if(typeof value.mapId!=='string'||!/^[A-Za-z0-9_-]{1,64}$/.test(value.mapId))throw new Error('Invalid saved map ID');
-    if(reference&&reference.id!==value.mapId)throw new Error('Inconsistent exact map and map ID');
-    reference??={id:value.mapId,version:1};
+  if(Object.hasOwn(value,'map'))validateMapSelection(value.map);
+  if(Object.hasOwn(value,'mapId')&&(typeof value.mapId!=='string'||!/^[A-Za-z0-9_-]{1,64}$/.test(value.mapId)))throw new Error('Invalid saved map ID');
+  if(Object.hasOwn(value,'mapRevision')&&![1,2].includes(value.mapRevision))throw new Error('Invalid saved map revision');
+  let selected;
+  try{selected=mapFor(value);}catch(error){
+    if(/Conflicting/.test(error.message))throw new Error('Inconsistent saved map identities/namespaces');
+    throw Object.assign(new Error('Saved map version or revision is unavailable; preserve the data directory and install the matching application version.'),{code:'MAP_UNAVAILABLE'});
   }
-  try{return getMap(reference);}catch{throw Object.assign(new Error('Saved map version is unavailable; preserve the data directory and install the matching application version.'),{code:'MAP_UNAVAILABLE'});}
+  // World2 has a canonical legacy identity, even when a modern room adds an exact alias.
+  if(value.map!==undefined&&(value.schemaVersion===2||[1,2].includes(value.schema))&&(value.mapId!==undefined||value.schemaVersion===2)){
+    let canonical;try{canonical=getLegacyMap(value.mapId??'beacon',value.mapRevision??1);}catch{throw new Error('World2 exact map requires its matching legacy map ID/revision');}
+    if(mapIdentity(canonical)!==mapIdentity(selected))throw new Error('World2 exact map requires its matching legacy map ID/revision');
+  }
+  return selected;
 }
 const mapRooms=state=>savedMap(state).roomLayout;
 const validStepKind=task=>typeof taskRules.validTaskKind==='function'?taskRules.validTaskKind(task):!Object.hasOwn(task,'kind')&&ROOM_LAYOUT.some(r=>r.id===task.roomId);
 function refuseFuture(room){
   const s=room?.state;
+  if([room?.mapRevision,s?.mapRevision,s?.replayHistory?.mapRevision].some(r=>Number.isSafeInteger(r)&&r>2))throw Object.assign(new Error('Saved map revision is unavailable; preserve the data directory and install the matching application version.'),{code:'MAP_UNAVAILABLE'});
   const newerTask=s?.players?.some?.(p=>p.tasks?.some?.(t=>t.kind==='station'?t.challenge?.version>1:t.progress?.v>(s.schemaVersion===2?2:1)));
   if(newerTask)throw Object.assign(new Error('Saved station challenge or task progress version is newer than this application; preserve the data directory.'),{code:'VERSION_UNAVAILABLE'});
   if(room?.schema>4||s?.schemaVersion>5||s?.features?.version>1||s?.replayHistory?.version>2||room?.stationTasksVersion>1||s?.stationTasksVersion>1)throw Object.assign(new Error('Saved room version is newer than this application; preserve the data directory.'),{code:'VERSION_UNAVAILABLE'});
@@ -45,13 +52,15 @@ const object = value => value !== null && typeof value === 'object' && !Array.is
 export function validateRoom(room) {
   refuseFuture(room);
   if (!object(room) || ![1,2,3,4].includes(room.schema) || !ROOM_ID.test(room.id) || !['human','spectator'].includes(room.mode)) throw new Error('Invalid room');
+  if(Object.hasOwn(room,'mapRevision')&&(![1,2].includes(room.mapRevision)||[3,4].includes(room.schema)))throw new Error('Invalid room map revision');
+  if(room.state&&Object.hasOwn(room.state,'mapRevision')&&(![1,2].includes(room.state.mapRevision)||room.state.schemaVersion!==2))throw new Error('Invalid match map revision');
   if (![room.createdAt,room.updatedAt].every(n => Number.isSafeInteger(n) && n >= 0) || room.updatedAt < room.createdAt) throw new Error('Invalid room time');
   if (!Array.isArray(room.identities) || !room.identities.length || room.identities.length > 128) throw new Error('Invalid identities');
   const setup=[2,3,4].includes(room.schema)?normalizeRoster({...room.lobby,mode:room.mode}):null;
   const selected=savedMap(room);
   if([3,4].includes(room.schema))validateTacticalRoomMetadata(room);
   else {if(Object.hasOwn(room,'preset'))throw new Error('Mixed tactical lobby metadata');if(Object.hasOwn(room,'settings'))validateSettings(room.settings);}
-  if(room.state&&(savedMap(room.state).id!==selected.id||savedMap(room.state).version!==selected.version))throw new Error('Inconsistent room and match map');
+  if(room.state&&(mapIdentity(savedMap(room.state))!==mapIdentity(selected)))throw new Error('Inconsistent room and match map or revision');
   if(room.schema===4?room.stationTasksVersion!==1:Object.hasOwn(room,'stationTasksVersion'))throw new Error('Invalid room station task version');
   const seatIds=setup?setup.humanPlayerIds:room.mode==='human'?['p1']:[];
   const seen = new Set(),seenSeats=new Set();
@@ -66,10 +75,10 @@ export function validateRoom(room) {
   if (room.state === null && room.startId !== null) throw new Error('Invalid lobby');
   if(room.state!==null){
     const state=room.state;
-    if(state.schemaVersion===2&&Object.hasOwn(state,'map')){const exact=savedMap(state),legacy=savedMap(Object.hasOwn(state,'mapId')?{mapId:state.mapId}:{});if(exact.id!==legacy.id||exact.version!==legacy.version)throw new Error('World2 exact map requires its matching legacy map ID/version');}
     if(state.replayHistory!==undefined){
       if(![2,3,4,5].includes(state.schemaVersion))throw new Error('Mixed legacy/world replay history');
       if(state.schemaVersion!==2&&state.replayHistory.version!==2)throw new Error('Replay version does not match the saved map');
+      if(state.schemaVersion===2&&(state.replayHistory.mapRevision??1)!==(state.mapRevision??1))throw new Error('Replay map revision mismatch');
       validateReplayHistory(state.replayHistory);validateReplayHistoryState(state.replayHistory,state);
       if(state.replayHistory.checkpoints.some(a=>a.at<state.startedAt||a.at>state.updatedAt||a.sequence>state.replaySequence))throw new Error('Replay checkpoint exceeds match history');
     }
@@ -101,7 +110,7 @@ const point=value=>object(value)&&Number.isFinite(value.x)&&Number.isFinite(valu
 function validateWorldStructure(state){
   const roomIds=new Set(mapRooms(state).map(r=>r.id));
   if(state.worldVersion!==1||!finiteTime(state.startedAt)||!finiteTime(state.updatedAt)||state.updatedAt<state.startedAt||!Array.isArray(state.bodies))throw new Error('Invalid world match');
-  const expanded=state.schemaVersion===2&&!hasTacticalFixtures(savedMap(state))&&savedMap(state).id!=='beacon';
+  const expanded=state.schemaVersion===2&&!hasTacticalFixtures(savedMap(state))&&(savedMap(state).legacyMapId??savedMap(state).id)!=='beacon';
   if(expanded){const tasks=state.players.flatMap(p=>p.tasks??[]);if(tasks.length!==state.rules.tasksPerCrew*5||new Set(tasks.map(t=>t?.id)).size!==tasks.length||tasks.some(t=>!object(t)||!/^t[a-f0-9]{20}$/.test(t.id)||!Object.hasOwn(t,'kind')||typeof t.label!=='string'||t.label.length<1||t.label.length>200||typeof t.completed!=='boolean'||t.completed&&!Object.hasOwn(t,'progress')))throw new Error('Invalid map task descriptors');}
   const ids=new Set();
   for(const player of state.players){
@@ -149,7 +158,7 @@ async function worldGeometry(supplied){
 export async function validateRoomSnapshot(room,{worldGeometry:provided}={}){
   validateRoom(room);
   if([2,3,4,5].includes(room.state?.schemaVersion)){
-    const geometry=(Object.hasOwn(room.state,'map')||Object.hasOwn(room.state,'mapId'))?savedMap(room.state).geometry:await worldGeometry(provided),{WORLD,isWalkable}=geometry;
+    const geometry=(Object.hasOwn(room.state,'map')||Object.hasOwn(room.state,'mapId')||Object.hasOwn(room.state,'mapRevision'))?savedMap(room.state).geometry:await worldGeometry(provided),{WORLD,isWalkable}=geometry;
     const validPoint=p=>point(p)&&p.x>=0&&p.y>=0&&p.x<=WORLD.width&&p.y<=WORLD.height&&isWalkable(p);
     for(const player of room.state.players){
       const m=player.motion;
@@ -234,7 +243,7 @@ export async function createRoomStore(directory,{worldGeometry:providedGeometry}
           const candidate=JSON.parse(await readFile(file,'utf8'));refuseFuture(candidate);room=validateRoom(candidate);if(room.id!==match[1])throw new Error('Room ID mismatch');
         } catch(error) {if(['MAP_UNAVAILABLE','VERSION_UNAVAILABLE'].includes(error.code))throw error;await rename(file,`${file}.quarantine-${randomUUID()}`);continue;}
         // Missing deployment geometry is a setup error, not corrupt user data.
-        const geometry=[2,3].includes(room.state?.schemaVersion)&&!room.state?.mapId&&!room.state?.map?await worldGeometry(providedGeometry):undefined;
+        const geometry=[2,3].includes(room.state?.schemaVersion)&&!room.state?.mapId&&!room.state?.map&&room.state?.mapRevision===undefined?await worldGeometry(providedGeometry):undefined;
         try{await validateRoomSnapshot(room,{worldGeometry:geometry});rooms.push(room);}catch{await rename(file,`${file}.quarantine-${randomUUID()}`);}
       }
       return rooms;

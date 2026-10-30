@@ -8,7 +8,7 @@ import {createDailyBudget} from './budget.mjs';
 import {createRooms,ServiceError,fail,identityFor,issueIdentity,cookie,requestId,selectRoomMap} from './rooms.mjs';
 import {CHARACTERS} from '../shared/contracts.mjs';
 import {aiRoster} from './features/lobbies/index.mjs';
-import {getMap} from '../shared/maps/index.mjs';
+import {getMap,mapFor,mapIdentity} from '../shared/maps/index.mjs';
 import {proposeMapSetting} from './map-settings.mjs';
 
 const object=value=>value!==null&&typeof value==='object'&&!Array.isArray(value);
@@ -38,6 +38,8 @@ function limiter(now) {
 
 // Optional dependencies let transport tests exercise faults without provider calls.
 export async function createGameServer(config,dependencies={}) {
+  if(Object.hasOwn(config,'mapRevision')&&![1,2].includes(config.mapRevision))throw new TypeError('Invalid map revision');
+  if(config.mapRevision===2&&config.worldMode!==true)throw new TypeError('Map revision requires world mode');
   const now=config.now||Date.now;
   const origin=validatePublicOrigin(config.publicOrigin),secure=origin.startsWith('https:');
   if(config.mapId!==undefined)getMap(config.mapId);
@@ -48,7 +50,7 @@ export async function createGameServer(config,dependencies={}) {
   let daily,service;
   try {
     daily=dependencies.dailyBudget||await createDailyBudget({directory:config.dataDir,maxCostUsd:config.ai?.maxDailyCostUsd??5,now});
-    service=createRooms({store,engine,ai,now,maxActiveRooms:config.maxActiveRooms??12,roomTtlMs:config.roomTtlMs??3600000,lobbyConfig:config.systemsMode?config.lobbyConfig??{}:null,tacticalMode:config.tacticalMode===true&&config.worldMode===true&&config.systemsMode===true,mapId:config.mapId,stationTasksMode:config.stationTasksMode===true&&config.tacticalMode===true&&config.worldMode===true&&config.systemsMode===true});await service.restore();
+    service=createRooms({store,engine,ai,now,maxActiveRooms:config.maxActiveRooms??12,roomTtlMs:config.roomTtlMs??3600000,lobbyConfig:config.systemsMode?config.lobbyConfig??{}:null,tacticalMode:config.tacticalMode===true&&config.worldMode===true&&config.systemsMode===true,mapId:config.mapId,mapRevision:config.mapRevision,stationTasksMode:config.stationTasksMode===true&&config.tacticalMode===true&&config.worldMode===true&&config.systemsMode===true});await service.restore();
   } catch(error){await store.close();throw error;}
   const {rooms,get,run,commit,view}=service;
   const limit=limiter(now),tasks=new Set();let closing=false,maintenance=null,closePromise;
@@ -106,7 +108,7 @@ export async function createGameServer(config,dependencies={}) {
         if(url.searchParams.has('matchId')&&url.searchParams.get('matchId')!==room.data.state?.id)fail(404,'MATCH_NOT_FOUND','This completed match is not available in this room.');
         if(room.data.state?.phase!=='ended')fail(409,'REPLAY_UNAVAILABLE','Replay is available after the match ends.');
         const metadata=engine.getReplayMetadata?.(room.data.state),aiSummary=view(room,identity).ai;
-        json(res,200,{roomId:room.data.id,matchId:room.data.state.id,...(room.data.state.map?{map:{...room.data.state.map},...(room.data.state.preset?{preset:{...room.data.state.preset}}:{})}:{}),...(room.data.state.mapId?{mapId:room.data.state.mapId}:{}),replay:engine.getReplay(room.data.state),...(room.data.state.beaconVersion?{snapshots:engine.getReplaySnapshots(room.data.state)}:{}),...(metadata?{metadata}:{}),ai:aiSummary});return;
+        json(res,200,{roomId:room.data.id,matchId:room.data.state.id,...(room.data.state.map?{map:{...room.data.state.map},...(room.data.state.preset?{preset:{...room.data.state.preset}}:{})}:{}),...(room.data.state.mapId?{mapId:room.data.state.mapId}:{}),...(room.data.state.mapRevision===2?{mapRevision:2}:{}),replay:engine.getReplay(room.data.state),...(room.data.state.beaconVersion?{snapshots:engine.getReplaySnapshots(room.data.state)}:{}),...(metadata?{metadata}:{}),ai:aiSummary});return;
       }
       if(route==='input'&&req.method==='POST') {
         limit(`input-ip:${ip}`,600);limit(`input-actor:${room.data.id}:${identity.hash}`,600);
@@ -138,11 +140,11 @@ export async function createGameServer(config,dependencies={}) {
             if(data.state&&data.startId!==input.id)fail(409,'ALREADY_STARTED','This match has already started.');
             let requestedFeatures;try{requestedFeatures=parseFeatures(Object.hasOwn(input,'features')?input.features:data.features);}catch{fail(400,'INVALID_FEATURES','Choose a valid death policy and ability preset.');}
             let requestedMap;if(Object.hasOwn(input,'mapId')){try{if(typeof input.mapId!=='string')throw new TypeError();requestedMap=getMap(input.mapId).id;}catch{fail(400,'INVALID_MAP','Choose an available map.');}}
-            if(data.startId===input.id){if(requestedMap!==undefined&&requestedMap!==(data.state?.mapId??data.state?.map?.id??data.mapId??data.map?.id??'beacon'))fail(409,'START_CONFLICT','This start request ID was accepted with a different map.');const accepted=parseFeatures(data.features);if(accepted.deathPolicy!==requestedFeatures.deathPolicy||accepted.abilities!==requestedFeatures.abilities)fail(409,'START_CONFLICT','This start request ID was accepted with different feature settings.');return;}
+            if(data.startId===input.id){if(requestedMap!==undefined){const acceptedMap=mapFor(data.state),retryMap=[1,2].includes(data.state.schemaVersion)&&requestedMap===(data.state.mapId??'beacon')&&(!data.map||data.map.id===requestedMap||config.tacticalMode!==true)?acceptedMap:getMap(requestedMap);if(mapIdentity(retryMap)!==mapIdentity(acceptedMap))fail(409,'START_CONFLICT','This start request ID was accepted with a different map.');}const accepted=parseFeatures(data.features);if(accepted.deathPolicy!==requestedFeatures.deathPolicy||accepted.abilities!==requestedFeatures.abilities)fail(409,'START_CONFLICT','This start request ID was accepted with different feature settings.');return;}
             const next=structuredClone(data);next.features=requestedFeatures;
-            if(requestedMap!==undefined){if(config.worldMode!==true){if(requestedMap!=='beacon')fail(400,'WORLD_REQUIRED','Maps require world mode.');}else selectRoomMap(next,requestedMap,{tactical:config.tacticalMode===true||[3,4].includes(data.schema),stationTasks:config.stationTasksMode===true||data.schema===4});}
+            if(requestedMap!==undefined){if(config.worldMode!==true){if(requestedMap!=='beacon')fail(400,'WORLD_REQUIRED','Maps require world mode.');}else selectRoomMap(next,requestedMap,{tactical:config.tacticalMode===true||[3,4].includes(data.schema),stationTasks:config.stationTasksMode===true||data.schema===4,mapRevision:next.mapRevision??(config.tacticalMode!==true?config.mapRevision:undefined)});}
             if((next.features?.deathPolicy==='ghost-tasks'||next.features?.abilities)&&config.worldMode!==true)fail(400,'WORLD_REQUIRED','Optional presets require world mode.');
-            next.startId=input.id;next.state=engine.createMatch({id:data.id,mode:data.mode,humanPlayerId:next.lobby?.humanPlayerIds[0]??'p1',...(next.lobby?{roster:next.lobby.roster,humanPlayerIds:next.lobby.humanPlayerIds,saboteurCount:next.lobby.saboteurCount}:{}),now:now(),config:config.rules||{},world:config.worldMode===true||[2,3,4].includes(next.schema),systems:[2,3,4].includes(next.schema)&&(!next.map||[3,4].includes(next.schema)),...([3,4].includes(next.schema)?{tactical:true,map:next.map,stationTasks:next.schema===4}:next.map||next.mapId?{mapId:next.map?.id??next.mapId}:{}),features:next.features,beaconRules:config.beaconRules??{}});await commit(room,next);
+            next.startId=input.id;next.state=engine.createMatch({id:data.id,mode:data.mode,humanPlayerId:next.lobby?.humanPlayerIds[0]??'p1',...(next.lobby?{roster:next.lobby.roster,humanPlayerIds:next.lobby.humanPlayerIds,saboteurCount:next.lobby.saboteurCount}:{}),now:now(),config:config.rules||{},world:config.worldMode===true||[2,3,4].includes(next.schema),systems:[2,3,4].includes(next.schema)&&((!next.map&&!next.mapId&&next.mapRevision===undefined)||[3,4].includes(next.schema)),...([3,4].includes(next.schema)?{tactical:true,map:next.map,stationTasks:next.schema===4}:next.map||next.mapId||next.mapRevision!==undefined?{mapId:mapFor(next).legacyMapId??mapFor(next).id,...(mapFor(next).legacyRevision===2?{mapRevision:2}:{})}:{}),features:next.features,beaconRules:config.beaconRules??{}});await commit(room,next);
           } else {
             if(!identity.seatId||(data.state&&!data.state.players.some(p=>p.id===identity.seatId&&p.human)))fail(403,'SPECTATOR','Spectators cannot act.');
             if(!data.state)fail(409,'NOT_STARTED','Start the match first.');
