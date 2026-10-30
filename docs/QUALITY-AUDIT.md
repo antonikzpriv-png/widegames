@@ -49,3 +49,88 @@ Default imports exercise the current checkout without requiring a pin override o
 Read the existing real reports in this assigned checkout: tactical-normal-browser-report.json records26 passing named checks at247250e5c6bf4b342bf2ba8816dd2979b614ef5c; tactical-browser-report.json records32 at104f494d6c575901b113cbf2ba57960365326355, both with0 recorded browser/console errors. Neither report has top-level performance/frame/longtask/CPU/metric data. They are historical workflow evidence and cannot qualify smoothness or actual rendering cost of the new quality phase. Native Canvas2D transform tests use a labeled no-op context, so they are not substituted for the later real desktop/mobile browser profile.
 
 Current initial work is complete within the8-test bound. New map/Core/client/task commits must be independently source-reviewed before exact-fix closure; new authoritative puzzle permissions/duplicate input/restore/model-safe-view and complete human/all-AI workflows remain subsequent work on committed integration. Chrome remains manager-held; no browser was launched. Browser harness will use the actual forthcoming protocol/UI rather than fabricate six solved tasks or outcomes. No Group2 branch, role expansion, seat allocation, paid feature parity, main/push/deploy or runtime edits are introduced here. Earlier authored AI/investigation dependencies are not independently self-approved by this audit.
+
+## Exact station integration review and frozen native baseline, 2026-10-30
+
+Reviewed **95e926057075032b1ed53c4db3ee611d0d93cc20**, including primitives **9c822ea4de1494a51e5fd873d9b353a22faaf92c**, root integration **b4430f8ed21dcbc190714aff500a2de3ae2deb0f**, and the final four-kind assignment/circuit-history tightening at95e9260. Raw archive `_artifacts/quality-source-95e9260` contains81 exact tracked runtime/package files, with per-file blobs and SHA256 manifest **28256af159e5415f614298d53d452289e279ff1fb726e1005e1c4d9906e1070e**. Product source remains untouched in this review worktree. This receipt supersedes the earlier 'no browser lease yet' preparation status only for the explicitly lent historical baseline.
+
+The actual diff extends room3/match4 support with opt-in room4/match5 stationTasksVersion1, keeps absent opt-in legacy behavior, registers taskInteract through the same actor/envelope/phase/range validation, projects challenges through self.tasks only, and persists per-input receipts. Opening records owner-only task_opened without completing or applying the completion cooldown; actual completed puzzles apply that cooldown. Store validation checks challenge shape/history/completed agreement, extends retained-map static historical geometry checks to schema5, and treats future room/match/station/challenge versions as unavailable data to preserve. AI supplies structured local inputs through the same engine. This review does not add or independently self-approve the earlier authored AI implementation.
+
+Principal exact95e9260 blobs:
+
+| File | Blob |
+| --- | --- |
+| public/app.mjs | bc47ba5759d98575898044fa975845917d53d18b |
+| server/features/tasks/index.mjs | 59ca0115ea86d1108a6c2afc9db3ea4778b654e9 |
+| shared/station-challenges.mjs | f63d245eeb120645e855b4f02bd154e3018bb4eb |
+| server/store.mjs | c1c994fca66c683ddb73af4a7a303faf6eb7c6a0 |
+| server/engine/index.mjs | 4a0d944620f8888d77c80132040ebf3eaa6a3a76 |
+| server/ai/world.mjs | bda2063e03fd91e0d981721cd348866a84ef0682 |
+| shared/maps/beacon-v2.mjs | d865873635f4fa028686330d8a4822121e555100 |
+
+### Eight new station-root controls
+
+`tests/quality-review-stations.test.mjs`: **8 pass,0 fail,0 skip/todo/cancel**, Node24.20.0. No manager pure-puzzle test is copied or rerun. The independent clue interpreter derives input from actual owner views, not the production nextStationInput solver; real generated assignments and accepted routes/actions supply positions, phases, deaths and transit. No runtime player/task mutation creates a success fixture.
+
+1. All six actual generated kinds on Beacon2 are physically reached and solved through engine taskInteract actions. Each accepted input changes confirmed progress; completion updates aggregate tasks and actual completion cooldown.
+2. Repeated opening remains inert. Relay confirm/complete, incomplete glyph verification, nonexistent tiles, extra completed/actorId fields and a co-located other crew actor cannot control the owner's puzzle.
+3. Real localhost HTTP/WS: concurrent same-ID inputs apply once; a conflicting payload is rejected; an old accepted receipt remains inert after a later accepted input. Spectator WS/GET never contains the task ID or another actor's task data. Visitor action, cross-room cookie, foreign task and extra playerId spoof are rejected by the actual transport/engine. The fixture uses explicitly idle demo seats, not simulated payloads.
+4. Actual store.backup, exact backup-byte restoration and two server/store restarts preserve room4/match5 glyph progress, cookie/seat and receipts. A wrong glyph toggle has numeric progress0; a new toggle clears it, and the old accepted receipt cannot re-toggle it even after restart. Backup bytes remain unchanged; active replay stays denied.
+5. Future room5, match6, station2, challenge2 and map99 files fail unavailable-version loading without being quarantined, rewritten or removed. The saved bytes and preexisting backup stay exact. These are deliberately corrupted future-version fixtures, not a supported upgrade or migration claim.
+6. Actual root app handlers receive real engine glyph views: empty -> wrong selected tile -> empty has equal numeric progress0. Older work is revoked even after the ABA return; late errors cannot create feedback/retry, a current409 still shows its real error, and a retained retry cannot send after selection context changes. Scene drawing alone is stubbed in the VM.
+7. Real movement out of range, emergency council, accepted elimination and accepted saboteur hatch transit deny stale task inputs without losing partial progress. Actual root movement/phase/death views also revoke pending feedback. Crew are not fabricated as hatch users: transit rejection is tested on a real saboteur, who has no crew task access.
+8. **AI self-check:** real LIVE-mode controller decisions solve all six generated puzzles at their stations through accepted taskInteract actions, with a mocked never-sent key, zero reservation callbacks and zero sends. A separately constructed real council request contains only owner task id/room/completed, no puzzle/clue/progress, outcome, replay or hidden-role fields. makeRequest is inspected, not sent; no provider or whole-AI-match claim follows from this check.
+
+The unchanged glyph positive assertion is also tested with **historical941e857 app handlers** receiving95e9260 engine safe views. It fails with `Error: OBSOLETE GLYPH CALLBACK` instead of AbortError. This is explicitly a historical app-lifecycle fixture, not a claim that941e857 has native schema5 support. Historical red `_artifacts/quality-station-historical-ABA-red.txt`, SHA256 **c0dfbc32e124980e1adceda3aa0aa5ea4b8cb4fdc42b8fe14891b6a3277068d3**, stays preserved. The exact95e9260 positive log `_artifacts/quality-station-final.txt` SHA256 **12099faf1cd0ab377db14fcf5752cdc1d4a161d7e563b6c1aba498797ef8e3b6** records8/8. Default source imports remain relative to the checkout; no feature-based skip or automatic historical-source fallback is present. A byte-identical copy staged under the ignored exact95 archive passes8/8 with both overrides removed, proving default-source mode. This review branch still has old941 runtime by design; importing the tests into95+ integration is required for its new schema, not an environment selection trick.
+
+Preparation failures are preserved in `_artifacts/quality-station-first.txt` (**73700348a67b336268f9028e55693598714f3256f35a7e92aa7ce0087bbadc49**): the fixture expected400 for extra action fields, whereas actual rule rejection correctly returns409/INVALID_ACTION; its cleanup hook removed the directory before closing the restarted store. Only the fixture expectation and cleanup order were corrected. Neither failure is reported as a product defect.
+
+### Native frozen941 baseline and explicit lease release
+
+Chrome lease was explicitly lent for **baseline only**. Executed frozen **941e857f046ef7cc9bae25f0fcad27cf6ab7578a**, exact Beacon1, Chrome **156.0.8078.79**, actual native app/HTTP/WS/server/store, desktop1440x1000 and mobile390x844. Source archive SHA256 values were checked before and after. No runtime overlay, injected positions/views, fake winner, new task UI or paid model was used. Other seats were a labeled idle demo fixture; station staging uses accepted navigate and a labeled accelerated authoritative arrival clock. This is not a full human/all-AI watch.
+
+**5 native checks passed,0 failed**,31 HTTP and42 WS safe-view inspections,0 browser errors,0 console errors,0 outbound requests and0 provider calls. Desktop uses real keyboard input; mobile uses native CDP touch events on the joystick. The remaining controls verify actual hidden-page stop and visible resume, a real map overlay, and legacy station opening without completion. Sound remains opt-in. Browser and local server are closed; owned private data/profile directories were removed. **Chrome lease released before station testing; no subsequent browser was launched.**
+
+Evidence directory **D:/Widegames-work/ship-quality-audit-20261030/_artifacts/quality-browser-baseline-W9c8JK**:
+
+- `report.json`, SHA256 **4aa89857a91734a9a6cb63d306d143d9ba34037e54b6cf55b8d766e5277b1ae0**.
+- `desktop-start.png`, `desktop-walking.png`, `mobile-walking.png`, `mobile-map-snapshot.png`, `mobile-legacy-station.png`.
+- `desktop-move-idle.cpuprofile` and `mobile-move-idle.cpuprofile` retain actual V8 samples; raw rAF intervals and per-method Canvas counts/times are in the report.
+
+| Instrumented window | rAF samples / median / p95 / max interval ms | Canvas calls / dispatch wall ms | CDP TaskDuration delta seconds | V8 samples |
+| --- | --- | --- | --- | --- |
+| Desktop move + idle | 110 /11.4 /12.8 /23.6 | 193917 /113.400 | 0.314513 | 803 |
+| Mobile touch + idle | 123 /11.5 /12.5 /12.7 | 216628 /110.100 | 0.299127 | 864 |
+
+These are host-specific, instrumented observations, not GPU completion time, a claimed FPS, a production latency grade or a benchmark threshold. The extra rAF monitor and Canvas wrappers add overhead; the V8 sampling interval is1000 microseconds and includes instrumentation itself. CDP metrics cover the measured browser main-thread window. Report wallMs additionally includes profile setup/stop and artifact serialization/write; it must not be divided into the rAF sample count as an FPS estimate. Node CPU fields include the server/harness, not isolated browser CPU. Top sampled functions are mainly idle/program plus Canvas wrapper/value/now work; no GPU bottleneck attribution is inferred. This baseline is only before-evidence for a later identical instrumented committed UI comparison.
+
+First native run is preserved at `_artifacts/quality-browser-baseline-hdUwMF/report.json` (**2c94680bdbe9167391a35d1b713887596d76e239facb45eb1de17b5cc74e7ee0**) and its failure screenshot. It passed lobby/desktop but falsely expected mobile movement while Puppeteer's switch to isMobile reloaded the page and reopened the legitimate role dialog. The corrected fixture acknowledges the dialog after viewport changes and uses actual mobile touch. This was a harness preparation failure, not a hidden product failure or skipped assertion.
+
+### Commands, prepared harness and remaining qualification
+
+```powershell
+$env:TEMP='D:/Widegames-work/temp'
+$env:TMP=$env:TEMP
+$env:npm_config_cache='D:/Widegames-work/npm-cache'
+npm ci --offline --ignore-scripts --no-audit --no-fund
+$env:QUALITY_BROWSER_ROOT=(Resolve-Path '_artifacts/quality-source-941e857').Path
+node scripts/quality-browser-check.mjs
+# Chrome and local baseline server closed; lease released here.
+Remove-Item Env:WORLD_ENGINE_GEOMETRY_MODULE -ErrorAction SilentlyContinue
+$env:QUALITY_REVIEW_ROOT=(Resolve-Path '_artifacts/quality-source-95e9260').Path
+node --test tests/quality-review-stations.test.mjs
+$env:QUALITY_STATION_APP_ROOT=(Resolve-Path '_artifacts/quality-source-941e857').Path
+node --test --test-name-pattern='glyph ABA' tests/quality-review-stations.test.mjs
+# Expected historical exit1, not a closure failure.
+Remove-Item Env:QUALITY_STATION_APP_ROOT
+Remove-Item Env:QUALITY_REVIEW_ROOT
+node --test _artifacts/quality-source-95e9260/tests/quality-review-stations.test.mjs
+node --check scripts/quality-browser-check.mjs
+node --check tests/quality-review-stations.test.mjs
+git diff --check
+git diff --exit-code 941e857f046ef7cc9bae25f0fcad27cf6ab7578a -- server public shared
+```
+
+The baseline driver accepts only the two authorized historical manifests and defaults to no paid calls. Exported preparation helpers exercise actual native controls for all six station kinds (including the nine-tile glyph grid), four generated human jobs and actual DEMO human/all-AI outcome observation with bounded timeout and no fallback winner. They import without launching Chrome. Their pending renderer selector assumptions were read-only inspected in the Frontend candidate; **they have not been executed or qualified against that mutable source**, and no full schema5 native UI/game claim is made. The next committed integration must supply the real human/all-AI fixtures, verify these selectors, cover the six-kind union across generated watches, and provide a new Chrome lease before running the final native workflows. The baseline remains distinct from those future new-UI scenarios.
+
+No additional station-root product defect was found in these eight bounded checks. **Q-A1 and Q-A2 remain OPEN** with their original unchanged positive assertions/red receipts. The manager reports a smaller early camera gap but has not supplied an independently qualified closure; no before/after improvement or MotionTrack delegation approval is claimed here. No full suite, broad browser gate, hosted CI, deployment, provider call, main edit, push or other worker mutation was performed.
