@@ -24,7 +24,7 @@ for(const settingFirst of [true,false])test('root serialized settings/start boun
  const change={id:'race-setting',mapId:target.id,expectedRevision:0},begin={id:'race-start'};
  const first=settingFirst?f.request(host.route+'/settings',change,host.cookie):f.request(host.route+'/start',begin,host.cookie),second=settingFirst?f.request(host.route+'/start',begin,host.cookie):f.request(host.route+'/settings',change,host.cookie),results=await Promise.all([first,second]);
  const setting=results[settingFirst?0:1],started=results[settingFirst?1:0];assert.equal(started.status,200);assert([200,409].includes(setting.status));const state=f.server.rooms.get(host.id).data;
- assert.equal(state.state.schemaVersion,4);assert.deepEqual(state.state.map,state.map);assert.deepEqual(state.state.replaySnapshots[0].map,state.map);assert.deepEqual(state.state.replay.find(e=>e.type==='started').map,state.map);
+ assert.equal(state.state.schemaVersion,5);assert.equal(state.state.stationTasksVersion,1);assert.deepEqual(state.state.map,state.map);assert.deepEqual(state.state.replaySnapshots[0].map,state.map);assert.deepEqual(state.state.replay.find(e=>e.type==='started').map,state.map);
  assert.equal(state.map.id,setting.status===200?target.id:host.body.map.id);const saved=JSON.stringify(state);assert.equal((await f.request(host.route+'/settings',{id:'late-setting',mapId:host.body.map.id,expectedRevision:state.settings.revision},host.cookie)).body.error.code,'ALREADY_STARTED');assert.equal(JSON.stringify(f.server.rooms.get(host.id).data),saved);metadata(started.body);assert(started.body.game.players.every(p=>!Object.hasOwn(p,'role')));
 });
 

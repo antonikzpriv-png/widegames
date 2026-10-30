@@ -13,7 +13,7 @@ const uiRoot = process.env.WORLD_UI_TEST_UI_ROOT ? pathToFileURL(resolve(process
 const world = await import(new URL('shared/world.mjs', sourceRoot));
 const { CHARACTERS } = await import(new URL('shared/contracts.mjs', sourceRoot));
 const source = path => readFileSync(new URL(path, uiRoot), 'utf8');
-const strip = text => text.replace(/^\uFEFF/, '').replace(/^import .*$/gm, '').replace(/^export /gm, '');
+const strip = text => text.replace(/^\uFEFF/gm, '').replace(/^import .*$/gm, '').replace(/^export /gm, '');
 const flush = () => new Promise(resolve => setImmediate(resolve));
 const {getMap} = await import(new URL('shared/maps/index.mjs', sourceRoot));
 const mapHelpers = await import(new URL('public/world/map-model.mjs', uiRoot));
