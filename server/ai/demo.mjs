@@ -113,7 +113,7 @@ export function observe(view, memory) {
     if (newlyDead.length) {
       memory.suspicion ??= {};
       for (const id of memory.observation.nearby) {
-        if (!dead.has(id)) memory.suspicion[id] = Math.min(3, (memory.suspicion[id] ?? 0) + 1);
+        if (!dead.has(id)) memory.suspicion[id] = Math.min(3, (own(memory.suspicion,id) ?? 0) + 1);
       }
     }
   }
