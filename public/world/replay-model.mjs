@@ -1,5 +1,6 @@
 import {CHARACTERS} from '../../shared/contracts.mjs';
 import {getMap} from '../../shared/maps/index.mjs';
+import {validateStationChallenge,stationComplete} from '../../shared/station-challenges.mjs';
 import {REPLAY_LIMITS,validateReplayMetadata,replaySequenceOf,validReplayTaskProgress,validReplayEffect} from '../../shared/replay.mjs';
 import {replayEvents} from '../presentation.mjs';
 const copy=structuredClone;
@@ -14,8 +15,17 @@ export function restoreReplayTime(value,events){
  return gap<=Number.EPSILON*Math.max(1,Math.abs(value))*32?nearest:value;
 }
 function base(roster){return {phase:'unknown',players:roster.map(p=>({id:p.id,name:p.name,color:p.color,position:null,alive:true,role:null,roomId:null,tasks:[],route:null,positionAt:null})),features:null,effects:[],bodies:[],sabotage:null,meeting:null,activity:[],observations:[],claims:[],outcome:null};}
-export function createReplayModel(response,{matchId,roomId,players=CHARACTERS,map:mapReference}={}){
- const map=getMap(mapReference??response?.map),{WORLD,isWalkable,moveWorldPoint,distance,canSeeWorldPoint}=map.geometry;
+export function createReplayModel(response,{matchId,roomId,players,map:mapReference}={}){
+ if(response?.roomId!==undefined&&roomId!==undefined&&response.roomId!==roomId)throw new Error('Replay belongs to another room.');
+ if(response?.matchId!==undefined&&matchId!==undefined&&response.matchId!==matchId)throw new Error('Replay belongs to another match.');
+ const requestedMatch=matchId??response?.matchId??response?.metadata?.matchId;
+ const metadata=response?.metadata?copy(validateReplayMetadata(response.metadata,requestedMatch)):null;
+ const recordedMap=metadata?.version===2?metadata.map:metadata?.version===1?{id:'beacon',version:1}:undefined;
+ const startedMap=replayEvents(response).find(e=>e.type==='started')?.map;
+ const map=getMap(recordedMap??mapReference??response?.map??startedMap),{WORLD,isWalkable,moveWorldPoint,distance,canSeeWorldPoint}=map.geometry;
+ // Metadata fixes immutable geometry; a caller may not relabel that recording.
+ for(const ref of [mapReference,response?.map])if(recordedMap&&ref!==undefined){const supplied=getMap(ref);if(supplied.id!==map.id||supplied.version!==map.version)throw new Error('Replay belongs to another map.');}
+
  const point=p=>p&&Number.isFinite(p.x)&&Number.isFinite(p.y)&&isWalkable(p);
 function route(start,path,speed,at){
  if(!point(start)||!Array.isArray(path)||path.length>REPLAY_LIMITS.route||!Number.isFinite(speed)||speed<=0||speed>WORLD.speed)return null;
@@ -28,16 +38,14 @@ function project(r,at){
  for(const next of r.path){const d=distance(p,next);if(budget<d)return {x:p.x+(next.x-p.x)*budget/d,y:p.y+(next.y-p.y)*budget/d};budget-=d;p=next;}
  return copy(p);
 }
- if(response?.roomId!==undefined&&roomId!==undefined&&response.roomId!==roomId)throw new Error('Replay belongs to another room.');
- if(response?.matchId!==undefined&&matchId!==undefined&&response.matchId!==matchId)throw new Error('Replay belongs to another match.');
  const events=copy(replayEvents(response));
  if(events.length>REPLAY_LIMITS.events||events.some(e=>!e||!Number.isFinite(e.at)||e.at<0||typeof e.type!=='string'))throw new Error('Invalid replay events.');
  // Stable numeric sort: preserve the server's causal order for identical times.
  events.sort((a,b)=>a.at-b.at);
- const metadata=response?.metadata?copy(validateReplayMetadata(response.metadata,matchId??response.matchId,{map:{id:map.id,version:map.version},players})):null;
  const anchor=metadata?.anchor;
  const started=events.find(e=>e.type==='started'),hasStart=started?.worldVersion===1&&Array.isArray(started.positions);
- const roster=players.map(p=>({id:p.id,name:p.name||p.id,color:p.color}));
+ const identities=players??anchor?.players??started?.roles??CHARACTERS;
+ const roster=identities.map(p=>({id:p.id,name:p.name||p.id,color:p.color}));
  const initial=base(roster);
  if(anchor){
   if(anchor.bodies.some(b=>!point(b.position)))throw new Error('Invalid replay metadata geometry');
@@ -50,7 +58,7 @@ function project(r,at){
    const ended=events.find(e=>e.type==='ended'&&e.at<=anchor.at&&(seq(e)===null||seq(e)<=anchor.sequence));
    if(ended)initial.outcome={winner:ended.winner,reason:ended.reason,at:ended.at};
   }
-  for(const p of anchor.players){if(!point(p.position)||p.route.some(q=>!point(q)))throw new Error('Invalid replay metadata geometry');const target=initial.players.find(q=>q.id===p.id);Object.assign(target,copy(p),{route:route(p.position,p.route,WORLD.speed,anchor.at),positionAt:anchor.at});}
+  for(const p of anchor.players){if(!point(p.position)||p.route.some(q=>!point(q)))throw new Error('Invalid replay metadata geometry');const target=initial.players.find(q=>q.id===p.id);if(!target)throw new Error('Replay roster does not match recorded metadata.');Object.assign(target,copy(p),{route:route(p.position,p.route,WORLD.speed,anchor.at),positionAt:anchor.at});}
  }
  const from=metadata?.coverage.from??events[0]?.at??0,through=metadata?.coverage.through??events.at(-1)?.at??from;
  if(events.some(e=>e.at>through))throw new Error('Replay events exceed recording coverage.');
@@ -88,6 +96,14 @@ function project(r,at){
     locate(p,e.position,e.at);
     if(p&&['navigate','move'].includes(a.type)){interrupt(p);p.route=route(e.position,e.route,e.speed,e.at);if(a.roomId)p.roomId=a.roomId;if(!p.alive)p.recordedFallenMotion=true;}
     if(p&&['task','taskStep'].includes(a.type)&&validReplayTaskProgress(e.taskProgress)){const t=p.tasks.find(t=>t.id===a.taskId);if(t)t.progress=copy(e.taskProgress);}
+    if(p&&a.type==='taskInteract'&&e.stationChallenge!==undefined){
+     validateStationChallenge(e.stationChallenge);
+     const task=p.tasks.find(t=>t.id===a.taskId);
+     if(typeof e.completed!=='boolean'||e.completed!==stationComplete(e.stationChallenge)||task&&(task.kind!=='station'||JSON.stringify([task.challenge?.version,task.challenge?.kind,task.challenge?.puzzle])!==JSON.stringify([e.stationChallenge.version,e.stationChallenge.kind,e.stationChallenge.puzzle])))throw new Error('Invalid recorded station challenge evidence.');
+     // A partial history may lack the original task assignment. Keep its dated
+     // log evidence, without inventing a room, assignment or earlier progress.
+     if(task){task.challenge=copy(e.stationChallenge);task.completed=e.completed;}
+    }
     if(p&&a.type==='task'){const t=p.tasks.find(t=>t.id===a.taskId);if(t&&t.kind!=='station')t.completed=true;}
     if(a.type==='eliminate'){const victim=get(a.targetId);if(victim){victim.alive=false;victim.route=null;}}
     if(a.type==='sabotage')s.sabotage={active:true,roomId:map.fixtures?.repairs?.power?.[0]?.roomId||'engine',repairsCompleted:0,repairsRequired:2};
@@ -111,8 +127,8 @@ function project(r,at){
    if(!['motion','direction','started'].includes(e.type)&&a.type!=='wait')s.activity.push(copy(e));
   }
   for(const p of s.players){p.ghost=!p.alive&&(s.features?.deathPolicy==='ghost-tasks'||!!p.recordedFallenMotion);if((p.alive||p.ghost)&&p.route)p.position=project(p.route,time);}
-  s.activity=s.activity.slice(-12);s.replayTaskRooms=s.activity.filter(e=>['task','taskStep'].includes(e.action?.type)&&time-e.at<=3000).map(e=>s.players.flatMap(p=>p.tasks).find(t=>t.id===e.action.taskId)?.roomId).filter(Boolean);s.time=time;s.events=s.bodies.filter(b=>!b.reported).map(b=>({...b,type:'body',bodyId:b.id}));
-  s.self=null;s.map={id:map.id,version:map.version};s.worldVersion=1;s.matchId=matchId??response?.matchId??'legacy';s.roles=Object.fromEntries(roles);return s;
+  s.activity=s.activity.slice(-12);s.replayTaskRooms=s.activity.filter(e=>['task','taskStep','taskInteract'].includes(e.action?.type)&&time-e.at<=3000).map(e=>s.players.flatMap(p=>p.tasks).find(t=>t.id===e.action.taskId)?.roomId).filter(Boolean);s.time=time;s.events=s.bodies.filter(b=>!b.reported).map(b=>({...b,type:'body',bodyId:b.id}));
+  s.self=null;s.map={id:map.id,version:map.version};s.worldVersion=1;s.matchId=requestedMatch??'legacy';s.roles=Object.fromEntries(roles);return s;
  }
  function perspective(s,id){
   const self=s.players.find(p=>p.id===id),visible=self&&point(self.position)?s.players.filter(p=>point(p.position)&&(p.id===id||(!p.ghost||!self.alive)&&distance(self.position,p.position)<=WORLD.visibilityRadius&&canSeeWorldPoint(self.position,p.position))):[];

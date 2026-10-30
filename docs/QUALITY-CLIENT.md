@@ -146,3 +146,38 @@ $env:QUALITY_CLIENT_AUDIT_ROOT=$env:QUALITY_CLIENT_MERGE_ROOT
 node --test tests/quality-client-main-integration.test.mjs tests/quality-client-regression-audit.test.mjs
 # In a completed integrated checkout, leave both overrides unset to test local current source.
 ```
+
+
+## Final bounded replay2 / ghost-station composition audit
+
+This supersedes the earlier missing shared replay2 reader gap: root now supplies actual version dispatch via shared/replay.mjs -> replay-v2.mjs -> replay-common.mjs, read from its working/staged files, plus docs/QUALITY-MAIN-REPLAY-CONTRACT.md. Version1 strict readers were not edited. Test composition is a fresh Git archive of Core `1c228a0f57af934ad4d71fa5d408dda249be33a2`, UI `55858ffdbbe37a6fc3de1d49069d631fa85b9a02`, actual root working replay validators/features/contracts/presentation, then only the two candidate owned UI corrections. All source is frozen under `_artifacts/replay2-ghost-closure-20261030/runtime`; source-manifest.json records root working-file SHA256s and every original dependency. Backend/shared/reserved movement bytes are verified unchanged after runs; test-level hashes reject runtime changes during each run. closure-receipt.json pins candidate files and actual results.
+
+Three UI findings were reproduced before correction. Metadata-only v2 selected Beacon1 and rejected real map2/Annex geometry; taskInteract replay kept the initial challenge despite recorded completed=true; and a ghost's USE rail remained hidden despite canViewAct keyboard support. UI now validates metadata before resolving exact metadata.map, rejects a conflicting caller/response map, derives a missing roster from the actual anchor rather than assuming six actors, and retains clear room/match errors. Recorded stationChallenge evidence is validated, checked against known station identity and completion, then copied into reconstructed progress. Unknown task assignments in an explicitly partial history remain unknown while their validated dated log stays available. The action rail now uses canViewAct so permitted ghost USE is visible; other ghost combat/report/ability buttons remain hidden. No server permission is invented.
+
+The actual generated fixtures use14-room Beacon2 with12 custom keepers and8-room Annex1 with8 custom keepers (14 is a room count, not an unsupported14-seat roster). Both are schema5 with ghost-tasks/abilities, and real engine actions complete every crew station until an actual crew-task victory. Actors are explicitly positioned at stations to bound this pure-engine fixture; it does not claim walking/navigation/HTTP/native workflows. Actual Core getReplay/getReplayMetadata supplies the ended envelope; it intentionally has no response.map, only metadata.map. The real createReplayModel and createSpatialReplay consume it, assert exact geometry/rosters/challenges, and use the actual seek range control backward/forward. An actual engine deadline tick produces paused state. Live/paused replay/metadata/snapshots stay unavailable; living/spectator projections contain no private fallen message or hidden ghost position. Actual owner ghost chat form submission renders the returned real room's new private message; it is absent from living/spectator views and replay.
+
+### Concrete remaining Core blockers at exact1c228a0
+
+The owned positive assertions remain RED; do not call the complete ghost station workflow qualified:
+
+1. server/engine/index.mjs featureHints returns [] for `!p?.alive`. Actual dead-crew ghost tasks are accepted by taskInteract and appear in self.tasks/availableActions, but no exact enabled task descriptor reaches interactions. UI correctly cannot open that ghost station. Change Core's hint entry guard to the real permitted canWorldAct path and still emit only actions accepted by denial; do not enable living-only systems for ghosts.
+2. The same featureHints emits task/eliminate/report/meeting plus Group1 service hints, but no protect/decoy rows. An actual Ward owner has protect in availableActions while interactions has no exact protect{targetId} descriptor; Echo similarly needs decoy{x,y}. The positive test fails first on Ward. This is source-confirmed in both exact1c and coordinator's observed working index, despite the earlier handoff statement that these descriptors were delivered. The existing UI exact descriptor parser remains unchanged.
+
+No shared/validator naming or field-shape blocker remains for the tested v2 metadata. These two hint gaps belong to Core/coordinator; frontend does not synthesize missing descriptors or edit their runtime.
+
+### Results and retained evidence
+
+- replay2-red.log: initial8 controls,1 pass/7 fail, preserving the original UI failures.
+- final-composed.log:13 controls,11 pass/2 fail/0 skip. Both failures are the exact Core affordance gaps above. The corrected UI and map/challenge/privacy/current-chat controls pass.
+- legacy-final-retained.log:14 pass/0 fail/0 skip; the two original main spatial-replay test files and assertions are unchanged. legacy-retained.log preserves the initial13 pass/1 fail when moving validation changed the expected wrong-match error; error ordering was corrected and the unchanged assertion now passes.
+- replay2-first-green.log is historical5 pass/3 fail: two viewer fixtures called the low-level clock.seek without changing the viewer's causal event limit; those fixtures now use the real seek input. No viewer assertions or runtime behavior were weakened. The third was the retained Core ghost descriptor failure.
+- partial-station-red.log preserves the additional partial-history counterexample before the new strict station reader was adjusted to retain unknown assignments.
+
+The focused driver records dependency hashes and fails on changes during a run. The explicit partial-record fixture is derived from actual ended event data but intentionally removes its prior assignment anchor; it is a contract boundary fixture, not a claim of an engine-produced truncated envelope. DOM/canvas calls use a minimal local surface; no Chrome, physical phone, GPU/audio or full manager runtime qualification is implied. Syntax/diff checks pass. No root/shared/Core/movement/other-worktree edits, Chrome/native server/full suite/providers/main/push/deploy or self-approval. Coordinator retains the native Chrome lease; no owned process remains.
+
+```powershell
+$env:TEMP='D:/Widegames-work/temp'; $env:TMP=$env:TEMP
+$env:QUALITY_CLIENT_REPLAY2_ROOT='D:/Widegames-work/ship-quality-main-ui-20261030/_artifacts/replay2-ghost-closure-20261030/runtime'
+node --test tests/quality-client-main-replay2.test.mjs
+# Expected at exact Core1c:11 pass /2 fail. Keep both positive assertions for Core closure.
+```
