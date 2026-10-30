@@ -232,6 +232,7 @@ async function candidateMain({final=false}={}){
  let browser,game,page,origin,roomId,skew=0,closed=false,scenario='staged',activeSeed,held=null,holdNext=false,expectFailure=false;
  const pause=ms=>new Promise(r=>setTimeout(r,ms)),nativeFetch=globalThis.fetch,pending=new Set(),queues=new Map(),staged=new Set(),knownMatches=new Set(),expectedIds=new Set(),wires=new Map(),privateGhosts=new Map();
  const map=getMap({id:'beacon',version:2}),now=()=>Date.now()+skew;
+ async function drain(){let timer;try{await Promise.race([Promise.allSettled([...pending]),new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('Audit response drain exceeded8s')),8000);})]);}finally{clearTimeout(timer);}}
  await writeFile(path.join(output,'invocation.json'),JSON.stringify({mode:final?'final':'candidate',pin:report.requiredPin,sourceRoot:source,section,watch:process.env.QUALITY_BROWSER_WATCH||'both',runnerSha256:report.runnerSha256,profiling:!final},null,2));
  const raw=()=>game.rooms.get(roomId).data.state;
  async function integrity(){if(final){await verifyFinalArchive({source,pin:process.env.QUALITY_BROWSER_PIN});return;}for(const [file,row]of Object.entries(manifest.files))assert.equal(createHash('sha256').update(await readFile(path.join(source,file))).digest('hex'),row.sha256,'Raw archive changed '+file);}
