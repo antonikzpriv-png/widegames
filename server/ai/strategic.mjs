@@ -1,4 +1,4 @@
-import {getMap,mapFor} from '../../shared/maps/index.mjs';
+import {getMap,mapFor,mapIdentity} from '../../shared/maps/index.mjs';
 import { visibleWorldPlayer, worldTaskAction, worldGeometry, worldRoute } from './world.mjs';
 
 const distance=(a,b)=>a&&b&&Number.isFinite(a.x)&&Number.isFinite(b.x)?Math.hypot(a.x-b.x,a.y-b.y):Infinity;
@@ -9,7 +9,7 @@ const ready = (view, key) => (view.self.cooldowns?.[key] ?? 0) <= view.serverNow
 const evidence = view => (view.events ?? []).filter(e => ['body', 'witness'].includes(e.type)).map(e => JSON.stringify([e.type,e.bodyId,e.playerId,e.targetId,e.at]));
 export function situation(view, memory = {}) {
   return JSON.stringify([view.meeting?.id, view.sabotage?.active ? view.sabotage.deadlineAt : null,
-    view.map??view.mapId,view.self.id,view.self.alive,view.self.ghost===true,!!(view.self.transit||view.systems?.selfTransit),
+    mapIdentity(mapFor(view)),view.self.id,view.self.alive,view.self.ghost===true,!!(view.self.transit||view.systems?.selfTransit),
     (view.systems?.doors??[]).filter(d=>d.closed).map(d=>d.id).sort(),
     view.sabotage?.sites?.map(s=>[s.id,s.progress]),
     (view.self.tasks ?? []).map(t => memory.intention?.goal === 'task_route' ? [t.id, t.roomId] : [t.id, !!t.completed]),
