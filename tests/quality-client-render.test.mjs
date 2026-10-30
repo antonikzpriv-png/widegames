@@ -62,7 +62,9 @@ for(const [key,dirs]of [['QUALITY_CLIENT_MAP_ROOT',['shared/maps']],['QUALITY_CL
 }
 const mapRegistry=process.env.QUALITY_CLIENT_MAP_ROOT?await import(pathToFileURL(resolve(process.env.QUALITY_CLIENT_MAP_ROOT,'shared/maps/index.mjs'))):{getMap};
 let largeMap;try{largeMap=mapRegistry.getMap({id:'beacon',version:2});}catch{}
-const motion=process.env.QUALITY_CLIENT_MOVEMENT_ROOT?await import(pathToFileURL(resolve(process.env.QUALITY_CLIENT_MOVEMENT_ROOT,'public/world/movement.mjs'))):null;
+const motionRoot=process.env.QUALITY_CLIENT_MOVEMENT_ROOT?pathToFileURL(resolve(process.env.QUALITY_CLIENT_MOVEMENT_ROOT)+'/'):root;
+const motion=await import(new URL('public/world/movement.mjs',motionRoot));
+externalPins.push({root:motionRoot.href,file:'public/world/movement.mjs',sha256:createHash('sha256').update(readFileSync(new URL('public/world/movement.mjs',motionRoot))).digest('hex')});
 
 test('actual Beacon2 fourteen-room metadata, overview and exact legacy versions stay independent',{skip:!largeMap&&'Beacon2 absent; integrate real map owner or set QUALITY_CLIENT_MAP_ROOT'},()=>{
  assert.equal(largeMap.geometry.WORLD.width,3200);assert.equal(largeMap.roomLayout.length,14);assert.equal(new Set(Object.values(largeMap.taskKinds)).size,6);
@@ -72,7 +74,7 @@ test('actual Beacon2 fourteen-room metadata, overview and exact legacy versions 
  finally{scene.dispose();}
 });
 
-test('scene delegates actual Core motion intent and clears it on suspended lifecycle',{skip:!motion&&'Core movement helper absent; set QUALITY_CLIENT_MOVEMENT_ROOT for exact real module'},()=>{
+test('scene delegates actual Core motion intent and clears it on suspended lifecycle',()=>{
  const map=getMap({id:'beacon',version:1}),canvas=surface(),tracks=[],scene=createWorldScene(canvas,{motionFactory:options=>{const track=new motion.MotionTrack(options);tracks.push(track);return track;}}),room=view(map);room.game.self.moving=false;
  try{scene.update(room,0);assert(scene.setIntent({seq:2,dx:1,dy:0},0));const p=tracks[0].at(room.game.self.id,16);assert(p.x>room.game.self.position.x);assert(p.x-room.game.self.position.x<=180*.1);scene.suspend();assert.equal(tracks[0].samples.size,0);assert.equal(tracks[0].intent,null);assert.equal(scene.setIntent({seq:3,dx:1,dy:0},20),false);scene.update(room,40);room.game.players[0].position=null;scene.update(room,50);assert.equal(tracks[0].at(room.game.self.id,60),null);}
  finally{scene.dispose();}

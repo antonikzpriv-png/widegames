@@ -7,7 +7,7 @@ export function createTaskPuzzle({task,kind,onSubmit,onClose,id}){
  let solved=false,closed=false,selected=null,sent=false;
  const node=dom('section','lw-task-modal');node.setAttribute('role','dialog');node.setAttribute('aria-modal','true');node.setAttribute('aria-labelledby',`${id}-title`);node.tabIndex=-1;
  const heading=dom('h2','',task.label);heading.id=`${id}-title`;
- const top=dom('div','lw-modal-title'),close=control('Close station',()=>onClose(),'lw-close');top.append(dom('p','lw-eyebrow','FIELD EQUIPMENT'),close);
+ const top=dom('div','lw-modal-title'),close=control('Close station',()=>{if(!closed)onClose();},'lw-close');top.append(dom('p','lw-eyebrow','FIELD EQUIPMENT'),close);
  const copy=dom('p','lw-task-instruction'),area=dom('div',`lw-puzzle lw-puzzle-${kind}`),status=dom('p','lw-puzzle-status');status.setAttribute('role','status');
  const submit=control('Send completed task',()=>{if(!solved||sent||closed)return;onSubmit();},'lw-primary');submit.disabled=true;
  const footer=dom('p','lw-modal-footnote','The server confirms completion. Leaving this station or entering council closes the equipment.');
@@ -35,6 +35,6 @@ export function createTaskPuzzle({task,kind,onSubmit,onClose,id}){
   area.append(order,grid);
   for(let n=1;n<=4;n++){const tile=control(String(n),()=>{if(solved)return;if(n!==sequence[entered.length]){entered=[];tiles.forEach(t=>t.dataset.done='false');setText(status,'Sequence reset. Begin again with 2.');return;}entered.push(n);tile.dataset.done='true';setText(status,`${entered.length} of 4 steps restored.`);if(entered.length===4){tiles.forEach(t=>t.disabled=true);finish();}},'lw-sequence-tile');tile.setAttribute('aria-label',`Sequence tile ${n}`);tiles.push(tile);grid.append(tile);}
  }
- node.addEventListener('keydown',event=>{if(event.key==='Escape'){event.preventDefault();onClose();}else trapDialog(node,event);});
+ node.addEventListener('keydown',event=>{if(event.key==='Escape'){event.preventDefault();if(!closed)onClose();}else trapDialog(node,event);});
  return {node,focus(){close.focus();},setPending(value){sent=value;submit.disabled=value||!solved;close.disabled=value;setText(submit,value?'Sending…':'Send completed task');},dispose(){closed=true;node.remove();}};
 }

@@ -77,7 +77,7 @@ export function createWorldExperience(host,callbacks,{mapResolver=getMap,motionF
  confirmation.addEventListener('keydown',event=>{if(event.key==='Escape'){event.preventDefault();closeConfirmation();}else trapDialog(confirmation,event);});
  function validElimination(){const g=room?.game;if(g?.beaconVersion===1)return g.phase==='roam'&&g.self?.alive&&g.self.role==='saboteur'&&!g.systems?.selfTransit&&!g.self.transit&&hasActionDescriptor(g,'eliminate',{targetId:confirmTarget});const target=g?.players?.find(p=>p.id===confirmTarget);return g?.phase==='roam'&&g.self?.alive&&g.self.role==='saboteur'&&target?.alive&&(g.beaconVersion!==1||knowledge(g,target)==='alive')&&point(target.position)&&distance(g.self.position,target.position)<=world.WORLD.killRadius&&g.availableActions?.includes('eliminate');}
  function closeConfirmation(restore=true){confirmTarget=null;render();if(restore)restoreTrigger(actionButtons.eliminate);}
- function closeTask(restore=true){const current=puzzle;puzzle=null;taskSession=null;current?.dispose();render();if(restore)restoreTrigger(actionButtons.use);}
+ function closeTask(restore=true){const current=puzzle,hadFocus=current?.node.contains(document.activeElement);puzzle=null;taskSession=null;current?.dispose();render();if(restore){restoreTrigger(actionButtons.use);if(hadFocus&&document.activeElement===document.body&&!disposed&&!document.hidden&&room?.game?.phase==='roam'&&room.game.self?.alive&&overlay.hidden&&roleScene.hidden)restoreTrigger(canvas);}}
  function openTask(task){
   taskSession={taskId:task.id,roomId:room.roomId,matchId:room.game.matchId,mapKey:mapKey(room.game.map??room.map),location:room.game.self.roomId,...(task.kind==='station'?{challengeKey:JSON.stringify([task.challenge?.version,task.challenge?.kind,task.challenge?.puzzle])}:{})};
   puzzle=createTaskPuzzle({id:uid,task,kind:taskKind(task,room.game.self.tasks.indexOf(task)),onClose:()=>closeTask(),onSubmit:async stationInput=>{
@@ -152,7 +152,7 @@ export function createWorldExperience(host,callbacks,{mapResolver=getMap,motionF
   if(game?.phase==='roam'&&recentEjection){const key=`${game.matchId}:${recentEjection.id||recentEjection.at}:${recentEjection.ejectedId}`;if(!seenEjections.has(key)){seenEjections.add(key);ejectionKey=key;const player=game.players.find(p=>p.id===recentEjection.ejectedId);setText(ejectionTitle,`${player?.name||'A keeper'} WAS EJECTED.`);setText(ejectionCopy,player?.role?`Revealed role: ${player.role}.`:'The beacon has not revealed their role. Keep watching.');const art=ejectionArt.getContext('2d');art.clearRect(0,0,200,220);drawKeeper(art,player||{name:'Keeper'},100,160,{scale:2.2,label:false});}}
   const isCouncil=['discussion','voting'].includes(game?.phase);
   council.node.hidden=!isCouncil;results.node.hidden=game?.phase!=='ended';paused.hidden=game?.phase!=='paused';confirmation.hidden=!confirmTarget;ejection.hidden=!ejectionKey;
-  if(isCouncil)council.update(game,options);
+  if(isCouncil)council.update(game,options);else council.suspend?.();
   if(game?.phase==='ended')results.update(game);
   if(confirmTarget){const target=game.players.find(p=>p.id===confirmTarget);setText(confirmTitle,`Eliminate ${target?.name||'keeper'}?`);setText(confirmCopy,'This action cannot be undone. The server checks your target and cooldown again.');confirmYes.disabled=pending()||!options.connected;}
   overlay.hidden=!(isCouncil||game?.phase==='ended'||game?.phase==='paused'||puzzle||confirmTarget||ejectionKey);
@@ -175,9 +175,9 @@ export function createWorldExperience(host,callbacks,{mapResolver=getMap,motionF
   input.sync();
  }
  function frame(now){raf=0;if(disposed||document.hidden)return;scene.draw(now);if(mapOpen)mini.draw(now,{overview:true});raf=requestAnimationFrame(frame);}
- function blur(){scene.suspend?.();mini.suspend?.();navigationEpoch++;actionGeneration++;beaconPanel?.suspend();lobbyMap.suspend();sound.suspend();}
+ function blur(){council.suspend?.();scene.suspend?.();mini.suspend?.();navigationEpoch++;actionGeneration++;beaconPanel?.suspend();lobbyMap.suspend();sound.suspend();}
  window.addEventListener('blur',blur);
- function visibility(){navigationEpoch++;actionGeneration++;beaconPanel?.suspend();lobbyMap.suspend();sound.suspend();if(document.hidden){scene.suspend?.();mini.suspend?.();cancelAnimationFrame(raf);raf=0;input.stop();}else if(!disposed&&!raf){scene.update(room,performance.now());mini.update(room,performance.now());scene.draw(performance.now());raf=requestAnimationFrame(frame);}}
+ function visibility(){council.suspend?.();navigationEpoch++;actionGeneration++;beaconPanel?.suspend();lobbyMap.suspend();sound.suspend();if(document.hidden){scene.suspend?.();mini.suspend?.();cancelAnimationFrame(raf);raf=0;input.stop();}else if(!disposed&&!raf){scene.update(room,performance.now());mini.update(room,performance.now());scene.draw(performance.now());raf=requestAnimationFrame(frame);}}
  document.addEventListener('visibilitychange',visibility);if(!document.hidden)raf=requestAnimationFrame(frame);
  const api={update(next,nextOptions={}){
   if(disposed)return;let nextMap;
@@ -187,5 +187,5 @@ export function createWorldExperience(host,callbacks,{mapResolver=getMap,motionF
   const changed=selectedMap.id!==nextMap.id||selectedMap.version!==nextMap.version;
   if(lastRoom&&(lastRoom!==next.roomId||changed||room?.game?.matchId!==next.game?.matchId||room?.game?.self?.id!==next.game?.self?.id)){ejectionKey=null;seenEjections.clear();revealed.clear();localFeedback='';lastRole=null;}
   lastScope=scope;lastRoom=next.roomId;mapError='';selectedMap=nextMap;world=selectedMap.geometry;room=next;options={...options,...nextOptions};scene.update(room,performance.now());mini.update(room,performance.now());sound.update(room);render();
- },dispose(){if(disposed)return;input.dispose();disposed=true;cancelAnimationFrame(raf);document.removeEventListener('visibilitychange',visibility);window.removeEventListener('blur',blur);scene.dispose();mini.dispose();lobbyMap.dispose();sound.dispose();beaconPanel?.dispose();puzzle?.dispose();results.dispose();shell.remove();}};return api;
+ },dispose(){if(disposed)return;input.dispose();disposed=true;cancelAnimationFrame(raf);document.removeEventListener('visibilitychange',visibility);window.removeEventListener('blur',blur);scene.dispose();mini.dispose();lobbyMap.dispose();sound.dispose();beaconPanel?.dispose();puzzle?.dispose();council.dispose?.();results.dispose();shell.remove();}};return api;
 }

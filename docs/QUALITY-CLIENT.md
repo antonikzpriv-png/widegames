@@ -87,3 +87,23 @@ node --test _artifacts/quality-walking-closure-20261030/candidate/tests/quality-
 ```
 
 In the integrated checkout the new walking driver defaults to its current real source; no archive or old pin is silently selected. This isolated client foundation intentionally lacks the reserved Core file, so use the genuine integrated overlay until manager composes the dependency. Legacy import-stripping VMs must inject the real MotionTrack/ObservedCamera dependencies; runtime does not fall back because a harness stripped imports. Syntax and git diff --check pass. No public game.css, root/server/shared/other-worktree edits, Chrome, server process, full suite, providers, main/push/deployment or production approval. Manager/Reviewer retain the Chrome lease; native walking qualification is next.
+
+
+## Bounded UI regression audit (before latest-main integration)
+
+Pinned runtime: f6cb78b4c61e0859fcf0d0ddb5a8171d87e20789 with this client overlay. Evidence is preserved in `_artifacts/quality-ui-regression-audit-20261030`, including original sources, source-manifest.json, counterexamples-red.log (7 pass / 4 fail), all green logs and closure-receipt.json. Server/shared and reserved Core helper fingerprints remain unchanged. Four failing checks exposed three defects: cancelling a pending station lost focus to BODY; obsolete council chat/vote rejections changed current-match feedback; disposed legacy puzzles still invoked close handlers.
+
+Pending cancellation now falls back to the still-valid world canvas when disabled USE cannot receive focus. Council promises are guarded by match/meeting/actor/phase generation plus suspension/disposal; stale success cannot clear a replacement draft and stale/abort failures cannot overwrite feedback. Disposed legacy close/Escape handlers are inert. Existing APIs and current failures with useful retry remain intact.
+
+The render delegation check now imports the local available Core helper by default, records its fingerprint, and has no optional-helper skip. An explicit dependency-root override remains supported. The isolated client foundation lacks the reserved tracked helper; the test was run from an ignored genuine integrated overlay with no movement override, rather than substituting a helper.
+
+Checks: audit-final-green.log 13 pass / 0 fail / 0 skip; helper-local-after.log 1 pass / 0 fail / 0 skip; focused-retained.log 11 pass / 0 fail / 0 skip. The 13 adversarial module/DOM controls cover pending cancel, death, room return, authoritative task completion, glyph pending ABA/current rejection, council match and draft ABA, IME, suspension/disposal and pointer cancellation/resource cleanup. Deferred callback fixtures are unit controls, not claimed HTTP workflows. Retained controls cover the six real challenge transitions, real schema5 progress, normal keyboard entry and all three legacy puzzles. Commands:
+
+```powershell
+$env:QUALITY_CLIENT_AUDIT_ROOT='D:/Widegames-work/ship-quality-client-20261030/_artifacts/quality-ui-regression-audit-20261030/runtime'
+node --test tests/quality-client-regression-audit.test.mjs
+# From the real integrated runtime, without QUALITY_CLIENT_MOVEMENT_ROOT:
+node --test --test-name-pattern='scene delegates actual Core motion intent' tests/quality-client-render.test.mjs
+```
+
+Source/syntax and diff checks passed. These counts are bounded module checks, not independent full matches. No Chrome/native server/full suite/provider/main/push/deployment was used. Reviewer retains Chrome; no owned long-lived process remains. Earlier red evidence and historical receipts are unchanged.
