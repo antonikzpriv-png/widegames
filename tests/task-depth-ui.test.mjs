@@ -15,7 +15,7 @@ function fixture(kind,{index=0,readyAt=0}={}){
   setAttribute(k,v){this.attrs.set(k,String(v));}getAttribute(k){return this.attrs.get(k)||null;}
   addEventListener(k,fn){const list=this.handlers.get(k)||[];list.push(fn);this.handlers.set(k,list);}removeEventListener(){}
   append(...nodes){for(const n of nodes){n.remove();n.parentNode=this;this.children.push(n);}}
-  replaceChildren(...nodes){for(const n of this.children)n.parentNode=null;this.children=[];this.text='';this.append(...nodes);}remove(){if(this.parentNode)this.parentNode.children=this.parentNode.children.filter(n=>n!==this);this.parentNode=null;}
+  replaceChildren(...nodes){for(const n of this.children){if(n.contains(document.activeElement))document.activeElement=document.body;n.parentNode=null;}this.children=[];this.text='';this.append(...nodes);}remove(){if(this.parentNode)this.parentNode.children=this.parentNode.children.filter(n=>n!==this);this.parentNode=null;}
   get textContent(){return this.text+this.children.map(n=>n.textContent).join('');}set textContent(v){this.replaceChildren();this.text=String(v);}
   contains(n){return n===this||this.children.some(c=>c.contains(n));}querySelectorAll(query){const parts=query.split(','),out=[];const walk=node=>{for(const c of node.children){if(parts.some(p=>p.startsWith('.')?c.className.split(' ').includes(p.slice(1)):c.tagName===p.toUpperCase()))out.push(c);walk(c);}};walk(this);return out;}querySelector(q){return this.querySelectorAll(q)[0]||null;}
   focus(){if(!this.disabled)document.activeElement=this;}getClientRects(){return [{}];}
@@ -26,7 +26,7 @@ function fixture(kind,{index=0,readyAt=0}={}){
  let clock=100000,task={id:'detail-'+kind,roomId:'bridge',kind,edition:3,label:'Verify '+kind,completed:false};task.progress={...challenge(task),index,readyAt};
  const puzzle=make({task,id:'test',onSubmit:input=>sent.push(input),onClose(){},getServerNow:()=>clock});document.body.append(puzzle.node);
  const all=()=>puzzle.node.querySelectorAll('button,input'),find=(key,value)=>all().find(n=>n.dataset[key]===value),button=text=>all().find(n=>n.tagName==='BUTTON'&&n.textContent===text),click=node=>{assert(node,'control exists');if(!node.disabled)for(const fn of node.handlers.get('click')||[])fn({preventDefault(){}});};
- return {puzzle,task,sent,timers,find,button,click,advance(ms){clock+=ms;puzzle.update(task);},ack(){const next=structuredClone(task);advanceTask(next,clock);task=next;this.task=next;puzzle.update(next);}};
+ return {puzzle,task,sent,timers,document,find,button,click,advance(ms){clock+=ms;puzzle.update(task);},ack(){const next=structuredClone(task);advanceTask(next,clock);task=next;this.task=next;puzzle.update(next);}};
 }
 
 test('all25 server task families mount an identified instrument with progress and actionable controls',()=>{
@@ -51,4 +51,11 @@ test('increasing-memory round collects full prefix and accessible pattern bypass
 });
 test('disposed memory playback cannot focus, submit or mutate another task controller',()=>{
  const f=fixture('sequence',{index:3});f.click(f.find('taskControl','memory-playback'));assert(f.timers.length);f.puzzle.dispose();while(f.timers.length)f.timers.shift()();assert.equal(f.sent.length,0);
+});
+
+test('a confirmed diagnostic start keeps focus inside equipment while every action awaits its timer',()=>{
+ const f=fixture('repair',{index:2}),start=f.find('taskControl','repair-step');start.focus();f.puzzle.setPending(true);f.ack();f.puzzle.setPending(false);const area=f.puzzle.node.querySelector('.lw-puzzle');assert.equal(f.document.activeElement,area);assert.equal(area.tabIndex,-1);assert(f.find('taskControl','repair-step').disabled);f.advance(1500);assert(area.contains(f.document.activeElement));assert(!f.find('taskControl','repair-step').disabled);f.puzzle.dispose();
+});
+test('timer snapshots and delayed acknowledgements preserve intentionally moved focus',()=>{
+ const f=fixture('repair',{index:2}),start=f.find('taskControl','repair-step');start.focus();f.puzzle.setPending(true);f.ack();const close=f.button('Close station');close.disabled=false;close.focus();f.puzzle.setPending(false);assert.equal(f.document.activeElement,close);f.advance(1500);assert.equal(f.document.activeElement,close);f.puzzle.dispose();
 });
