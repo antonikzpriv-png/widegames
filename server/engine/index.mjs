@@ -353,7 +353,7 @@ export function getPlayerView(state,playerIdOrNull,now=Date.now()) {
   const p=state.players.find(p=>p.id===playerIdOrNull);
   const ended=state.phase==='ended';
   const projection=isBeacon(state)?runtime(state).projectWorld(state,playerIdOrNull,now):null;
-  const visible=q=>ended||q.id===p?.id||!(isGhost(state,q)&&(!p||p.alive))&&(!p||(isWorld(state)?runtime(state).sees(p.position,q.position):q.roomId===p.roomId));
+  const visible=q=>q.id===p?.id||(!(isGhost(state,q)&&(!p||p.alive))&&(ended||!p||(isWorld(state)?runtime(state).sees(p.position,q.position):q.roomId===p.roomId)));
   const bodyVisible=b=>!p||(isWorld(state)?runtime(state).sees(p.position,b.position):b.roomId===p.roomId);
   const bodyEvent=b=>({id:b.id,type:'body',bodyId:b.id,playerId:b.playerId,roomId:b.roomId,at:isWorld(state)?b.at:state.updatedAt,...(isWorld(state)?{position:clone(b.position)}:{})});
   const events=clone(state.events);

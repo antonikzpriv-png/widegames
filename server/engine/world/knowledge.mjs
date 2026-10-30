@@ -71,7 +71,7 @@ export function spatialKnowledge(g){
       const own=player.id===viewerId,known=k?.roster.find(row=>row.id===player.id),body=(state.bodies??[]).find(b=>b.playerId===player.id&&visibleBody(state,b,origin,viewerId));
       const visible=!hasTransit(state,player.id)&&((own&&canWorldAct(state,player))||(player.alive||isGhost(state,self)&&isGhost(state,player))&&g.sees(origin,player.position,state,viewerId)||!!body);
       const status=ended||own||visible?(player.alive?'alive':'dead'):known?.status??'unknown',alive=status==='unknown'?null:status==='alive';
-      const hiddenGhost=!ended&&isGhost(state,player)&&(!isGhost(state,self)||!g.sees(origin,player.position,state,viewerId));const position=hiddenGhost?null:ended?player.position:visible?(isGhost(state,player)?player.position:body?.position??player.position):null,roomId=position?(isGhost(state,player)?player.roomId:body?.roomId??player.roomId):null;
+      const hiddenGhost=isGhost(state,player)&&(!isGhost(state,self)||!g.sees(origin,player.position,state,viewerId));const position=hiddenGhost?null:ended?player.position:visible?(isGhost(state,player)?player.position:body?.position??player.position):null,roomId=position?(isGhost(state,player)?player.roomId:body?.roomId??player.roomId):null;
       return {id:player.id,name:player.name,color:player.color,status,alive,roomId,position:position?g.point(position):null,...(ended?{role:player.role}:{})};
     });
     return {players,localEvents:clone(k?.events??[]).slice(-limit(state)),vision:{radius:g.radius(state,viewerId),origin:g.point(origin),mode:ended?'reveal':self?'player':g.viewpointMode,lights:!!state.systems?.lights?.active}};
