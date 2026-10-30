@@ -24,3 +24,29 @@ Exact composed engine check: fe373b895b5f5f17acecc0a4997af27f8a31d751 archived u
 The first six retained targeted suites at that exact composition produced37 pass/9 fail/0 skip (46 total). All13 CAPTCHA controls pass. The nine failures are three frontend replay models still choosing Beacon geometry for new map-string metadata, plus six storage geometry selections still using the original world for expanded mapId. Logs retained at _artifacts/latest-main-fe373b8-targeted.txt. These were reported to owners, not fixed across ownership. Coordinator now has later committed client/storage integration; remaining failures must be retested against that new immutable composition.
 
 Adopted coordinator fe373b8's strict v1 canonical six IDs/one saboteur/100-task limits. My early optional v1 roster broadening was unnecessary and is superseded; dynamic4..12 remain quality replay2. The owned legacy geometry/layout/runtime lookups now explicitly resolve {id:mapId,version:1}, matching authored getWorld and saved mapId semantics instead of drifting if a future registry latest changes. New constructor mapId likewise selects retained version1. Quality state.map still resolves its exact recorded object, and no mapId is injected into quality states. Latest own protocol rerun3/3 pass; no world-runtime.mjs edit or production qualification.
+
+## Focused composed closure (not candidate-wide qualification)
+
+Source progression is preserved honestly: fe373b895b5f5f17acecc0a4997af27f8a31d751 had37/46 retained checks pass with9 owner-integration failures;93a0f4f834ac18200ee8ca2555b298117d300aa2 had48/51 pass after storage fixes, leaving3 replay-presentation failures. Logs/archives/manifests for both remain in _artifacts. Later coordinator81a5aa0dfd552b4e8e562fb50c4bcac4b2d95e41 incorporates committed frontend replay integration and passes the entire focused composition below. The coordinator worktree had unrelated uncommitted test edits at archival time; they were excluded. Every one of486 raw Git blobs was checked against git cat-file; no source overlays or working-copy runtime were used.
+
+**51/51 pass,0 skip**,3486.5047ms at exact81a5aa0:
+
+```powershell
+$env:TEMP='D:/Widegames-work/temp'; $env:TMP=$env:TEMP
+node _artifacts/prepare-final-composed-engine.mjs
+$env:LATEST_MAIN_ENGINE_ROOT='D:/Widegames-work/ship-quality-final-engine-20261030/_artifacts/latest-main-final-81a5aa0'
+# $source is that same exact archive root.
+node --test --test-concurrency=2 tests/latest-main-engine-worlds.test.mjs $source/tests/latest-main-engine-protocol.test.mjs $source/tests/captcha-task-engine.test.mjs $source/tests/map-spatial-replay.test.mjs $source/tests/maps-authority-audit.test.mjs $source/tests/quality-main-replay-validation.test.mjs $source/tests/spatial-replay-model.test.mjs $source/tests/spatial-replay-recording.test.mjs
+```
+
+The retained six suites contribute46 cases, plus3 protocol and2 legal-world cases. Both generated expanded matches retain12 explicit jobs per crew/all11 families, execute every job for one owner using real engine routes/input/receipts/JSON, remain active while others' work remains, then end by real council/ejection. No fabricated all-crew completion/outcome/death/position. Replay map-string metadata stays bound to its authored geometry, is defensive/ended-only and rejects foreign maps/future clocks/private keys. Existing quality map2/station6/custom12-roster/3-faction tests and replay v2/privacy/bounds/chronology remain. The old five-kind deterministic task vectors, diagnostic timer, new semantic CAPTCHA inputs and malformed saved tasks also pass.
+
+Copyable evidence under this worker:
+
+- _artifacts/latest-main-final-81a5aa0/ and _artifacts/latest-main-final-81a5aa0-manifest.json (exact source pin above)
+- _artifacts/latest-main-final-targeted.txt (successful51-check run)
+- _artifacts/latest-main-fe373b8-targeted.txt and _artifacts/latest-main-93a0f4f-targeted.txt (retained reds)
+- _artifacts/latest-main-engine-worlds-fe373b8.txt (first two legal-map passes)
+- _artifacts/latest-engine-protocol-first.txt and latest-engine-protocol-strict-v1.txt (owned direct protocol controls)
+
+Owned commits90448b26a9137043638e2597749c8b747d56b60c,26693bac7761d134095fd09465cbce3b3182dd93 and4c41433ced093932807fd55eb7fa7133c447c9c3 carry the runtime/test handoffs. Coordinator already composed904 plus equivalent capability/strict-reader corrections. **4c41433's conservative version1 legacy-map lookup is an additional owned follow-up, not yet in the archived81a5aa0 source**; its direct3-case protocol check passes, and it selects the same current v1 descriptors. Do not silently relabel this51-check receipt as testing a newer composition. No world-runtime.mjs edit; all new map selection is in owned index.mjs. No remaining failing check in this bounded archived composition, but storage/HTTP/browser/full-suite/final-source qualification remains manager/other-owner work. Prior production receipts are historical and do not approve this candidate. No paid providers, Chrome, live service data, main/push/deploy or other-owner edits.
