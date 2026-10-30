@@ -1,3 +1,4 @@
+import {MotionTrack} from './movement.mjs';
 ﻿import {mapKey} from './map-model.mjs';
 import {knowledge,descriptors,actionDescriptors,hasActionDescriptor} from './beacon-model.mjs';
 /** Pure presentation rules. Inputs are redacted views, never engine state. */
@@ -57,8 +58,16 @@ export function contexts(game,world){
 }
 /** Rendering blends only two received positions. Missing actors are removed immediately. */
 export class ActorSamples{
- constructor(){this.samples=new Map();}
+ constructor(options={}){this.track=new MotionTrack(options);this.legacy=new Map();this.usingWorld=false;this.forceWorld=options.world===true;}
+ get samples(){return this.usingWorld?this.track.samples:this.legacy;}
+ get intent(){return this.usingWorld?this.track.intent:null;}
+ setIntent(input,at){return this.usingWorld?this.track.setIntent(input,at):false;}
  update(game,at){
+  // Every production world view has version/rooms or a map/beacon marker.
+  // Only historical unit-only Cartesian fixtures lack all these identifiers.
+  const realWorld=this.forceWorld||game?.beaconVersion===1||game?.map!==undefined||!!game?.worldVersion&&(Number.isFinite(game.version)||Array.isArray(game.rooms));
+  if(realWorld!==this.usingWorld){this.clear();this.usingWorld=realWorld;}
+  if(realWorld){this.track.update(game,at);return;}
   const seen=new Set();
   for(const player of visiblePlayers(game)){
    seen.add(player.id);const old=this.samples.get(player.id);
@@ -68,8 +77,8 @@ export class ActorSamples{
   }
   for(const id of this.samples.keys())if(!seen.has(id))this.samples.delete(id);
  }
- at(id,now,reduced=false){const sample=this.samples.get(id);if(!sample)return null;const t=reduced?1:clamp((now-sample.at)/140,0,1);return {x:sample.from.x+(sample.to.x-sample.from.x)*t,y:sample.from.y+(sample.to.y-sample.from.y)*t};}
- clear(){this.samples.clear();}
+ at(id,now,reduced=false){if(this.usingWorld)return this.track.at(id,now,reduced);const sample=this.samples.get(id);if(!sample)return null;const t=reduced?1:clamp((now-sample.at)/140,0,1);return {x:sample.from.x+(sample.to.x-sample.from.x)*t,y:sample.from.y+(sample.to.y-sample.from.y)*t};}
+ clear(){this.track.clear();this.legacy.clear();this.usingWorld=false;}
 }
 export function validTaskSession(session,room,world){
  const game=room?.game,task=game?.self?.tasks?.find(t=>t.id===session?.taskId);

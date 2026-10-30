@@ -1,4 +1,4 @@
-import {followCamera,viewportBounds,intersects} from './camera.mjs';
+import {ObservedCamera,viewportBounds,intersects} from './camera.mjs';
 import {createStaticLayer} from './static-layer.mjs';
 import {paintEnvironment,drawRoomLabels,drawStation,drawForeground} from './environment.mjs';
 import {getMap} from '../../shared/maps/index.mjs';
@@ -30,9 +30,21 @@ export function drawKeeper(ctx,player,x,y,{scale=1,step=0,selected=false,ghost=f
  ctx.restore();
 }
 export function createWorldScene(canvas,{reduced=false,mapResolver=getMap,motionFactory}={}){
- const ctx=canvas.getContext('2d'),samples=motionFactory?motionFactory({mapResolver}):new ActorSamples();let map=mapResolver(),world=map.geometry;let room=null,lastKey=null,camera={x:800,y:400},view={width:1,height:1,zoom:1},stopped=false,lastFrame=null;
+ const ctx=canvas.getContext('2d'),samples=motionFactory?motionFactory({mapResolver}):new ActorSamples({mapResolver,world:true});let map=mapResolver(),world=map.geometry;let room=null,lastKey=null,camera={x:800,y:400},view={width:1,height:1,zoom:1},stopped=false,lastOwner=null,lastAt=-Infinity,lastVersion=-1;
+ const cameraTrack=new ObservedCamera();
  const cache=createStaticLayer({paint:paintEnvironment,makeCanvas:(w,h)=>{if(typeof OffscreenCanvas!=='undefined')return new OffscreenCanvas(w,h);return canvas.ownerDocument?.createElement?.('canvas')||globalThis.document?.createElement?.('canvas');}});
- function update(next,at){map=mapResolver(next?.game?.map??next?.map);world=map.geometry;const key=`${next?.roomId}:${next?.game?.matchId}:${map.id}:${map.version}`;if(key!==lastKey){samples.clear();lastFrame=null;lastKey=key;camera={...(visionFrame(next?.game,map)?.origin||next?.game?.self?.position||world.WORLD_VIEWPOINT)};}room=next;samples.update(room?.game,at);}
+ function update(next,at){
+  const nextMap=mapResolver(next?.game?.map??next?.map),game=next?.game;
+  const owner=JSON.stringify([next?.roomId,game?.matchId,nextMap.id,nextMap.version,game?.self?.id]);
+  if(owner===lastOwner&&(at<lastAt||Number.isFinite(game?.version)&&game.version<lastVersion))return;
+  const key=JSON.stringify([owner,game?.phase,game?.self?.alive,!!(game?.self?.transit||game?.systems?.selfTransit),game?.vision?.mode]);
+  map=nextMap;world=map.geometry;
+  const target=!game?{x:world.WORLD_VIEWPOINT.x,y:world.WORLD_VIEWPOINT.y+25}:(visionFrame(game,map)?.origin||game?.self?.position||world.WORLD_VIEWPOINT);
+  if(key!==lastKey){samples.clear();cameraTrack.reset(target,at);lastKey=key;}else cameraTrack.update(target,at);
+  lastOwner=owner;lastAt=at;lastVersion=Number.isFinite(game?.version)?game.version:-1;
+  room=next;samples.update(game,at);
+ }
+
  function draw(time,{overview=false}={}){
   if(stopped)return;const rect=canvas.getBoundingClientRect();if(!rect.width||!rect.height)return;
   const dpr=Math.min(2,globalThis.devicePixelRatio||1),width=rect.width,height=rect.height;
@@ -41,9 +53,9 @@ export function createWorldScene(canvas,{reduced=false,mapResolver=getMap,motion
   const sea=ctx.createLinearGradient(0,0,width,height);sea.addColorStop(0,map.id==='beacon'?'#102f48':'#172f46');sea.addColorStop(1,map.id==='beacon'?'#244957':'#3e6067');ctx.fillStyle=sea;ctx.fillRect(0,0,width,height);
   if(!reduced){ctx.strokeStyle='#93c2d01c';ctx.lineWidth=2;for(let i=0;i<45;i++){const x=(i*137+time*.014)% (width+80)-40,y=(i*83+time*.038)%(height+80)-40;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x-12,y+27);ctx.stroke();}}
   const game=room?.game,lobby=!game;
-  const vision=visionFrame(game,map),follow=(game?.self?samples.at(game.self.id,time,reduced):null)||vision?.origin||game?.self?.position||samples.at(game?.players?.find(p=>point(p.position)&&p.alive)?.id,time,reduced)||world.WORLD_VIEWPOINT;
-  // Camera moves only toward an observed position; hidden actors have no samples.
-  const destination=lobby?{x:world.WORLD_VIEWPOINT.x,y:world.WORLD_VIEWPOINT.y+25}:follow;camera=followCamera(camera,destination,lastFrame===null?0:time-lastFrame,reduced);lastFrame=time;
+  const vision=visionFrame(game,map);
+  camera=cameraTrack.at(time,reduced)||{...world.WORLD_VIEWPOINT};
+
   const zoom=overview?Math.min((width-30)/world.WORLD.width,(height-30)/world.WORLD.height):lobby?Math.min(width/620,height/390):clamp(Math.min(width/650,height/650),.64,1.28);
   if(overview)camera={x:world.WORLD.width/2,y:world.WORLD.height/2};view={width,height,zoom,camera:{...camera}};
   ctx.save();ctx.translate(width/2,height/2);ctx.scale(zoom,zoom);ctx.translate(-camera.x,-camera.y);
@@ -70,5 +82,5 @@ export function createWorldScene(canvas,{reduced=false,mapResolver=getMap,motion
    const fog=ctx.createRadialGradient(sx,sy,radius*.35,sx,sy,radius);fog.addColorStop(0,'#091d3000');fog.addColorStop(.82,'#091d3038');fog.addColorStop(1,'#091d30e8');ctx.fillStyle=fog;ctx.fillRect(0,0,width,height);
   }
  }
- return {update,draw,setIntent(input,at){return samples.setIntent?.(input,at)||false;},suspend(){samples.clear();lastFrame=null;},toWorld(clientX,clientY){const r=canvas.getBoundingClientRect();return {x:(clientX-r.left-view.width/2)/view.zoom+view.camera.x,y:(clientY-r.top-view.height/2)/view.zoom+view.camera.y};},stats(){return cache.stats();},dispose(){stopped=true;samples.clear();cache.dispose();}};
+ return {update,draw,setIntent(input,at){return samples.setIntent?.(input,at)||false;},suspend(){samples.clear();cameraTrack.clear();lastKey=null;},toWorld(clientX,clientY){const r=canvas.getBoundingClientRect();return {x:(clientX-r.left-view.width/2)/view.zoom+view.camera.x,y:(clientY-r.top-view.height/2)/view.zoom+view.camera.y};},stats(){return cache.stats();},dispose(){stopped=true;samples.clear();cameraTrack.clear();cache.dispose();}};
 }

@@ -53,3 +53,37 @@ node --test tests/quality-client-render.test.mjs tests/quality-client-stations.t
 ```
 
 In an integrated checkout, leave runtime/map overrides unset; those tests use its real modules. Core motion delegation tests currently need QUALITY_CLIENT_MOVEMENT_ROOT unless the test is extended to load the integrated helper. The declared foundation skips only absent new map/station/motion module checks, not a failing available implementation. This phase used no Chrome, server/browser profile, external assets, provider, main/push/deployment or production approval. Manager retains the Chrome lease and final desktop/mobile full-match qualification. No owned long-lived processes remain.
+
+
+## Mandatory default walking-presentation closure
+
+This supersedes the earlier optional MotionTrack root-binding handoff. Actual production defaults now use the delivered Core helper automatically: ActorSamples imports MotionTrack and delegates update/at/clear/samples for real world views; createWorldScene constructs that safe sampler with its actual map resolver. The existing ordinary experience input callback already forwards direction-only intentions and clears presentation on blur/hidden/dispose and owner changes. No root factory is required. The optional factory remains compatible, but it is not the safety mechanism. Core movement.mjs is a mandatory integration dependency from managerf7af9d6f0a0eb42ae5f26e4701037e693878713b; it was neither copied into the tracked client tree nor edited.
+
+Production world views carry map/beacon identity or worldVersion plus version/rooms. All such views delegate, including the actual schema2 legacy world and schemas3/4/5. The only mathematical compatibility path is for raw fixtures lacking all production identifiers (map/beacon/version/rooms); the historical small Cartesian tests use worldVersion1 but have no version/rooms/map and positions unrelated to real geometry. Their140ms arithmetic is retained and tested explicitly. No coordinate-based exception or opt-out is applied to real world data. The normal scene forces the geometry-aware path even for minimal supplied views.
+
+The prior per-draw exp(-dt) still sampled an interpolating target at frame cadence and capped the first draw after a snapshot gap. Camera now has a deterministic snapshot-anchored curve. Every accepted view update first evaluates the old curve at that arrival time, then anchors easing to the new authoritative observed origin. Draws evaluate that curve without changing it. The target is independent of Core's bounded actor prediction/interpolation, so preview cannot extend what camera follows. Reduced motion snaps to the observed target; room/match/map/actor/phase/transit context changes and suspend reset it; jumps above600 world units snap. Old same-owner time/version updates are ignored. Default actor intent remains collision/LOS/lease bounded by Core, and hidden/unknown actors are forgotten.
+
+The unchanged Reviewer source at D:/Widegames-work/ship-quality-audit-20261030/tests/quality-review-initial.test.mjs was run directly, read-only. Its SHA256 is `6c8affc77685208e0edf32b589ff6c32fa1ea689658c7452145508e5f9f767fa`. No assertions, expectations or names changed. Baseline exact9cb UI over managerf7 real engine/maps/helper reproduced2 failures: chart-table displayed point(800,200), and30/120Hz equal200ms camera gap8.45240863951176. Both positive controls now pass against the candidate overlay. No closure claim rests on a replacement negative expectation.
+
+Evidence: _artifacts/quality-walking-closure-20261030. baseline and candidate contain a Git archive of exactf7 public/server/shared/package source; candidate overlays ONLY this worktree's public/world files except reserved movement.mjs. source-manifest.json pins every original file, Reviewer source and baseline overlay. The final verification confirms server/shared/Core helper bytes still exactly match f7 and only camera/model/scene differ in the candidate runtime. closure-receipt.json records all three candidate runtime hashes and test-source identity. Core helper SHA256: `d6e2ab4a00ba744b6d84674dcfa068d0775a8709b4ea1e1d87e7bb92a85801d6`. This is a source/module composition qualification, not a new committed manager runtime or native qualification.
+
+- reviewer-red.log preserves the actual original2 failures; reviewer-final-green.log records the same2 passing with no skips.
+- walking-final.log:10 pass/0 fail/0 skip. It checks default ActorSamples safety, normal experience keyboard entry without a factory, bounded intent/stop/blur clearing, hidden/old-version revocation, actual full-scene cadence over snapshot gaps and moving targets, reduced motion/owner/large-jump resets, and all3 unchanged legacy minigame interaction/submission paths.
+- walking-metrics.json: full-scene elapsed1400ms at24/30/60/120/144Hz, with snapshots at0/1000/1090/1225ms, yields exactly the same camera(906.4251563003999,300), maximum gap0 world units. This is a transform/cadence result, not FPS or GPU speed.
+- station-retained.log:21 pass/0 fail/0 skip, including six actual challenge kinds, real schema5 engine progress and stale callback ownership. These are retained module cases, not21 additional browser matches. Manager normal startup station flag remains false; explicit stationTasks:true is what this fixture qualifies.
+- reviewer-archive-setup-failure.log retains the initial archive-format setup error (tar was incorrectly read as ZIP), not a product failure. walking-first.log retains6 pass/1 fail when the new normal-intent fixture accidentally selected reduced motion; the fixture now explicitly uses normal motion, while its unchanged bounded-displacement assertion passes and the separate reduced-motion positive case still verifies snapping.
+
+Reproduction after materializing the pinned overlay described above, from this worktree:
+
+```powershell
+$env:TEMP='D:/Widegames-work/temp'
+$env:TMP=$env:TEMP
+$env:QUALITY_CLIENT_WALK_ROOT='D:/Widegames-work/ship-quality-client-20261030/_artifacts/quality-walking-closure-20261030/candidate'
+$env:QUALITY_REVIEW_ROOT=$env:QUALITY_CLIENT_WALK_ROOT
+node --test tests/quality-client-walking.test.mjs
+node --test --test-name-pattern='rendered samples of a real accepted detour|camera position after equal elapsed time' D:/Widegames-work/ship-quality-audit-20261030/tests/quality-review-initial.test.mjs
+$env:QUALITY_CLIENT_RUNTIME_ROOT=$env:QUALITY_CLIENT_WALK_ROOT
+node --test _artifacts/quality-walking-closure-20261030/candidate/tests/quality-client-stations.test.mjs
+```
+
+In the integrated checkout the new walking driver defaults to its current real source; no archive or old pin is silently selected. This isolated client foundation intentionally lacks the reserved Core file, so use the genuine integrated overlay until manager composes the dependency. Legacy import-stripping VMs must inject the real MotionTrack/ObservedCamera dependencies; runtime does not fall back because a harness stripped imports. Syntax and git diff --check pass. No public game.css, root/server/shared/other-worktree edits, Chrome, server process, full suite, providers, main/push/deployment or production approval. Manager/Reviewer retain the Chrome lease; native walking qualification is next.
