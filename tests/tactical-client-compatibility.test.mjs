@@ -20,7 +20,7 @@ test('interactionLabel remains a one-argument callback including Array.map extra
 });
 
 test('interactionLabel accepts explicit immutable map descriptors and game map references',()=>{
- for(const item of maps.MAP_CATALOG||[{id:'beacon'}]){
+ for(const item of maps.TACTICAL_MAP_CATALOG||[{id:'beacon'}]){
   const map=maps.getMap(item.id),door=map.fixtures.doors[0],h={type:'systemSabotage',fields:{kind:'door',targetId:door.id},label:'Close door'};
   const expected=`Close door: ${door.id} (${door.roomId})`;
   assert.equal(interactionLabel(h,map),expected);

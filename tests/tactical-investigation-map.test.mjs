@@ -4,7 +4,7 @@ import {resolve} from 'node:path';
 import {pathToFileURL} from 'node:url';
 const root=process.env.TACTICAL_INVESTIGATION_ROOT?pathToFileURL(resolve(process.env.TACTICAL_INVESTIGATION_ROOT)+'/'):new URL('../',import.meta.url);
 const investigation=await import(new URL('server/engine/investigation/index.mjs',root));
-const {getMap,MAP_CATALOG}=await import(new URL('shared/maps/index.mjs',root));
+const {getMap,TACTICAL_MAP_CATALOG}=await import(new URL('shared/maps/index.mjs',root));
 const {createSpatialWorld}=await import(new URL('server/engine/world/index.mjs',root));
 const {DEFAULT_BEACON_RULES}=await import(new URL('shared/beacon.mjs',root));
 const copy=value=>structuredClone(value),frozen=value=>{if(value&&typeof value==='object'){Object.freeze(value);for(const child of Object.values(value))frozen(child);}return value;};
@@ -21,7 +21,7 @@ function fixture(mapId='beacon',kind='cameras',legacy=false){
  return {state,map,device,ctx,owner,start(){assert.equal(investigation.applyInvestigationAction(state,owner,{type:'investigate',deviceId:device.id},state.updatedAt,ctx),true);},advance(at){const changed=investigation.advanceInvestigation(state,at,ctx);state.updatedAt=at;assert.equal(investigation.validateInvestigationState(state),true);return changed;},view(id=owner.id,at=state.updatedAt){return investigation.getInvestigationView(state,id,at,ctx);}};
 }
 
-for(const {id:mapId} of MAP_CATALOG){
+for(const {id:mapId} of TACTICAL_MAP_CATALOG){
  test(mapId+': schema4 samples are map scoped, dated, typed, capped and owner only',()=>{
   const f=fixture(mapId);f.state.players[10].alive=false;f.state.systems.transit['keeper-11']={deadlineAt:500};f.start();assert.deepEqual(f.view().session.map,f.state.map);assert.equal(f.advance(99),false);assert.deepEqual(f.view().observations,[]);f.advance(100);
   const sample=f.view().observations[0];assert.equal(sample.at,100);assert.deepEqual(sample.map,f.state.map);assert.deepEqual(sample.provenance,{type:'device',ownerId:f.owner.id});assert.equal(sample.kind,'cameras');assert.equal(sample.deviceId,f.device.id);assert.equal(sample.id,'obs:'+f.owner.id+':'+f.device.id+':100');
@@ -71,8 +71,8 @@ test('map-derived hints and safe views are pure defensive projections with no fo
  const f=fixture();const before=copy(f.state);frozen(f.state);const hints=investigation.investigationActionHints(f.state,f.owner,0,f.ctx),v=f.view();assert.deepEqual(hints.filter(h=>h.type==='investigate').map(h=>h.fields.deviceId),f.map.fixtures.devices.map(d=>d.id));assert.deepEqual(v.devices.map(d=>d.id),f.map.fixtures.devices.map(d=>d.id));v.devices[0].position.x=-1;assert.deepEqual(f.state,before);
 });
 
-for(let left=0;left<MAP_CATALOG.length;left++)for(let right=left+1;right<MAP_CATALOG.length;right++)test('concurrent '+MAP_CATALOG[left].id+' / '+MAP_CATALOG[right].id+' reads keep map, source, rooms and history isolated',()=>{
- const a=fixture(MAP_CATALOG[left].id,'occupancy'),b=fixture(MAP_CATALOG[right].id,'occupancy');a.start();b.start();a.advance(50);b.advance(100);assert.deepEqual(a.view().observations,[]);a.advance(100);
+for(let left=0;left<TACTICAL_MAP_CATALOG.length;left++)for(let right=left+1;right<TACTICAL_MAP_CATALOG.length;right++)test('concurrent '+TACTICAL_MAP_CATALOG[left].id+' / '+TACTICAL_MAP_CATALOG[right].id+' reads keep map, source, rooms and history isolated',()=>{
+ const a=fixture(TACTICAL_MAP_CATALOG[left].id,'occupancy'),b=fixture(TACTICAL_MAP_CATALOG[right].id,'occupancy');a.start();b.start();a.advance(50);b.advance(100);assert.deepEqual(a.view().observations,[]);a.advance(100);
  for(const f of [a,b]){const v=f.view(),sample=v.observations[0];assert.deepEqual(sample.map,f.state.map);assert.deepEqual(sample.data.rooms.map(r=>r.roomId),f.map.roomLayout.map(r=>r.id));assert.deepEqual(v.devices.map(d=>d.id),f.map.fixtures.devices.map(d=>d.id));}
  const wrong=copy(b.state);wrong.investigation.observations[b.owner.id]=copy(a.view().observations);assert.throws(()=>investigation.validateInvestigationState(wrong));assert.throws(()=>investigation.getInvestigationView(wrong,b.owner.id,100,b.ctx));
  assert.equal(investigation.validateInvestigationAction(b.state,b.owner,{type:'investigate',deviceId:a.device.id},100,b.ctx).code,'INVALID_DEVICE');assert.deepEqual(a.map,getMap(a.state.map));assert.deepEqual(b.map,getMap(b.state.map));

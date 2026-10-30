@@ -5,7 +5,7 @@ import {pathToFileURL} from 'node:url';
 const root=process.env.TACTICAL_INVESTIGATION_ROOT?pathToFileURL(resolve(process.env.TACTICAL_INVESTIGATION_ROOT)+'/'):new URL('../',import.meta.url);
 const engine=await import(new URL('server/engine/index.mjs',root));
 const investigation=await import(new URL('server/engine/investigation/index.mjs',root));
-const {getMap,MAP_CATALOG}=await import(new URL('shared/maps/index.mjs',root));
+const {getMap,TACTICAL_MAP_CATALOG}=await import(new URL('shared/maps/index.mjs',root));
 const roster=Array.from({length:12},(_,i)=>({id:'tactical-'+i,name:'Fixture Keeper '+i,color:'#123456',persona:'Labeled offline engine fixture.'}));
 // Actual engine navigation/actions and clock. Hidden roles/path lengths are read
 // only by this staging harness; no client/AI is given authoritative engine state.
@@ -22,7 +22,7 @@ function fixture(mapId){
  };
 }
 
-for(const {id:mapId} of MAP_CATALOG){
+for(const {id:mapId} of TACTICAL_MAP_CATALOG){
  test(mapId+': actual schema4 timed camera read/restart is private, scoped and duplicate-safe',()=>{
   const f=fixture(mapId),owner=f.crew[0],device=f.device('cameras');f.walk(owner,device.position);const started=f.now;f.act(owner,'investigate',{deviceId:device.id},'read-once');f.tick(started+50);f.restore();f.tick(started+1000);
   const v=f.view(owner),sample=v.investigation.observations[0];assert.equal(v.map.id,mapId);assert.equal(v.investigation.observations.length,1);assert.equal(sample.at,started+100);assert.deepEqual(sample.map,v.map);assert.deepEqual(sample.provenance,{type:'device',ownerId:owner});assert(sample.data.frames.every(frame=>frame.field&&frame.players.length<=6));assert.equal(f.act(owner,'investigate',{deviceId:device.id},'read-once').duplicate,true);assert.equal(f.view(owner).investigation.observations.length,1);

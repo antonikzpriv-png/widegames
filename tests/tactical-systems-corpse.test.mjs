@@ -3,9 +3,9 @@ import assert from 'node:assert/strict';
 import path from 'node:path';
 import {pathToFileURL} from 'node:url';
 const source=process.env.TACTICAL_SYSTEMS_SOURCE_ROOT?pathToFileURL(path.resolve(process.env.TACTICAL_SYSTEMS_SOURCE_ROOT)+path.sep):new URL('../',import.meta.url);
-const [engine,{MAP_CATALOG,getMap}]=await Promise.all(['server/engine/index.mjs','shared/maps/index.mjs'].map(file=>import(new URL(file,source))));
+const [engine,{TACTICAL_MAP_CATALOG,getMap}]=await Promise.all(['server/engine/index.mjs','shared/maps/index.mjs'].map(file=>import(new URL(file,source))));
 // Actual integrated engine report/council/closure lifecycle; only initial near-door positions are seeded.
-for(const selection of MAP_CATALOG)test('reported corpse on '+selection.id+' no longer jams a later real tactical closure',()=>{
+for(const selection of TACTICAL_MAP_CATALOG)test('reported corpse on '+selection.id+' no longer jams a later real tactical closure',()=>{
  const map=getMap(selection.id),door=map.fixtures.doors[0],start=100000;
  let state=engine.createMatch({id:'corpse-door-review',tactical:true,map:{id:map.id,version:map.version},now:start,seed:'corpse-review',config:{initialKillCooldownMs:1,killCooldownMs:1,discussionMs:20,votingMs:20,meetingCooldownMs:1,roamDeadlineMs:1000000,maxMatchMs:2000000},beaconRules:{doorDurationMs:25000}});assert.equal(state.schemaVersion,4);
  const sab=state.players.find(p=>p.role==='saboteur'),crew=state.players.filter(p=>p.role==='crew'),victim=crew[0],reporter=crew[1],pad=map.geometry.WORLD.bodyRadius+4;
@@ -21,7 +21,7 @@ for(const selection of MAP_CATALOG)test('reported corpse on '+selection.id+' no 
 });
 
 
-for(const selection of MAP_CATALOG)test('persisted25s tactical doors on '+selection.id+' permit two overlaps with the shared20s auxiliary clock',()=>{
+for(const selection of TACTICAL_MAP_CATALOG)test('persisted25s tactical doors on '+selection.id+' permit two overlaps with the shared20s auxiliary clock',()=>{
  const map=getMap(selection.id),start=100000;let state=engine.createMatch({id:'overlap-duration-review',tactical:true,map:{id:map.id,version:map.version},now:start,seed:'overlap-review',saboteurCount:2,beaconRules:{doorDurationMs:25000}});const sabs=state.players.filter(p=>p.role==='saboteur');assert.equal(sabs.length,2);
  let result=engine.applyAction(state,sabs[0].id,{id:'door-one',type:'systemSabotage',kind:'door',targetId:map.fixtures.doors[0].id},start);assert(result.accepted);state=engine.tick(result.state,start+1000).state;
  result=engine.applyAction(state,sabs[1].id,{id:'door-two',type:'systemSabotage',kind:'door',targetId:map.fixtures.doors[1].id},start+20000);assert(result.accepted);state=engine.tick(result.state,start+21000).state;assert.equal(state.systems.doors.filter(d=>d.closed).length,2);assert.equal(state.systems.factionCooldowns.saboteur.auxiliaryAt,start+40000);

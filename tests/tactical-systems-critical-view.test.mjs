@@ -1,7 +1,7 @@
 import test from 'node:test';import assert from 'node:assert/strict';
 import path from 'node:path';import {fileURLToPath,pathToFileURL} from 'node:url';import {mkdir,mkdtemp,rm,readFile} from 'node:fs/promises';
 const source=process.env.TACTICAL_SYSTEMS_SOURCE_ROOT?pathToFileURL(path.resolve(process.env.TACTICAL_SYSTEMS_SOURCE_ROOT)+path.sep):new URL('../',import.meta.url);
-const [engine,systems,storage,rooms,{getMap,MAP_CATALOG}]=await Promise.all(['server/engine/index.mjs','server/engine/systems/index.mjs','server/store.mjs','server/rooms.mjs','shared/maps/index.mjs'].map(file=>import(new URL(file,source))));
+const [engine,systems,storage,rooms,{getMap,TACTICAL_MAP_CATALOG}]=await Promise.all(['server/engine/index.mjs','server/engine/systems/index.mjs','server/store.mjs','server/rooms.mjs','shared/maps/index.mjs'].map(file=>import(new URL(file,source))));
 const temporary=fileURLToPath(new URL('../_artifacts/test-temp/',import.meta.url));
 const sabotage=(state,at=1001)=>{const actor=state.players.find(p=>p.role==='saboteur');const result=engine.applyAction(state,actor.id,{id:'critical-start',type:'systemSabotage',kind:'power',targetId:'beacon'},at);assert(result.accepted,JSON.stringify(result.error));return result.state;};
 function assertView(state,status,active,at=state.updatedAt){
@@ -21,7 +21,7 @@ test('exact reported probe ends critical with inactive failed tactical projectio
  let state=engine.createMatch({id:'probe',tactical:true,seed:3,now:1000,config:{sabotageCooldownMs:1,criticalDurationMs:10}});state=sabotage(state);state=engine.tick(state,1011).state;assert.equal(state.phase,'ended');assert.equal(state.outcome.reason,'critical');assert.equal(state.sabotage.active,true);assert.equal(state.sabotage.repairsCompleted,0);assertView(state,'failed',false);
 });
 
-for(const map of MAP_CATALOG){
+for(const map of TACTICAL_MAP_CATALOG){
  for(const outcome of ['critical','tasks','paused'])test(map.id+' real '+outcome+' resolution projects inactive without rewriting persisted critical/replay',async t=>{
   const room=rooms.createRoom('human',1000,{}, {tactical:true,mapId:map.id});rooms.issueIdentity(room,true);
   let state=engine.createMatch({id:room.id,tactical:true,map:{id:map.id,version:map.version},seed:3,now:1000,config:{sabotageCooldownMs:1,criticalDurationMs:outcome==='critical'?10:100000,maxMatchMs:outcome==='paused'?5:200000,taskCooldownMs:1}});state=sabotage(state);const historical=structuredClone(state.sabotage);

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import path from 'node:path';
 import {pathToFileURL} from 'node:url';
 const source=process.env.TACTICAL_SYSTEMS_SOURCE_ROOT?pathToFileURL(path.resolve(process.env.TACTICAL_SYSTEMS_SOURCE_ROOT)+path.sep):new URL('../',import.meta.url);
-const [{createMatch},systems,{getMap,MAP_CATALOG},{TACTICAL_PRESET},{DEFAULT_BEACON_RULES}]=await Promise.all(['server/engine/index.mjs','server/engine/systems/index.mjs','shared/maps/index.mjs','shared/tactical.mjs','shared/beacon.mjs'].map(file=>import(new URL(file,source))));
+const [{createMatch},systems,{getMap,TACTICAL_MAP_CATALOG},{TACTICAL_PRESET},{DEFAULT_BEACON_RULES}]=await Promise.all(['server/engine/index.mjs','server/engine/systems/index.mjs','shared/maps/index.mjs','shared/tactical.mjs','shared/beacon.mjs'].map(file=>import(new URL(file,source))));
 const start=100000,json=value=>JSON.parse(JSON.stringify(value));
 // Seeded module fixture: actual legacy constructor/immutable map, explicit two-saboteur role setup.
 // Root schema4 orchestration/HTTP/idempotency is coordinator-owned and not simulated as a passing integration.
@@ -142,7 +142,7 @@ test('persisted faction clocks cannot precede known active/repaired critical or 
 });
 
 
-for(const selection of MAP_CATALOG)test('registered map '+selection.id+' uses only its own door/repair/passage fixtures through restored systems lifecycles',()=>{
+for(const selection of TACTICAL_MAP_CATALOG)test('registered map '+selection.id+' uses only its own door/repair/passage fixtures through restored systems lifecycles',()=>{
  const reference={id:selection.id,version:selection.version},map=getMap(reference);
  for(const kind of ['power','flood']){
   const f=fixture({map:reference}),sites=map.fixtures.repairs[kind];apply(f,f.sabs[0],sabotage(kind));assert.deepEqual(f.state.sabotage.sites.map(s=>s.id),sites.map(s=>s.id));place(f.crew[0],sites[0]);apply(f,f.crew[0],repair(kind,sites[0].id),start+1);restored(f);place(f.crew[1],sites[1]);apply(f,f.crew[1],repair(kind,sites[1].id),start+2);assert.equal(f.state.sabotage.active,false);
@@ -155,7 +155,7 @@ for(const selection of MAP_CATALOG)test('registered map '+selection.id+' uses on
  for(const entry of map.fixtures.vents)for(const exitId of entry.links){
   const f=fixture({map:reference}),exit=map.fixtures.vents.find(v=>v.id===exitId);place(f.sabs[0],entry);place(f.crew[0],entry);place(f.crew[1],exit);apply(f,f.sabs[0],{type:'vent',entryId:entry.id,exitId});assert(f.records[0].visibleTo.includes(f.crew[0].id));assert(!f.records[0].visibleTo.includes(f.crew[1].id));restored(f);systems.advanceSystems(f.state,start+1600,f.ctx);assert.deepEqual(f.sabs[0].position,exit.position);assert.equal(f.sabs[0].roomId,exit.roomId);assert(f.records.at(-1).visibleTo.includes(f.crew[1].id));assert.equal(systems.validateSystemsState(f.state),true);
  }
- const other=MAP_CATALOG.find(value=>value.id!==selection.id);
+ const other=TACTICAL_MAP_CATALOG.find(value=>value.id!==selection.id);
  if(other){const f=fixture({map:reference}),foreign=getMap(other.id);assert.equal(systems.validateSystemAction(f.state,f.sabs[0],sabotage('door',foreign.fixtures.doors[0].id),start,f.ctx).code,'INVALID_TARGET');const another=fixture({map:other.id});apply(f,f.sabs[0],sabotage('door',map.fixtures.doors[0].id));assert(another.state.systems.doors.every(d=>d.status==='open'));assert.deepEqual(f.state.systems.doors.map(d=>d.id),map.fixtures.doors.map(d=>d.id));}
 });
 

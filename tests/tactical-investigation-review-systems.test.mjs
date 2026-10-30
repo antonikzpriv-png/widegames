@@ -6,7 +6,7 @@ const root=process.env.TACTICAL_INVESTIGATION_ROOT?pathToFileURL(resolve(process
 const engine=await import(new URL('server/engine/index.mjs',root));
 const systems=await import(new URL('server/engine/systems/index.mjs',root));
 const {createSpatialWorld}=await import(new URL('server/engine/world/index.mjs',root));
-const {getMap,MAP_CATALOG}=await import(new URL('shared/maps/index.mjs',root));
+const {getMap,TACTICAL_MAP_CATALOG}=await import(new URL('shared/maps/index.mjs',root));
 const copy=value=>structuredClone(value);
 function fixture(mapId){
  const map=getMap(mapId),state=engine.createMatch({id:'independent-systems-'+mapId,tactical:true,map:{id:map.id,version:map.version},mode:'spectator',roster:Array.from({length:12},(_,i)=>({id:'review-'+i,name:'Review '+i,color:'#123456'})),saboteurCount:2,seed:'independent-systems',now:0,config:{roamDeadlineMs:600000,maxMatchMs:900000}});assert.equal(state.schemaVersion,4,'Requires actual tactical source, not a legacy skip');assert.equal(state.systems.version,2);
@@ -16,7 +16,7 @@ function fixture(mapId){
 function act(state,id,type,fields,at,accepted=true){const result=engine.applyAction(state,id,{id:'review:'+at+':'+type,type,...fields},at);assert.equal(result.accepted,accepted,JSON.stringify(result.error));return result;}
 
 // Independent review of Systems/Core, not approval of authored investigation.
-for(const {id:mapId} of MAP_CATALOG){
+for(const {id:mapId} of TACTICAL_MAP_CATALOG){
  test('independent '+mapId+': faction auxiliary reservation survives restart and constrains the other saboteur',()=>{
   const f=fixture(mapId),first=act(f.state,f.sab[0],'systemSabotage',{kind:'lights',targetId:'beacon'},0).state;
   const restored=JSON.parse(JSON.stringify(first));assert.equal(systems.validateSystemsState(restored),true);const denied=act(restored,f.sab[1],'systemSabotage',{kind:'communications',targetId:'beacon'},1,false);assert.equal(denied.error.code,'COOLDOWN');assert.equal(restored.systems.communications.active,false);

@@ -1,7 +1,7 @@
 import test from 'node:test';import assert from 'node:assert/strict';
 import path from 'node:path';import {fileURLToPath,pathToFileURL} from 'node:url';import {mkdir,mkdtemp,rm,readFile} from 'node:fs/promises';
 const source=process.env.TACTICAL_SYSTEMS_SOURCE_ROOT?pathToFileURL(path.resolve(process.env.TACTICAL_SYSTEMS_SOURCE_ROOT)+path.sep):new URL('../',import.meta.url);
-const [engine,systems,storage,rooms,{MAP_CATALOG,getMap}]=await Promise.all(['server/engine/index.mjs','server/engine/systems/index.mjs','server/store.mjs','server/rooms.mjs','shared/maps/index.mjs'].map(file=>import(new URL(file,source))));
+const [engine,systems,storage,rooms,{TACTICAL_MAP_CATALOG,getMap}]=await Promise.all(['server/engine/index.mjs','server/engine/systems/index.mjs','server/store.mjs','server/rooms.mjs','shared/maps/index.mjs'].map(file=>import(new URL(file,source))));
 const temporary=fileURLToPath(new URL('../_artifacts/test-temp/',import.meta.url)),start=100000;
 function fixture(map,legacy=false){
  const room=rooms.createRoom('human',start,{},legacy?{}:{tactical:true,mapId:map.id});rooms.issueIdentity(room,true);room.startId='checkpoint-start';room.state=engine.createMatch({id:room.id,world:true,systems:true,...(legacy?{}:{tactical:true,map:{id:map.id,version:map.version}}),now:start,seed:3,config:{sabotageCooldownMs:1,criticalDurationMs:100000,roamDeadlineMs:1000000,maxMatchMs:2000000}});let serial=0;
@@ -15,7 +15,7 @@ async function restart(t,room){
  const raw=JSON.stringify(room);store=await storage.createRoomStore(directory);await store.save(room);const file=path.join(directory,'room-'+room.id+'.json'),bytes=await readFile(file,'utf8');await store.close();store=await storage.createRoomStore(directory);const loaded=await store.load();assert.equal(loaded.length,1);assert.equal(JSON.stringify(loaded[0]),raw);assert.equal(await readFile(file,'utf8'),bytes);await storage.validateRoomSnapshot(loaded[0]);
 }
 
-for(const map of MAP_CATALOG){
+for(const map of TACTICAL_MAP_CATALOG){
  test(map.id+' valid future due dates/reservations remain legal through active checkpoints and actual restart',async t=>{
   const initial=fixture(map);assert(initial.state.systems.factionCooldowns.saboteur.criticalAt>initial.state.updatedAt);await storage.validateRoomSnapshot(initial.room);
   for(const kind of ['lights','communications','door','power','flood']){
