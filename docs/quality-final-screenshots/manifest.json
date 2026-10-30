@@ -1,0 +1,48 @@
+{
+  "sourceCommit": "c471b154ce806a71846c25a9932f039aeab0ab15",
+  "sourceManifestSha256": "a22722696c19d44154a76404c5cc786a73928d3b21d0ef825f8ec449c23d668b",
+  "sourceFileCount": 566,
+  "reportSha256": "52e1e9acd8b2053181317aed7d65f818588cdadc6cc9f3384f5f5428fb99cb16",
+  "summary": {
+    "status": "passed",
+    "passed": 22,
+    "failed": 0
+  },
+  "safeViews": {
+    "http": 1617,
+    "websocket": 1293
+  },
+  "fixture": "Unedited Windows Chrome captures from exact raw Git source; seeded/accelerated offline fixtures. Some equipment/council/ghost actors are explicitly staged with legal engine actions. Autonomous DEMO matches use the real controller and unchanged deadlines. No paid providers, screenshot editing, artificial winner or render-only mock.",
+  "files": [
+    {
+      "file": "desktop-beacon2-start.png",
+      "bytes": 510041,
+      "sha256": "f15bde3a58fb780f4e1ae0a882e1f8b6738b7ad99801baf6d0ad20449f1f9911"
+    },
+    {
+      "file": "desktop-whole-map-fourteen-room-key.png",
+      "bytes": 541211,
+      "sha256": "496afafbb70f21c08bc5c430dcbcb5b426d2323ed3de0a38b178379765a982c8"
+    },
+    {
+      "file": "watch1-glyph-grid-390x844.png",
+      "bytes": 47162,
+      "sha256": "95ee05ed0fe632fb30ee0b465d2b03b3c154d23457c0f0da455bf3167d224b41"
+    },
+    {
+      "file": "council-voting-844x390.png",
+      "bytes": 54408,
+      "sha256": "0c8822b9c7be9ac582f1cf305c5352340897d52c7500a5e0794aeeff907d50ca"
+    },
+    {
+      "file": "mobile-private-fallen-chat.png",
+      "bytes": 92407,
+      "sha256": "7ad35998955425e2f7d23489b247db698c050303e8234d1e6fe2c1a6a06bb647"
+    },
+    {
+      "file": "autonomous-spectator-role-revealed-replay.png",
+      "bytes": 329598,
+      "sha256": "2462c0cd132f478a82671c8a3bedaae2a56bcc32cb394ff0380444c6c9e4173f"
+    }
+  ]
+}
