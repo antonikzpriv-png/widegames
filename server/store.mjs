@@ -34,7 +34,9 @@ const mapRooms=state=>savedMap(state).roomLayout;
 const validStepKind=task=>typeof taskRules.validTaskKind==='function'?taskRules.validTaskKind(task):!Object.hasOwn(task,'kind')&&ROOM_LAYOUT.some(r=>r.id===task.roomId);
 function refuseFuture(room){
   const s=room?.state;
-  if(room?.schema>4||s?.schemaVersion>5||s?.features?.version>1||s?.replayHistory?.version>2||room?.stationTasksVersion>1||s?.stationTasksVersion>1||s?.players?.some?.(p=>p.tasks?.some?.(t=>t.kind==='station'?t.challenge?.version>1:t.progress?.v>2)))throw Object.assign(new Error('Saved room version is newer than this application; preserve the data directory.'),{code:'VERSION_UNAVAILABLE'});
+  const newerTask=s?.players?.some?.(p=>p.tasks?.some?.(t=>t.kind==='station'?t.challenge?.version>1:t.progress?.v>(s.schemaVersion===2?2:1)));
+  if(newerTask)throw Object.assign(new Error('Saved station challenge or task progress version is newer than this application; preserve the data directory.'),{code:'VERSION_UNAVAILABLE'});
+  if(room?.schema>4||s?.schemaVersion>5||s?.features?.version>1||s?.replayHistory?.version>2||room?.stationTasksVersion>1||s?.stationTasksVersion>1)throw Object.assign(new Error('Saved room version is newer than this application; preserve the data directory.'),{code:'VERSION_UNAVAILABLE'});
 }
 
 export const ROOM_ID = /^[A-Za-z0-9_-]{20,40}$/;
@@ -129,7 +131,7 @@ function validateBeaconStructure(state,setup){
  for(const p of state.players){
   if(!Array.isArray(p.tasks)||p.tasks.length>240||typeof p.human!=='boolean'||!object(p.cooldowns)||!Number.isSafeInteger(p.meetingsRemaining)||p.meetingsRemaining<0||p.meetingsRemaining>10)throw new Error('Invalid keeper state');
   for(const t of p.tasks)if(!object(t)||typeof t.id!=='string'||t.id.length>100||!roomIds.has(t.roomId)||typeof t.label!=='string'||t.label.length>200||typeof t.completed!=='boolean')throw new Error('Invalid task state');
-  for(const task of p.tasks){if(state.schemaVersion===5){if(task.kind!=='station')throw new Error('Invalid station task kind');validateStationChallenge(task.challenge);if(task.completed!==stationComplete(task.challenge))throw new Error('Inconsistent station task progress');}else if(task.kind==='station'||Object.hasOwn(task,'challenge'))throw new Error('Mixed station/legacy tasks');}
+  for(const task of p.tasks){if(state.schemaVersion===5){if(task.kind!=='station')throw new Error('Invalid station task kind');validateStationChallenge(task.challenge);if(task.completed!==stationComplete(task.challenge))throw new Error('Inconsistent station task progress');}else if(task.kind==='station'||Object.hasOwn(task,'challenge')||state.schemaVersion!==2&&(task.kind!==undefined&&task.kind!=='relay'||task.progress?.v===2))throw new Error('Mixed station/legacy task protocol');}
   for(const key of ['moveAt','taskAt','killAt','sabotageAt','meetingAt'])if(!finiteTime(p.cooldowns[key]))throw new Error('Invalid cooldown');
   const requests=state.requests[p.id];if(!Array.isArray(requests)||requests.length>2048||new Set(requests.map(r=>r.id)).size!==requests.length||requests.some(r=>!object(r)||typeof r.id!=='string'||!/^[A-Za-z0-9:_-]{1,100}$/.test(r.id)||typeof r.fingerprint!=='string'||r.fingerprint.length>10000||typeof r.accepted!=='boolean'))throw new Error('Invalid accepted request history');
  }

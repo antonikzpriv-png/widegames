@@ -78,7 +78,7 @@ export async function createGameServer(config,dependencies={}) {
         if(!['human','spectator'].includes(input.mode)||Object.keys(input).some(k=>!['mode','name','features','mapId'].includes(k))||(input.name!==undefined&&(typeof input.name!=='string'||input.name.length>40)))fail(400,'INVALID_ROOM','Choose human or spectator mode.');
         let features;try{features=parseFeatures(Object.hasOwn(input,'features')?input.features:config.features);}catch{fail(400,'INVALID_FEATURES','Choose a valid death policy and ability preset.');}
         if((features.deathPolicy==='ghost-tasks'||features.abilities)&&config.worldMode!==true)fail(400,'WORLD_REQUIRED','Optional presets require world mode.');
-        let selectedMap=config.mapId;
+        let selectedMap=config.tacticalMode!==true&&(!config.mapId||config.mapId==='beacon')&&!Object.hasOwn(input,'mapId')?null:config.mapId;
         if(Object.hasOwn(input,'mapId')){try{if(typeof input.mapId!=='string')throw new TypeError();selectedMap=getMap(input.mapId).id;}catch{fail(400,'INVALID_MAP','Choose an available map.');}}
         if(selectedMap!==undefined&&config.worldMode!==true){if(getMap(selectedMap).id!=='beacon')fail(400,'WORLD_REQUIRED','Maps require world mode.');selectedMap=null;}
         const {room,token,identity}=await service.create(input.mode,features,selectedMap);json(res,201,view(room,identity),{'Set-Cookie':cookie(room.data.id,token,secure)});return;

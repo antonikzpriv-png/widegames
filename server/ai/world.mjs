@@ -1,15 +1,15 @@
 import {taskInput} from '../engine/tasks.mjs';
 import {createSpatialWorld} from '../engine/world/index.mjs';
 import {nextStationInput} from '../../shared/station-challenges.mjs';
-import {getMap} from '../../shared/maps/index.mjs';
+import {getMap,mapFor} from '../../shared/maps/index.mjs';
 import { CHARACTERS, ROOM_LAYOUT } from '../../shared/contracts.mjs';
 import { WORLD, WORLD_STATIONS, WORLD_BELL, distance, findWorldPath, canSeeWorldPoint } from '../../shared/world.mjs';
 
 import {localGoals,localNavigationIntent} from '../features/strategy/index.mjs';
 
 const navigators=new Map();
-export function worldGeometry(view){return getMap(view.map??view.mapId).geometry;}
-export function worldRoute(view,target){const self=view.self;if(!self?.position||self.transit||view.systems?.selfTransit||(!self.alive&&!(self.ghost===true)))return null;const map=getMap(view.map??view.mapId),key=map.id+':'+map.version;if(!navigators.has(key))navigators.set(key,createSpatialWorld(map.geometry));return navigators.get(key).navigation({id:self.id,alive:true,position:self.position},target,view.serverNow,{systems:{doors:view.systems?.doors??[],transit:{}}});}
+export function worldGeometry(view){return mapFor(view).geometry;}
+export function worldRoute(view,target){const self=view.self;if(!self?.position||self.transit||view.systems?.selfTransit||(!self.alive&&!(self.ghost===true)))return null;const map=mapFor(view),key=map.id+':'+map.version;if(!navigators.has(key))navigators.set(key,createSpatialWorld(map.geometry));return navigators.get(key).navigation({id:self.id,alive:true,position:self.position},target,view.serverNow,{systems:{doors:view.systems?.doors??[],transit:{}}});}
 export function worldTaskAction(view,task){if(!task||task.completed)return {type:'wait'};if(task.kind==='station'){const input=nextStationInput(task.challenge);return input?{type:'taskInteract',taskId:task.id,...input}:{type:'wait'};}if(task.progress&&typeof task.progress==='object'){const p=task.progress;if(p.kind==='repair'&&p.index===3&&view.serverNow<p.readyAt)return {type:'wait'};return p.index<p.total?{type:'taskStep',taskId:task.id,step:p.index,input:taskInput(task)}:{type:'task',taskId:task.id};}return {type:'task',taskId:task.id};}
 
 const ordered = values => [...values].sort((a, b) => a.id.localeCompare(b.id));
@@ -122,7 +122,7 @@ export function worldCandidates(view, memory, suspect) {
 
 /** Group1 adaptation: local goals consume only server-permitted observations. */
 function beaconCandidates(view,memory,suspect){
- const map=getMap(view.map??view.mapId),{WORLD,WORLD_STATIONS,WORLD_BELL,distance}=map.geometry,ROOM_LAYOUT=map.roomLayout;
+ const map=mapFor(view),{WORLD,WORLD_STATIONS,WORLD_BELL,distance}=map.geometry,ROOM_LAYOUT=map.roomLayout;
  const self=view.self,allowed=new Set(view.availableActions??[]),wait=()=>allowed.has('wait')?[{type:'wait'}]:[];
  if(!point(self?.position)||self.transit)return wait();
  const controls=(view.interactions??[]).filter(a=>a.enabled),proposal=d=>({type:d.type,...d.fields});

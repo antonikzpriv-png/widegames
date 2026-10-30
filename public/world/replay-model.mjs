@@ -21,9 +21,9 @@ export function createReplayModel(response,{matchId,roomId,players,map:mapRefere
  if(response?.matchId!==undefined&&matchId!==undefined&&response.matchId!==matchId)throw new Error('Replay belongs to another match.');
  const requestedMatch=matchId??response?.matchId??response?.metadata?.matchId;
  const metadata=response?.metadata?copy(validateReplayMetadata(response.metadata,requestedMatch)):null;
- const recordedMap=metadata?.version===2?metadata.map:metadata?.version===1?(['lantern-wake-v1','beacon'].includes(metadata.map)?{id:'beacon',version:1}:metadata.map):undefined;
- const started=replayEvents(response).find(e=>e.type==='started'),startedMap=started?.map??started?.mapId;
- const map=getMap(recordedMap??mapReference??mapId??response?.map??response?.mapId??startedMap),{WORLD,isWalkable,moveWorldPoint,distance,canSeeWorldPoint}=map.geometry;
+ const recordedMap=metadata?.version===2?metadata.map:metadata?.version===1?{id:metadata.map==='lantern-wake-v1'?'beacon':metadata.map,version:1}:undefined;
+ const started=replayEvents(response).find(e=>e.type==='started'),startedMap=started?.map??(started?.mapId===undefined?undefined:{id:started.mapId,version:1});
+ const map=getMap(recordedMap??mapReference??(mapId===undefined?undefined:{id:mapId,version:1})??response?.map??(response?.mapId===undefined?undefined:{id:response.mapId,version:1})??startedMap),{WORLD,isWalkable,moveWorldPoint,distance,canSeeWorldPoint}=map.geometry;
  // Metadata fixes immutable geometry; a caller may not relabel that recording.
  for(const ref of [mapReference,mapId,response?.map,response?.mapId,startedMap])if(ref!==undefined){if(typeof ref==='string'){if(ref!==map.id)throw new Error('Replay belongs to another map.');}else{const supplied=getMap(ref);if(supplied.id!==map.id||supplied.version!==map.version)throw new Error('Replay belongs to another map.');}}
 

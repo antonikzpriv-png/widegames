@@ -31,3 +31,12 @@ test('main replay v1 retains canonical six-seat bounds while expanded-map geomet
  }
  for(const map of [{id:'storm-foundry',version:1},{id:'tidal-observatory',version:1}])assert.throws(()=>engine.createMatch({id:'wrong-tactical',tactical:true,map,now:1000}));
 });
+
+test('legacy beacon mapId stays version1 in shared, scene identity and AI geometry',async()=>{
+ const {mapReference,resolveViewMap}=await import('../public/world/map-model.mjs'),{worldGeometry}=await import('../server/ai/world.mjs');
+ assert.equal(mapFor({mapId:'beacon'}),getMap({id:'beacon',version:1}));assert.deepEqual(mapReference({game:{mapId:'beacon'}}),{id:'beacon',version:1});assert.equal(resolveViewMap({game:{mapId:'beacon'}}).version,1);assert.equal(worldGeometry({mapId:'beacon'}).WORLD.width,1600);assert.equal(worldGeometry({map:{id:'beacon',version:2}}).WORLD.width,3200);
+});
+test('known world2 task kind cannot enter tactical relay persistence',async()=>{
+ const engine=await import('../server/engine/index.mjs'),{taskProgress}=await import('../server/engine/tasks.mjs'),{createRoom,issueIdentity}=await import('../server/rooms.mjs'),{validateRoomSnapshot}=await import('../server/store.mjs');
+ const room=createRoom('human',1000,undefined,{tactical:true,mapId:'beacon',stationTasks:false});issueIdentity(room,true);room.startId='protocol-boundary';room.state=engine.createMatch({id:room.id,tactical:true,map:room.map,seed:1,now:1000});const task=room.state.players.find(p=>p.role==='crew').tasks[0];task.kind='glyphs';task.progress=taskProgress(task);await assert.rejects(validateRoomSnapshot(room),error=>error.code==='VERSION_UNAVAILABLE'||/protocol/.test(error.message));
+});

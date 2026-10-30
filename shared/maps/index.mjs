@@ -22,6 +22,7 @@ for(const map of expanded)versions.set(map.id,new Map([[map.version,map]]));
 const latest=new Map([['beacon',BEACON_V2],['stormbreak-annex',STORMBREAK_ANNEX],...expanded.map(map=>[map.id,map])]);
 export const MAP_CATALOG=deepFreeze([...latest.values()].map(({id,version,name,description,theme,tactical=true,taskProtocol='station'})=>({id,version,name,description,theme,tactical,taskProtocol})));
 export const TACTICAL_MAP_CATALOG=deepFreeze(MAP_CATALOG.filter(map=>map.tactical));
+export const PUBLIC_MAP_CATALOG=deepFreeze(MAP_CATALOG.map(({id,version,name,description,theme})=>({id,version,name,description,theme})));
 export function getMap(reference){
  if(reference===undefined)return beacon;
  if(typeof reference==='string'){const map=latest.get(reference);if(map)return map;}
@@ -30,4 +31,4 @@ export function getMap(reference){
  }
  throw new TypeError('Unsupported map identity/version');
 }
-export function mapFor(value){const map=getMap(value?.map!==undefined?value.map:value?.mapId);if(value?.map!==undefined&&value?.mapId!==undefined&&getMap(value.mapId).id!==map.id)throw new TypeError('Conflicting map identities');return map;}
+export function mapFor(value){const map=getMap(value?.map!==undefined?value.map:value?.mapId!==undefined?{id:value.mapId,version:1}:undefined);if(value?.map!==undefined&&value?.mapId!==undefined&&getMap(value.mapId).id!==map.id)throw new TypeError('Conflicting map identities');return map;}

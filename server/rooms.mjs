@@ -2,7 +2,7 @@ import {parseFeatures} from '../shared/features.mjs';
 import {randomBytes,createHash} from 'node:crypto';
 import {ROOM_ID,validateRoom} from './store.mjs';
 import {normalizeRoster,publicRoster} from './features/lobbies/index.mjs';
-import {getMap,MAP_CATALOG} from '../shared/maps/index.mjs';
+import {getMap,PUBLIC_MAP_CATALOG} from '../shared/maps/index.mjs';
 import {hasTacticalFixtures} from './config.mjs';
 import {CHARACTERS} from '../shared/contracts.mjs';
 import {TACTICAL_PRESET} from '../shared/tactical.mjs';
@@ -74,7 +74,7 @@ export function createRooms({store,engine,ai,now=Date.now,maxActiveRooms=12,room
     const notices=Array.isArray(data.aiContext.notices)?data.aiContext.notices.filter(x=>typeof x==='string').slice(-10).map(x=>x.slice(0,240)):[];
     if(safeAi.mode==='live')notices.push(safeAi.strategy==='strategic'?'Strategic AI: model plans and council; local legal execution.':'Hybrid AI: live model council; navigation and deck actions use local policy.');
     if(room.aiBlocked)notices.push('AI paused because durable storage or budget reservation failed.');
-    return {...(data.features?{features:structuredClone(data.features)}:{}),...(data.schema===4?{stationTasksVersion:1}:{}),...(data.mapId?{mapId:data.mapId}:{}),...(data.map?{map:{...data.map},...(data.preset?{preset:{...data.preset}}:{}),availableMaps:MAP_CATALOG,...(data.settings?{settingsRevision:data.settings.revision}:{})}:{}),...([2,3,4].includes(data.schema)?{roster:data.lobby.roster.map(({id,name,color,persona})=>({id,name,color,persona}))}:{}),roomId:data.id,mode:data.mode,isHost:identity.host,seatId:identity.seatId,phase:data.state?.phase||'lobby',connection:'connected',game:data.state?engine.getPlayerView(data.state,identity.seatId,now()):null,ai:safeAi,notices,createdAt:data.createdAt};
+    return {...(data.features?{features:structuredClone(data.features)}:{}),...(data.schema===4?{stationTasksVersion:1}:{}),...(data.mapId?{mapId:data.mapId}:{}),...(data.map?{map:{...data.map},...(data.preset?{preset:{...data.preset}}:{}),availableMaps:PUBLIC_MAP_CATALOG,...(data.settings?{settingsRevision:data.settings.revision}:{})}:{}),...([2,3,4].includes(data.schema)?{roster:data.lobby.roster.map(({id,name,color,persona})=>({id,name,color,persona}))}:{}),roomId:data.id,mode:data.mode,isHost:identity.host,seatId:identity.seatId,phase:data.state?.phase||'lobby',connection:'connected',game:data.state?engine.getPlayerView(data.state,identity.seatId,now()):null,ai:safeAi,notices,createdAt:data.createdAt};
   }
   async function restore() {
     for(const data of await store.load()) {
