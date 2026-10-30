@@ -7,6 +7,7 @@ import {serveStatic} from './static.mjs';
 import {validatePublicOrigin} from './origin.mjs';
 import {createRoomStore} from './store.mjs';
 import {createDailyBudget} from './budget.mjs';
+import {archiveReplayState} from './engine/replay-history.mjs';
 import {createRooms,ServiceError,fail,identityFor,issueIdentity,cookie,requestId,selectRoomMap,isConfigurableRoom} from './rooms.mjs';
 import {CHARACTERS} from '../shared/contracts.mjs';
 import {aiRoster} from './features/lobbies/index.mjs';
@@ -178,8 +179,9 @@ export async function createGameServer(config,dependencies={}) {
             if(!data.state||!['ended','paused'].includes(data.state.phase))fail(409,'MATCH_ACTIVE','Finish the current watch before a rematch.');
             const from=data.generation??0;promote(next);
             if(data.state.phase==='ended'){
-              const replay=engine.getReplay(data.state).slice(-2000);while(Buffer.byteLength(JSON.stringify(replay))>1000000)replay.shift();
-              next.archives.push({matchId:data.state.id,generation:from,replay,players:engine.getPlayerView(data.state,null,now()).players,...(engine.getReplayMetadata?{metadata:engine.getReplayMetadata({...data.state,replay})}:{})});
+              const completeReplay=engine.getReplay(data.state),replay=completeReplay.slice(-2000);while(Buffer.byteLength(JSON.stringify(replay))>1000000)replay.shift();
+              const metadataState=archiveReplayState(data.state,replay,completeReplay.slice(0,completeReplay.length-replay.length));
+              next.archives.push({matchId:data.state.id,generation:from,replay,players:engine.getPlayerView(data.state,null,now()).players,...(engine.getReplayMetadata?{metadata:engine.getReplayMetadata(metadataState)}:{})});
               while(next.archives.length>3||Buffer.byteLength(JSON.stringify(next.archives))>2000000)next.archives.shift();
             }
             next.generation++;next.lastRematch={id:input.id,from};next.state=null;next.startId=null;next.aiContext={};

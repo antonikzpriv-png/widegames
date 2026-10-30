@@ -33,6 +33,23 @@ export function replayMetadata(state){
   coverage:{startedAt:state.startedAt,from:anchor?.at??Math.min(...state.replay.map(e=>e.at),state.outcome?.at??state.updatedAt),through:state.outcome?.at??state.updatedAt,partial:!anchor||anchor.at!==state.startedAt||first>1}};return copy(validateReplayMetadata(metadata,state.id));
 }
 
+/** Build a read-only metadata source for an archived chronological slice.
+ * Retention removes a time-ordered prefix, while checkpoints use append order.
+ * A backdated arrival can therefore have a larger sequence than the first kept
+ * event. Only checkpoints covering every removed event may bridge that gap.
+ * Without one, the normal metadata reader reports honest unknown/partial history.
+ */
+export function archiveReplayState(state,retained,discarded){
+ const source={...state,replay:retained};
+ if(!discarded.length||!state.replayHistory)return source;
+ let throughSequence=0,throughAt=state.startedAt;
+ for(const event of discarded){const sequence=replaySequenceOf(event);if(sequence!==null)throughSequence=Math.max(throughSequence,sequence);throughAt=Math.max(throughAt,event.at);}
+ const checkpoints=state.replayHistory.checkpoints.filter(anchor=>anchor.sequence>=throughSequence&&anchor.at>=throughAt);
+ if(checkpoints.length)source.replayHistory={...state.replayHistory,checkpoints};
+ else delete source.replayHistory;
+ return source;
+}
+
 /** Store integration hook: version1 stays exact; version2 is exact-map aware. */
 export function validateReplayHistoryState(h,state){
  if(h?.version===1){if(state.schemaVersion!==2)throw new Error('Mixed mapped/legacy replay history');if(h.map!==(state.mapId??REPLAY_MAP))throw new Error('Replay map does not match world2 state');if((h.mapRevision??1)!==(state.mapRevision??1))throw new Error('Replay map revision does not match world2 state');const result=validateReplayHistory(h);

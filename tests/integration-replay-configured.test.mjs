@@ -6,6 +6,9 @@ import {createStationChallenge} from '../shared/station-challenges.mjs';
 import {validateReplayHistory,validateReplayMetadata} from '../shared/replay.mjs';
 import {createReplayModel} from '../public/world/replay-model.mjs';
 import {challenge} from '../server/engine/tasks.mjs';
+import * as engine from '../server/engine/index.mjs';
+import {checkpointReplay,archiveReplayState} from '../server/engine/replay-history.mjs';
+import {replaySequenceOf} from '../shared/replay.mjs';
 
 // Controlled recording-reader fixtures. These validate bounded metadata and
 // reconstruction; the engine/transport suites cover legal movement/recording.
@@ -71,4 +74,26 @@ test('recorded complete starts own membership ahead of contradictory final profi
  const f=fixture({count:15});f.metadata.anchor=null;f.metadata.coverage.partial=true;
  const start={type:'started',at:1000,sequence:1,worldVersion:1,positions:f.anchor.players.map(p=>({id:p.id,position:{...p.position}})),roles:f.anchor.players.map(p=>({id:p.id,role:p.role})),tasks:[]};
  const model=createReplayModel({metadata:f.metadata,replay:[start],players:[{id:'unrecorded',name:'Final-only',color:'#8fd3c1'}]}),frame=model.at(1000);assert.equal(frame.players.length,15);assert(frame.players.some(p=>p.id==='p15'));assert(!frame.players.some(p=>p.id==='unrecorded'));
+});
+
+
+test('chronological archive eviction covers backdated higher-sequence motion or leaves its geometry unknown',()=>{
+ let state,serial=0,now=1000;
+ for(let seed=0;seed<100;seed++){state=engine.createMatch({id:'archive-backdated',world:true,now,seed,config:{meetingCooldownMs:1,discussionMs:10,votingMs:10}});if(state.players[5].role==='saboteur')break;}
+ assert.equal(state.players[5].role,'saboteur');
+ const capture=()=>{const source=structuredClone(state);delete source.replayHistory;checkpointReplay(source);return source.replayHistory.checkpoints[0];};
+ const initial=capture();
+ function action(id,type,fields={}){const result=engine.applyAction(state,id,{id:'backdated-'+ ++serial,type,...fields},now);assert(result.accepted,JSON.stringify(result.error));state=result.state;}
+ let input=engine.applyInput(state,'p1',{seq:1,dx:-1,dy:0},now);assert(input.accepted);state=input.state;
+ action('p2','navigate',{x:818.125,y:272});action('p3','navigate',{x:890,y:272});const before=capture();
+ now=2000;state=engine.tick(state,now).state;const after=capture();
+ const motions=state.replay.filter(e=>e.type==='motion');assert.deepEqual(motions.map(e=>e.playerId),['p1','p2','p3']);assert(motions[1].at<motions[0].at&&motions[2].at<motions[0].at,'real engine arrival records are backdated relative to append order');
+ action('p2','meeting');now=state.deadlineAt;state=engine.tick(state,now).state;action('p2','vote',{targetId:'p6'});now=state.deadlineAt;state=engine.tick(state,now).state;assert.equal(state.phase,'ended');
+ state.replayHistory={version:1,map:'lantern-wake-v1',checkpoints:[initial,before,after]};
+ const full=engine.getReplay(state),cut=full.findIndex(e=>e.id===motions[0].id),retained=full.slice(cut),discarded=full.slice(0,cut),cutoff=Math.max(...discarded.map(e=>replaySequenceOf(e)??0)),unchanged=structuredClone(state);
+ const naive=engine.getReplayMetadata({...state,replay:retained});assert(naive.anchor.sequence<cutoff,'first chronological event alone selects an incompatible old checkpoint');
+ const source=archiveReplayState(state,retained,discarded),metadata=engine.getReplayMetadata(source);assert.equal(metadata.coverage.partial,true);assert(metadata.anchor.sequence>=cutoff);assert(metadata.anchor.at>=Math.max(...discarded.map(e=>e.at)));assert.equal(metadata.anchor.sequence,after.sequence);
+ const model=createReplayModel({metadata,replay:retained}),frame=model.at(metadata.coverage.from);for(const p of after.players)assert.deepEqual(frame.players.find(q=>q.id===p.id).position,p.position);assert.deepEqual(state,unchanged);
+ const withoutCover={...state,replayHistory:{...state.replayHistory,checkpoints:[initial,before]}},partial=engine.getReplayMetadata(archiveReplayState(withoutCover,retained,discarded));assert.equal(partial.anchor,null);assert.equal(partial.coverage.partial,true);assert.equal(partial.coverage.from,retained[0].at);
+ const unknown=createReplayModel({metadata:partial,replay:retained,players:engine.getPlayerView(state,null).players}).at(partial.coverage.from);assert.equal(unknown.players.find(p=>p.id==='p3').position,null,'uncovered arrival must not become a fabricated checkpoint position');
 });
