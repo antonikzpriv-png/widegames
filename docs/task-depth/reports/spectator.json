@@ -1,0 +1,526 @@
+{
+  "fixture": "Native app and HTTP/WebSocket APIs with real demo bots and deterministic engine seeds. Production loadConfig selects revision-2 cutaway geometry on all three maps. Native keyboard ghost controls traverse real machinery and exterior walls without sending actor input. Long legal cooldowns prevent fixture combat; no fabricated outcome, provider call or deployment. Browser timings describe this headless Cloud host, not a guarantee on every device.",
+  "checks": [
+    {
+      "name": "all-AI spectator has no playable seat",
+      "passed": true
+    },
+    {
+      "name": "all-AI spectator roles and task assignments stay private before explicit inspection opt-in",
+      "passed": true
+    },
+    {
+      "name": "explicit AI-only observer opt-in enables authorized inspection",
+      "passed": true
+    },
+    {
+      "name": "demo execution is visibly labeled",
+      "passed": true
+    },
+    {
+      "name": "production spectator starts the redesigned revision-2 beacon",
+      "passed": true
+    },
+    {
+      "name": "spectator WASD moves a local free ghost camera diagonally",
+      "passed": true
+    },
+    {
+      "name": "releasing WASD stops free camera movement",
+      "passed": true
+    },
+    {
+      "name": "free ghost WASD sends no gameplay actions or movement packets",
+      "passed": true
+    },
+    {
+      "name": "native free ghost passes through solid Lantern Wake machinery",
+      "passed": true
+    },
+    {
+      "name": "native free ghost crosses the Lantern Wake hull into exterior space",
+      "passed": true
+    },
+    {
+      "name": "authorized all-AI inspector shows the selected keeper actual role",
+      "passed": true
+    },
+    {
+      "name": "inspector provides a labeled current-activity summary",
+      "passed": true
+    },
+    {
+      "name": "inspector excludes private model context, unrestricted memory and secrets",
+      "passed": true
+    },
+    {
+      "name": "selected keeper following remains available",
+      "passed": true
+    },
+    {
+      "name": "clicking a drawn station opens its inspector",
+      "passed": true
+    },
+    {
+      "name": "clicking the drawn emergency bell opens its inspector",
+      "passed": true
+    },
+    {
+      "name": "clicking a drawn keeper opens that keeper inspector",
+      "passed": true
+    },
+    {
+      "name": "All-AI world with inspector remains responsive under real demo updates (p95 <100ms, average <40ms)",
+      "passed": true
+    },
+    {
+      "name": "spectator inspector and controls fit a mobile viewport",
+      "passed": true
+    },
+    {
+      "name": "hidden page stops spectator camera movement",
+      "passed": true
+    },
+    {
+      "name": "spectator inspection, following and camera lifecycle emit no game actions",
+      "passed": true
+    },
+    {
+      "name": "live observer inspection does not unlock unfinished replay",
+      "passed": true
+    },
+    {
+      "name": "leaving disposes the spectator controller",
+      "passed": true
+    },
+    {
+      "name": "human player receives no observer inspection payload",
+      "passed": true
+    },
+    {
+      "name": "human WASD moves its authoritative keeper",
+      "passed": true
+    },
+    {
+      "name": "human movement still uses validated authoritative input",
+      "passed": true
+    },
+    {
+      "name": "other players roles remain private in a human match",
+      "passed": true
+    },
+    {
+      "name": "Human-plus-AI world remains responsive under real demo updates (p95 <100ms, average <40ms)",
+      "passed": true
+    },
+    {
+      "name": "expanded-map observer starts with private assignments on Storm Foundry",
+      "passed": true
+    },
+    {
+      "name": "all-AI spectator starts the selected Storm Foundry map",
+      "passed": true
+    },
+    {
+      "name": "production spectator uses redesigned revision-2 Storm Foundry",
+      "passed": true
+    },
+    {
+      "name": "local ghost camera uses expanded bounds on Storm Foundry",
+      "passed": true
+    },
+    {
+      "name": "native free ghost passes through solid Storm Foundry machinery",
+      "passed": true
+    },
+    {
+      "name": "native free ghost crosses the Storm Foundry hull into exterior space",
+      "passed": true
+    },
+    {
+      "name": "keeper inspection works on Storm Foundry",
+      "passed": true
+    },
+    {
+      "name": "canvas station picking uses Storm Foundry geometry",
+      "passed": true
+    },
+    {
+      "name": "Storm Foundry all-AI world remains responsive under real demo updates (p95 <100ms, average <40ms)",
+      "passed": true
+    },
+    {
+      "name": "inspection and camera on Storm Foundry send no gameplay input",
+      "passed": true
+    },
+    {
+      "name": "expanded-map observer starts with private assignments on Tidal Observatory",
+      "passed": true
+    },
+    {
+      "name": "all-AI spectator starts the selected Tidal Observatory map",
+      "passed": true
+    },
+    {
+      "name": "production spectator uses redesigned revision-2 Tidal Observatory",
+      "passed": true
+    },
+    {
+      "name": "local ghost camera uses expanded bounds on Tidal Observatory",
+      "passed": true
+    },
+    {
+      "name": "native free ghost passes through solid Tidal Observatory machinery",
+      "passed": true
+    },
+    {
+      "name": "native free ghost crosses the Tidal Observatory hull into exterior space",
+      "passed": true
+    },
+    {
+      "name": "keeper inspection works on Tidal Observatory",
+      "passed": true
+    },
+    {
+      "name": "canvas station picking uses Tidal Observatory geometry",
+      "passed": true
+    },
+    {
+      "name": "Tidal Observatory all-AI world remains responsive under real demo updates (p95 <100ms, average <40ms)",
+      "passed": true
+    },
+    {
+      "name": "inspection and camera on Tidal Observatory send no gameplay input",
+      "passed": true
+    },
+    {
+      "name": "no browser exceptions or unexpected console errors",
+      "passed": true
+    },
+    {
+      "name": "runtime source remains unchanged during browser qualification",
+      "passed": true
+    }
+  ],
+  "errors": [],
+  "consoleErrors": [
+    "Failed to load resource: the server responded with a status of 409 (Conflict)"
+  ],
+  "screenshots": [
+    "ghost-inside-beacon.png",
+    "01-spectator-agent-inspector.png",
+    "02-spectator-mobile.png",
+    "03-human-world.png",
+    "ghost-inside-storm-foundry.png",
+    "04-spectator-storm-foundry.png",
+    "ghost-inside-tidal-observatory.png",
+    "04-spectator-tidal-observatory.png"
+  ],
+  "performance": [
+    {
+      "label": "All-AI world with inspector",
+      "frames": 144,
+      "meanFrameMs": 16.66597222222222,
+      "p95FrameMs": 16.700000000000728,
+      "taskMsPerSecond": 409.11734929841356,
+      "layouts": 47,
+      "styleRecalculations": 51
+    },
+    {
+      "label": "Human-plus-AI world",
+      "frames": 144,
+      "meanFrameMs": 16.66597222222222,
+      "p95FrameMs": 16.700000000000728,
+      "taskMsPerSecond": 402.01364802197946,
+      "layouts": 6,
+      "styleRecalculations": 52
+    },
+    {
+      "label": "Storm Foundry all-AI world",
+      "frames": 108,
+      "meanFrameMs": 16.66574074074072,
+      "p95FrameMs": 16.700000000000728,
+      "taskMsPerSecond": 368.4578928012409,
+      "layouts": 2,
+      "styleRecalculations": 48
+    },
+    {
+      "label": "Tidal Observatory all-AI world",
+      "frames": 108,
+      "meanFrameMs": 16.664814814814843,
+      "p95FrameMs": 16.700000000004366,
+      "taskMsPerSecond": 445.51847040676597,
+      "layouts": 2,
+      "styleRecalculations": 48
+    }
+  ],
+  "sourceCommit": "37a899e73fe6239a9b27ad23c80b9f966989aac1",
+  "runtimeFingerprints": [
+    [
+      "public/api.mjs",
+      "40f08e0c4ad31330fd656e93d1f8d3687cde1e1a4d56817c8b2a0b27f1756442"
+    ],
+    [
+      "public/app.mjs",
+      "711bf84945f69895d6020b5c315c3f810c639f555a202287c007bf06e648f0f8"
+    ],
+    [
+      "public/favicon.svg",
+      "6502f813f8a3f0973f28c7fd3d08c8814829cc32832aa326cd57b9daaa1d6c59"
+    ],
+    [
+      "public/game.css",
+      "47a6365f4e4bd5946086e013a3b302c6fdf9a7b26497bdd56c08b91387aed04e"
+    ],
+    [
+      "public/harbor.mjs",
+      "1261215b5dbcb3ffc6ce8b24b91e7c9f09e80cc399c951512d07dfa6f812866b"
+    ],
+    [
+      "public/index.html",
+      "32a7694da748bd519b69565b12bed63db6b119bf51d34e0db5b5823f77ee27a2"
+    ],
+    [
+      "public/lobby.mjs",
+      "4cf5d3fde46e90259d406cf551a59be5408a173a784a013aee520317059a149a"
+    ],
+    [
+      "public/members.mjs",
+      "7450542eb4344c8dd5985ffd0ffd388e5b4b51bc214243202f3b9aeb20791df2"
+    ],
+    [
+      "public/panels.mjs",
+      "e0fab17f6e478687932bdf197b5f03d69121f67683f58360c8ea9caf645254d2"
+    ],
+    [
+      "public/pregame-customization.css",
+      "3fd7cabd2acc45a7713edf7e933142c4aea861934f571e23977bb517ddcde92c"
+    ],
+    [
+      "public/pregame-customization.mjs",
+      "966501540075aec2669a69b396819e765e7fcd0b33feb15abc2afc15d37bfe1b"
+    ],
+    [
+      "public/presentation.mjs",
+      "eae3c5147b93bca04c5674c7a083512d6ba4bdad40a54591c3afb4bb94ed0f4f"
+    ],
+    [
+      "public/styles.css",
+      "335d5670e89500451202f07d60812638a49358ed0dc852af271e3272b8c5ee02"
+    ],
+    [
+      "public/task-panels.css",
+      "a2f36400710301b3c772612d5c7a474ffb9060b6a8cc130e07d29614b8f9be9f"
+    ],
+    [
+      "public/ui.mjs",
+      "60498216e8715ec284ac4ca2e7d3cd5248283d6059016b79b8b5d6fa5a4e1a8f"
+    ],
+    [
+      "public/waiting-room-scene.mjs",
+      "f83be47c1844ad97f1ec751188ae09debbcf0f8725fe0649ccb544fdc06ea886"
+    ],
+    [
+      "public/waiting-room.css",
+      "45431fe310e4fe835c330e388f254a454916588dc0c7e36a5e24b79b77682fbd"
+    ],
+    [
+      "public/world-input-envelope.mjs",
+      "5ff82433cebfd15abc549923632a0c862c82a3bbd031b43397159584a4a4cfcc"
+    ],
+    [
+      "public/world/captcha.css",
+      "be77de2ce8cc345fa29d42c2d3f3ba3091472bd8b6a9a6b0d8340c9a216ec081"
+    ],
+    [
+      "public/world/dom.mjs",
+      "96f1b4358301984548cba35f147acd233b8ae9974799210f68a69f0441ba0012"
+    ],
+    [
+      "public/world/experience.mjs",
+      "fff101c0c402d80ece20370be65d794289ace795b92303e4cfb2872fd9894700"
+    ],
+    [
+      "public/world/input.mjs",
+      "31d4c845f18a84280ec219ade3b0038daf130f4300bdd7fe115244c14c3018d0"
+    ],
+    [
+      "public/world/interior-art.mjs",
+      "42edf244f6e9f3d2bf0bac3586a6bd4086d3dc20e972abc4bf319804c6b6a467"
+    ],
+    [
+      "public/world/model.mjs",
+      "3ee82c19c84b88ea7c2cee514dda46a7a06220dfdc1132207062c9f3c3f98887"
+    ],
+    [
+      "public/world/phases.mjs",
+      "33b1724e303e09d15a2193fa102b7e7dcf04426afc2b98ff096394021826a7b8"
+    ],
+    [
+      "public/world/puzzles.mjs",
+      "ed54632fc9d24dccc723f3ced1dd03ee1690a3d7f524797a4667901f5be46a60"
+    ],
+    [
+      "public/world/replay-model.mjs",
+      "a92e0e1e3f403fb173bac0c826de7fe4b4c9a0a55ca6ae1e5297e0fec98e8a55"
+    ],
+    [
+      "public/world/replay-viewer.mjs",
+      "70097c859a073af161613926913b4fee3717725da34e9e150110f22c7b5cb07b"
+    ],
+    [
+      "public/world/replay.mjs",
+      "b6b4db7f38f19fe3aa9eb0b8d127404cab3a6ff3da49c296bc1214cb3c854dd6"
+    ],
+    [
+      "public/world/scene.mjs",
+      "533ef7618e3ad612a65abc5723d476f2f93b0ffeed352c31e1613b2fc98b6f1e"
+    ],
+    [
+      "public/world/spectator.mjs",
+      "f68ec6460b03953b5be11ed672c1dd3cbc750f7c0a571b522a0b200c9c060b3d"
+    ],
+    [
+      "server/ai/anthropic.mjs",
+      "56e3e05430ebdbb33eaee4837967cc8ed8971dd9c6d5839efade9746f34a69fc"
+    ],
+    [
+      "server/ai/demo.mjs",
+      "4911839b18eefe5f99da8d92ab8a32a85497e89272f1fb7b355a1ad569b3efb8"
+    ],
+    [
+      "server/ai/index.mjs",
+      "b1b3f9f2817af9e4685d26a3350fab815a1b1156e7f2a5fc2d5c2243ceab5fbf"
+    ],
+    [
+      "server/ai/strategic.mjs",
+      "c749140ef1095eb4baaaa8325a558928cb78c5a896beac307bfc78d28c388cbd"
+    ],
+    [
+      "server/ai/world.mjs",
+      "d39026a9eac8ec17239a075bbf039b3a4bff3219f90bfe8f4a0d71555bc35d6f"
+    ],
+    [
+      "server/budget.mjs",
+      "20ca2be9c4a6187419a64b7b90b9101739557b276f0fe404edb536ada6345990"
+    ],
+    [
+      "server/config.mjs",
+      "c6378b0dfe14433364582ed4d1ee389b08f72e8e5c822fccd79075d95e1cfcb9"
+    ],
+    [
+      "server/engine/features.mjs",
+      "be0fcd3402bd93030c0414c6eda1ac5b282c5e3fbd4fec2b6f21c48d157f6494"
+    ],
+    [
+      "server/engine/index.mjs",
+      "15cb14394a06b3627a3b28213fed9734f10b7b478917c46366f5023c9415e8f6"
+    ],
+    [
+      "server/engine/replay-history.mjs",
+      "0f18b89ef21537a5b96dac64e8d8c66f380dc029f102fb1585aa8eb29839d0a1"
+    ],
+    [
+      "server/engine/state-copy.mjs",
+      "06c25b40bcf91d4d9bbda5785090eb7b7814c090c4f15bd0ee6ae9adf2412ebf"
+    ],
+    [
+      "server/engine/tasks.mjs",
+      "e8b29288572b5298a270fe95e778c4e6142399795fe020120167a9a2283b7a4a"
+    ],
+    [
+      "server/engine/world-runtime.mjs",
+      "8ef65c27e55ef4ea02a85c927a1930c5ee5ed0a3a42a4e52c684c772271261ec"
+    ],
+    [
+      "server/feature-validation.mjs",
+      "321420c15029404e80d6dc126f1b11218ba20b41e7b2033318c2dcf131be6914"
+    ],
+    [
+      "server/main.mjs",
+      "1835fb6d7e44e264c137e2a77fc320f986560546ce03404bec58fd67c90b1019"
+    ],
+    [
+      "server/origin.mjs",
+      "6ebdcb4f65cc3f44411ae1de1cbed6fb8618791674e5b550bcb3555ddad67cbe"
+    ],
+    [
+      "server/rooms.mjs",
+      "0e21d36b5a6bbdd76c753073686a250b045e1f7c55c90cd1224742ca24ccb8af"
+    ],
+    [
+      "server/spectator.mjs",
+      "f1547450dbc22b2f09039d8a5c4bf874c0464b5f7a55b3b9330b62f0524138ed"
+    ],
+    [
+      "server/static.mjs",
+      "cd832f9facdf467bdd2e3129fdaf4281ed92e4f8286a9bfadfe0e25185db974f"
+    ],
+    [
+      "server/store.mjs",
+      "34eee76fee245999a6aa9348ce52248649a4b8539fde435d1a482115db58b568"
+    ],
+    [
+      "server/transport.mjs",
+      "20b7791e8baa08112b7a7209aa41c471bbda1629eafa236aedbbdbc7b0c9039f"
+    ],
+    [
+      "shared/captcha.mjs",
+      "43ce676f540daba8d0a572ca8c97227e6d2437a9e608b31dfa3e22e74c785631"
+    ],
+    [
+      "shared/contracts.mjs",
+      "e432d31a70f7b41288abb6ad67c00c36dde27eb1dfc47d99f822a8d2f4a4d5f9"
+    ],
+    [
+      "shared/features.mjs",
+      "9279383ace5c705e29eff3395446c9a5cef99a824217ef78133e33be5bbdea0d"
+    ],
+    [
+      "shared/lobby.mjs",
+      "a19de0493b5d4b058efe35a60a88da6301f0965eca1ed98077c69464b9eea16f"
+    ],
+    [
+      "shared/maps/beacon-v2.mjs",
+      "3129525c0e57cdd107d17da79a67f81c941e1b53c7e3f868928ce3d6dceceb3f"
+    ],
+    [
+      "shared/maps/shape-geometry.mjs",
+      "6abb318e564efe2c14f39d24a13dc5f66059a4d9d9bf72bcb18e0c5be1f2a0f4"
+    ],
+    [
+      "shared/maps/storm-foundry-v2.mjs",
+      "c45d8a732cc0f2cc3159169567d0f29c6772e1bf8dc6c303f9af62e43e91bd43"
+    ],
+    [
+      "shared/maps/storm-foundry.mjs",
+      "b5720f44c41e40b800785ded9c5507208789652a4c076508730d1240d8c5d547"
+    ],
+    [
+      "shared/maps/tidal-observatory-v2.mjs",
+      "5b4e6bf11210e72cf397a18171066a3e2c1afab9f046deeed91be930019d2939"
+    ],
+    [
+      "shared/maps/tidal-observatory.mjs",
+      "a1fd0dddaccf9233c3743760abd492a274b3b024dc996afb063556588a354f88"
+    ],
+    [
+      "shared/replay.mjs",
+      "60fd83fad705b88dd5740f24b35960ee8ca1887aade39d7fb4d21da32b499015"
+    ],
+    [
+      "shared/task-catalog.mjs",
+      "cf87563c66b126a2f41ea2e1faad85961bd03272ea9404b67742f6a4b71aea34"
+    ],
+    [
+      "shared/world.mjs",
+      "83d9cc84d562958b2ded639df420600299ca6fb991be02919502e9a9b3ef9bbf"
+    ]
+  ],
+  "browser": "Chrome/154.0.8037.57",
+  "passed": true,
+  "summary": {
+    "passed": 50,
+    "failed": 0
+  }
+}

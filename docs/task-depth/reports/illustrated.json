@@ -1,0 +1,302 @@
+{
+  "taskEdition": 1,
+  "mapRevision": 2,
+  "sourceCommit": "37a899e73fe6239a9b27ad23c80b9f966989aac1",
+  "fixture": "Actual production app, HTTP/cookies, revision-2 collision/pathfinding, native task controls and persistent store. Historical task edition1 deliberately pins the original equipment/CAPTCHA protocol for map qualification; the separate task-depth suite qualifies all25 current families. Seeded crew assignment, explicitly idle demo AI and accelerated server clock; no provider calls, response fabrication or artificial task completion.",
+  "checks": [
+    "beacon production lobby selects immutable revision-2 geometry",
+    "beacon keeps real crew assignment and workload",
+    "beacon closing the overview with M restores movement controls",
+    "beacon Escape closes the map accessibly",
+    "beacon reaches bridge through authoritative collision-safe navigation",
+    "beacon reaches workshop through authoritative collision-safe navigation",
+    "beacon reaches engine through authoritative collision-safe navigation",
+    "beacon reaches lantern through authoritative collision-safe navigation",
+    "beacon reaches archive through authoritative collision-safe navigation",
+    "beacon reaches galley through authoritative collision-safe navigation",
+    "beacon native equipment completes through server acknowledgment",
+    "beacon illustrated machinery remains a server-owned collider",
+    "beacon rejected obstacle route cannot move the actor",
+    "beacon reload retains layout revision and confirmed task",
+    "beacon spectator sees correct artwork with private roles/tasks withheld",
+    "beacon spectator inspection requires deliberate opt-in",
+    "beacon mobile world fits viewport",
+    "storm-foundry production lobby selects immutable revision-2 geometry",
+    "storm-foundry keeps real crew assignment and workload",
+    "storm-foundry closing the overview with M restores movement controls",
+    "storm-foundry Escape closes the map accessibly",
+    "storm-foundry reaches bridge through authoritative collision-safe navigation",
+    "storm-foundry reaches lantern through authoritative collision-safe navigation",
+    "storm-foundry reaches observatory through authoritative collision-safe navigation",
+    "storm-foundry reaches filtration through authoritative collision-safe navigation",
+    "storm-foundry reaches engine through authoritative collision-safe navigation",
+    "storm-foundry reaches dynamo through authoritative collision-safe navigation",
+    "storm-foundry reaches galley through authoritative collision-safe navigation",
+    "storm-foundry reaches foundry through authoritative collision-safe navigation",
+    "storm-foundry reaches signal through authoritative collision-safe navigation",
+    "storm-foundry reaches workshop through authoritative collision-safe navigation",
+    "storm-foundry reaches archive through authoritative collision-safe navigation",
+    "storm-foundry reaches cargo through authoritative collision-safe navigation",
+    "storm-foundry native equipment completes through server acknowledgment",
+    "storm-foundry illustrated machinery remains a server-owned collider",
+    "storm-foundry rejected obstacle route cannot move the actor",
+    "storm-foundry reload retains layout revision and confirmed task",
+    "storm-foundry spectator sees correct artwork with private roles/tasks withheld",
+    "storm-foundry spectator inspection requires deliberate opt-in",
+    "storm-foundry mobile world fits viewport",
+    "tidal-observatory production lobby selects immutable revision-2 geometry",
+    "tidal-observatory keeps real crew assignment and workload",
+    "tidal-observatory closing the overview with M restores movement controls",
+    "tidal-observatory Escape closes the map accessibly",
+    "tidal-observatory reaches bridge through authoritative collision-safe navigation",
+    "tidal-observatory reaches archive through authoritative collision-safe navigation",
+    "tidal-observatory reaches lens through authoritative collision-safe navigation",
+    "tidal-observatory reaches workshop through authoritative collision-safe navigation",
+    "tidal-observatory reaches ballast through authoritative collision-safe navigation",
+    "tidal-observatory reaches conservatory through authoritative collision-safe navigation",
+    "tidal-observatory reaches galley through authoritative collision-safe navigation",
+    "tidal-observatory reaches sonar through authoritative collision-safe navigation",
+    "tidal-observatory reaches spectrum through authoritative collision-safe navigation",
+    "tidal-observatory reaches charts through authoritative collision-safe navigation",
+    "tidal-observatory reaches lantern through authoritative collision-safe navigation",
+    "tidal-observatory reaches radio through authoritative collision-safe navigation",
+    "tidal-observatory reaches engine through authoritative collision-safe navigation",
+    "tidal-observatory reaches intake through authoritative collision-safe navigation",
+    "tidal-observatory native equipment completes through server acknowledgment",
+    "tidal-observatory illustrated machinery remains a server-owned collider",
+    "tidal-observatory rejected obstacle route cannot move the actor",
+    "tidal-observatory reload retains layout revision and confirmed task",
+    "tidal-observatory spectator sees correct artwork with private roles/tasks withheld",
+    "tidal-observatory spectator inspection requires deliberate opt-in",
+    "tidal-observatory mobile world fits viewport",
+    "No illustrated-map browser page errors",
+    "Only the three deliberately rejected collision requests produce console errors",
+    "Runtime source remains unchanged during real browser qualification"
+  ],
+  "errors": [],
+  "consoleErrors": [
+    "Failed to load resource: the server responded with a status of 409 (Conflict)",
+    "Failed to load resource: the server responded with a status of 409 (Conflict)",
+    "Failed to load resource: the server responded with a status of 409 (Conflict)"
+  ],
+  "screenshots": [
+    "beacon-lobby.png",
+    "beacon-overview.png",
+    "beacon-map-art.png",
+    "beacon-room-bridge.png",
+    "beacon-room-workshop.png",
+    "beacon-room-engine.png",
+    "beacon-room-lantern.png",
+    "beacon-room-archive.png",
+    "beacon-room-galley.png",
+    "beacon-task-pressure.png",
+    "beacon-mobile.png",
+    "beacon-mobile-overview.png",
+    "storm-foundry-lobby.png",
+    "storm-foundry-overview.png",
+    "storm-foundry-map-art.png",
+    "storm-foundry-room-bridge.png",
+    "storm-foundry-room-lantern.png",
+    "storm-foundry-room-observatory.png",
+    "storm-foundry-room-filtration.png",
+    "storm-foundry-room-engine.png",
+    "storm-foundry-room-dynamo.png",
+    "storm-foundry-room-galley.png",
+    "storm-foundry-room-foundry.png",
+    "storm-foundry-room-signal.png",
+    "storm-foundry-room-workshop.png",
+    "storm-foundry-room-archive.png",
+    "storm-foundry-room-cargo.png",
+    "storm-foundry-task-wires.png",
+    "storm-foundry-mobile.png",
+    "storm-foundry-mobile-overview.png",
+    "tidal-observatory-lobby.png",
+    "tidal-observatory-overview.png",
+    "tidal-observatory-map-art.png",
+    "tidal-observatory-room-bridge.png",
+    "tidal-observatory-room-archive.png",
+    "tidal-observatory-room-lens.png",
+    "tidal-observatory-room-workshop.png",
+    "tidal-observatory-room-ballast.png",
+    "tidal-observatory-room-conservatory.png",
+    "tidal-observatory-room-galley.png",
+    "tidal-observatory-room-sonar.png",
+    "tidal-observatory-room-spectrum.png",
+    "tidal-observatory-room-charts.png",
+    "tidal-observatory-room-lantern.png",
+    "tidal-observatory-room-radio.png",
+    "tidal-observatory-room-engine.png",
+    "tidal-observatory-room-intake.png",
+    "tidal-observatory-task-wires.png",
+    "tidal-observatory-mobile.png",
+    "tidal-observatory-mobile-overview.png"
+  ],
+  "maps": [
+    {
+      "mapId": "beacon",
+      "revision": 2,
+      "roomCount": 6,
+      "props": 44,
+      "rooms": [
+        {
+          "id": "bridge",
+          "waypoints": 5
+        },
+        {
+          "id": "workshop",
+          "waypoints": 8
+        },
+        {
+          "id": "engine",
+          "waypoints": 11
+        },
+        {
+          "id": "lantern",
+          "waypoints": 6
+        },
+        {
+          "id": "archive",
+          "waypoints": 9
+        },
+        {
+          "id": "galley",
+          "waypoints": 10
+        }
+      ],
+      "tasks": [
+        "pressure"
+      ],
+      "total": 15
+    },
+    {
+      "mapId": "storm-foundry",
+      "revision": 2,
+      "roomCount": 12,
+      "props": 93,
+      "rooms": [
+        {
+          "id": "bridge",
+          "waypoints": 1
+        },
+        {
+          "id": "lantern",
+          "waypoints": 8
+        },
+        {
+          "id": "observatory",
+          "waypoints": 9
+        },
+        {
+          "id": "filtration",
+          "waypoints": 10
+        },
+        {
+          "id": "engine",
+          "waypoints": 16
+        },
+        {
+          "id": "dynamo",
+          "waypoints": 3
+        },
+        {
+          "id": "galley",
+          "waypoints": 6
+        },
+        {
+          "id": "foundry",
+          "waypoints": 7
+        },
+        {
+          "id": "signal",
+          "waypoints": 8
+        },
+        {
+          "id": "workshop",
+          "waypoints": 10
+        },
+        {
+          "id": "archive",
+          "waypoints": 11
+        },
+        {
+          "id": "cargo",
+          "waypoints": 21
+        }
+      ],
+      "tasks": [
+        "wires"
+      ],
+      "total": 60
+    },
+    {
+      "mapId": "tidal-observatory",
+      "revision": 2,
+      "roomCount": 14,
+      "props": 92,
+      "rooms": [
+        {
+          "id": "bridge",
+          "waypoints": 1
+        },
+        {
+          "id": "archive",
+          "waypoints": 11
+        },
+        {
+          "id": "lens",
+          "waypoints": 16
+        },
+        {
+          "id": "workshop",
+          "waypoints": 10
+        },
+        {
+          "id": "ballast",
+          "waypoints": 6
+        },
+        {
+          "id": "conservatory",
+          "waypoints": 15
+        },
+        {
+          "id": "galley",
+          "waypoints": 6
+        },
+        {
+          "id": "sonar",
+          "waypoints": 10
+        },
+        {
+          "id": "spectrum",
+          "waypoints": 12
+        },
+        {
+          "id": "charts",
+          "waypoints": 26
+        },
+        {
+          "id": "lantern",
+          "waypoints": 7
+        },
+        {
+          "id": "radio",
+          "waypoints": 10
+        },
+        {
+          "id": "engine",
+          "waypoints": 17
+        },
+        {
+          "id": "intake",
+          "waypoints": 7
+        }
+      ],
+      "tasks": [
+        "wires"
+      ],
+      "total": 60
+    }
+  ],
+  "browser": "Chrome/154.0.8037.57",
+  "passed": true
+}

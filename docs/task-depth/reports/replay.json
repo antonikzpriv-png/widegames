@@ -1,0 +1,42 @@
+{
+  "fixture": "Seeded legal engine actions and accelerated clocks produce a completed match. Native app, authenticated HTTP and WebSocket paths; demo/idle scheduling, no provider calls. This is playback qualification, not a full AI strategy evaluation.",
+  "checks": [
+    "all-AI observer inspection reveals roles separately from redacted player views",
+    "live demo label remains visible",
+    "new full recording loads from authoritative initial anchor",
+    "initial paused replay paints the map immediately",
+    "recorded AI usage is labeled as reservations",
+    "fractional time scrub is not rounded",
+    "fractional authoritative arrival time is preserved",
+    "play/pause advances the replay clock at bounded speed",
+    "character history distinguishes a captured witness from reconstructed visibility",
+    "claims and evidence are compared without a truth verdict",
+    "postgame ballots are overlaid",
+    "keyboard event seek returns consistently to start and final reveal",
+    "equal-time event scrub preserves the causal prefix before the outcome",
+    "following, perspective and resize preserve the selected equal-time event",
+    "play finishes remaining terminal events before restarting the watch",
+    "event bookmarks seek real eliminations",
+    "replay controls and map fit mobile width",
+    "hidden-page lifecycle pauses playback",
+    "playback, scrubbing, following and leave emit no game actions or movement",
+    "no browser or console errors",
+    "source files remain unchanged during real browser qualification"
+  ],
+  "screenshots": [
+    "01-live-ai-spectator.png",
+    "02-spatial-overview.png",
+    "03-follow-recorded-route.png",
+    "04-perspective-claims-and-ballots.png",
+    "05-mobile-spatial-replay.png"
+  ],
+  "errors": [],
+  "consoleErrors": [],
+  "sourceCommit": "37a899e73fe6239a9b27ad23c80b9f966989aac1",
+  "browser": "Chrome/154.0.8037.57",
+  "passed": true,
+  "cleanup": {
+    "browserClosed": true,
+    "serverClosed": true
+  }
+}

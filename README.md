@@ -87,9 +87,11 @@ npm run test:replay:browser
 
 Browser checks use an installed Chromium/Chrome via `CHROME_PATH`; the Cloud launcher is `/workspace/.cloud-setup/bin/chromium-cloud`. No paid provider calls or deployment are needed.
 
-The latest spectator/movement improvements from main `aa1f58c` are preserved. Free observer movement and following work with ordinary role-private views; revealing AI-only inspection requires explicit per-identity consent, is unavailable when any human occupies the match, and resets on rematch.
+The latest illustrated maps, spectator and movement improvements from main `668a867` are preserved. Free observer movement and following work with ordinary role-private views; revealing AI-only inspection requires explicit per-identity consent, is unavailable when any human occupies the match, and resets on rematch.
 ## Illustrated deck redesign
 
 New rooms use redesigned, original cutaway versions of **all three maps**, with irregular room outlines, asymmetric corridor loops, beveled hull walls, distinct equipment and floor materials, glazing, pipes, cables, vents, grates, warning paint and readable room labels. The **M / Map** control opens a large deck plan; gold task stations mark your remaining work.
 
 After updating and restarting the server, **Exit** any saved room and create a fresh room to see the redesign. Existing rooms and replays retain their original geometry so saved positions and task progress stay valid. [Design, screenshots and verification](docs/ILLUSTRATED-MAPS.md). Run `npm run test:illustrated:browser` for the actual app’s all-room tour, native task controls, mobile layout and restart checks.
+
+Final integrated qualification: **794 tests passed, 6 optional skips; all nine browser suites passed (382 checks)**. [Exact commands, source revisions, reports, screenshots and access limits](docs/TASK-DEPTH-VERIFICATION.md).
