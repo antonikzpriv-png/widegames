@@ -161,3 +161,16 @@ test('ghost-only tasks can supply the final authoritative crew task victory',()=
  const task=s.players.find(p=>p.id===v.id).tasks[0];task.completed=false;place(s.players.find(p=>p.id===v.id),stations[task.roomId]);
  const r=act(s,v,'task',{taskId:task.id},1002);assert(r.accepted);assert.equal(r.state.outcome.reason,'tasks');assert.equal(r.state.players.find(p=>p.id===v.id).alive,false);
 });
+
+test('audit: declared optional room presets cannot silently lose engine metadata on restore',async()=>{
+ const s=make(),saved=room(s);saved.features={deathPolicy:'ghost-tasks',abilities:true};
+ delete saved.state.features;delete saved.state.ghostChat;delete saved.state.effects;for(const p of saved.state.players)delete p.ability;
+ await assert.rejects(validateRoomSnapshot(saved),/optional feature/);
+ const classic=room(createMatch({id:'old',mode:'spectator',world:true,now:1000}));classic.features={deathPolicy:'transfer',abilities:false};await validateRoomSnapshot(classic);
+});
+
+test('audit: restored effects cannot duplicate an ability owner even with different targets',async()=>{
+ let s=make();const {ward,sab}=actors(s);place(ward);place(sab);s=act(s,ward,'protect',{targetId:ward.id}).state;
+ const bad=room(s);bad.state.effects.push({...clone(s.effects[0]),id:'fx-'+'a'.repeat(32),targetId:sab.id});
+ await assert.rejects(validateRoomSnapshot(bad),/optional feature/);
+});

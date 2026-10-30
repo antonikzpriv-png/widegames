@@ -8,6 +8,7 @@ export function validateFeatures(room){
  if(Object.hasOwn(room,'features')){assert(exact(room.features,['deathPolicy','abilities']));parseFeatures(room.features);}
  const s=room.state;if(!s)return;
  if(!Object.hasOwn(s,'features')){
+  assert(!room.features||(room.features.deathPolicy==='transfer'&&!room.features.abilities));
   assert(!Object.hasOwn(s,'effects')&&!Object.hasOwn(s,'ghostChat')&&!s.players.some(p=>Object.hasOwn(p,'ability')));return;
  }
  assert(s.schemaVersion===2&&exact(s.features,['version','deathPolicy','abilities'])&&s.features.version===1);
@@ -32,11 +33,12 @@ export function validateFeatures(room){
  assert(s.players.filter(p=>p.ability?.type==='ward').length===1&&s.players.filter(p=>p.ability?.type==='echo').length===1);
  for(const p of s.players)if(Object.hasOwn(p,'ability'))assert(exact(p.ability,['type','readyAt'])&&['ward','echo'].includes(p.ability.type)&&p.role===(p.ability.type==='ward'?'crew':'saboteur')&&time(p.ability.readyAt));
  assert(Array.isArray(s.effects)&&s.effects.length<=2&&(s.phase==='roam'||s.effects.length===0));
- const ids=new Set(),targets=new Set();
+ const ids=new Set(),targets=new Set(),owners=new Set();
  for(const e of s.effects){
   assert(exact(e,['id','kind','playerId','createdAt','expiresAt',e.kind==='ward'?'targetId':'position'])&&['ward','echo'].includes(e.kind)&&typeof e.id==='string'&&/^fx-[a-f0-9]{32}$/.test(e.id)&&!ids.has(e.id));ids.add(e.id);
   const actor=s.players.find(p=>p.id===e.playerId);assert(actor?.alive&&actor.ability?.type===e.kind&&time(e.createdAt)&&e.createdAt>=s.startedAt&&e.createdAt<=s.updatedAt&&e.expiresAt>s.updatedAt&&e.expiresAt===e.createdAt+(e.kind==='ward'?R.wardDurationMs:R.echoDurationMs)&&actor.ability.readyAt===e.createdAt+(e.kind==='ward'?R.wardCooldownMs:R.echoCooldownMs));
-  const key=e.kind==='ward'?e.targetId:e.playerId;assert(!targets.has(key));targets.add(key);
+  assert(!owners.has(e.playerId));owners.add(e.playerId);
+  const key=e.kind+':'+(e.kind==='ward'?e.targetId:e.playerId);assert(!targets.has(key));targets.add(key);
   if(e.kind==='ward')assert(s.players.some(p=>p.id===e.targetId&&p.alive));
   else assert(exact(e.position,['x','y'])&&Number.isFinite(e.position.x)&&Number.isFinite(e.position.y));
  }

@@ -6,6 +6,7 @@ import path from 'node:path';
 import {once} from 'node:events';
 import {WebSocket} from 'ws';
 import * as engine from '../server/engine/index.mjs';
+import {validateRoomSnapshot} from '../server/store.mjs';
 import {createGameServer} from '../server/transport.mjs';
 import {createAiController} from '../server/ai/index.mjs';
 import {CHARACTERS} from '../shared/contracts.mjs';
@@ -83,13 +84,14 @@ test('transport schedules fallen demo actors with unfinished tasks',async t=>{
 for(const deathPolicy of ['transfer','ghost-tasks'])for(const mode of ['spectator','human'])test(`full deterministic demo ${mode}, ${deathPolicy}, optional abilities, real rules win and JSON restart`,{timeout:180000},async t=>{
  const fetched=t.mock.method(globalThis,'fetch',()=>{throw Error('No live calls');});const summaries=[];
  for(const seed of [1,7,19]){
-  let state=engine.createMatch({id:`feature-demo-${mode}-${seed}`,seed,mode,world:true,now:1000,features:{deathPolicy,abilities:true},config:{discussionMs:6000,votingMs:4000}});
+  let state=engine.createMatch({id:`feature-demo-${mode}-${seed}`.padEnd(24,'x'),seed,mode,world:true,now:1000,features:{deathPolicy,abilities:true},config:{discussionMs:6000,votingMs:4000}});
+  const validate=state=>validateRoomSnapshot({schema:1,id:state.id,mode,createdAt:1000,updatedAt:state.updatedAt,identities:[{hash:'a'.repeat(64),host:true,seatId:mode==='human'?'p1':null}],state,startId:'start',aiContext:{},features:{deathPolicy,abilities:true}});
   let ai=createAiController({config:{provider:'demo',decisionIntervalMs:1800}}),context={},restarted=false;const types=new Set();
   for(let now=1000;now<=901000&&!['ended','paused'].includes(state.phase);now+=250){
-   state=engine.tick(state,now).state;
+   state=engine.tick(state,now).state;await validate(state);
    for(const player of CHARACTERS.filter(p=>mode==='spectator'||p.id!=='p1')){
     const view=engine.getPlayerView(state,player.id,now),a=await ai.decide({view,player,context});if(!a)continue;
-    const r=engine.applyAction(state,player.id,a,now);assert(r.accepted,JSON.stringify({seed,mode,a,error:r.error}));state=r.state;types.add(a.type);
+    const r=engine.applyAction(state,player.id,a,now);assert(r.accepted,JSON.stringify({seed,mode,a,error:r.error}));state=r.state;await validate(state);types.add(a.type);
    }
    if(!restarted&&state.effects?.length){state=JSON.parse(JSON.stringify(state));context=JSON.parse(JSON.stringify(context));ai=createAiController({config:{provider:'demo',decisionIntervalMs:1800}});restarted=true;}
   }
@@ -98,4 +100,19 @@ for(const deathPolicy of ['transfer','ghost-tasks'])for(const mode of ['spectato
   summaries.push({seed,outcome:state.outcome,types:[...types]});
  }
  assert.equal(fetched.mock.callCount(),0);t.diagnostic(JSON.stringify(summaries));
+});
+
+for(const order of ['ward-first','echo-first'])test(`audit: ward on saboteur coexists with echo through HTTP persistence and restart (${order})`,async t=>{
+ const f=await serverFixture(t),host=await f.req('/api/rooms',{method:'POST',body:{mode:'human'}}),route='/api/rooms/'+host.body.roomId;
+ assert.equal((await f.req(route+'/start',{method:'POST',body:{id:'start'},cookie:host.cookie})).status,200);
+ const entry=f.game.rooms.get(host.body.roomId),sab=entry.data.state.players.find(p=>p.role==='saboteur');
+ // Arrange a nearby legal target; subsequent abilities still use the real engine/HTTP authority.
+ entry.data.state.players[0].position={...sab.position};entry.data.state.players[0].roomId=sab.roomId;
+ const castWard=async()=>{const r=await f.req(route+'/action',{method:'POST',body:{id:'ward-saboteur',type:'protect',targetId:sab.id},cookie:host.cookie});assert.equal(r.status,200,JSON.stringify(r.body));};
+ const castEcho=()=>{const r=engine.applyAction(entry.data.state,sab.id,{id:'bot-echo',type:'decoy',x:sab.position.x,y:sab.position.y},1000);assert(r.accepted);entry.data.state=r.state;};
+ if(order==='ward-first'){await castWard();castEcho();}else{castEcho();await castWard();}
+ // An authenticated real write forces the complete pair through both room/store validators.
+ const saved=await f.req(route+'/action',{method:'POST',body:{id:'persist-both',type:'wait'},cookie:host.cookie});assert.equal(saved.status,200,JSON.stringify(saved.body));assert.equal(saved.body.game.effects.length,2);
+ await f.restart();const restored=await f.req(route,{cookie:host.cookie});assert.equal(restored.body.game.effects.length,2);assert.equal(restored.body.game.self.ability.readyAt,36000);
+ f.setNow(7000);const expired=await f.req(route+'/action',{method:'POST',body:{id:'expire-echo',type:'wait'},cookie:host.cookie});assert.equal(expired.status,200);assert.deepEqual(expired.body.game.effects.map(e=>e.kind),['ward']);
 });
