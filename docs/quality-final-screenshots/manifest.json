@@ -1,0 +1,53 @@
+{
+  "sourceCommit": "14ad207d1065a90ce141b75e1b26900684aeabb6",
+  "sourceManifestSha256": "7bb5e66f67cf8ff314323efdec0ace72b5f347ce4e13ce4ef51d04e149b821af",
+  "sourceFileCount": 574,
+  "reportSha256": "9dadc0e06c7d7af3ee39b42b5a32871f6412fc474be0817a1129692977c1a26d",
+  "summary": {
+    "status": "passed",
+    "passed": 22,
+    "failed": 0
+  },
+  "safeViews": {
+    "http": 1505,
+    "websocket": 1078
+  },
+  "canceledAuditReads": {
+    "count": 1,
+    "reason": "consumer_closed",
+    "excludedFromInspectedCount": true
+  },
+  "fixture": "Unedited Windows Chrome captures from exact raw Git source; seeded/accelerated offline fixtures. Equipment/council/ghost cases stage legal engine actions; autonomous DEMO outcomes use real controllers and original deadlines. No model calls, image editing or artificial winners.",
+  "files": [
+    {
+      "file": "autonomous-spectator-role-revealed-replay.png",
+      "bytes": 328160,
+      "sha256": "c335965cda9c8544f4bb333a446e963e5b77af8b5271c29d3cd4ef46e2dc6252"
+    },
+    {
+      "file": "council-voting-844x390.png",
+      "bytes": 54468,
+      "sha256": "f9fc25fa287a99d969a0788a7538a21e13b670ab57ada3e2a66e0f11a0092d38"
+    },
+    {
+      "file": "desktop-beacon2-start.png",
+      "bytes": 509323,
+      "sha256": "ab5cb54c7571d83ae5935d5ef1b3c382a06d89cb9f873e01854dd83eb6ec4c09"
+    },
+    {
+      "file": "desktop-whole-map-fourteen-room-key.png",
+      "bytes": 541377,
+      "sha256": "25fced8d016cddc1ee75fcea584a682203b492d26a85657aa07b625f852ca5e3"
+    },
+    {
+      "file": "mobile-private-fallen-chat.png",
+      "bytes": 92551,
+      "sha256": "be5c5824c492bd0572c57722e05ac8fd1a535c0242168f2220d67e612078cb36"
+    },
+    {
+      "file": "watch1-glyph-grid-390x844.png",
+      "bytes": 47212,
+      "sha256": "eb14d841d76e19296bd73b2c921611f328d77c40c305ad88775f58a06023ced6"
+    }
+  ]
+}

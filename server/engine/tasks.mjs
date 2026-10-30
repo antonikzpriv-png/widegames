@@ -7,12 +7,13 @@ const stationKinds={bridge:'wires',lantern:'tuning',archive:'sequence',galley:'p
 const lengths={wires:3,tuning:1,sequence:4,pressure:2,repair:4,glyphs:3,count:2,order:4,rotate:3,oddity:2,code:1};
 
 /** Old tasks remain station-derived; expanded-map tasks declare a validated kind. */
-export const validTaskKind=task=>!!task&&typeof task==='object'&&(Object.hasOwn(task,'kind')?TASK_KINDS.includes(task.kind):Object.hasOwn(stationKinds,task.roomId));
+const originalKinds=['wires','tuning','sequence','pressure','repair'];
+export const validTaskKind=task=>!!task&&typeof task==='object'&&(Object.hasOwn(task,'kind')&&task.kind!=='relay'?TASK_KINDS.includes(task.kind):Object.hasOwn(task,'taskKind')?originalKinds.includes(task.taskKind):Object.hasOwn(stationKinds,task.roomId));
 
 /** Version 1 remains deterministic for existing saves without optional metadata. */
 export function challenge(task) {
  const bytes=createHash('sha256').update(task.id).digest();
- const explicit=Object.hasOwn(task,'kind'),kind=explicit?task.kind:stationKinds[task.roomId];
+ const explicit=Object.hasOwn(task,'kind')&&task.kind!=='relay',kind=explicit?task.kind:originalKinds.includes(task.taskKind)?task.taskKind:stationKinds[task.roomId];
  return {
   v:explicit?2:1,kind,target:30+bytes[0]%51,
   sequence:Array.from({length:4},(_,i)=>1+bytes[i]%4),

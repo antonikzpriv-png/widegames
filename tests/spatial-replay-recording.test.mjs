@@ -1,6 +1,8 @@
+import nodePath from 'node:path';
+import {fileURLToPath} from 'node:url';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {mkdtemp,rm,stat} from 'node:fs/promises';
+import {mkdir,mkdtemp,rm,stat} from 'node:fs/promises';
 import * as engine from '../server/engine/index.mjs';
 import {checkpointReplay} from '../server/engine/replay-history.mjs';
 import {validateReplayHistory,validateReplayMetadata,REPLAY_LIMITS} from '../shared/replay.mjs';
@@ -47,7 +49,7 @@ test('checkpoint retention is bounded and malformed or secret-bearing metadata f
 });
 
 test('byte retention limits large action histories and the room persists below 8 MiB',async t=>{
- const directory=await mkdtemp('/workspace/widegames/_artifacts/spatial-store-');let store;t.after(async()=>{await store?.close();await rm(directory,{recursive:true,force:true});});
+ const parent=new URL('../_artifacts/test-temp/',import.meta.url);await mkdir(parent,{recursive:true});const directory=await mkdtemp(new URL('spatial-store-',parent));let store;t.after(async()=>{await store?.close();assert.equal(nodePath.dirname(directory),nodePath.resolve(fileURLToPath(parent)));await rm(directory,{recursive:true,force:true});});
  const room=createRoom('human',1000);issueIdentity(room,true);const f=spatialFixture(room.id);room.state=f.state;room.startId='spatial-store';room.updatedAt=f.now;
  const live=structuredClone(f.initial);live.replay=Array.from({length:12000},(_,i)=>({id:'r'+(i+1),type:'unknown_extension',at:1000,payload:'x'.repeat(350)}));live.replaySequence=12000;delete live.replayBytes;
  const result=engine.applyAction(live,'p1',{id:'bounded',type:'wait'},1001);assert(result.accepted);assert(result.state.replay.length<12000);assert(result.state.replayBytes<=REPLAY_LIMITS.bytes);validateReplayHistory(result.state.replayHistory);

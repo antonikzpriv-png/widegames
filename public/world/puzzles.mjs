@@ -1,4 +1,5 @@
 import {captchaChallenge} from '../../shared/captcha.mjs';
+import {createStationPuzzle} from '../features/tasks/station.mjs';
 import {dom,control,setText,trapDialog} from './dom.mjs';
 
 /** Local puzzles gate a real task request; their solved state has no server authority. */
@@ -6,7 +7,7 @@ function createLegacyPuzzle({task,kind,onSubmit,onClose,id}){
  let solved=false,closed=false,selected=null,sent=false;
  const node=dom('section','lw-task-modal');node.setAttribute('role','dialog');node.setAttribute('aria-modal','true');node.setAttribute('aria-labelledby',`${id}-title`);node.tabIndex=-1;
  const heading=dom('h2','',task.label);heading.id=`${id}-title`;
- const top=dom('div','lw-modal-title'),close=control('Close station',()=>onClose(),'lw-close');top.append(dom('p','lw-eyebrow','FIELD EQUIPMENT'),close);
+ const top=dom('div','lw-modal-title'),close=control('Close station',()=>{if(!closed)onClose();},'lw-close');top.append(dom('p','lw-eyebrow','FIELD EQUIPMENT'),close);
  const copy=dom('p','lw-task-instruction'),area=dom('div',`lw-puzzle lw-puzzle-${kind}`),status=dom('p','lw-puzzle-status');status.setAttribute('role','status');
  const submit=control('Send completed task',()=>{if(!solved||sent||closed)return;onSubmit();},'lw-primary');submit.disabled=true;
  const footer=dom('p','lw-modal-footnote','The server confirms completion. Leaving this station or entering council closes the equipment.');
@@ -34,7 +35,7 @@ function createLegacyPuzzle({task,kind,onSubmit,onClose,id}){
   area.append(order,grid);
   for(let n=1;n<=4;n++){const tile=control(String(n),()=>{if(solved)return;if(n!==sequence[entered.length]){entered=[];tiles.forEach(t=>t.dataset.done='false');setText(status,'Sequence reset. Begin again with 2.');return;}entered.push(n);tile.dataset.done='true';setText(status,`${entered.length} of 4 steps restored.`);if(entered.length===4){tiles.forEach(t=>t.disabled=true);finish();}},'lw-sequence-tile');tile.setAttribute('aria-label',`Sequence tile ${n}`);tiles.push(tile);grid.append(tile);}
  }
- node.addEventListener('keydown',event=>{if(event.key==='Escape'){event.preventDefault();onClose();}else trapDialog(node,event);});
+ node.addEventListener('keydown',event=>{if(event.key==='Escape'){event.preventDefault();if(!closed)onClose();}else trapDialog(node,event);});
  return {node,focus(){close.focus();},setPending(value){sent=value;submit.disabled=value||!solved;close.disabled=value;setText(submit,value?'Sending…':'Send completed task');},dispose(){closed=true;node.remove();}};
 }
 
@@ -84,23 +85,26 @@ function renderCaptcha(area,c,{id,copy,status,send}){
 
 /** Controls submit semantic inputs; only an authoritative snapshot advances them. */
 export function createTaskPuzzle(options){
+ if(options.task?.kind==='station')return createStationPuzzle(options);
  if(!options.task.progress)return createLegacyPuzzle(options);
- const {id,onClose,onSubmit}=options;let task=options.task,pending=false,closed=false,key='',focusBeforePending=null;
+ const {id,onClose,onSubmit}=options;let task=options.task,pending=false,closed=false,key='',renderEpoch=0,focusBeforePending=null;
  const node=dom('section','lw-task-modal');node.setAttribute('role','dialog');node.setAttribute('aria-modal','true');node.tabIndex=-1;
  const heading=dom('h2','',task.label);heading.id=`${id}-title`;node.setAttribute('aria-labelledby',heading.id);
- const close=control('Close station',onClose,'lw-close'),copy=dom('p','lw-task-instruction'),area=dom('div','lw-puzzle'),status=dom('p','lw-puzzle-status');status.setAttribute('role','status');
- node.append(close,heading,copy,area,status,dom('p','lw-modal-footnote','Progress is saved by the server. Leaving or council closes equipment; an unfinished diagnostic must restart.'));
+ const close=control('Close station',()=>{if(!closed)onClose();},'lw-close'),copy=dom('p','lw-task-instruction'),area=dom('div','lw-puzzle'),status=dom('p','lw-puzzle-status');status.setAttribute('role','status');
+ const top=dom('div','lw-modal-title');top.append(dom('p','lw-eyebrow','FIELD EQUIPMENT'),close);
+ node.append(top,heading,copy,area,status,dom('p','lw-modal-footnote','Progress is saved by the server. Leaving or council closes equipment; an unfinished diagnostic must restart.'));
  const firstAvailable=()=>[...area.querySelectorAll('button,input')].find(control=>!control.disabled);
  function send(input){if(!pending&&!closed)onSubmit(input===undefined?undefined:{step:task.progress.index,input});}
- function render(){const c=task.progress,next=JSON.stringify(c);if(next===key)return;key=next;const sendStep=input=>{if(key===next)send(input);};area.replaceChildren();area.className=`lw-puzzle lw-puzzle-${c.kind}`;status.textContent=`${c.index} / ${c.total} steps confirmed`;
+ function render(){const c=task.progress,next=JSON.stringify(c);if(next===key)return;key=next;const epoch=++renderEpoch,sendStep=input=>{if(epoch===renderEpoch)send(input);};area.replaceChildren();area.className=`lw-puzzle lw-puzzle-${c.kind}`;status.textContent=`${c.index} / ${c.total} steps confirmed`;
   if(c.index===c.total){copy.textContent='Equipment ready. Send the completed task.';area.append(control('Send completed task',()=>sendStep(),'lw-primary'));return;}
   if(c.v===2&&renderCaptcha(area,c,{id,copy,status,send:sendStep}))return;
   if(c.kind==='wires'){copy.textContent=`Connect cable ${c.index+1} to the same numbered socket.`;let selected=false;area.append(control(`Left cable ${c.index+1}`,()=>{selected=true;status.textContent='Choose the matching right socket.';}));for(let n=0;n<3;n++)area.append(control(`Right socket ${n+1}`,()=>{if(selected)sendStep(`${c.index}:${n}`);else status.textContent='Select the left cable first.';}));}
   else if(c.kind==='sequence'){copy.textContent=`Restore record: ${c.sequence.join(' → ')}. Enter step ${c.index+1}.`;for(let n=1;n<=4;n++){const tile=control(String(n),()=>sendStep(String(n)),'lw-sequence-tile');tile.setAttribute('aria-label',`Sequence tile ${n}`);area.append(tile);}}
   else if(c.kind==='pressure'){copy.textContent=`Reservoirs: left ${c.pressure} bar, right ${10-c.pressure} bar. Equalize to 5 bar each by transferring pressure. ${c.index===0?'Choose flow direction.':'Choose how many bar to transfer.'}`;if(c.index===0){area.append(control('Flow left to right',()=>sendStep('left-to-right')),control('Flow right to left',()=>sendStep('right-to-left')));}else for(let n=1;n<=4;n++)area.append(control(`Transfer ${n} bar`,()=>sendStep(String(n))));}
   else if(c.kind==='tuning'){copy.textContent=`Tune the beacon to ${c.target} kHz.`;const label=dom('label','','Frequency'),slider=dom('input','lw-frequency-slider'),value=dom('output','','0');slider.id=`${id}-dial`;slider.type='range';slider.min=0;slider.max=100;slider.step=1;slider.value=0;label.htmlFor=slider.id;slider.addEventListener('input',()=>value.textContent=slider.value);area.append(label,slider,value,control('Lock frequency',()=>sendStep(slider.value)));}
-  else {const labels=['Isolate power','Replace fuse','Start diagnostic','Verify diagnostic'],inputs=['isolate','replace','start','test'];copy.textContent=c.index===3?'Wait at least 1.5 seconds after starting, then verify. The server checks elapsed time.':'Repair in order: isolate power, replace fuse, start diagnostic, verify.';area.append(control(labels[c.index],()=>sendStep(inputs[c.index])));}
+  else if(c.kind==='repair'){const labels=['Isolate power','Replace fuse','Start diagnostic','Verify diagnostic'],inputs=['isolate','replace','start','test'];copy.textContent=c.index===3?'Wait at least 1.5 seconds after starting, then verify. The server checks elapsed time.':'Repair in order: isolate power, replace fuse, start diagnostic, verify.';area.append(control(labels[c.index],()=>sendStep(inputs[c.index])));}
+  else copy.textContent='This equipment version is unavailable. Close the station and reconnect with a compatible client.';
  }
- node.addEventListener('keydown',e=>{if(e.key==='Escape'){e.preventDefault();onClose();}else trapDialog(node,e);});render();
- return {node,focus(){close.focus();},update(next){if(next){const restore=area.contains(document.activeElement),before=key;task=next;render();if(pending)for(const control of node.querySelectorAll('button,input'))control.disabled=true;if(restore&&before!==key)firstAvailable()?.focus();}},setPending(value){if(value)focusBeforePending=area.contains(document.activeElement)?document.activeElement:null;pending=value;for(const control of node.querySelectorAll('button,input'))control.disabled=value||control.dataset.confirmed==='true';if(!value&&focusBeforePending){const target=area.contains(focusBeforePending)&&!focusBeforePending.disabled?focusBeforePending:firstAvailable();target?.focus();focusBeforePending=null;}},feedback(message){status.textContent=message;},dispose(){closed=true;node.remove();}};
+ node.addEventListener('keydown',e=>{if(e.key==='Escape'){e.preventDefault();if(!closed)onClose();}else trapDialog(node,e);});render();
+ return {node,focus(){close.focus();},update(next){if(!closed&&next){const restore=area.contains(document.activeElement),before=key;task=next;render();if(pending)for(const control of node.querySelectorAll('button,input'))control.disabled=true;if(restore&&before!==key)firstAvailable()?.focus();}},setPending(value){if(value)focusBeforePending=area.contains(document.activeElement)?document.activeElement:null;pending=value;for(const control of node.querySelectorAll('button,input'))control.disabled=value||control.dataset.confirmed==='true';if(!value&&focusBeforePending){const target=area.contains(focusBeforePending)&&!focusBeforePending.disabled?focusBeforePending:firstAvailable();target?.focus();focusBeforePending=null;}},feedback(message){status.textContent=message;},dispose(){closed=true;node.remove();}};
 }

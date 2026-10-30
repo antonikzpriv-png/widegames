@@ -159,20 +159,21 @@ function walls(c,edges){
  for(const e of edges)line(c,[e.a,e.b],'#111c25',24);c.restore();
  for(const e of edges){line(c,[e.a,e.b],METAL,13);line(c,[{x:e.a.x,y:e.a.y+2},{x:e.b.x,y:e.b.y+2}],'#546a73',7);line(c,[{x:e.a.x,y:e.a.y-3},{x:e.b.x,y:e.b.y-3}],'#d4d9cb',2);const length=Math.hypot(e.a.x-e.b.x,e.a.y-e.b.y);for(let t=18;t<length-12;t+=62){const x=e.a.x+(e.b.x-e.a.x)*t/length,y=e.a.y+(e.b.y-e.a.y)*t/length;screw(c,x,y);}}
 }
-function paint(c,geometry){
+function paint(c,geometry,bounds){
+ const visible=(r,pad=32)=>!bounds||r.x-pad<bounds.x+bounds.width&&r.x+r.width+pad>bounds.x&&r.y-pad<bounds.y+bounds.height&&r.y+r.height+pad>bounds.y;
  const rooms=geometry.WORLD_ROOMS,floors=geometry.WORLD_FLOORS,corridors=floors.filter(f=>!f.center),edges=geometry.WORLD_WALLS||exposedEdges(floors);
  c.save();c.lineJoin='round';
  // The joined outer rim reads as a single vessel rather than independent room cards.
- c.shadowColor='#02090c';c.shadowBlur=18;c.shadowOffsetY=9;for(const f of floors)polygon(c,outline(f),'#172a34','#071116',27);c.restore();
- for(const f of corridors)floorPaint(c,f,true);for(const r of rooms)floorPaint(c,r);
- walls(c,edges);
+ c.shadowColor='#02090c';c.shadowBlur=18;c.shadowOffsetY=9;for(const f of floors.filter(f=>visible(f)))polygon(c,outline(f),'#172a34','#071116',27);c.restore();
+ for(const f of corridors.filter(f=>visible(f)))floorPaint(c,f,true);for(const r of rooms.filter(r=>visible(r)))floorPaint(c,r);
+ walls(c,edges.filter(e=>visible({x:Math.min(e.a.x,e.b.x),y:Math.min(e.a.y,e.b.y),width:Math.abs(e.b.x-e.a.x),height:Math.abs(e.b.y-e.a.y)})));
  const identities=new Set(rooms.flatMap(r=>[(r.name||'').toUpperCase(),r.id.toUpperCase()]));
- for(const item of geometry.WORLD_DECOR||[])if(item.kind!=='label'||!identities.has(String(item.text).toUpperCase()))detail(c,item);
- for(const prop of geometry.WORLD_OBSTACLES)equipment(c,prop);
+ for(const item of geometry.WORLD_DECOR||[])if((item.kind!=='label'||!identities.has(String(item.text).toUpperCase()))&&visible({x:item.x,y:item.y,width:item.width||80,height:item.height||80},100))detail(c,item);
+ for(const prop of geometry.WORLD_OBSTACLES.filter(p=>visible(p)))equipment(c,prop);
 }
 /** Static art is shared between live/replay scenes; positions, tasks and hidden state never enter this cache. */
-export function drawInterior(c,geometry,{cache=true}={}){
- if(!cache){paint(c,geometry);return;}
+export function drawInterior(c,geometry,{cache=true,bounds}={}){
+ if(!cache||bounds){paint(c,geometry,bounds);return;}
  let layer=layers.get(geometry);
  if(layer===undefined){
   const canvas=globalThis.document?.createElement?.('canvas')||null,ctx=canvas?.getContext?.('2d');

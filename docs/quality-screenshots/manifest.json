@@ -1,0 +1,70 @@
+{
+  "fixture": "Real app/native browser, offline seeded or autonomous DEMO cases; no live provider or deployment",
+  "imagesUnmodified": true,
+  "operator": "Coordinator",
+  "captures": [
+    {
+      "file": "beacon-map.png",
+      "sourceRevision": "f0ea76d6702448a27a891598a2d7512bc0e5ea02",
+      "original": "_artifacts/quality-browser-final-f0ea76d-6NLWB4/desktop-whole-map-fourteen-room-key.png",
+      "sha256": "9c5797f440da77880814895ad7e5c84afa7aeb50f6d6b0f608471e127e9e1efe",
+      "caption": "Original fourteen-room Beacon2 map and numbered room key"
+    },
+    {
+      "file": "beacon-walking.png",
+      "sourceRevision": "f0ea76d6702448a27a891598a2d7512bc0e5ea02",
+      "original": "_artifacts/quality-browser-final-f0ea76d-6NLWB4/desktop-walking.png",
+      "sha256": "501c8faa83fbd1971577a09ea1ba88aa0908b1238a252e8d9574e964c7e77e4b",
+      "caption": "Actual keyboard walking in the Beacon world"
+    },
+    {
+      "file": "glyph-inspection-mobile.png",
+      "sourceRevision": "f0ea76d6702448a27a891598a2d7512bc0e5ea02",
+      "original": "_artifacts/quality-browser-final-f0ea76d-6NLWB4/watch0-glyph-grid-390x844.png",
+      "sha256": "d356142935e21bbf5bb15462cfbad816df094c8205eb43cad081f8fafcb7a519",
+      "caption": "Owner-only glyph puzzle at390px"
+    },
+    {
+      "file": "pressure-valves.png",
+      "sourceRevision": "f0ea76d6702448a27a891598a2d7512bc0e5ea02",
+      "original": "_artifacts/quality-browser-final-f0ea76d-6NLWB4/watch1-manifolds-open.png",
+      "sha256": "3e168008300e90768d854c86be50df945472abf0667d994270dc4f75caed3ada",
+      "caption": "Generated authoritative pressure-order puzzle"
+    },
+    {
+      "file": "council-mobile.png",
+      "sourceRevision": "f0ea76d6702448a27a891598a2d7512bc0e5ea02",
+      "original": "_artifacts/quality-browser-final-f0ea76d-6NLWB4/council-discussion-320x740.png",
+      "sha256": "8917c8a6c743f7f49ad89b31b3626bd9f0b814d01762865df6ea37ef539e1f57",
+      "caption": "320px council scrolled to composer, fixed readable heading/timer"
+    },
+    {
+      "file": "ghost-controls-mobile.png",
+      "sourceRevision": "f0ea76d6702448a27a891598a2d7512bc0e5ea02",
+      "original": "_artifacts/quality-browser-final-f0ea76d-6NLWB4/mobile-crew-ghost-world.png",
+      "sha256": "eb46fbb68f43d54d4f36d473f284a065f24be726cf78ba5c6e187b9fb1cb90e2",
+      "caption": "Ghost task controls and collapsed private-chat dock"
+    },
+    {
+      "file": "fallen-chat-mobile.png",
+      "sourceRevision": "f0ea76d6702448a27a891598a2d7512bc0e5ea02",
+      "original": "_artifacts/quality-browser-final-f0ea76d-6NLWB4/mobile-private-fallen-chat.png",
+      "sha256": "3843a72a72d765872fe0967a66998bf5612ee6c15bc479d5c3baa6bf629fc350",
+      "caption": "Actual private fallen-message acknowledgement"
+    },
+    {
+      "file": "spatial-replay.png",
+      "sourceRevision": "f0ea76d6702448a27a891598a2d7512bc0e5ea02",
+      "original": "_artifacts/quality-browser-final-f0ea76d-6NLWB4/autonomous-spectator-role-revealed-replay.png",
+      "sha256": "e0df079be880e032ff3ad2d56e47c9dc76d90f1f7f183dbef5e0490ed23a93db",
+      "caption": "Actual all-AI outcome and role-revealed spatial replay"
+    },
+    {
+      "file": "annex-map.png",
+      "sourceRevision": "4911f170fafb23cc6d9172e6c7ccc3ed2c878aff",
+      "original": "_artifacts/tactical-browser-FQaqgR/stormbreak-annex-crew-01b-overview.png",
+      "sha256": "afc470d3f4fe500d3b23f3a6be9816f77c05d5bae2a33e9cdde47c236630d0aa",
+      "caption": "Original Stormbreak Annex1 from the two-map tactical fixture"
+    }
+  ]
+}

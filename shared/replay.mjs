@@ -3,11 +3,13 @@ import {CAPTCHA_KINDS} from './captcha.mjs';
 /** Versioned, bounded postgame recording contract. Never a live player view. */
 export const REPLAY_VERSION=1;
 export const REPLAY_MAP='lantern-wake-v1';
-export const REPLAY_LIMITS=Object.freeze({events:12000,bytes:2*1024*1024,checkpoints:14,interval:1024,route:128});
+import {REPLAY_LIMITS} from './replay-common.mjs';
+export {REPLAY_LIMITS} from './replay-common.mjs';
+import {validateMappedReplayHistory,validateMappedReplayMetadata} from './replay-v2.mjs';
 const object=v=>v!==null&&typeof v==='object'&&!Array.isArray(v);
 const time=n=>Number.isFinite(n)&&n>=0&&n<=Number.MAX_SAFE_INTEGER;
 const id=s=>typeof s==='string'&&/^[A-Za-z0-9:_-]{1,100}$/.test(s);
-const player=s=>/^p[1-6]$/.test(s);
+const player=s=>typeof s==='string'&&/^p[1-6]$/.test(s);
 const originalKinds=['wires','tuning','sequence','pressure','repair'];
 const allKinds=[...originalKinds,...CAPTCHA_KINDS];
 const totals={wires:3,tuning:1,sequence:4,pressure:2,repair:4,glyphs:3,count:2,order:4,rotate:3,oddity:2,code:1};
@@ -32,6 +34,7 @@ export function validReplayEffect(e,map=REPLAY_MAP,mapRevision=1){
 export function validateReplayAnchor(a,map=REPLAY_MAP,mapRevision=1){
  const {room,point}=validators(map,mapRevision);
  if(!keys(a,['at','sequence','phase','players','bodies','sabotage','meeting','outcome','features','effects'])||!time(a.at)||!Number.isSafeInteger(a.sequence)||a.sequence<0||!['roam','discussion','voting','ended','paused'].includes(a.phase)||!bounded(a.players,6)||a.players.length!==6||new Set(a.players.map(p=>p?.id)).size!==6)reject();
+ const actorIds=new Set(a.players.map(p=>p.id)),actor=id=>player(id)&&actorIds.has(id);
  if(a.features!=null&&(!keys(a.features,['version','deathPolicy','abilities'])||a.features.version!==1||!['transfer','ghost-tasks'].includes(a.features.deathPolicy)||typeof a.features.abilities!=='boolean'))reject();
  if(a.effects!==undefined&&(!bounded(a.effects,2)||a.effects.some(e=>!validReplayEffect(e,map,mapRevision)||e.createdAt>a.at||e.expiresAt<=a.at)||a.effects.length&&(!a.features?.abilities||a.phase!=='roam')))reject();
  // Optional for existing version-1 recordings; new terminal checkpoints retain it.
@@ -46,16 +49,17 @@ export function validateReplayAnchor(a,map=REPLAY_MAP,mapRevision=1){
   if(!keys(p,['id','role','alive','roomId','position','tasks','route','ability'])||!player(p.id)||!['crew','saboteur'].includes(p.role)||typeof p.alive!=='boolean'||!room(p.roomId)||!point(p.position)||!bounded(p.tasks,100)||!bounded(p.route,REPLAY_LIMITS.route)||p.route.some(q=>!point(q)))reject();
   if(p.ability!==undefined&&(!a.features?.abilities||!keys(p.ability,['type','readyAt'])||!['ward','echo'].includes(p.ability.type)||!time(p.ability.readyAt)))reject();
   tasks+=p.tasks.length;
-  for(const t of p.tasks)if(!keys(t,['id','roomId','label','completed','progress','kind'])||!id(t.id)||!room(t.roomId)||typeof t.label!=='string'||t.label.length>200||typeof t.completed!=='boolean'||t.kind!==undefined&&!allKinds.includes(t.kind)||t.progress!==undefined&&(!validReplayTaskProgress(t.progress)||(t.kind!==undefined?(t.progress.v!==2||t.progress.kind!==t.kind):t.progress.v!==1)))reject();
+  for(const t of p.tasks)if(!keys(t,['id','roomId','label','completed','progress','kind','taskKind'])||!id(t.id)||!room(t.roomId)||typeof t.label!=='string'||t.label.length>200||typeof t.completed!=='boolean'||t.kind!==undefined&&t.kind!=='relay'&&!allKinds.includes(t.kind)||t.taskKind!==undefined&&!originalKinds.includes(t.taskKind)||t.progress!==undefined&&(!validReplayTaskProgress(t.progress)||(t.kind!==undefined&&t.kind!=='relay'?(t.progress.v!==2||t.progress.kind!==t.kind):t.progress.v!==1)))reject();
  }
- if(tasks>100||a.players.filter(p=>p.role==='saboteur').length!==1||!bounded(a.bodies,6))reject();
- for(const b of a.bodies)if(!keys(b,['id','playerId','roomId','position','at','reported'])||!id(b.id)||!player(b.playerId)||!room(b.roomId)||!point(b.position)||!time(b.at)||b.at>a.at||typeof b.reported!=='boolean')reject();
+ const hostile=a.players.filter(p=>p.role==='saboteur').length;if(tasks>100||hostile!==1||!bounded(a.bodies,6)||new Set(a.bodies.map(b=>b?.playerId)).size!==a.bodies.length)reject();
+ for(const b of a.bodies)if(!keys(b,['id','playerId','roomId','position','at','reported'])||!id(b.id)||!actor(b.playerId)||!room(b.roomId)||!point(b.position)||!time(b.at)||b.at>a.at||typeof b.reported!=='boolean')reject();
  if(a.sabotage!==null&&(!keys(a.sabotage,['active','roomId','deadlineAt','repairsCompleted','repairsRequired'])||!room(a.sabotage.roomId)||typeof a.sabotage.active!=='boolean'||!time(a.sabotage.deadlineAt)||!Number.isInteger(a.sabotage.repairsCompleted)||a.sabotage.repairsCompleted<0||a.sabotage.repairsCompleted>6||a.sabotage.repairsRequired!==2))reject();
- if(a.meeting!==null){const m=a.meeting;if(!keys(m,['id','votes','eligibleVoters','tallied'])||!id(m.id)||!bounded(m.votes,6)||!bounded(m.eligibleVoters,6)||m.eligibleVoters.some(p=>!player(p))||m.votes.some(v=>!keys(v,['playerId','targetId'])||!player(v.playerId)||!(v.targetId==='skip'||player(v.targetId)))||typeof m.tallied!=='boolean')reject();}
+ if(a.meeting!==null){const m=a.meeting;if(!keys(m,['id','votes','eligibleVoters','tallied'])||!id(m.id)||!bounded(m.votes,12)||!bounded(m.eligibleVoters,12)||new Set(m.eligibleVoters).size!==m.eligibleVoters.length||new Set(m.votes.map(v=>v?.playerId)).size!==m.votes.length||m.eligibleVoters.some(p=>!actor(p))||m.votes.some(v=>!keys(v,['playerId','targetId'])||!actor(v.playerId)||!(v.targetId==='skip'||actor(v.targetId)))||typeof m.tallied!=='boolean')reject();}
  if(JSON.stringify(a).length>65536)reject();
  return a;
 }
 export function validateReplayHistory(h){
+ if(h?.version===2)return validateMappedReplayHistory(h);
  if(!keys(h,['version','map','mapRevision','checkpoints'])||h.version!==REPLAY_VERSION||typeof h.map!=='string'||!bounded(h.checkpoints,REPLAY_LIMITS.checkpoints)||!h.checkpoints.length)reject();
  if(Object.hasOwn(h,'mapRevision')&&![1,2].includes(h.mapRevision))reject();
  replayGeometry(h.map,h.mapRevision??1);
@@ -63,6 +67,7 @@ export function validateReplayHistory(h){
  return h;
 }
 export function validateReplayMetadata(m,matchId){
+ if(m?.version===2)return validateMappedReplayMetadata(m,matchId);
  if(!keys(m,['version','map','mapRevision','matchId','coverage','anchor'])||m.version!==REPLAY_VERSION||typeof m.map!=='string'||m.matchId!==matchId||!id(m.matchId)||!keys(m.coverage,['startedAt','from','through','partial']))reject();
  if(Object.hasOwn(m,'mapRevision')&&![1,2].includes(m.mapRevision))reject();
  replayGeometry(m.map,m.mapRevision??1);

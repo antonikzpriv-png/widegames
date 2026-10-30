@@ -13,6 +13,20 @@
 .lw-world h1,.lw-world h2,.lw-world h3{font-family:system-ui,sans-serif;font-weight:950}.lw-world .lw-secondary,.lw-world .lw-close,.lw-world .lw-vote-button{color:#f8ecd0}.lw-world .lw-replay-log summary{color:#254e5b}.lw-world .lw-feedback{z-index:35}.lw-ai-notice{font-size:10px;color:#f1d49c;margin-top:10px!important;max-width:240px;overflow-wrap:anywhere}.lw-council-heading h1{font-size:clamp(23px,2.7vw,35px)}
 @media(max-width:700px){.lw-ai-notice{font-size:9px}.lw-world[data-critical=true] .lw-assignment{max-height:185px;overflow:auto}.lw-world[data-critical=true] .lw-critical{top:300px}.lw-world[data-critical=true] .lw-scene-overlay,.lw-world[data-critical=true] .lw-scene-overlay:has(.lw-task-modal:not([hidden])),.lw-world[data-critical=true] .lw-scene-overlay:has(.lw-confirm:not([hidden])){padding-top:370px}.lw-world[data-critical=true] .lw-role-scene{padding-top:365px}.lw-council-heading h1{font-size:22px}}
 
+/* Original, owner-projected station equipment. Keep native controls/drafts stable. */
+.lw-world .lw-station-modal{max-width:660px}.lw-world .lw-station-equipment{display:grid;gap:12px;padding:18px;background:#254a5c;border:3px solid #17394c;border-radius:14px;color:#f4ebcb;max-height:46dvh;overflow:auto;overscroll-behavior:contain}
+.lw-world .lw-station-equipment label{font-size:13px}.lw-world .lw-station-control{min-width:0;min-height:48px;padding:10px;border:2px solid #b7cec0;border-radius:9px;background:#183a4e;color:#f9edc9;font:800 14px/1.3 system-ui,sans-serif;touch-action:manipulation}
+.lw-world .lw-station-control:hover:not(:disabled){background:#356375}.lw-world .lw-station-control[aria-pressed=true]{outline:3px solid #ffdc87;outline-offset:-5px;background:#3b6974}.lw-world .lw-station-control[data-confirmed=true]{background:#486f62}
+.lw-world .lw-station-circuit{grid-template-columns:1fr 1fr}.lw-world .lw-station-column{display:grid;gap:10px}.lw-world .lw-station-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.lw-world .lw-station-glyphs .lw-station-control{min-height:65px}.lw-world .lw-station-order,.lw-world .lw-station-value{font:900 24px system-ui,sans-serif;color:#ffe3a0;text-align:center}.lw-world .lw-station-slider{width:100%;min-height:44px;accent-color:#efc87b}
+.lw-world .lw-station-progress{width:100%;height:14px;margin-top:12px;accent-color:#478a73}.lw-world .lw-station-caption{font-size:11px;color:#46616a}.lw-world .lw-station-rotors{grid-template-columns:repeat(3,minmax(0,1fr))}.lw-world .lw-station-rotor{display:grid;align-content:start;gap:10px}.lw-world .lw-station-direction{width:100%;min-height:44px;font:700 16px system-ui,sans-serif;border:2px solid #a7c8bd;border-radius:8px;background:#f9eccb;color:#234958}
+@media(max-width:700px){.lw-world .lw-station-equipment{padding:12px;gap:10px;max-height:43dvh}.lw-world .lw-station-control{font-size:12px;padding:8px;min-height:48px}.lw-world .lw-station-rotors{grid-template-columns:1fr}.lw-world .lw-station-rotor{grid-template-columns:1fr 1fr}.lw-world .lw-station-rotor label{grid-column:1/-1}.lw-world .lw-station-caption{font-size:10px}}
+@media(max-height:540px) and (min-width:560px){.lw-world .lw-station-equipment{max-height:38dvh;padding:10px}.lw-world .lw-station-caption{font-size:9px}}
+
+/* A numbered room key keeps14-room maps readable at phone scale. */
+.lw-world .lw-map-pane{width:min(620px,calc(100vw - 40px));height:auto;max-height:calc(100dvh - 260px);overflow:auto;overscroll-behavior:contain}.lw-world .lw-mini-map{height:340px}.lw-world .lw-map-legend{margin:10px 0 0;padding-left:26px;display:grid;grid-template-columns:1fr 1fr;gap:5px 18px;font-size:12px;color:#e3ead5}.lw-world .lw-map-legend li{padding-left:2px;overflow-wrap:anywhere}
+@media(max-width:700px){.lw-world .lw-map-pane{right:12px;top:153px;width:calc(100vw - 24px);max-height:calc(100dvh - 225px)}.lw-world .lw-mini-map{height:280px}.lw-world .lw-map-legend{font-size:11px;gap:6px 14px}}
+@media(max-height:540px) and (min-width:560px){.lw-world .lw-map-pane{top:102px;bottom:72px;max-height:calc(100dvh - 174px)}.lw-world .lw-mini-map{height:190px}}
 /* Postgame playback and safe live AI observation share the illustrated map. */
 .lw-results:has(.lw-replay:not([hidden])){width:min(1260px,100%)}
 .lw-replay{max-width:1200px;min-width:0}
@@ -44,12 +58,30 @@
 .lw-actions {flex-wrap:wrap}
 @media(max-width:600px){.lw-ghost-chat {bottom:95px;right:8px;width:210px;max-height:28vh}.lw-ghost-chat h2{font-size:12px}.lw-ghost-chat p{margin:4px 0}.lw-presets{font-size:12px;gap:5px}.lw-ability-info{max-width:160px}}
 
+/* Equipment stays below persistent status/Exit; scroll the panel instead of
+   letting a tall glyph grid cover its close control at narrow phone heights. */
+@media(max-width:700px),(max-height:540px) and (min-width:560px){
+ .lw-world .lw-scene-overlay:has(.lw-task-modal:not([hidden])){display:block;padding-top:105px;padding-bottom:16px;box-sizing:border-box}
+ .lw-world .lw-scene-overlay>.lw-task-modal{box-sizing:border-box;min-height:0;max-height:calc(100dvh - 181px);overflow:auto;overscroll-behavior:contain;margin:0 auto;flex-shrink:0}
+ .lw-world .lw-task-modal .lw-modal-title{position:sticky;top:0;z-index:2;background:#e9dfbd;padding-block:4px}
+ .lw-world[data-critical=true] .lw-scene-overlay:has(.lw-task-modal:not([hidden])){padding-top:370px}
+ .lw-world[data-critical=true] .lw-scene-overlay>.lw-task-modal{max-height:calc(100dvh - 446px)}
+}
+
+/* Expanded-map jobs remain readable without covering the spatial stage. The
+   existing numbered map key/scrolling panel scales to every catalog room. */
+.lw-world .lw-tasks{max-height:min(27vh,220px);overflow-y:auto;overscroll-behavior:contain}
+.lw-world select:focus-visible{outline:3px solid #fff1a9;outline-offset:4px}
+.lw-world .lw-lobby{overflow-y:auto;overscroll-behavior:contain;pointer-events:auto}
+@media(max-width:700px){.lw-world .lw-tasks{max-height:15vh}}
+@media(max-height:540px) and (min-width:560px){.lw-world .lw-tasks{max-height:20vh}}
+
 /* Spectator controls stay local to the viewport and leave the map available. */
 .lw-world{contain:layout paint}
 .lw-world[data-spectator=true] .lw-assignment{display:none}
 .lw-world[data-spectator=true] .lw-world-canvas{cursor:crosshair}
-.lw-world[data-spectator=true] .lw-map-pane{z-index:48}
-.lw-world[data-spectator=true] .lw-map-toggle{z-index:49}
+.lw-world[data-spectator=true][data-phase=roam] .lw-map-pane{z-index:48}
+.lw-world[data-spectator=true][data-phase=roam] .lw-map-toggle{z-index:49}
 .lw-world select:focus-visible{outline:3px solid #fff1a9;outline-offset:4px}
 .lw-spectator,.lw-inspector{
   contain:layout style;
@@ -67,9 +99,9 @@
   top:auto;
   right:auto;
   left:22px;
-  bottom:22px;
-  width:min(332px,calc(100% - 44px));
-  max-height:calc(100% - 150px);
+  bottom:88px;
+  width:min(332px,calc(50% - 32px));
+  max-height:calc(100% - 280px);
   padding:13px;
   overflow:auto;
   gap:9px;
@@ -85,8 +117,9 @@
   z-index:47;
   top:192px;
   right:22px;
-  width:min(344px,calc(100% - 44px));
-  max-height:calc(100% - 216px);
+  width:min(344px,calc(50% - 32px));
+  bottom:220px;
+  max-height:none;
   overflow:auto;
   scrollbar-gutter:stable;
   padding:15px;
@@ -144,30 +177,33 @@
   .lw-spectator button[aria-pressed=true]{outline:2px solid Highlight;outline-offset:2px}
 }
 
-/* Map choices retain native keyboard/touch controls; only the host fixes a watch's map. */
-.lw-world .lw-map-name{display:block;margin-top:2px;font-size:10px;letter-spacing:1px;font-weight:750;color:#bddbd0}
-.lw-world .lw-map-label{font-weight:850}.lw-world .lw-map-select{max-width:min(320px,60vw);font:inherit;min-height:38px}
-.lw-world .lw-map-description{max-width:560px;text-align:center;font-size:12px;color:#d7e7df;line-height:1.45}
-.lw-world select:focus-visible{outline:3px solid #fff1a9;outline-offset:4px}
-.lw-world .lw-tasks{max-height:min(27vh,220px);overflow-y:auto;overscroll-behavior:contain}
-.lw-world .lw-map-room-list{display:flex;flex-wrap:wrap;gap:4px 9px;max-height:78px;overflow-y:auto;list-style:none;padding:7px 0 0;margin:0;font-size:10px;color:#d9e8dd}
-.lw-world .lw-map-room-list li{border-bottom:1px solid #92b5af44;padding-bottom:2px}
-.lw-world:not([data-map=beacon]) .lw-map-pane{width:min(480px,calc(100% - 28px));height:420px}
-.lw-world:not([data-map=beacon]) .lw-mini-map{height:260px}
-@media(max-width:700px){.lw-world .lw-map-name{font-size:8px;letter-spacing:.4px}.lw-world .lw-map-description{font-size:10px;max-width:290px}.lw-world .lw-map-select{font-size:13px;min-height:36px}.lw-world .lw-tasks{max-height:15vh}.lw-world:not([data-map=beacon]) .lw-map-pane{right:10px;max-height:calc(100% - 200px);overflow-y:auto}.lw-world:not([data-map=beacon]) .lw-mini-map{height:230px}}
-@media(max-height:540px) and (min-width:560px){.lw-world .lw-map-description{font-size:10px;max-width:480px}.lw-world .lw-presets{gap:4px;margin:5px auto}.lw-world .lw-map-select{min-height:30px;padding:4px}.lw-world:not([data-map=beacon]) .lw-mini-map{height:150px}.lw-world:not([data-map=beacon]) .lw-map-pane{height:auto;max-height:calc(100% - 154px);overflow-y:auto}.lw-world .lw-tasks{max-height:20vh}}
-.lw-world .lw-lobby{overflow-y:auto;overscroll-behavior:contain;pointer-events:auto;padding:0 4px 8px}
-.lw-world .lw-presets{pointer-events:auto;flex-shrink:0}
-/* On narrow decks the AI mode already occupies the second header line. */
-@media(max-width:700px){.lw-world .lw-map-name{position:absolute;top:49px;left:12px;margin:0;line-height:11px;max-width:calc(100% - 120px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}}
-@media(max-width:700px) and (max-height:540px){.lw-world .lw-map-name{top:37px;left:145px;max-width:calc(100% - 260px)}}
 
-/* Revision-two deck plans have room to show the authored interiors. */
-.lw-map-close{position:absolute;right:14px;top:10px;min-height:36px;padding:5px 11px;border:1px solid #9fb9b6;border-radius:6px;background:#173340;color:#e8eee3;font-size:11px}
-.lw-world[data-map-revision="2"] .lw-map-pane{inset:90px 22px 22px;width:auto;height:auto;max-height:none;display:grid;grid-template-rows:auto minmax(0,1fr) auto auto;gap:8px;padding:18px 22px;background:#101b21f8;border:2px solid #9eaaa3;border-radius:12px;box-shadow:0 20px 80px #000a;z-index:10;overflow:hidden}
-.lw-world[data-map-revision="2"] .lw-map-pane h2{font-size:19px;letter-spacing:2px;color:#f1ead7;min-height:28px;padding-right:130px}
-.lw-world[data-map-revision="2"] .lw-mini-map{width:100%;height:100%;min-height:0;object-fit:contain}
-.lw-world[data-map-revision="2"] .lw-map-room-list{max-height:42px;justify-content:center;font-size:10px;padding:2px}
-.lw-world[data-map-revision="2"] .lw-map-pane>p{text-align:center;color:#b4c8c3;font-size:11px}
-@media(max-width:700px){.lw-world[data-map-revision="2"] .lw-map-pane{inset:75px 8px 12px;padding:12px 8px;gap:5px}.lw-world[data-map-revision="2"] .lw-map-pane h2{font-size:12px;letter-spacing:.6px;padding-right:90px;min-height:40px}.lw-map-close{right:8px;top:8px;min-height:36px;font-size:10px;padding:5px 8px}.lw-world[data-map-revision="2"] .lw-map-room-list{max-height:60px;font-size:9px}.lw-world[data-map-revision="2"] .lw-map-pane>p{font-size:9px}}
-@media(max-height:540px) and (min-width:560px){.lw-world[data-map-revision="2"] .lw-map-pane{inset:60px 10px 8px;padding:10px 12px;gap:2px}.lw-world[data-map-revision="2"] .lw-map-pane h2{font-size:12px;min-height:24px}.lw-world[data-map-revision="2"] .lw-map-room-list{display:none}}
+/* Inspection yields to council/equipment and keeps the quality mobile rail and
+   joystick unobstructed. Close remains recoverable in a bounded scrolling pane. */
+.lw-inspector-head{position:sticky;top:0;z-index:1;background:#123247}
+@media(max-width:700px){
+ .lw-world .lw-inspector{top:160px;bottom:300px;max-height:none;width:auto;min-height:0}
+ .lw-world[data-inspector=true] .lw-spectator{display:none}
+}
+@media(max-height:540px) and (min-width:560px){
+ .lw-world .lw-spectator{left:126px;top:104px;bottom:72px;max-height:none;width:270px}
+ .lw-world .lw-inspector{top:110px;right:14px;bottom:72px;left:auto;width:310px;max-height:none;min-height:0}
+}
+
+/* Keep the authoritative critical timer in its reserved band during inspection. */
+.lw-world[data-spectator=true][data-critical=true] .lw-critical{max-height:104px}
+.lw-world[data-spectator=true][data-critical=true] .lw-critical>span:last-child{max-height:48px;overflow:auto;overscroll-behavior:contain}
+@media(max-width:700px){
+ .lw-world[data-spectator=true][data-critical=true] .lw-critical{top:76px}
+ .lw-world[data-spectator=true][data-critical=true] .lw-spectator{top:188px}
+ .lw-world[data-spectator=true][data-critical=true] .lw-map-toggle{top:188px}
+ .lw-world[data-spectator=true][data-critical=true] .lw-inspector{top:236px}
+}
+@media(max-height:540px) and (min-width:560px){
+ .lw-world[data-spectator=true][data-critical=true] .lw-critical{top:64px;max-height:72px}
+ .lw-world[data-spectator=true][data-critical=true] .lw-critical>span:last-child{max-height:28px}
+ .lw-world[data-spectator=true][data-critical=true] .lw-spectator,.lw-world[data-spectator=true][data-critical=true] .lw-inspector{top:144px}
+ .lw-world[data-spectator=true][data-critical=true] .lw-map-toggle{top:102px}
+}
+
+.lw-world[data-spectator=true] .lw-map-toggle{max-width:76px;min-height:44px}

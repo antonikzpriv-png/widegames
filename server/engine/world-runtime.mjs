@@ -1,4 +1,4 @@
-import {canWorldAct} from '../../shared/features.mjs';
+import {canWorldAct} from './features.mjs';
 /** Continuous world state is private. Geometry is supplied by the shared map. */
 export function worldRuntime(geometry) {
   const {WORLD,worldRoomAt,isWalkable,moveWorldPoint,findWorldPath,canSeeWorldPoint,worldSpawn,distance,WORLD_STATIONS,WORLD_BELL}=geometry;
