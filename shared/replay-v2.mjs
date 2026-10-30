@@ -6,6 +6,12 @@ const object=v=>v!==null&&typeof v==='object'&&!Array.isArray(v),keys=(o,a)=>obj
 const time=n=>Number.isFinite(n)&&n>=0&&n<=Number.MAX_SAFE_INTEGER,id=s=>typeof s==='string'&&/^[A-Za-z0-9:_-]{1,100}$/.test(s),player=s=>typeof s==='string'&&/^[A-Za-z][A-Za-z0-9_-]{0,31}$/.test(s)&&!['constructor','prototype','__proto__'].includes(s),bounded=(a,n)=>Array.isArray(a)&&a.length<=n;
 const check=v=>{if(!v)throw new Error('Invalid map-aware replay metadata');};
 export function replayMap(ref){check(keys(ref,['id','version'])&&Object.keys(ref).length===2);const map=getMap(ref);check(map.tactical!==false);return map;}
+export function validMappedReplayEffect(e,ref,identities){
+ let map;try{map=replayMap(ref);}catch{return false;}
+ if(!Array.isArray(identities)||identities.length<4||identities.length>12||identities.some(id=>!player(id))||new Set(identities).size!==identities.length)return false;
+ const actor=id=>identities.includes(id),point=p=>keys(p,['x','y'])&&Object.keys(p).length===2&&Number.isFinite(p.x)&&Number.isFinite(p.y)&&map.geometry.isWalkable(p);
+ return keys(e,['id','kind','playerId','createdAt','expiresAt',e?.kind==='ward'?'targetId':'position'])&&id(e.id)&&['ward','echo'].includes(e.kind)&&actor(e.playerId)&&time(e.createdAt)&&time(e.expiresAt)&&e.expiresAt>e.createdAt&&(e.kind==='ward'?actor(e.targetId):point(e.position));
+}
 export function validateMappedReplayAnchor(a,ref){
  const map=replayMap(ref),g=map.geometry,room=r=>map.roomLayout.some(x=>x.id===r),point=p=>keys(p,['x','y'])&&Object.keys(p).length===2&&Number.isFinite(p.x)&&Number.isFinite(p.y)&&g.isWalkable(p);
  check(keys(a,['at','sequence','phase','players','bodies','sabotage','meeting','outcome','features','effects'])&&time(a.at)&&Number.isSafeInteger(a.sequence)&&a.sequence>=0&&['roam','discussion','voting','ended','paused'].includes(a.phase)&&bounded(a.players,12)&&a.players.length>=4&&new Set(a.players.map(p=>p?.id)).size===a.players.length);
@@ -26,7 +32,7 @@ export function validateMappedReplayAnchor(a,ref){
  for(const b of a.bodies)check(keys(b,['id','playerId','roomId','position','at','reported'])&&b.id==='body-'+b.playerId&&actor(b.playerId)&&room(b.roomId)&&point(b.position)&&time(b.at)&&b.at<=a.at&&typeof b.reported==='boolean');
  if(a.sabotage!==null)check(keys(a.sabotage,['active','roomId','deadlineAt','repairsCompleted','repairsRequired'])&&room(a.sabotage.roomId)&&typeof a.sabotage.active==='boolean'&&time(a.sabotage.deadlineAt)&&Number.isInteger(a.sabotage.repairsCompleted)&&a.sabotage.repairsCompleted>=0&&a.sabotage.repairsCompleted<=12&&a.sabotage.repairsRequired===2);
  if(a.meeting!==null){const m=a.meeting;check(keys(m,['id','votes','eligibleVoters','tallied'])&&id(m.id)&&bounded(m.votes,12)&&bounded(m.eligibleVoters,12)&&new Set(m.eligibleVoters).size===m.eligibleVoters.length&&new Set(m.votes.map(v=>v?.playerId)).size===m.votes.length&&m.eligibleVoters.every(actor)&&m.votes.every(v=>keys(v,['playerId','targetId'])&&actor(v.playerId)&&(v.targetId==='skip'||actor(v.targetId)))&&typeof m.tallied==='boolean');}
- if(a.effects!==undefined){check(bounded(a.effects,2)&&(!a.effects.length||a.features?.abilities&&a.phase==='roam'));for(const e of a.effects)check(keys(e,['id','kind','playerId','createdAt','expiresAt',e?.kind==='ward'?'targetId':'position'])&&id(e.id)&&['ward','echo'].includes(e.kind)&&actor(e.playerId)&&time(e.createdAt)&&time(e.expiresAt)&&e.createdAt<=a.at&&e.expiresAt>a.at&&(e.kind==='ward'?actor(e.targetId):point(e.position)));}
+ if(a.effects!==undefined){check(bounded(a.effects,2)&&(!a.effects.length||a.features?.abilities&&a.phase==='roam'));for(const e of a.effects)check(validMappedReplayEffect(e,ref,[...ids])&&e.createdAt<=a.at&&e.expiresAt>a.at);}
  check(JSON.stringify(a).length<=256*1024);return a;
 }
 export function validateMappedReplayHistory(h){

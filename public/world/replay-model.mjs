@@ -1,3 +1,4 @@
+import {validMappedReplayEffect} from '../../shared/replay-v2.mjs';
 import {CHARACTERS} from '../../shared/contracts.mjs';
 import {getMap} from '../../shared/maps/index.mjs';
 import {validateStationChallenge,stationComplete} from '../../shared/station-challenges.mjs';
@@ -114,7 +115,7 @@ function project(r,at){
    if(e.type==='task_progress'&&typeof e.completed==='boolean'){const task=p?.tasks.find(t=>t.id===e.taskId);if(task)task.completed=e.completed;}
    if(e.type==='effect_started'){
     const effect={id:e.effectId??e.id,kind:e.kind,playerId:e.playerId,createdAt:e.createdAt,expiresAt:e.expiresAt,...(e.kind==='ward'?{targetId:e.targetId}:{position:copy(e.position)})};
-    if(validReplayEffect(effect,metadata?.version===1?metadata.map:map.taskProtocol==='taskStep'?map.id:undefined)){s.effects=s.effects.filter(f=>f.id!==effect.id);s.effects.push(effect);}
+    if(metadata?.version===2?validMappedReplayEffect(effect,metadata.map,roster.map(p=>p.id)):validReplayEffect(effect,metadata?.version===1?metadata.map:map.taskProtocol==='taskStep'?map.id:undefined)){s.effects=s.effects.filter(f=>f.id!==effect.id);s.effects.push(effect);}
    }
    if(e.type==='effect_ended')s.effects=s.effects.filter(f=>f.id!==e.effectId);
    if(e.type==='tasks_reassigned'){interrupt(p);for(const assignment of e.assignments||[]){const task=p?.tasks.find(t=>t.id===assignment.taskId),owner=get(assignment.playerId);if(task&&owner){p.tasks=p.tasks.filter(t=>t!==task);owner.tasks.push(task);}}}
