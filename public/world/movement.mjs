@@ -65,7 +65,7 @@ export class MotionTrack{
    if(this.reveal&&['crew','saboteur'].includes(p.role))player.role=p.role;
    if(old&&distance(old.to,to)<.001){old.receivedAt=at;old.player=player;continue;}
    const history=old?.history??[];
-   if(old&&old.receivedAt>history.at(-1).at)history.push({at:old.receivedAt,position:copy(old.to),interpolate:true});
+   if(old&&history.length&&old.receivedAt>history.at(-1).at)history.push({at:old.receivedAt,position:copy(old.to),interpolate:true});
    const replace=history.length&&at<=history.at(-1).at,previous=history.at(replace?-2:-1)?.position;
    const entry={at,position:copy(to),interpolate:!previous||this.segment(previous,to)};
    if(replace)history[history.length-1]=entry;else history.push(entry);while(history.length>8)history.shift();
