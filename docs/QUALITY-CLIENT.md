@@ -181,3 +181,39 @@ $env:QUALITY_CLIENT_REPLAY2_ROOT='D:/Widegames-work/ship-quality-main-ui-2026103
 node --test tests/quality-client-main-replay2.test.mjs
 # Expected at exact Core1c:11 pass /2 fail. Keep both positive assertions for Core closure.
 ```
+
+
+## Final owner UI self-check at manager f9b3215
+
+Exact source `f9b32151e4dfab4f2525cee067a9859cd1a27dff`, archived from the repository into `_artifacts/final-ui-selfcheck-f9b3215/runtime`. This is the UI author's own product self-check, not independent review/production approval. No source overlay or dependency substitution is used in this run. Manifest records every archived file; full post-run verification found no changed bytes. Root incorporates61 plus the Core ghost descriptor and permission-validated Ward/Echo fixes, including self-Ward-first. Historical exact1c red results above remain history and have not been rewritten as failures at f9.
+
+Requested unchanged checks ran ONCE together against only that frozen archive, without runtime overrides:13 replay2 +14 main legacy replay +13 lifecycle/input audit =40 pass /0 fail /0 skip. Both owned test files equal the frozen root versions after Git newline normalization; main legacy files are the unchanged source assertions. Evidence requested-checks.log/source-manifest.json/closure-receipt.json contains exact sources/results. These overlap manager's earlier reported checks, so this is not an additional independent41-case/full-match qualification. Metadata2 both maps/custom rosters, station evidence, actual paused/live privacy, actual ghost station and private message flows, and legacy replay/lifecycle now pass in the real composed root. No Chrome/native server/full suite/provider was used.
+
+### One new reproduced product defect (left for coordinator resolution)
+
+`tests/quality-client-main-ward-selection.test.mjs` adds one focused positive counterexample, run once against that same exact archive:0 pass /1 fail. A real generated Beacon2 match gives the Ward owner p4 an exact permitted descriptor for p2 as well as the first self-Ward descriptor. The visible target selector offers and selects p2. Clicking WARD submits protect{targetId:'p4'}, accepted by the real engine, rather than selected p2. The action handler only honors the selector for non-beacon schemas while beaconContexts chooses the first Ward descriptor. This is a visible selection/action mismatch, not a rejected-permission or simulated HTTP workflow. It was reported promptly; no runtime files were edited under this docs/test-only task.
+
+Concrete correction: build beacon Ward options from exact enabled protect descriptors, synchronize the initial option with the active descriptor (self may remain default), and on activation choose the matching still-enabled descriptor for the selected target. Submit a clone of that descriptor's fields; reject revoked selections rather than guessing a target. Preserve legacy schema2 selection, current request guards and all owner/privacy checks. Keep the positive counterexample unchanged for closure. Evidence ward-selection-counterexample.log preserves actual p4 != p2 failure.
+
+### Guide/source semantics review (root documentation fixes needed)
+
+- README's first duplicate victory/rules paragraph still says all unfinished work transfers and critical repair requires two crew in Engine; remove it or scope it to legacy schema2. The following paragraph correctly describes current two-site repairs and muster redistribution. Its linked docs/QUALITY-VERIFICATION.md is absent at exact f9; add the intended final receipt or correct that link.
+- docs/QUALITY-RULES.md line5 incorrectly limits station inputs to living crew; permitted ghost crew now use the same six station challenges. Its line9 and docs/QUALITY-REFERENCE.md lines15/17 still frame merged ghosts/abilities/strategic mode as unimplemented Group2 seams. State actual optional presets/strategy and retain the default transfer/hybrid distinction.
+- docs/WORLD-TASKS.md's general opening describes five station types; explicitly scope those taskStep/progress instructions to schema2. Normal match5 has four different jobs drawn from six original challenge kinds through taskInteract. README already makes this new/old distinction correctly.
+- docs/GHOST-ABILITIES.md task-transfer/protocol prose is the old schema2 account: immediate transfer/five taskStep puzzles. Scope it to legacy2 and add beacon muster versus optional ghost retention, plus current six taskInteract challenges. Its statement that ghost position remains null even after ended conflicts with the actual ended role-revealed projection. Keep the live hidden-position rule and private-chat exclusion, including after end, distinct from ended revealed positions/replay.
+- docs/SPATIAL-REPLAY.md's v1 map-string/six-actor/100-task/64KiB description remains useful as legacy documentation; link/scope the current exact-map v2/custom-roster/station reader to QUALITY-MAIN-REPLAY-CONTRACT.md. Do not silently relabel v2 as the old format.
+
+Source matches14-room Beacon2/eight-room Annex, four distinct room/kind jobs, six challenge kinds and the retained five old progress panels plus three metadata-free legacy puzzles. Optional strategic configuration/controller and truthful STRATEGIC versus HYBRID/DEMO labels remain in actual source; no live provider execution was attempted. Ghost owner presentation deliberately holds only each actual received own position, without prediction/interpolation, while server collision/input authority still applies. That can look less fluid between snapshots; it is a documented presentation limit, not a claim that normal living MotionTrack prediction applies to ghosts.
+
+### Native visual review pending
+
+At the final artifact observation `2026-10-30T09:49:05+01:00`, Reviewer had no final f9 native screenshot/report set in its observed artifact directories. Older911 screenshots and manager's earlier world-browser artifacts are historical and are not substituted for current visual qualification. Desktop/mobile screenshot review remains pending Reviewer final files, preferably after the Ward mismatch is resolved. No new browser was launched. Reviewer owns the Chrome lease; no owned process remains. This receipt does not claim a visual pass or completed native qualification.
+
+```powershell
+$env:TEMP='D:/Widegames-work/temp'; $env:TMP=$env:TEMP
+# Requested unchanged files, run without override variables:
+node --test _artifacts/final-ui-selfcheck-f9b3215/runtime/tests/quality-client-main-replay2.test.mjs _artifacts/final-ui-selfcheck-f9b3215/runtime/tests/spatial-replay-model.test.mjs _artifacts/final-ui-selfcheck-f9b3215/runtime/tests/spatial-replay-lifecycle.test.mjs _artifacts/final-ui-selfcheck-f9b3215/runtime/tests/quality-client-regression-audit.test.mjs
+# New positive counterexample; expected RED at exact f9:
+$env:QUALITY_CLIENT_WARD_ROOT='D:/Widegames-work/ship-quality-main-ui-20261030/_artifacts/final-ui-selfcheck-f9b3215/runtime'
+node --test tests/quality-client-main-ward-selection.test.mjs
+```
