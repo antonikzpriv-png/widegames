@@ -414,3 +414,32 @@ node scripts/quality-browser-check.mjs
 ```
 
 Every final-attempt report (vVlJSk, E6Ft5g,8tFE9j,5Ufzs0,42yuaB,MfWefX) retains sourceStable/driverStable true and confirmed owned browser/server/profile/data cleanup. No final artifact directory contains a cpuprofile; old941/911 profiling and its limitations stay historical. All422 source hashes were independently rechecked after the last browser closed. **The exclusive Chrome lease was explicitly released immediately afterMfWefX cleanup, before this receipt/commit. No further browser launch occurred.** No runtime/other-worktree/main/push/deployment edit or paid call was made. The final disposition is bounded successful regression/outcome evidence plus one concrete mobile ghost UI finding, not blanket approval from prose.
+
+
+## Pending final rerun: harness preparation only (2026-10-30)
+
+No new runtime pin is qualified here. Q-F1 remains open pending the Frontend fix, a complete committed pin and an explicit Chrome handoff. The coordinator retains Chrome; no browser, app service, profile, paid call or performance probe was started this turn. All historical native red and positive evidence remains intact.
+
+Final mode accepts an explicit40-hex QUALITY_BROWSER_PIN without embedding an f9-only whitelist. It must exactly equal the raw manifest revision and name a Git commit. Before app imports, the manifest must enumerate the complete pinned tree; every regular in-root file is checked against its Git blob/mode and SHA256. The executed runner must match that pin's tracked harness after LF/CRLF normalization, while recording raw and normalized hashes separately. Thus the next complete pin can include this harness without a recursive embedded hash. The941/d551 baseline function is text-identical to7429271; the911-only candidate restriction remains intact.
+
+Prepared native additions: discussion and voting each inspect320x740,390x844 and844x390. Actual heading/timer rectangles stay below status/Exit; the scroll body stays inside its panel above the60px rail. Station-closure feedback must have its own band. Every visible Send/textarea/vote control is scrolled and center-hit-tested inside the body; Send/Skip dispatch real touchscreen/mouse clicks. Any displayed critical band is checked separately and recorded conditionally; absence does not qualify critical native coverage. Glyph recovery/scroll controls are unchanged.
+
+The staged ghost case legally brings another living crew keeper into range and selects OTHER Ward first. The authoritative effect must name that keeper, with no self-effect fallback. Actual expiry and legal cooldown precede the existing self-Ward case. The positive Q-F1 USE hit assertion, queued validated NPC elimination, actual ghost capability checks and separate public-observer HTTP/WS privacy fixture remain active. The new fallen dock is explicitly opened before its form is submitted. Two real-controller DEMO outcome/replay watches remain separate from staged actors.
+
+Archive provenance correction: the preserved quality-source-f9b3215 archive is stable against its recorded SHA256 manifest, but the stronger Git-byte gate found370/422 files with only LF-to-CRLF conversion from Windows git archive;52 matched byte-for-byte. All370 were compared to actual blobs. Prior raw-byte wording therefore establishes manifest-byte stability plus recorded Git-source provenance, not literal byte equality to Git objects. This archive-preparation limitation does not erase the historical app evidence or establish a new game defect. Per-file proof is retained in _artifacts/quality-harness-prep-old-archive-eol.json; originals remain untouched.
+
+A separate _artifacts/quality-source-f9b3215-byte-exact was created using git -c core.autocrlf=false archive --format=tar f9b32151e4dfab4f2525cee067a9859cd1a27dff. All422 blobs pass the stronger gate. It was used only for offline guard preparation, with no new native execution. The next archive must pass this byte gate; an old app pin with a different tracked runner correctly fails the provenance guard.
+
+```powershell
+$env:TEMP='D:/Widegames-work/temp'; $env:TMP=$env:TEMP
+$env:npm_config_cache='D:/Widegames-work/npm-cache'
+$env:QUALITY_REVIEW_ROOT=(Resolve-Path '_artifacts/quality-source-f9b3215').Path
+node --test --test-reporter=tap tests/quality-review-browser-helper.test.mjs
+node --check scripts/quality-browser-check.mjs
+node --check tests/quality-review-browser-helper.test.mjs
+git diff --check
+```
+
+Nine helper tests pass, exit0, no skips: the existing three actual-engine station guards plus six harness guard cases. Added miniature Git/rectangle/DOM-shaped fixtures qualify harness behavior only, not Chromium or the pending UI. Receipt _artifacts/quality-harness-prep-helper-nine-tests-tap.txt SHA256 dc1e4b1c19ce6452eda930ddcdda7c726400bf79585cb5aa9cb71a6d1b874f54; actual command/exit in quality-harness-prep-helper-nine-exit.json. Six expected prelaunch rejections (missing/short/mismatched final pin, historical candidate/baseline source mismatch, valid app pin with different tracked harness) plus422-blob positive proof: _artifacts/quality-harness-prep-offline-gates.json SHA256 031bf05db0387c362b5cf2e7f97a75b7ab9c8e5aefc1368ea2fe9c8b73dff5b6.
+
+Prepared runner raw SHA256 806eb4186a2e31ac8fe34a3886729a1390636b2ee511cfbaccc3003aa0178e1f; LF-normalized SHA256 e7349a6778e60096ee95e2fc259593ed41d8bf56d708c43cdc155309ac4ba0c7. No runtime/other-worktree/main/push/deployment edit. Stop after preparation; native council, OTHER Ward and Q-F1 closure remain pending. No new performance or blanket approval claim.
