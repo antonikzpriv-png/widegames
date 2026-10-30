@@ -11,7 +11,7 @@ export const own = (map, id) => Object.hasOwn(map, id) ? map[id] : undefined;
 export const dictionary = () => ({});
 export const put = (map, id, value) => Object.defineProperty(map, id, { value, writable: true, enumerable: true, configurable: true });
 export const clone = value => structuredClone(value);
-export const tactical = state => state?.schemaVersion === 4;
+export const tactical = state => [4,5].includes(state?.schemaVersion);
 export function mapForState(state) {
   if (tactical(state) && (state.tacticalVersion !== 1 || !record(state.map) || Object.keys(state.map).length !== 2 || !Object.hasOwn(state.map, 'id') || !Object.hasOwn(state.map, 'version'))) throw new Error('Invalid investigation map');
   return getMap(state?.map);

@@ -9,7 +9,7 @@ const duration=(rules,kind)=>rules[kind==='lights'?'lightsDurationMs':kind==='co
 const currentDoor=(state,id)=>state.systems.doors.find(d=>d.id===id);
 const readyContext=ctx=>ctx&&['record','publicEvent','nearby','sees','stop'].every(key=>typeof ctx[key]==='function');
 export function initializeSystems(state,now){
- validateRoster(state);rulesFor(state);const {map}=fixturesFor(state);if(state.schemaVersion===4&&!tactical(state))throw new Error('Invalid tactical systems identity');if(!time(now)||Object.hasOwn(state,'systems')||state.sabotage!==null)throw new Error('Cannot initialize systems on an existing or invalid match');
+ validateRoster(state);rulesFor(state);const {map}=fixturesFor(state);if([4,5].includes(state.schemaVersion)&&!tactical(state))throw new Error('Invalid tactical systems identity');if(!time(now)||Object.hasOwn(state,'systems')||state.sabotage!==null)throw new Error('Cannot initialize systems on an existing or invalid match');
  const cooldowns=Object.fromEntries(state.players.map(p=>{const criticalAt=p.cooldowns?.sabotageAt??now;if(!time(criticalAt))throw new Error('Invalid initial sabotage cooldown');return [p.id,{criticalAt,auxiliaryAt:now,ventAt:now}];}));
  const v2=tactical(state);
  state.systems={version:v2?2:1,lights:inactive(),communications:inactive(),doors:map.fixtures.doors.map(d=>v2?openTacticalDoor(d.id):({id:d.id,closed:false,startedAt:null,deadlineAt:null})),transit:{},cooldowns:v2?Object.fromEntries(state.players.map(p=>[p.id,{ventAt:now}])):cooldowns,...(v2?{factionCooldowns:{saboteur:{criticalAt:Math.max(now,...state.players.filter(p=>p.role==='saboteur').map(p=>cooldowns[p.id].criticalAt)),auxiliaryAt:now}}}:{})};

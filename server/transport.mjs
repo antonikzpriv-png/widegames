@@ -44,7 +44,7 @@ export async function createGameServer(config,dependencies={}) {
   let daily,service;
   try {
     daily=dependencies.dailyBudget||await createDailyBudget({directory:config.dataDir,maxCostUsd:config.ai?.maxDailyCostUsd??5,now});
-    service=createRooms({store,engine,ai,now,maxActiveRooms:config.maxActiveRooms??12,roomTtlMs:config.roomTtlMs??3600000,lobbyConfig:config.systemsMode?config.lobbyConfig??{}:null,tacticalMode:config.tacticalMode===true&&config.worldMode===true&&config.systemsMode===true,mapId:config.mapId});await service.restore();
+    service=createRooms({store,engine,ai,now,maxActiveRooms:config.maxActiveRooms??12,roomTtlMs:config.roomTtlMs??3600000,lobbyConfig:config.systemsMode?config.lobbyConfig??{}:null,tacticalMode:config.tacticalMode===true&&config.worldMode===true&&config.systemsMode===true,mapId:config.mapId,stationTasksMode:config.stationTasksMode===true});await service.restore();
   } catch(error){await store.close();throw error;}
   const {rooms,get,run,commit,view}=service;
   const limit=limiter(now),tasks=new Set();let closing=false,maintenance=null,closePromise;
@@ -110,7 +110,7 @@ export async function createGameServer(config,dependencies={}) {
           const next=structuredClone(data);next.state=result.state;
           // Validate even an inert result before considering a durable update.
           service.validate(next);
-          if(result.accepted&&[2,3,4].includes(result.state.schemaVersion)&&result.state.players.find(player=>player.id===identity.seatId)?.motion.seq!==input.seq)throw new Error('Invalid engine input sequence');
+          if(result.accepted&&[2,3,4,5].includes(result.state.schemaVersion)&&result.state.players.find(player=>player.id===identity.seatId)?.motion.seq!==input.seq)throw new Error('Invalid engine input sequence');
           if(result.state.version!==data.state.version){await commit(room,next);broadcast(room);}
           if(!result.accepted){const error=result.error||{};fail(409,typeof error.code==='string'&&/^[A-Z][A-Z0-9_]{0,63}$/.test(error.code)?error.code:'INPUT_REJECTED',typeof error.message==='string'&&error.message.length<=240?error.message:'Movement input rejected.');}
         });
@@ -126,7 +126,7 @@ export async function createGameServer(config,dependencies={}) {
             if(Object.keys(input).some(k=>k!=='id'))fail(400,'INVALID_START','Start accepts only a request ID.');
             if(data.startId===input.id)return;
             if(data.state)fail(409,'ALREADY_STARTED','This match has already started.');
-            const next=structuredClone(data);next.startId=input.id;next.state=engine.createMatch({id:data.id,mode:data.mode,humanPlayerId:data.lobby?.humanPlayerIds[0]??'p1',...(data.lobby?{roster:data.lobby.roster,humanPlayerIds:data.lobby.humanPlayerIds,saboteurCount:data.lobby.saboteurCount}:{}),now:now(),config:config.rules||{},world:config.worldMode===true||[2,3].includes(data.schema),systems:[2,3].includes(data.schema),...(data.schema===3?{tactical:true,map:data.map}:{}),beaconRules:config.beaconRules??{}});await commit(room,next);
+            const next=structuredClone(data);next.startId=input.id;next.state=engine.createMatch({id:data.id,mode:data.mode,humanPlayerId:data.lobby?.humanPlayerIds[0]??'p1',...(data.lobby?{roster:data.lobby.roster,humanPlayerIds:data.lobby.humanPlayerIds,saboteurCount:data.lobby.saboteurCount}:{}),now:now(),config:config.rules||{},world:config.worldMode===true||[2,3,4].includes(data.schema),systems:[2,3,4].includes(data.schema),...([3,4].includes(data.schema)?{tactical:true,map:data.map,stationTasks:data.schema===4}:{}),beaconRules:config.beaconRules??{}});await commit(room,next);
           } else {
             if(!identity.seatId||(data.state&&!data.state.players.some(p=>p.id===identity.seatId&&p.human)))fail(403,'SPECTATOR','Spectators cannot act.');
             if(!data.state)fail(409,'NOT_STARTED','Start the match first.');

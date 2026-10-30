@@ -1,3 +1,4 @@
+import {nextStationInput} from '../../shared/station-challenges.mjs';
 import {getMap} from '../../shared/maps/index.mjs';
 import { CHARACTERS, ROOM_LAYOUT } from '../../shared/contracts.mjs';
 import { WORLD, WORLD_STATIONS, WORLD_BELL, distance, findWorldPath, canSeeWorldPoint } from '../../shared/world.mjs';
@@ -124,7 +125,7 @@ function beaconCandidates(view,memory,suspect){
   const repair=controls.find(a=>a.type==='systemRepair');if(repair)return [proposal(repair)];
   const goal=localGoals.select(view,memory);
   if(goal?.goalId==='repair'){memory.goal={id:goal.goalId,at:view.serverNow};return navigate(goal.target);}
-  const task=controls.find(h=>h.type==='task');if(task&&ready(view,'taskAt'))return [proposal(task)];
+  const task=controls.find(h=>h.type==='task');if(task&&ready(view,'taskAt')){const own=self.tasks.find(t=>t.id===task.fields.taskId);if(own?.kind==='station'){const input=nextStationInput(own.challenge);return input?[{type:'taskInteract',taskId:own.id,...input}]:wait();}return [proposal(task)];}
   if(goal?.goalId==='investigate'){const device=controls.find(h=>h.type==='investigate'&&h.fields.deviceId===goal.deviceId);if(device){memory.lastTerminalAt=view.serverNow;memory.tacticalReads=(memory.tacticalReads??0)+1;return [proposal(device)];}return navigate(goal.target);}
   if(!view.sabotage?.active&&suspect!=='skip'&&ready(view,'meetingAt')&&self.meetingsRemaining>0){if(allowed.has('meeting'))return [{type:'meeting'}];return navigate(WORLD_BELL);}
   if(goal){memory.goal={id:goal.goalId,at:view.serverNow};return navigate(goal.target);}

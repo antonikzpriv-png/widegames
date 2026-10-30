@@ -3,7 +3,7 @@ import {fail,requestId} from './rooms.mjs';
 /** Map-only settings adapter for the existing serialized authenticated lobby. */
 export function proposeMapSetting(data,identity,input){
  if(!identity?.host)fail(403,'HOST_REQUIRED','Only the host can change this map.');
- if(data.schema!==3)fail(409,'SETTINGS_UNAVAILABLE','This saved lobby retains its original map and rules.');
+ if(![3,4].includes(data.schema))fail(409,'SETTINGS_UNAVAILABLE','This saved lobby retains its original map and rules.');
  if(!input||Object.keys(input).length!==3||!['id','mapId','expectedRevision'].every(k=>Object.hasOwn(input,k))||!requestId(input.id)||typeof input.mapId!=='string'||input.mapId.length>64||!Number.isSafeInteger(input.expectedRevision)||input.expectedRevision<0||input.expectedRevision>64)fail(400,'INVALID_SETTINGS','Send an ID, mapId and current expectedRevision.');
  const fingerprint=JSON.stringify([input.mapId,input.expectedRevision]),old=data.settings.requests.find(r=>r.id===input.id);
  if(old){if(old.fingerprint!==fingerprint)fail(409,'REQUEST_CONFLICT','This settings ID was used for different contents.');return {next:null,error:old.error??null,accepted:old.accepted};}

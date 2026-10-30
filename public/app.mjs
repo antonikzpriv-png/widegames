@@ -20,7 +20,7 @@ let worldExperience=null,worldSession=null,lastInputFailure=0,worldActionGenerat
 function beaconContextKey(game){
  if(game?.beaconVersion!==1)return null;
  const self=game.self;
- return JSON.stringify([game.map,game.preset,self?.position,self?.roomId,self?.alive,self?.transit,game.systems?.selfTransit,game.investigation?.session,game.vision?.radius,self?.tasks?.map(t=>[t.id,t.completed,t.progress]),game.interactions?.map(h=>[h.id,h.type,h.fields,h.enabled])]);
+ return JSON.stringify([game.map,game.preset,self?.position,self?.roomId,self?.alive,self?.transit,game.systems?.selfTransit,game.investigation?.session,game.vision?.radius,self?.tasks?.map(t=>[t.id,t.completed,t.progress,t.challenge?.progress]),game.interactions?.map(h=>[h.id,h.type,h.fields,h.enabled])]);
 }
 function captureActionContext(body){
  const game=room?.game,self=game?.self;if(!game?.worldVersion||!body.type)return null;
@@ -268,7 +268,7 @@ function act(type,fields={}){
  return mutation('/action',actionEnvelope(type,fields),()=>{
   if(type==='say')draft='';
   confirmTarget=null;
-  tell(({move:'You moved to the next room.',task:'Task complete.',repair:'Repair contribution received.',vote:'Your vote is recorded.',say:'Message sent.',report:'Report received.',meeting:'Emergency bell rung.',sabotage:'Critical sabotage triggered.',eliminate:'Elimination received.'})[type]||'Action received.');
+  tell(({move:'You moved to the next room.',task:room?.game?.self?.tasks?.find(t=>t.id===fields.taskId)?.kind==='station'?'Station access confirmed.':'Task complete.',repair:'Repair contribution received.',vote:'Your vote is recorded.',say:'Message sent.',report:'Report received.',meeting:'Emergency bell rung.',sabotage:'Critical sabotage triggered.',eliminate:'Elimination received.'})[type]||'Action received.');
  });
 }
 async function loadReplay(){

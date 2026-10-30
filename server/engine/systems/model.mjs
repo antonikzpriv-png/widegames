@@ -42,7 +42,7 @@ validateHatchNetwork(BEACON_VENTS);
 for(const [kind,sites]of Object.entries(BEACON_REPAIRS))if(!sites.length||sites.length>2||new Set(sites.map(s=>s.id)).size!==sites.length||sites.some(s=>!id(s.id)||!point(s.position)||!geometry.isWalkable(s.position)))throw new Error('Invalid repair fixtures');
 export function validateSystemsState(state){
  const ids=validateRoster(state),r=rulesFor(state),s=state.systems,{map,geometry:geo,doors,vents,repairs}=fixturesFor(state),v2=tactical(state);
- if(state.schemaVersion===4&&!v2||v2&&(!exact(state.map,['id','version'])||!exact(state.preset,['id','version'])||state.preset.id!==TACTICAL_PRESET.id||state.preset.version!==TACTICAL_PRESET.version))throw new Error('Invalid tactical systems identity');
+ if([4,5].includes(state.schemaVersion)&&!v2||v2&&(!exact(state.map,['id','version'])||!exact(state.preset,['id','version'])||state.preset.id!==TACTICAL_PRESET.id||state.preset.version!==TACTICAL_PRESET.version))throw new Error('Invalid tactical systems identity');
  if(!exact(s,['version','lights','communications','doors','transit','cooldowns',...(v2?['factionCooldowns']:[])])||s.version!==(v2?2:1))throw new Error('Invalid systems state');
  // This validator consumes finalized checkpoints, never in-progress chronological mutations.
  const checkpoint=state.updatedAt,begin=state.startedAt===undefined?0:state.startedAt;
