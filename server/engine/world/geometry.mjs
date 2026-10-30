@@ -18,16 +18,29 @@ export function spatialGeometry(geometry){
   const checker=state=>{const doors=closed(state);return p=>valid(p)&&isWalkable(p)&&!doors.some(r=>{const x=Math.max(r.x,Math.min(p.x,r.x+r.width)),y=Math.max(r.y,Math.min(p.y,r.y+r.height));return Math.hypot(p.x-x,p.y-y)<WORLD.bodyRadius||inside(p,r);});};
   const walkable=(p,state)=>checker(state)(p);
   const motionGeometry=state=>closed(state).map(d=>d.id).sort().join("|");
-  function collisionSweep(from,length,state){
-    const solids=[...WORLD_OBSTACLES,...closed(state)];
+  // Only immutable public collision data may outlive a query. Cache entries
+  // contain fixed grid legality, never targets, actors, routes or match state.
+  const immutable=value=>Object.isFrozen(value),cacheable=immutable(geometry)&&immutable(WORLD)&&[WORLD_FLOORS,WORLD_OBSTACLES,fixtures.doors].every(rows=>immutable(rows)&&rows.every(immutable));
+  let staticGrid=null;const doorGrids=new Map();
+  const grid=nodes=>({safe:new Uint8Array(nodes),edges:new Uint8Array(nodes*2)});
+  function gridFor(nodes,doors){
+    if(!cacheable)return grid(nodes);
+    staticGrid??=grid(nodes);if(!doors.length)return staticGrid;
+    const signature=JSON.stringify(doors.map(d=>d.id).sort());
+    let value=doorGrids.get(signature);if(value)doorGrids.delete(signature);else value=grid(nodes);
+    doorGrids.set(signature,value);if(doorGrids.size>4)doorGrids.delete(doorGrids.keys().next().value);
+    return value;
+  }
+  function collisionSweep(from,length,state,doorsOnly=false){
+    const solids=doorsOnly?closed(state):[...WORLD_OBSTACLES,...closed(state)];
     const r=WORLD.bodyRadius,d=r/Math.SQRT2,probes=[[0,0],[r,0],[-r,0],[0,r],[0,-r],[d,d],[-d,d],[d,-d],[-d,-d]];
-    const localFloors=WORLD_FLOORS.filter(f=>f.x<=from.x+length+r&&f.x+f.width>=from.x-length-r&&f.y<=from.y+length+r&&f.y+f.height>=from.y-length-r);
+    const localFloors=doorsOnly?[]:WORLD_FLOORS.filter(f=>f.x<=from.x+length+r&&f.x+f.width>=from.x-length-r&&f.y<=from.y+length+r&&f.y+f.height>=from.y-length-r);
     function interval(a,x,y,rect,strict=false){let low=0,high=1;for(const [v,delta,min,size] of [[a.x,x,rect.x,rect.width],[a.y,y,rect.y,rect.height]]){if(Math.abs(delta)<1e-12){if(strict?v<=min||v>=min+size:v<min||v>min+size)return null;}else{let first=(min-v)/delta,last=(min+size-v)/delta;if(first>last)[first,last]=[last,first];low=Math.max(low,first);high=Math.min(high,last);if(strict?low>=high:low>high)return null;}}return [low,high];}
     return function swept(a,x,y){
       let until=1;
       // Every body probe must remain in the union of floors for the WHOLE
       // segment, including concave corridor seams whose endpoints are valid.
-      for(const [ox,oy] of probes){const ranges=[];for(const floor of localFloors){const span=interval({x:a.x+ox,y:a.y+oy},x,y,floor);if(span)ranges.push(span);}ranges.sort((a,b)=>a[0]-b[0]);let covered=0;for(const [low,high] of ranges){if(low>covered+1e-12)break;covered=Math.max(covered,high);}until=Math.min(until,covered);}
+      if(!doorsOnly)for(const [ox,oy] of probes){const ranges=[];for(const floor of localFloors){const span=interval({x:a.x+ox,y:a.y+oy},x,y,floor);if(span)ranges.push(span);}ranges.sort((a,b)=>a[0]-b[0]);let covered=0;for(const [low,high] of ranges){if(low>covered+1e-12)break;covered=Math.max(covered,high);}until=Math.min(until,covered);}
       for(const rect of solids){
         for(const expanded of [{x:rect.x-r,y:rect.y,width:rect.width+2*r,height:rect.height},{x:rect.x,y:rect.y-r,width:rect.width,height:rect.height+2*r}]){const span=interval(a,x,y,expanded,true);if(span)until=Math.min(until,span[0]);}
         const speed=x*x+y*y;if(!speed)continue;
@@ -97,17 +110,32 @@ export function spatialGeometry(geometry){
   function path(start,target,state){
     const walk=checker(state);if(!walk(start)||!walk(target))return null;if(distance(start,target)<.01)return [];
     if(segment(start,target,walk,state))return [point(target)];
-    const size=WORLD.grid,columns=Math.ceil(WORLD.width/size),rows=Math.ceil(WORLD.height/size);if(columns*rows>50000)return null;
-    const toPoint=id=>({x:id%columns*size,y:Math.floor(id/columns)*size}),safe=new Map(),edges=new Map();
-    const cell=id=>{if(!safe.has(id))safe.set(id,walk(toPoint(id)));return safe.get(id);};
-    const edge=(a,b)=>{const key=a<b?a+':'+b:b+':'+a;if(!edges.has(key))edges.set(key,segment(toPoint(a),toPoint(b),walk,state));return edges.get(key);};
+    const size=WORLD.grid,columns=Math.ceil(WORLD.width/size),rows=Math.ceil(WORLD.height/size),nodes=columns*rows;if(nodes>50000)return null;
+    const doors=closed(state);
+    if(cacheable&&!doors.length&&typeof geometry.findWorldPath==='function'){
+      // The public helper owns static grid caches but uses an older sampled
+      // segment check. Treat its result as a proposal and sweep EVERY segment.
+      let candidate;try{candidate=geometry.findWorldPath(point(start),point(target));}catch{candidate=null;}
+      if(Array.isArray(candidate)&&candidate.length>0&&candidate.length<=4096&&candidate.every(valid)&&distance(candidate.at(-1),target)<1e-7&&routeClear(start,candidate,state))return candidate.map(point);
+    }
+    const {safe,edges}=gridFor(nodes,doors),toPoint=id=>({x:id%columns*size,y:Math.floor(id/columns)*size});
+    const staticCell=id=>{if(!staticGrid.safe[id])staticGrid.safe[id]=isWalkable(toPoint(id))?2:1;return staticGrid.safe[id]===2;};
+    const cell=id=>{if(!safe[id])safe[id]=(cacheable?staticCell(id)&&walk(toPoint(id)):walk(toPoint(id)))?2:1;return safe[id]===2;};
+    const edge=(a,b)=>{
+      const key=Math.min(a,b)*2+(Math.abs(a-b)===columns?1:0);
+      if(!edges[key]){
+        if(cacheable&&edges!==staticGrid.edges){if(!staticGrid.edges[key])staticGrid.edges[key]=segment(toPoint(a),toPoint(b),isWalkable,undefined)?2:1;const from=toPoint(a),to=toPoint(b);edges[key]=staticGrid.edges[key]===2&&collisionSweep(from,distance(from,to),state,true)(from,to.x-from.x,to.y-from.y)>=1-1e-9?2:1;}
+        else edges[key]=segment(toPoint(a),toPoint(b),walk,state)?2:1;
+      }
+      return edges[key]===2;
+    };
     function anchor(p){const list=[],cx=Math.round(p.x/size),cy=Math.round(p.y/size);for(let y=cy-2;y<=cy+2;y++)for(let x=cx-2;x<=cx+2;x++){if(x<0||y<0||x>=columns||y>=rows)continue;const id=y*columns+x;list.push({id,d:distance(p,toPoint(id))});}list.sort((a,b)=>a.d-b.d||a.id-b.id);return list.find(v=>cell(v.id)&&segment(p,toPoint(v.id),walk,state))?.id;}
     const first=anchor(start),last=anchor(target);if(first===undefined||last===undefined)return null;
-    const queue=[first],parents=new Map([[first,null]]);let head=0;
-    while(head<queue.length&&!parents.has(last)){const id=queue[head++],x=id%columns,y=Math.floor(id/columns);for(const [dx,dy]of [[0,-1],[-1,0],[1,0],[0,1]]){const nx=x+dx,ny=y+dy;if(nx<0||ny<0||nx>=columns||ny>=rows)continue;const next=ny*columns+nx;if(parents.has(next)||!cell(next)||!edge(id,next))continue;parents.set(next,id);queue.push(next);}}
-    if(!parents.has(last))return null;const raw=[];for(let id=last;id!==null;id=parents.get(id))raw.push(toPoint(id));raw.reverse();raw.push(point(target));
+    const queue=new Int32Array(nodes),parents=new Int32Array(nodes);parents.fill(-1);parents[first]=first;queue[0]=first;let head=0,tail=1;
+    while(head<tail&&parents[last]===-1){const id=queue[head++],x=id%columns,y=Math.floor(id/columns);for(const [dx,dy]of [[0,-1],[-1,0],[1,0],[0,1]]){const nx=x+dx,ny=y+dy;if(nx<0||nx>=columns||ny<0||ny>=rows)continue;const next=ny*columns+nx;if(parents[next]!==-1||!cell(next)||!edge(id,next))continue;parents[next]=id;queue[tail++]=next;}}
+    if(parents[last]===-1)return null;const raw=[];for(let id=last;;id=parents[id]){raw.push(toPoint(id));if(id===first)break;}raw.reverse();raw.push(point(target));
     const result=[];for(let i=0;i<raw.length;i++){const previous=i?raw[i-1]:start,next=raw[i+1],current=raw[i];if(next&&(current.x-previous.x)*(next.y-current.y)===(current.y-previous.y)*(next.x-current.x))continue;if(distance(result.at(-1)||start,current)>.01)result.push(current);}
-    return result.length<=4096?result:null;
+    return result.length<=4096&&routeClear(start,result,state)?result:null;
   }
   const station=id=>{const value=Array.isArray(WORLD_STATIONS)?WORLD_STATIONS.find(s=>s.roomId===id||s.id===id):WORLD_STATIONS[id];return value?.position??value;};
   const spawnRoomId=geometry.WORLD_SPAWN_ROOM??(WORLD_ROOMS.some(r=>r.id==='bridge')?'bridge':geometry.ROOM_LAYOUT?.[0]?.id??WORLD_ROOMS[0]?.id);

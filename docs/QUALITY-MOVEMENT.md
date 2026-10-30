@@ -66,3 +66,41 @@ Final spatial benchmark uses the same50-lease/12-actor/300-sample scenarios and 
 Presentation-only final profile (12 visible static keepers,100 warmup then1000 frames; timing at() for12 actors, snapshot updates excluded) measured median0.095ms/p950.211ms/max0.761ms versus original0.0014/0.0025/0.253ms. Exact fixture/script/result: _artifacts/quality-presentation-profile.mjs and quality-movement-presentation-profile.json. Additional collision/privacy work costs CPU. No unsupported FPS, physical input latency or full-server throughput claim.
 
 Handoff: Frontend must delegate ActorSamples, forward local direction packets to setIntent and clear on hidden/room/account/dispose. Coordinator must retain chronological geometry settlement and explicit schema5 root/store dispatch. New maps were read-only geometry qualification, not station-task/default schema5 transport approval. Independent Reviewer/manager approval and native browser feel remain outstanding. No root/shared/other-owner edits, installs, providers, Chrome, full suite, main changes or pushes performed. This bounded implementation assignment is complete.
+
+## Bounded navigation optimization follow-up
+
+Integration baseline: exact a20cf920f9e0f4f438f0bdabf730a3762add667d, with real Beacon2/map source47cf and station schema5. The own ignored raw archive contains329 verified Git blobs; manifest _artifacts/quality-navigation-a20cf92-manifest.json. This worker remains on its isolated Core branch; no root/shared/Frontend sources were edited or imported into the branch.
+
+Immutable map geometries now reuse fixed-grid cell and edge legality. One static grid and up to four closed-door signatures use bounded typed arrays with lazy population and LRU eviction. Signature keys contain only sorted known closed-door IDs; pending/open/jammed doors do not impersonate closed geometry. Cache entries contain legality bits only, never coordinates of proposed targets, complete routes, actors, roles, requests, observations or state references. Per grid there are N cell bytes and2N edge bytes; at most15N retained bytes including static and four dynamic grids, plus small signature metadata. N remains bounded by50000. Mutable custom descriptors bypass retained caches and the static proposal helper. Query parent/queue arrays are local and bounded by N; all results remain at most4096 waypoints. Exports/signatures and movement/lease/replay semantics are unchanged.
+
+With no closed doors, an immutable descriptor's findWorldPath may supply a static cached proposal, receiving copied public start/target points only. Every waypoint, final destination, route length and COMPLETE exact swept polyline is validated before acceptance. Invalid, oversized, wrong-destination or throwing proposals fall back to the authoritative grid. Closed geometry never uses that static proposal shortcut. Static edge legality is reused; dynamic edge legality runs the same rounded-door sweep. Final routes are swept again under current geometry. Door changes reselect their own graph and accepted routes still stop through invalidateRoutes at the actual boundary; reopening never reuses a closed result as open.
+
+The ORIGINAL-coordinate fixtures already selected version1 in a34/a20 via the fixture converter. This change additionally makes the historical test call sites explicit {id,version:1}, asserting resolved identity and walkable original coordinates. Existing corner speed/slide/equality assertions remain intact. Catalog-driven seeded tests separately include explicit Beacon2. No original-red evidence was overwritten.
+
+Seven new meaningful regressions cover bidirectional reachability/route legality across every available retained map; validated static helper and4096/50000 limits; measured grid-check reuse and defensive route copies; canonical signatures/five-door eviction/reopening; JSON/privacy/death/transit isolation; mutable-geometry bypass; and actual root navigation/input receipts plus closure-time stop and a new legal detour. First run3/7 passed: four failures came from my new fixture comparing point-only destinations with station records carrying an id. Normalizing station fixture inputs to {x,y} corrected that shared fixture error; first output is preserved in quality-navigation-controls-first.txt. Corrected seven controls passed; this was not a product counterexample.
+
+Exact schema5 integration was tested in an own ignored copy of a20, overlaying ONLY candidate server/engine/world/geometry.mjs. Overlay provenance: _artifacts/quality-navigation-a20cf92-overlay-provenance.json; this is a labeled candidate integration, not an unmodified committed manager runtime. Command:
+
+~~~powershell
+$env:QUALITY_MOVEMENT_MAP_ROOT=(Join-Path (Get-Location) '_artifacts/quality-navigation-a20cf92')
+$env:QUALITY_NAVIGATION_ENGINE_ROOT=(Join-Path (Get-Location) '_artifacts/quality-navigation-a20cf92-overlay')
+node --test tests/quality-movement-navigation.test.mjs tests/quality-movement-authority.test.mjs
+Remove-Item Env:QUALITY_NAVIGATION_ENGINE_ROOT
+Remove-Item Env:QUALITY_MOVEMENT_MAP_ROOT
+~~~
+
+17/17 pass, zero skips/failures, including original physics/concave seam controls, schema5 Beacon2 restart/duplicates, and real root door closure: accepted route stops at(530,250) exactly at1000ms with unchanged action receipts; an ordinary new proposal takes the legal detour. The legal initial approach position in that last control is a labeled fixture, never client input. Provider fetch is blocked/count0. Log: _artifacts/quality-navigation-integrated-schema5.txt. Ordinary tests default to current checkout maps/root; explicit overrides select the archive/overlay.
+
+### Measured Node CPU before/after
+
+Same fixed36 public farthest-station-to-critical-site proposals: four power/flood sites, three door signatures (open/one closed/two closed), three exact maps. Each implementation runs one first pass (12 queries/map) and two repeated passes (24 queries/map); total108 queries per implementation. This times synchronous g.path only; exact route validation is outside the timed interval. There is no AI/network/render/browser/full-match workload. Node v24.20.0, one local bounded measurement; first-pass totals include lazy population and later partial reuse, not36 independently cold processes. All108 candidate route hashes match original hashes and every route passes exact collision/destination validation.
+
+| Exact map | First pass total original ? candidate ms | Repeated p95 original ? candidate ms | Repeated total original ? candidate ms |
+| --- | --- | --- | --- |
+| Beacon1 |159.015 ?64.532 |12.999 ?0.619 |238.275 ?8.074 |
+| Annex1 |280.314 ?121.893 |23.796 ?0.667 |501.831 ?10.341 |
+| Beacon2 |1723.826 ?568.342 |170.487 ?2.028 |3374.760 ?28.384 |
+
+Cold costs are retained: first-ever open queries original?candidate were Beacon1 28.617?19.264ms, Annex1 36.137?43.499ms, Beacon2 187.075?202.751ms. First closed-signature queries and all216 individual timings are in the JSON. Cold Annex/Beacon2 costs rose even though repeated costs fell. No claim is made that the manager's78.176s complete scenario now takes a particular time, or that these figures measure FPS/input latency. First candidate duplicated static sweeps while populating dynamic edges; its slower profile is preserved separately rather than erased.
+
+Reproduce with node _artifacts/quality-navigation-profile.mjs. Final data _artifacts/quality-navigation-profile.json; console quality-navigation-profile-console.txt; first-candidate evidence quality-navigation-profile-first-candidate.json. Profile records exact baseline pin, candidate geometry SHA256, all public query coordinates/signatures, passes, route hashes and timings. This optimization does not change MotionTrack or Frontend ActorSamples delegation. Q-A1/Q-A2 and independent native/browser integration remain with their owners; no self-approval is claimed. No Chrome, providers, dependencies, broad suite, other-worktree edits, main/push/merge/deploy.
