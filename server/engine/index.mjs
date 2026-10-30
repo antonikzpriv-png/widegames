@@ -4,6 +4,7 @@ import { CHARACTERS, ROOM_LAYOUT, DEFAULT_RULES } from '../../shared/contracts.m
 import {initializeFeatures,isGhost,nextEffectAt,clearEffects,featureDenial,activateFeature,safeEffects} from './features.mjs';
 import {worldRuntime} from './world-runtime.mjs';
 import {checkpointReplay,replayMetadata} from './replay-history.mjs';
+import {copyState} from './state-copy.mjs';
 const worldEngine=worldRuntime(await import(process.env.WORLD_ENGINE_GEOMETRY_MODULE||'../../shared/world.mjs'));
 const isWorld=state=>state.schemaVersion===2&&state.worldVersion===1;
 
@@ -198,7 +199,10 @@ function denial(state,p,a,now,hint=false) {
 
 export function tick(input,now=Date.now()) {
   if (!finiteTime(now) || now<input.updatedAt) return {state:input,events:[]};
-  const state=clone(input),seq=state.sequence;
+  if (['ended','paused'].includes(input.phase)) return {state:input,events:[]};
+  const deadline=Math.min(input.sabotage?.active?input.sabotage.deadlineAt:Infinity,input.startedAt+input.rules.maxMatchMs,input.deadlineAt??Infinity,nextEffectAt(input));
+  if(deadline>now&&(!isWorld(input)||!worldEngine.pending(input,Math.min(deadline,now))))return {state:input,events:[]};
+  const state=copyState(input),seq=state.sequence;
   if (!advance(state,now)) return {state:input,events:[]};
   state.version++;
   checkpointReplay(state);
@@ -219,7 +223,7 @@ export function applyAction(input,playerId,action,now=Date.now()) {
     return {state,events:timed.events,accepted:prior.accepted,...(prior.error?{error:clone(prior.error)}:{}),duplicate:true};
   }
   if(state.requests[playerId].length>=MAX_REQUESTS)return reject(fail('REQUEST_LIMIT','This keeper has reached the match request limit. Existing requests remain idempotent.'));
-  state=clone(state);
+  if(state===input)state=copyState(state);
   const p=state.players.find(p=>p.id===playerId);
   let error=denial(state,p,action,now);
   let path,target;
@@ -346,7 +350,7 @@ export function applyInput(input,playerId,request,now=Date.now()) {
     return {state,events:timed.events,accepted:!motion.error,...(motion.error?{error:clone(motion.error)}:{}),duplicate:true};
   }
   const error=['ended','paused'].includes(state.phase)?fail('MATCH_INACTIVE','This match is not active.'):!actor.alive&&!isGhost(state,actor)?fail('PLAYER_DEAD','Eliminated keepers cannot move.'):state.phase!=='roam'?fail('WRONG_PHASE','Movement requires roaming.'):null;
-  state=clone(state);const p=state.players.find(p=>p.id===playerId);
+  if(state===input)state=copyState(state);const p=state.players.find(p=>p.id===playerId);
   if(error){p.motion.seq=request.seq;p.motion.dx=request.dx;p.motion.dy=request.dy;p.motion.error=error;state.version++;state.updatedAt=now;return {state,events:timed.events,accepted:false,error:clone(error)};}
   if(request.dx||request.dy)interruptTasks({players:[p]});
   if(worldEngine.input(p,request,now))record(state,'direction',now,{playerId:p.id,dx:request.dx,dy:request.dy,position:clone(p.position)});
