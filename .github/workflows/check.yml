@@ -20,6 +20,9 @@ jobs:
       - run: npm run test:browser
         env:
           CHROME_PATH: /usr/bin/google-chrome
+      - run: npm run test:maps:browser
+        env:
+          CHROME_PATH: /usr/bin/google-chrome
       - run: npm run test:features:browser
         env:
           CHROME_PATH: /usr/bin/google-chrome
@@ -46,3 +49,5 @@ jobs:
             _artifacts/ghost-abilities-browser-*/*.png
             _artifacts/spatial-browser-*/report.json
             _artifacts/spatial-browser-*/*.png
+            _artifacts/maps-captcha-browser-*/report.json
+            _artifacts/maps-captcha-browser-*/*.png

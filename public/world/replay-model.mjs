@@ -1,9 +1,8 @@
 import {CHARACTERS} from '../../shared/contracts.mjs';
-import {WORLD,isWalkable,moveWorldPoint,distance,canSeeWorldPoint} from '../../shared/world.mjs';
-import {REPLAY_LIMITS,validateReplayMetadata,replaySequenceOf,validReplayTaskProgress,validReplayEffect} from '../../shared/replay.mjs';
+import {getWorld,distance} from '../../shared/world.mjs';
+import {REPLAY_LIMITS,validateReplayMetadata,replaySequenceOf,validReplayTaskProgress,validReplayEffect,REPLAY_MAP} from '../../shared/replay.mjs';
 import {replayEvents} from '../presentation.mjs';
 const copy=structuredClone;
-const point=p=>p&&Number.isFinite(p.x)&&Number.isFinite(p.y)&&isWalkable(p);
 const seq=replaySequenceOf;
 /** HTML range controls serialize doubles with fewer digits than JSON. Restore a
  * nearest recorded boundary only within that floating-point serialization error;
@@ -13,7 +12,8 @@ export function restoreReplayTime(value,events){
  for(const event of events){const d=Math.abs(event.at-value);if(d<gap){gap=d;nearest=event.at;}}
  return gap<=Number.EPSILON*Math.max(1,Math.abs(value))*32?nearest:value;
 }
-function route(start,path,speed,at){
+function route(start,path,speed,at,world){
+ const {WORLD,moveWorldPoint}=world,point=p=>p&&Number.isFinite(p.x)&&Number.isFinite(p.y)&&world.isWalkable(p);
  if(!point(start)||!Array.isArray(path)||path.length>REPLAY_LIMITS.route||!Number.isFinite(speed)||speed<=0||speed>WORLD.speed)return null;
  let prior=start;
  for(const p of path){if(!point(p))return null;const d=distance(prior,p);if(d&&distance(moveWorldPoint(prior,(p.x-prior.x)/d,(p.y-prior.y)/d,d),p)>.01)return null;prior=p;}
@@ -25,7 +25,7 @@ function project(r,at){
  return copy(p);
 }
 function base(roster){return {phase:'unknown',players:roster.map(p=>({id:p.id,name:p.name,color:p.color,position:null,alive:true,role:null,roomId:null,tasks:[],route:null,positionAt:null})),features:null,effects:[],bodies:[],sabotage:null,meeting:null,activity:[],observations:[],claims:[],outcome:null};}
-export function createReplayModel(response,{matchId,roomId,players=CHARACTERS}={}){
+export function createReplayModel(response,{matchId,roomId,players=CHARACTERS,mapId}={}){
  if(response?.roomId!==undefined&&roomId!==undefined&&response.roomId!==roomId)throw new Error('Replay belongs to another room.');
  if(response?.matchId!==undefined&&matchId!==undefined&&response.matchId!==matchId)throw new Error('Replay belongs to another match.');
  const events=copy(replayEvents(response));
@@ -33,6 +33,9 @@ export function createReplayModel(response,{matchId,roomId,players=CHARACTERS}={
  // Stable numeric sort: preserve the server's causal order for identical times.
  events.sort((a,b)=>a.at-b.at);
  const metadata=response?.metadata?copy(validateReplayMetadata(response.metadata,matchId??response.matchId)):null;
+ const selectedMap=metadata?.map===REPLAY_MAP?'beacon':metadata?.map??mapId??'beacon';
+ if(mapId!==undefined&&selectedMap!==mapId)throw new Error('Replay belongs to another map.');
+ const world=getWorld(selectedMap),{WORLD,canSeeWorldPoint}=world,point=p=>p&&Number.isFinite(p.x)&&Number.isFinite(p.y)&&world.isWalkable(p);
  const anchor=metadata?.anchor;
  const started=events.find(e=>e.type==='started'),hasStart=started?.worldVersion===1&&Array.isArray(started.positions);
  const roster=CHARACTERS.map(c=>{const p=players.find(p=>p.id===c.id);return {id:c.id,name:p?.name||c.name,color:p?.color||c.color};});
@@ -48,7 +51,7 @@ export function createReplayModel(response,{matchId,roomId,players=CHARACTERS}={
    const ended=events.find(e=>e.type==='ended'&&e.at<=anchor.at&&(seq(e)===null||seq(e)<=anchor.sequence));
    if(ended)initial.outcome={winner:ended.winner,reason:ended.reason,at:ended.at};
   }
-  for(const p of anchor.players){if(!point(p.position)||p.route.some(q=>!point(q)))throw new Error('Invalid replay metadata geometry');const target=initial.players.find(q=>q.id===p.id);Object.assign(target,copy(p),{route:route(p.position,p.route,WORLD.speed,anchor.at),positionAt:anchor.at});}
+  for(const p of anchor.players){if(!point(p.position)||p.route.some(q=>!point(q)))throw new Error('Invalid replay metadata geometry');const target=initial.players.find(q=>q.id===p.id);Object.assign(target,copy(p),{route:route(p.position,p.route,WORLD.speed,anchor.at,world),positionAt:anchor.at});}
  }
  const from=metadata?.coverage.from??events[0]?.at??0,through=metadata?.coverage.through??events.at(-1)?.at??from;
  if(events.some(e=>e.at>through))throw new Error('Replay events exceed recording coverage.');
@@ -84,7 +87,7 @@ export function createReplayModel(response,{matchId,roomId,players=CHARACTERS}={
    }
    if(e.type==='action'){
     locate(p,e.position,e.at);
-    if(p&&['navigate','move'].includes(a.type)){interrupt(p);p.route=route(e.position,e.route,e.speed,e.at);if(a.roomId)p.roomId=a.roomId;if(!p.alive)p.recordedFallenMotion=true;}
+    if(p&&['navigate','move'].includes(a.type)){interrupt(p);p.route=route(e.position,e.route,e.speed,e.at,world);if(a.roomId)p.roomId=a.roomId;if(!p.alive)p.recordedFallenMotion=true;}
     if(p&&['task','taskStep'].includes(a.type)&&validReplayTaskProgress(e.taskProgress)){const t=p.tasks.find(t=>t.id===a.taskId);if(t)t.progress=copy(e.taskProgress);}
     if(p&&a.type==='task'){const t=p.tasks.find(t=>t.id===a.taskId);if(t)t.completed=true;}
     if(a.type==='eliminate'){const victim=get(a.targetId);if(victim){victim.alive=false;victim.route=null;}}
@@ -95,7 +98,7 @@ export function createReplayModel(response,{matchId,roomId,players=CHARACTERS}={
    }
    if(e.type==='effect_started'){
     const effect={id:e.effectId??e.id,kind:e.kind,playerId:e.playerId,createdAt:e.createdAt,expiresAt:e.expiresAt,...(e.kind==='ward'?{targetId:e.targetId}:{position:copy(e.position)})};
-    if(validReplayEffect(effect)){s.effects=s.effects.filter(f=>f.id!==effect.id);s.effects.push(effect);}
+    if(validReplayEffect(effect,metadata?.map??(selectedMap==='beacon'?REPLAY_MAP:selectedMap))){s.effects=s.effects.filter(f=>f.id!==effect.id);s.effects.push(effect);}
    }
    if(e.type==='effect_ended')s.effects=s.effects.filter(f=>f.id!==e.effectId);
    if(e.type==='tasks_reassigned'){interrupt(p);for(const assignment of e.assignments||[]){const task=p?.tasks.find(t=>t.id===assignment.taskId),owner=get(assignment.playerId);if(task&&owner){p.tasks=p.tasks.filter(t=>t!==task);owner.tasks.push(task);}}}
@@ -109,14 +112,14 @@ export function createReplayModel(response,{matchId,roomId,players=CHARACTERS}={
   }
   for(const p of s.players){p.ghost=!p.alive&&(s.features?.deathPolicy==='ghost-tasks'||!!p.recordedFallenMotion);if((p.alive||p.ghost)&&p.route)p.position=project(p.route,time);}
   s.activity=s.activity.slice(-12);s.replayTaskRooms=s.activity.filter(e=>['task','taskStep'].includes(e.action?.type)&&time-e.at<=3000).map(e=>s.players.flatMap(p=>p.tasks).find(t=>t.id===e.action.taskId)?.roomId).filter(Boolean);s.time=time;s.events=s.bodies.filter(b=>!b.reported).map(b=>({...b,type:'body',bodyId:b.id}));
-  s.self=null;s.worldVersion=1;s.matchId=matchId??response?.matchId??'legacy';s.roles=Object.fromEntries(roles);return s;
+  s.self=null;s.worldVersion=1;if(selectedMap!=='beacon')s.mapId=selectedMap;s.matchId=matchId??response?.matchId??'legacy';s.roles=Object.fromEntries(roles);return s;
  }
  function perspective(s,id){
   const self=s.players.find(p=>p.id===id),visible=self&&point(self.position)?s.players.filter(p=>point(p.position)&&(p.id===id||(!p.ghost||!self.alive)&&distance(self.position,p.position)<=WORLD.visibilityRadius&&canSeeWorldPoint(self.position,p.position))):[];
   return {label:'Reconstructed visibility at recorded positions; not proof of attention or model input.',visible:visible.map(p=>p.id),bodies:s.bodies.filter(b=>self&&point(self.position)&&point(b.position)&&distance(self.position,b.position)<=WORLD.visibilityRadius&&canSeeWorldPoint(self.position,b.position)).map(b=>b.id),observations:s.observations.filter(e=>Array.isArray(e.visibleTo)&&e.visibleTo.includes(id)),ownRole:self?.role??null};
  }
  function claims(s,id){return s.claims.filter(e=>!id||e.playerId===id).slice(-12).map(claim=>({claim,evidence:events.filter(e=>e.at<=s.time&&Math.abs(e.at-claim.at)<=10000&&(e.type==='witness'||e.type==='action'&&e.action?.type!=='say'&&e.action?.type!=='wait')).slice(-6),label:'Context comparison only. A public claim is not verified by nearby events; absence of evidence is not contradiction.'}));}
- return {events,coverage,at,perspective,claims,metadata};
+ return {events,coverage,at,perspective,claims,metadata,mapId:selectedMap,mapName:world.metadata.name};
 }
 
 /** Clock owns no network or input callbacks. Seek resets wall-clock accumulation. */

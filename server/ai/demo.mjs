@@ -2,6 +2,7 @@ import { ROOM_LAYOUT, CHARACTERS } from '../../shared/contracts.mjs';
 import { worldCandidates, visibleWorldPlayer } from './world.mjs';
 
 const rooms = new Map(ROOM_LAYOUT.map(room => [room.id, room]));
+const roomFor=(view,id)=>view.rooms?.find(room=>room.id===id)??rooms.get(id);
 const ordered = list => [...list].sort((a, b) => String(a.id).localeCompare(String(b.id)));
 
 /** Deterministic BFS over public map geometry only. */
@@ -60,7 +61,7 @@ const VOICES = Object.freeze({
 function dialogue(view, memory) {
   const target = suspect(view, memory);
   const name = (view.players ?? []).find(p => p.id === target)?.name ?? CHARACTERS.find(p => p.id === target)?.name;
-  const room = rooms.get(view.self.roomId)?.name ?? 'my station';
+  const room = roomFor(view,view.self.roomId)?.name ?? 'my station';
   const number = Math.min(memory.discussionCount ?? 0, 2);
   const voice = VOICES[view.self.id] ?? VOICES.p1;
   if (view.self.role === 'saboteur') return [
@@ -71,7 +72,7 @@ function dialogue(view, memory) {
   const witness = memory.witnesses?.[target];
   if (witness && number < 2) {
     const victim = (view.players ?? []).find(p => p.id === witness.targetId)?.name ?? CHARACTERS.find(p => p.id === witness.targetId)?.name;
-    const where = rooms.get(witness.roomId)?.name;
+    const where = roomFor(view,witness.roomId)?.name;
     return voice[number] + ' I saw ' + name + ' attack ' + victim + ' in ' + where + '. That is firsthand; I will vote for ' + name + '.';
   }
   if (name && number < 2) return voice[number] + ' Suspicion only: ' + name + ' was nearby before a disappearance. I did not see an attack; that is a proximity inference.';
@@ -92,7 +93,7 @@ export function observe(view, memory) {
   const rosterIds = new Set((view.players ?? []).slice(0, 24).map(p => p.id));
   for (const field of ['witnesses', 'suspicion']) if (memory[field]) memory[field] = Object.fromEntries(Object.entries(memory[field]).filter(([id]) => rosterIds.has(id)).slice(0, 24));
   for (const event of view.events ?? []) {
-    if (event.type === 'witness' && event.playerId !== view.self.id && event.playerId !== event.targetId && rosterIds.has(event.playerId) && rosterIds.has(event.targetId) && rooms.has(event.roomId)) {
+    if (event.type === 'witness' && event.playerId !== view.self.id && event.playerId !== event.targetId && rosterIds.has(event.playerId) && rosterIds.has(event.targetId) && !!roomFor(view,event.roomId)) {
       memory.witnesses ??= {};
       memory.witnesses[event.playerId] = { targetId: event.targetId, roomId: event.roomId, at: Number.isFinite(event.at) ? event.at : view.serverNow };
     }
