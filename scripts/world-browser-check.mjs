@@ -32,7 +32,7 @@ function contrast(foreground,background){const luminance=value=>{const rgb=value
 function safeRoom(room){
  if(!room?.game)return;const view=room.game;assert.equal(view.worldVersion,1);if(view.tacticalVersion){assert.equal(view.tacticalVersion,1);getMap(view.map);}assert(!('identities'in room)&&!('aiContext'in room)&&!('requests'in view)&&!('replay'in view));
  assert(!('memories'in (room.ai||{})));assert.equal(view.self?.id??null,room.seatId);
- for(const player of view.players){assert(!('motion'in player)&&!('tasks'in player)&&!('destination'in player)&&!('inputSeq'in player));if(view.phase!=='ended')assert(!('role'in player));if(view.self&&view.phase!=='ended'&&player.id!==view.self.id&&player.position)assert(Math.hypot(view.self.position.x-player.position.x,view.self.position.y-player.position.y)<=view.vision.radius+1e-5);}
+ for(const player of view.players){assert(!('motion'in player)&&!('tasks'in player)&&!('destination'in player)&&!('inputSeq'in player));if(view.phase!=='ended')assert(!('role'in player));if(view.self&&view.phase!=='ended'&&player.id!==view.self.id&&player.position)assert(Math.hypot(view.self.position.x-player.position.x,view.self.position.y-player.position.y)<=(view.vision?.radius??selectedMap.geometry.WORLD.visibilityRadius)+1e-5);}
  if(view.phase==='voting')assert(view.meeting.votes.every(v=>!Object.hasOwn(v,'targetId')));
  report.privacyChecks++;
 }
