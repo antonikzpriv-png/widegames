@@ -52,7 +52,7 @@ async function navigate(position){
 async function keyboardPuzzle(label){
  // Traverse the real dialog with Tab; Enter generates the native button action.
  for(let attempt=0;attempt<12;attempt++){
-  const selected=await page.evaluate(label=>document.activeElement?.tagName==='BUTTON'&&(document.activeElement.getAttribute('aria-label')||document.activeElement.textContent)===label&&!document.activeElement.disabled,label);
+  const selected=await page.evaluate(label=>document.activeElement?.tagName==='BUTTON'&&(document.activeElement.getAttribute('aria-label')===label||document.activeElement.textContent===label)&&!document.activeElement.disabled,label);
   if(selected){await page.keyboard.press('Enter');return;}
   await page.keyboard.press('Tab');
  }
@@ -60,7 +60,7 @@ async function keyboardPuzzle(label){
 }
 async function touchPuzzle(label){
  const point=await page.$eval('.lw-task-modal',(modal,label)=>{
-  const button=[...modal.querySelectorAll('button')].find(button=>(button.getAttribute('aria-label')||button.textContent)===label);
+  const button=[...modal.querySelectorAll('button')].find(button=>(button.getAttribute('aria-label')===label||button.textContent===label));
   if(!button||button.disabled)throw Error('Missing enabled touch control');
   button.scrollIntoView({block:'center'});const r=button.getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2};
  },label);
