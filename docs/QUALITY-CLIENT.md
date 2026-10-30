@@ -1,0 +1,14 @@
+# Quality client working receipt
+
+Foundation941e857f046ef7cc9bae25f0fcad27cf6ab7578a; work only ship-quality-client-20261030. No Chrome lease, providers or other-worktree edits.
+
+Early station API handoff: retain createTaskPuzzle(options). Station instances will add update(task,{pending,connected}) to ingest only actual server projections while preserving same-control focus/drafts. Existing onSubmit will receive only {interactionId,value}; experience captures taskId/session and calls taskInteract. It will use returned real room and/or root update, never a local solved/completed flag. Equipment closes on owner/map/match/phase/death/access changes. Legacy3 puzzles and their no-argument submission remain unchanged. Foundation has only shared/station-contract.mjs; the manager's exact puzzle/progress shapes are requested before implementing projected field access. Rendering/cache work proceeds independently. MotionTrack optional isolated module remains Core-owned.
+
+Baseline source is preserved under _artifacts/quality-client-20261030/baseline with fingerprints. Measurements are actual canvas command-dispatch/cache traces and bounded cache bytes, not invented FPS/GPU/physical-device results. Native final QA remains manager-owned.
+
+
+Early renderer milestone: original layered deck/furniture/station art uses actual immutable geometry; unbacked metadata solids are rejected. Static tiles are256 logical px, capped32 tiles/8MiB per scene, no full-world/DPR2 bitmap. Overview uses vector drawing; exceptional viewports needing more than32 tiles use a vector fallback. Cache is per scene/map descriptor and released on dispose. Camera uses elapsed time, with a100ms resume bound; reduced motion snaps to observed positions. New scene imports require real camera/environment/static-layer helpers in import-stripping legacy VMs; no assertions or old fixtures were changed here.
+
+Four focused ESM checks pass. Initial frozen941e comparison (120 warm frames, reduced-motion Beacon1, one safe keeper) recorded229560 baseline canvas dispatch/property operations versus78000 at320x740,78600 at390x844 and80520 at1440x1000. Warm caches15/20/24 tiles used3.75/5/6MiB respectively and did not rebuild. Initial JS dispatch time was32.42/31.49/26.83ms baseline versus10.62/9.79/10.86ms candidate across120 frames; these are noisy Node/counting-surface CPU timings, NOT native painting, GPU time or FPS. Exact artifact: _artifacts/quality-client-20261030/render-benchmark.json. Later runs retain their own timing records; no physical-device performance is claimed.
+
+Station challenge source is now available read-only from coordinator9c822ea4 and Beacon2 metadata from map owner695bf4e8 (later working edits are not called committed). Exact shapes will be used for the six state-driven task controls in the next scoped milestone. No need to wait for root HTTP implementation.
