@@ -66,6 +66,7 @@ export function validateRoom(room) {
   if (room.state === null && room.startId !== null) throw new Error('Invalid lobby');
   if(room.state!==null){
     const state=room.state;
+    if(state.schemaVersion===2&&Object.hasOwn(state,'map')){const exact=savedMap(state),legacy=savedMap(Object.hasOwn(state,'mapId')?{mapId:state.mapId}:{});if(exact.id!==legacy.id||exact.version!==legacy.version)throw new Error('World2 exact map requires its matching legacy map ID/version');}
     if(state.replayHistory!==undefined){
       if(![2,3,4,5].includes(state.schemaVersion))throw new Error('Mixed legacy/world replay history');
       if(state.schemaVersion!==2&&state.replayHistory.version!==2)throw new Error('Replay version does not match the saved map');
@@ -233,7 +234,7 @@ export async function createRoomStore(directory,{worldGeometry:providedGeometry}
           const candidate=JSON.parse(await readFile(file,'utf8'));refuseFuture(candidate);room=validateRoom(candidate);if(room.id!==match[1])throw new Error('Room ID mismatch');
         } catch(error) {if(['MAP_UNAVAILABLE','VERSION_UNAVAILABLE'].includes(error.code))throw error;await rename(file,`${file}.quarantine-${randomUUID()}`);continue;}
         // Missing deployment geometry is a setup error, not corrupt user data.
-        const geometry=[2,3].includes(room.state?.schemaVersion)&&!room.state?.mapId?await worldGeometry(providedGeometry):undefined;
+        const geometry=[2,3].includes(room.state?.schemaVersion)&&!room.state?.mapId&&!room.state?.map?await worldGeometry(providedGeometry):undefined;
         try{await validateRoomSnapshot(room,{worldGeometry:geometry});rooms.push(room);}catch{await rename(file,`${file}.quarantine-${randomUUID()}`);}
       }
       return rooms;
