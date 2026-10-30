@@ -26,7 +26,7 @@ export function validateStationChallenge(c){
  if(!exact(c,['version','kind','puzzle','progress'])||c.version!==1||!STATION_TASK_KINDS.includes(c.kind)||!exact(c.progress,['values'])||!Array.isArray(c.progress.values)||c.progress.values.length>10||c.progress.values.some(v=>typeof v!=='string'||v.length>30)||!unique(c.progress.values))throw new TypeError('Invalid station challenge state');
  const p=c.puzzle,v=tokens(c),list=(a,length,prefix)=>Array.isArray(a)&&a.length===length&&a.every((x,i)=>exact(x,['id','symbol'])&&x.id===prefix+i&&symbols.includes(x.symbol));
  if(c.kind==='circuit'){
-  if(!exact(p,['left','right'])||!list(p.left,4,'l')||!list(p.right,4,'r')||!unique(p.left.map(x=>x.symbol))||!unique(p.right.map(x=>x.symbol))||p.left.some(x=>!p.right.some(y=>y.symbol===x.symbol))||v.some(x=>{const[a,b]=x.split(':');return !p.left.some(l=>l.id===a&&p.right.some(r=>r.id===b&&r.symbol===l.symbol));})||!unique(v.map(x=>x.split(':')[0])))throw new TypeError('Invalid circuit challenge');
+  if(!exact(p,['left','right'])||!list(p.left,4,'l')||!list(p.right,4,'r')||!unique(p.left.map(x=>x.symbol))||!unique(p.right.map(x=>x.symbol))||p.left.some(x=>!p.right.some(y=>y.symbol===x.symbol))||v.some(x=>{const[a,b,...extra]=x.split(':');return extra.length>0||!p.left.some(l=>l.id===a&&p.right.some(r=>r.id===b&&r.symbol===l.symbol));})||!unique(v.map(x=>x.split(':')[0])))throw new TypeError('Invalid circuit challenge');
  }else if(c.kind==='signal'){
   if(!exact(p,['target','min','max','unit'])||!integer(p.target,10,90)||p.min!==0||p.max!==100||p.unit!=='kHz'||v.length>1||v.some(x=>x!==String(p.target)))throw new TypeError('Invalid signal challenge');
  }else if(c.kind==='sequence'){
