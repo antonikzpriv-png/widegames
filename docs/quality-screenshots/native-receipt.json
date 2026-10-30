@@ -1,0 +1,202 @@
+{
+  "sourceCommit": "f0ea76d6702448a27a891598a2d7512bc0e5ea02",
+  "sourceFileCount": 433,
+  "allGitBlobsVerified": true,
+  "summary": {
+    "status": "passed",
+    "passed": 22,
+    "failed": 0
+  },
+  "httpSafeViews": 1060,
+  "wsSafeViews": 863,
+  "providerCalls": 0,
+  "outboundRequests": [],
+  "outboundNodeRequests": [],
+  "errors": [],
+  "consoleErrors": [],
+  "sourceStable": true,
+  "driverStable": true,
+  "runnerDependenciesStable": true,
+  "cleanup": {
+    "browserClosed": true,
+    "serverClosed": true,
+    "ownedProfileAndDataRemoved": true
+  },
+  "ghostScenario": {
+    "seed": "quality-ghost-2",
+    "map": {
+      "id": "beacon",
+      "version": 2
+    },
+    "fixture": "Idle/scripted actors with actual engine actions; not an autonomous watch",
+    "actualNpcElimination": true,
+    "ownCrewGhost": true,
+    "otherWardSelectedAndExpired": true,
+    "selfWardActivatedAndExpired": true,
+    "stationKind": "signal",
+    "stationCompleted": true,
+    "privateObserverHttpWs": true,
+    "echoUiQualified": false
+  },
+  "canceledAuditResponses": [],
+  "operator": "Coordinator",
+  "reviewerFinalTask": "Quota-paused before launch; committed harness retained and run by coordinator",
+  "reportOriginal": "_artifacts/quality-browser-final-f0ea76d-6NLWB4/report.json",
+  "reportSha256": "3753b50346b38e7ec3bd1a7dcf48a0d35e6dbaa20f22460f13d08cb2508bc45e",
+  "runtimeRevision": "3c1c206b65d7d44c71471450120ba23c43efad9e",
+  "nativeSourceManifestSha256": "3a23cd9ec570ee55ef4b8a4f34e3aacbb341f5a1b94a6afa62fa5e5cb825bd32",
+  "sixCouncilLayouts": 6,
+  "wardTargets": [
+    {
+      "case": "selected OTHER",
+      "actorId": "p1",
+      "targetId": "p2"
+    },
+    {
+      "case": "selected SELF",
+      "actorId": "p1",
+      "targetId": "p1"
+    }
+  ],
+  "outcomes": [
+    {
+      "mode": "human",
+      "fixture": "Normal DEMO nonhuman seats; human intentionally idle",
+      "seed": 3,
+      "outcome": {
+        "winner": "saboteur",
+        "reason": "critical",
+        "at": 1793357616831
+      },
+      "tasks": {
+        "completed": 2,
+        "total": 20
+      },
+      "wallMs": 40968,
+      "observed": [
+        {
+          "phase": "roam",
+          "serverNow": 1793357324802,
+          "tasks": {
+            "completed": 0,
+            "total": 20
+          }
+        },
+        {
+          "phase": "discussion",
+          "serverNow": 1793357567056,
+          "tasks": {
+            "completed": 2,
+            "total": 20
+          }
+        },
+        {
+          "phase": "voting",
+          "serverNow": 1793357596839,
+          "tasks": {
+            "completed": 2,
+            "total": 20
+          }
+        },
+        {
+          "phase": "roam",
+          "serverNow": 1793357616551,
+          "tasks": {
+            "completed": 2,
+            "total": 20
+          }
+        },
+        {
+          "phase": "ended",
+          "serverNow": 1793357619364,
+          "tasks": {
+            "completed": 2,
+            "total": 20
+          }
+        }
+      ],
+      "proposals": {
+        "navigate": 75,
+        "systemSabotage": 14,
+        "investigate": 3,
+        "systemRepair": 13,
+        "taskInteract": 10,
+        "eliminate": 1,
+        "wait": 7,
+        "say": 15,
+        "vote": 5
+      },
+      "replayEvents": 503,
+      "snapshots": 51
+    },
+    {
+      "mode": "spectator",
+      "fixture": "All seats use real DEMO controller",
+      "seed": 3,
+      "outcome": {
+        "winner": "saboteur",
+        "reason": "critical",
+        "at": 1793357921114
+      },
+      "tasks": {
+        "completed": 2,
+        "total": 20
+      },
+      "wallMs": 46426,
+      "observed": [
+        {
+          "phase": "roam",
+          "serverNow": 1793357621664,
+          "tasks": {
+            "completed": 0,
+            "total": 20
+          }
+        },
+        {
+          "phase": "discussion",
+          "serverNow": 1793357863394,
+          "tasks": {
+            "completed": 2,
+            "total": 20
+          }
+        },
+        {
+          "phase": "voting",
+          "serverNow": 1793357892858,
+          "tasks": {
+            "completed": 2,
+            "total": 20
+          }
+        },
+        {
+          "phase": "roam",
+          "serverNow": 1793357913495,
+          "tasks": {
+            "completed": 2,
+            "total": 20
+          }
+        },
+        {
+          "phase": "ended",
+          "serverNow": 1793357923184,
+          "tasks": {
+            "completed": 2,
+            "total": 20
+          }
+        }
+      ],
+      "proposals": {
+        "navigate": 84,
+        "systemSabotage": 13,
+        "investigate": 4,
+        "systemRepair": 13,
+        "taskInteract": 7,
+        "wait": 3,
+        "say": 18,
+        "vote": 6
+      },
+      "replayEvents": 602,
+      "snapshots": 52
+    }
+  ]
+}

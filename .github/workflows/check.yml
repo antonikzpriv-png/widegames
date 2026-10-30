@@ -2,10 +2,13 @@ name: Lantern Wake checks
 on: [push, pull_request]
 permissions:
   contents: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
 jobs:
   offline:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
         with:
@@ -20,7 +23,13 @@ jobs:
       - run: npm run test:browser
         env:
           CHROME_PATH: /usr/bin/google-chrome
-      - run: npm run test:maps:browser
+      - run: npm run test:task-browser
+        env:
+          CHROME_PATH: /usr/bin/google-chrome
+      - run: npm run test:tactical-browser
+        env:
+          CHROME_PATH: /usr/bin/google-chrome
+      - run: npm run test:beacon-browser
         env:
           CHROME_PATH: /usr/bin/google-chrome
       - run: npm run test:features:browser
@@ -45,9 +54,11 @@ jobs:
             _artifacts/world-browser-*/*.png
             _artifacts/world-ui-*/report.json
             _artifacts/world-ui-*/*.png
+            _artifacts/beacon-browser-*/report.json
+            _artifacts/beacon-browser-*/*.png
+            _artifacts/tactical-browser-*/report.json
+            _artifacts/tactical-browser-*/*.png
             _artifacts/ghost-abilities-browser-*/report.json
             _artifacts/ghost-abilities-browser-*/*.png
             _artifacts/spatial-browser-*/report.json
             _artifacts/spatial-browser-*/*.png
-            _artifacts/maps-captcha-browser-*/report.json
-            _artifacts/maps-captcha-browser-*/*.png

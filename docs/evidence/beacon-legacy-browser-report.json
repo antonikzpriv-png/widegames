@@ -1,0 +1,152 @@
+{
+  "checkout": "26e1e0348bb533ed25bd8c747175d6c974ef9e47",
+  "modifiedPaths": "M README.md\n?? docs/BEACON-VERIFICATION.md\n?? docs/beacon-screenshots/\n?? docs/evidence/",
+  "runtimeCheckout": "26e1e0348bb533ed25bd8c747175d6c974ef9e47",
+  "runtimeModifiedPaths": "M README.md\n?? docs/BEACON-VERIFICATION.md\n?? docs/beacon-screenshots/\n?? docs/evidence/",
+  "fixture": "Real transport, cookies, WS and engine. Seeded roles/tasks, idle AI scheduling and a controlled clock; no API responses mocked. Long transit uses real navigate actions. Critical-council preconditions use legal engine actions by fixture AI seats; this is not a full demo-AI match or performance claim.",
+  "checks": [
+    {
+      "name": "lobby: all six original keeper seats and real host start",
+      "pass": true
+    },
+    {
+      "name": "crew assignment: private own role reveal, status and exit remain visible",
+      "pass": true
+    },
+    {
+      "name": "real keyboard movement refreshes integer leases and stops after keyup",
+      "pass": true,
+      "detail": {
+        "start": {
+          "x": 728,
+          "y": 272
+        },
+        "end": {
+          "x": 878.8399999999995,
+          "y": 272
+        },
+        "leases": 6
+      }
+    },
+    {
+      "name": "stage layout and map: desktop, 320, 390, 768 and mobile landscape",
+      "pass": true,
+      "detail": [
+        {
+          "width": 1440,
+          "height": 1000,
+          "stage": {
+            "width": 1440,
+            "height": 1000
+          }
+        },
+        {
+          "width": 320,
+          "height": 740,
+          "stage": {
+            "width": 320,
+            "height": 740
+          }
+        },
+        {
+          "width": 390,
+          "height": 844,
+          "stage": {
+            "width": 390,
+            "height": 844
+          }
+        },
+        {
+          "width": 768,
+          "height": 1024,
+          "stage": {
+            "width": 768,
+            "height": 1024
+          }
+        },
+        {
+          "width": 844,
+          "height": 390,
+          "stage": {
+            "width": 844,
+            "height": 390
+          }
+        }
+      ]
+    },
+    {
+      "name": "actual touch joystick releases to zero; click-to-walk arrives without extrapolating position",
+      "pass": true
+    },
+    {
+      "name": "synthetic blur event stops a real lease and idle updates preserve canvas identity",
+      "pass": true
+    },
+    {
+      "name": "an open task is invalidated by actual movement before any task request",
+      "pass": true
+    },
+    {
+      "name": "real spectator cookie + HTTP polling fallback exposes no private assignment or action controls",
+      "pass": true
+    },
+    {
+      "name": "actual wires task: puzzle gates one real task completion",
+      "pass": true
+    },
+    {
+      "name": "actual tuning task: puzzle gates one real task completion",
+      "pass": true
+    },
+    {
+      "name": "actual sequence task: puzzle gates one real task completion",
+      "pass": true
+    },
+    {
+      "name": "emergency transition + persistent live chat draft/focus and literal text",
+      "pass": true
+    },
+    {
+      "name": "vote cast status hides targets until tally; server ejection ends match",
+      "pass": true
+    },
+    {
+      "name": "role-revealed results/replay are attributed, readable and keyboard scrubbable",
+      "pass": true
+    },
+    {
+      "name": "saboteur Q confirmation: keyboard Cancel restores only valid trigger; confirm is real",
+      "pass": true
+    },
+    {
+      "name": "report key opens actual reported-body council; no invented opponent roles",
+      "pass": true
+    },
+    {
+      "name": "nonterminal ejection scene states only the role supplied by the safe server view",
+      "pass": true
+    },
+    {
+      "name": "critical countdown stays visible on mobile; real crew USE contributes an actual repair",
+      "pass": true
+    },
+    {
+      "name": "critical deadline continues through a real reported-body council",
+      "pass": true
+    }
+  ],
+  "errors": [],
+  "cleanup": {
+    "browserClosed": true,
+    "serverClosed": true,
+    "ownedDataRemoved": true
+  },
+  "browserVersion": "Chrome/156.0.8078.73",
+  "nodeVersion": "v24.20.0",
+  "sourceUnchanged": true,
+  "summary": {
+    "passed": 19,
+    "failed": 0
+  },
+  "rawEvidenceDirectory": "_artifacts/world-ui-LnTqOv"
+}

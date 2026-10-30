@@ -1,0 +1,28 @@
+/** Actual root callbacks with injected drawing/network, not browser timing claims. */
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import vm from 'node:vm';
+import {readFile} from 'node:fs/promises';
+import {worldInputEnvelope} from '../public/world-input-envelope.mjs';
+const state=(version=1)=>({roomId:'A',mode:'human',seatId:'captain',isHost:true,phase:'roam',game:{beaconVersion:1,worldVersion:1,matchId:'match-A',version,serverNow:1000+version,phase:'roam',vision:{radius:360},players:[],self:{id:'captain',alive:true,role:'crew',inputSeq:0,moving:false,position:{x:930,y:310},roomId:'bridge',tasks:[],transit:null},systems:{selfTransit:null},investigation:{session:null},interactions:[{id:'investigate:security',type:'investigate',fields:{deviceId:'security'},enabled:true}],availableActions:['investigate','navigate','wait']}});
+async function fixture(){
+ const requests=[],scenes=[],feedback={children:[],attributes:{},classList:{toggle(){}},replaceChildren(...nodes){this.children=nodes;},append(node){this.children.push(node);},setAttribute(k,v){this.attributes[k]=v;},get textContent(){return this.children.map(n=>n.text??'').join(' ');}},main={replaceChildren(){},querySelector(){return null;},querySelectorAll(){return [];}},body={};
+ const context={console,AbortController,DOMException,crypto,Date,setTimeout,clearTimeout,worldInputEnvelope,document:{body,activeElement:body,hidden:false,querySelector:s=>s==='#feedback'?feedback:main},history:{replaceState(){},pushState(){}},sessionStorage:{setItem(){},removeItem(){}},h:(tag,attrs,text)=>({tag,attrs,text}),button:(text,click)=>({text,click}),roomFrom:x=>x.room??x,roomPath:(id,suffix='')=>'/api/rooms/'+id+suffix,actionEnvelope:(type,fields)=>({...fields,type,id:crypto.randomUUID()}),createWatchPanels:()=>({update(){},dispose(){}}),createWorldExperience(host,callbacks){const scene={callbacks,update(){},dispose(){}};scenes.push(scene);return scene;},request:(route,options)=>new Promise((resolve,reject)=>requests.push({route,options,resolve,reject}))};
+ context.globalThis=context;const src=await readFile(new URL('../public/app.mjs',import.meta.url),'utf8');vm.runInNewContext(src.slice(0,src.indexOf('const rulesToggle=')).replace(/^import .*$/gm,'')+';render=()=>{};saveFocus=()=>({});restoreFocus=()=>{};connect=()=>{};globalThis.api={openRoom,mount:renderWorld,accept,getRoom:()=>room};',context);await context.api.openRoom('A',state());context.api.mount();return {context,feedback,requests,scene:scenes[0],api:context.api};
+}
+const failure=()=>new TypeError('OBSOLETE BEACON ERROR');
+for(const change of ['descriptor-return','session-return','transit-return','position-return','vision-return'])test('root permanently invalidates old beacon error after '+change,async()=>{
+ const f=await fixture(),pending=f.scene.callbacks.action('investigate',{deviceId:'security'}),rejected=assert.rejects(pending,e=>e.name==='AbortError');let changed=state(2);if(change==='descriptor-return')changed.game.interactions=[];if(change==='session-return')changed.game.investigation.session={deviceId:'security',status:'reading',deadlineAt:3000};if(change==='transit-return')changed.game.self.transit={entryId:'archive-hatch',exitId:'workshop-hatch',deadlineAt:3000};if(change==='position-return')changed.game.self.position.x+=10;if(change==='vision-return')changed.game.vision.radius=110;f.api.accept(changed);f.api.accept(state(3));const notice=f.feedback.textContent;f.requests[0].reject(failure());await rejected;assert.equal(f.feedback.textContent,notice);assert(!f.feedback.children.some(n=>n.text==='Retry same request'));
+});
+
+test('late successful beacon response can synchronize authority without overwriting current feedback',async()=>{
+ const f=await fixture(),pending=f.scene.callbacks.action('investigate',{deviceId:'security'}),rejected=assert.rejects(pending,e=>e.name==='AbortError'),changed=state(2);changed.game.interactions=[];f.api.accept(changed);f.feedback.children=[{text:'Current watch notice'}];f.requests[0].resolve(state(99));await rejected;assert.equal(f.api.getRoom().game.version,99);assert.equal(f.feedback.textContent,'Current watch notice');
+});
+
+test('still-current uncertain equipment preserves exact-ID retry across unrelated version progress',async()=>{
+ const f=await fixture(),pending=f.scene.callbacks.action('investigate',{deviceId:'security'}),rejected=assert.rejects(pending,/Current connection reset/);f.api.accept(state(2));f.requests[0].reject(new TypeError('Current connection reset'));await rejected;const retry=f.feedback.children.find(n=>n.text==='Retry same request');assert(retry);const resent=retry.click();assert.equal(f.requests[1].route,f.requests[0].route);assert.deepEqual(JSON.parse(JSON.stringify(f.requests[1].options.body)),JSON.parse(JSON.stringify(f.requests[0].options.body)));const accepted=state(3);accepted.game.investigation.session={deviceId:'security',status:'reading',deadlineAt:3000};accepted.game.interactions=[];f.requests[1].resolve(accepted);await resent;assert.equal(f.api.getRoom().game.investigation.session.status,'reading');assert(!f.feedback.children.some(n=>n.text==='Retry same request'));
+});
+
+test('already displayed old equipment retry cannot resurrect after permission return',async()=>{
+ const f=await fixture(),pending=f.scene.callbacks.action('investigate',{deviceId:'security'}),rejected=assert.rejects(pending,/Connection reset/);f.requests[0].reject(new TypeError('Connection reset'));await rejected;const retry=f.feedback.children.find(n=>n.text==='Retry same request'),changed=state(2);changed.game.interactions=[];f.api.accept(changed);f.api.accept(state(3));const count=f.requests.length;await retry.click();assert.equal(f.requests.length,count);
+});

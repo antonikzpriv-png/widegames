@@ -1,8 +1,9 @@
+import {deviceFacts} from '../features/strategy/index.mjs';
 import { ROOM_LAYOUT, CHARACTERS } from '../../shared/contracts.mjs';
 import { worldCandidates, visibleWorldPlayer } from './world.mjs';
 
+const own=(o,k)=>o&&Object.hasOwn(o,k)?o[k]:undefined;
 const rooms = new Map(ROOM_LAYOUT.map(room => [room.id, room]));
-const roomFor=(view,id)=>view.rooms?.find(room=>room.id===id)??rooms.get(id);
 const ordered = list => [...list].sort((a, b) => String(a.id).localeCompare(String(b.id)));
 
 /** Deterministic BFS over public map geometry only. */
@@ -35,14 +36,14 @@ function visibleBodies(view) {
   for (const event of view.events ?? []) {
     if (event.bodyId && event.roomId === view.self.roomId && !event.reported) found.set(event.bodyId, event.bodyId);
   }
-  return [...found.values()].slice(0, 24);
+  return [...found.values()].slice(0, 12);
 }
 
 function suspect(view, memory) {
   const living = ordered((view.players ?? []).filter(p => p.alive && p.id !== view.self.id));
-  const witnessed = living.filter(p => memory.witnesses?.[p.id]);
+  const witnessed = living.filter(p => own(memory.witnesses,p.id));
   if (witnessed.length) return witnessed.sort((a, b) => memory.witnesses[b.id].at - memory.witnesses[a.id].at || a.id.localeCompare(b.id))[0].id;
-  const ranked = living.filter(p => (memory.suspicion?.[p.id] ?? 0) > 0)
+  const ranked = living.filter(p => (own(memory.suspicion,p.id) ?? 0) > 0)
     .sort((a, b) => memory.suspicion[b.id] - memory.suspicion[a.id] || a.id.localeCompare(b.id));
   if (ranked.length) return ranked[0].id;
   if (view.self.role === 'saboteur' && living.length) return living[0].id;
@@ -60,20 +61,27 @@ const VOICES = Object.freeze({
 
 function dialogue(view, memory) {
   const target = suspect(view, memory);
-  const name = (view.players ?? []).find(p => p.id === target)?.name ?? CHARACTERS.find(p => p.id === target)?.name;
-  const room = roomFor(view,view.self.roomId)?.name ?? 'my station';
+  const name = (view.players??CHARACTERS).find(p => p.id === target)?.name;
+  const room = (view.rooms??ROOM_LAYOUT).find(r=>r.id===view.self.roomId)?.name ?? 'my station';
   const number = Math.min(memory.discussionCount ?? 0, 2);
-  const voice = VOICES[view.self.id] ?? VOICES.p1;
+  const voice=(Object.hasOwn(VOICES,view.self.id)?VOICES[view.self.id]:undefined)??Object.values(VOICES)[[...view.self.id].reduce((n,c)=>n+c.charCodeAt(0),0)%Object.keys(VOICES).length];
   if (view.self.role === 'saboteur') return [
     voice[0] + ' I was checking the relays near ' + room + '. Who can account for the last crossing?',
     voice[1] + (name ? ' ' + name + ', tell us your route. We need a consistent account.' : ' Keep the repair teams together.'),
     voice[2] + ' I am voting on the accounts we have heard.'
   ][number];
-  const witness = memory.witnesses?.[target];
+  const witness = own(memory.witnesses,target);
   if (witness && number < 2) {
-    const victim = (view.players ?? []).find(p => p.id === witness.targetId)?.name ?? CHARACTERS.find(p => p.id === witness.targetId)?.name;
-    const where = roomFor(view,witness.roomId)?.name;
+    const victim = (view.players??CHARACTERS).find(p => p.id === witness.targetId)?.name;
+    const where = (view.rooms??ROOM_LAYOUT).find(r=>r.id===witness.roomId)?.name??witness.roomId;
     return voice[number] + ' I saw ' + name + ' attack ' + victim + ' in ' + where + '. That is firsthand; I will vote for ' + name + '.';
+  }
+  const sample=view.beaconVersion?deviceFacts(view).at(-1):null;
+  if(sample&&number===0){
+    const at=new Date(sample.at).toISOString(),who=id=>(view.players??[]).find(p=>p.id===id)?.name??id;
+    if(sample.kind==='vitals')return 'Vitals sampled '+at+': '+sample.players.map(p=>who(p.id)+' '+p.status).join(', ')+'. No location or attacker was identified.';
+    if(sample.kind==='occupancy')return 'Occupancy sampled '+at+': '+sample.rooms.map(r=>r.roomId+' '+r.count).join(', ')+'. Counts do not identify people.';
+    if(sample.kind==='cameras')return 'Camera sample '+at+': '+sample.frames.map(f=>f.cameraId+' saw '+(f.players.map(who).join(', ')||'no keepers')).join('; ')+'. This is a past sample, not an attack witness.';
   }
   if (name && number < 2) return voice[number] + ' Suspicion only: ' + name + ' was nearby before a disappearance. I did not see an attack; that is a proximity inference.';
   return [
@@ -90,30 +98,29 @@ export function observe(view, memory) {
     memory.meetingId = phaseKey;
     memory.discussionCount = 0;
   }
-  const rosterIds = new Set((view.players ?? []).slice(0, 24).map(p => p.id));
-  for (const field of ['witnesses', 'suspicion']) if (memory[field]) memory[field] = Object.fromEntries(Object.entries(memory[field]).filter(([id]) => rosterIds.has(id)).slice(0, 24));
   for (const event of view.events ?? []) {
-    if (event.type === 'witness' && event.playerId !== view.self.id && event.playerId !== event.targetId && rosterIds.has(event.playerId) && rosterIds.has(event.targetId) && !!roomFor(view,event.roomId)) {
+    if (event.type === 'witness' && event.playerId !== view.self.id && event.playerId !== event.targetId && (view.players??CHARACTERS).some(p => p.id === event.playerId) && (view.players??CHARACTERS).some(p => p.id === event.targetId) && (view.rooms??ROOM_LAYOUT).some(room=>room.id===event.roomId)) {
       memory.witnesses ??= {};
       memory.witnesses[event.playerId] = { targetId: event.targetId, roomId: event.roomId, at: Number.isFinite(event.at) ? event.at : view.serverNow };
     }
   }
-  if (memory.observation && (!Array.isArray(memory.observation.nearby) || !Array.isArray(memory.observation.dead))) delete memory.observation;
-  const dead = new Set((view.players ?? []).filter(p => !p.alive).map(p => p.id));
+  const rosterIds=new Set((view.players??[]).slice(0,24).map(p=>p.id));
+  for(const field of ['witnesses','suspicion'])if(memory[field])memory[field]=Object.fromEntries(Object.entries(memory[field]).filter(([id])=>rosterIds.has(id)).slice(0,24));
+  if(memory.observation&&(!Array.isArray(memory.observation.nearby)||!Array.isArray(memory.observation.dead)))delete memory.observation;
+  const dead = new Set((view.players ?? []).filter(p => p.alive===false).map(p => p.id));
   if (memory.observation?.roomId === view.self.roomId) {
     const newlyDead = memory.observation.nearby.filter(id => dead.has(id) && !memory.observation.dead.includes(id));
     if (newlyDead.length) {
       memory.suspicion ??= {};
       for (const id of memory.observation.nearby) {
-        if (!dead.has(id)) memory.suspicion[id] = Math.min(3, (memory.suspicion[id] ?? 0) + 1);
+        if (!dead.has(id)) memory.suspicion[id] = Math.min(3, (own(memory.suspicion,id) ?? 0) + 1);
       }
     }
   }
   memory.observation = {
-    at: view.serverNow,
     roomId: view.self.roomId,
-    nearby: (view.players ?? []).filter(p => p.id !== view.self.id && p.alive && (view.worldVersion === 1 ? visibleWorldPlayer(view, p) : p.roomId === view.self.roomId)).map(p => p.id).slice(0, 24),
-    dead: [...dead].slice(0, 24)
+    nearby: (view.players ?? []).filter(p => p.id !== view.self.id && p.alive && (view.worldVersion === 1 ? visibleWorldPlayer(view, p) : p.roomId === view.self.roomId)).map(p => p.id).slice(0, 12),
+    dead: [...dead].slice(0, 12)
   };
 }
 
@@ -122,7 +129,7 @@ export function candidates(view, memory) {
   const allowed = new Set(view.availableActions ?? []);
   const can = type => allowed.has(type);
   const actions = [];
-  if(view.self?.ghost&&view.worldVersion===1)return view.phase==='roam'?worldCandidates(view,memory,'skip'):[];
+  if(view.self?.ghost===true&&view.worldVersion===1)return view.phase==='roam'?worldCandidates(view,memory,'skip'):[];
   if (!view.self?.alive || ['ended', 'paused', 'lobby'].includes(view.phase)) return actions;
   if (view.phase === 'discussion') {
     if (can('say') && (memory.discussionCount ?? 0) < 3) actions.push({ type: 'say', text: dialogue(view, memory) });

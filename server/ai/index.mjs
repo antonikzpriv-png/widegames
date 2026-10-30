@@ -79,10 +79,13 @@ export function createAiController({ config = {} } = {}) {
   }
   return {
     async decide({ view, player, context, signal, commitReservation, getCurrentView } = {}) {
-      if (signal?.aborted || !record(context) || !view?.self || (!view.self.alive&&!view.self.ghost) || typeof view.matchId !== 'string' || !Number.isFinite(view.serverNow) || !['roam', 'discussion', 'voting'].includes(view.phase)) return null;
-      const publicEntry = (view.players ?? []).slice(0, 24).find(p => p.id === player?.id);
-      const validPublicName = typeof publicEntry?.name === 'string' && publicEntry.name.trim().length > 0 && publicEntry.name.length <= 80 && !/[\u0000-\u001f\u007f]/u.test(publicEntry.name);
-      const actor = CHARACTERS.find(p => p.id === player?.id) ?? (publicEntry && /^[A-Za-z0-9_-]{1,40}$/.test(publicEntry.id) && validPublicName ? { id: publicEntry.id, name: publicEntry.name, persona: 'A keeper aboard the beacon.' } : null);
+      if (signal?.aborted || !record(context) || !view?.self || (!view.self.alive&&!(view.self.ghost===true)) || typeof view.matchId !== 'string' || !Number.isFinite(view.serverNow) || !['roam', 'discussion', 'voting'].includes(view.phase)) return null;
+      const publicEntry=(view.players??[]).slice(0,24).find(p=>p.id===player?.id);
+      const validName=typeof publicEntry?.name==='string'&&publicEntry.name.trim().length>0&&publicEntry.name.length<=80&&!/[\u0000-\u001f\u007f]/u.test(publicEntry.name);
+      // Only an exact public identity may use the safe canonical traits.
+      // Never consume supplied player/roster persona fields or private state.
+      const canonical=CHARACTERS.find(p=>p.id===publicEntry?.id&&p.name===publicEntry?.name);
+      const actor=publicEntry&&/^[A-Za-z][A-Za-z0-9_-]{0,63}$/.test(publicEntry.id)&&validName?{id:publicEntry.id,name:publicEntry.name,color:publicEntry.color,persona:canonical?.persona??'A keeper aboard the beacon.'}:null;
       if (!actor || actor.id !== view.self.id) return null;
       const state = getState(context, view.matchId);
       const actorKey = `actor:${actor.id}`;
@@ -98,10 +101,12 @@ export function createAiController({ config = {} } = {}) {
         observe(view, memory);
         if (settings.strategy === 'strategic' && view.worldVersion === 1) remember(view, memory);
         const strategic = settings.strategy === 'strategic' && state.mode === 'live' && !view.self.ghost && view.phase === 'roam' && view.worldVersion === 1;
+        // The shared local dispatcher includes every permitted fallen faction.
         const localChoices = candidates(view, memory);
         if (view.phase !== 'roam' || view.self.ghost) delete memory.intention;
         // Retain optional local ability behavior without introducing model calls.
         if (view.self.alive && ['protect', 'decoy'].includes(localChoices[0]?.type)) return envelope(localChoices[0], view, memory);
+        if(view.self.transit||view.systems?.selfTransit||view.investigation?.session?.status==='reading')return envelope(localChoices[0],view,memory);
         if (strategic) {
           const continued = execute(view, memory);
           if (continued) return envelope(continued, view, memory);
@@ -119,7 +124,7 @@ export function createAiController({ config = {} } = {}) {
         if (typeof commitReservation !== 'function') { fallback(context, state, 'reservation_required'); return demo(); }
         if (strategic) { memory.plannedSituation = situation(view, memory); memory.replanAt = view.serverNow + 30000; }
         const current = () => getCurrentView ? getCurrentView() : view;
-        const valid = () => { const fresh = current(); return fresh?.matchId === view.matchId && fresh.phase === view.phase && fresh.self?.alive && fresh.meeting?.id === view.meeting?.id && (!strategic || situation(fresh, memory) === situation(view, memory)); };
+        const valid = () => { const fresh=current();return context.activeMatchId===view.matchId&&fresh?.matchId===view.matchId&&fresh.phase===view.phase&&fresh.self?.id===actor.id&&fresh.self?.alive===true&&fresh.map?.id===view.map?.id&&fresh.map?.version===view.map?.version&&fresh.meeting?.id===view.meeting?.id&&(!strategic||situation(fresh,memory)===situation(view,memory)); };
         let request;
         try { request = makeRequest(view, actor, memory, choices); }
         catch (error) { fallback(context, state, error.code); return demo(); }
