@@ -131,3 +131,30 @@ Legacy schemas1/2/3/4/5 and ended histories1/2 preserve their bytes/metadata/eve
 Report: `_artifacts/quality-production-76105e2-run-AZGKJz/report.json`. Preparation/install/checker logs, raw tar, manifest/dependency proofs, frozen hashes and final-summary.json remain under `_artifacts/escape-final-production/`; generated private rooms stay inside this run's private-data directory. Earlier artifacts/worktrees are untouched. Git confirms app/runner/shared/config/package sources remain exactly the frozen pin.
 
 This is the requested final WS-only actual-main production qualification at76105e2. The fixture does not itself operate a browser or the Escape key; coordinator's browser evidence covers those controls. No Chrome, paid/model call, full suite, Docker container run, main/push/merge or deployment is claimed or performed. Only this focused receipt is committed.
+
+
+## Final focus-guard frozen asset qualification, 2026-10-30
+
+Exact source: `25b39a75795d72cdcc98e99b15b4ebd478a31681`, app14ad207 with the higher-priority-dialog Escape guard. This is the current frozen production receipt, superseding76105e2 for the changed app; all earlier receipts/trees remain preserved. New isolated worktree/branch: `D:/Widegames-work/ship-quality-production-focus-final-20261030`, `codex/ship-quality-production-focus-final-20261030`. Only this appended documentation changes.
+
+Repeated the unchanged tracked raw Git-blob preparer, exact `git -c core.autocrlf=false archive --format=tar`, and compatible adjacent checker-manifest conversion. All574 raw tracked files and574 regular tar entries match their committed hashes, including86 unedited PNGs. Raw root: `D:\Widegames-work\ship-quality-production-focus-final-20261030\_artifacts\quality-source-25b39a7-raw-Nhq2Uz`. Converted metadata contains pin/tarSha256/files(file,mode,blob,oid,sha256); no source overlays or text conversions.
+
+Inside that raw root, `npm ci --omit=dev --offline --ignore-scripts --no-audit --no-fund` succeeded with one package. TEMP/TMP `D:/Widegames-work/temp`, npm cache `D:/Widegames-work/npm-cache`. Only ws8.22.0 is installed/resolved locally. Puppeteer and puppeteer-core are absent/unresolvable through ancestors; NODE_PATH unset. No coordinator or development dependency directory was used.
+
+Executed the original checker once, unchanged, with QUALITY_PRODUCTION_REVIEW_PIN=`25b39a75795d72cdcc98e99b15b4ebd478a31681` and QUALITY_PRODUCTION_REVIEW_ROOT set to that raw root: `node tests/quality-production-review.mjs`. Exit0, status passed,30 checks in29.753s on Nodev24.20.0, within the original90s budget. The count is the unchanged30+5 per extra Beacon crew-selection attempt; no extra attempt was needed. No assertion change, omitted gate, result-seeking rerun or error.
+
+Final counts/scope:574 blobs unchanged before/after;103 runtime files;67 public/shared assets fetched byte-exact with MIME/CSP;249 local import edges and6 browser references resolve. Actual production HTTP/owner-public WebSockets exercise Beacon2 and Annex1, including permissions/origins/cross-room cookies, static/private/traversal boundaries, map/settings/start/action/input receipts and private notes. Four distinct station jobs/kinds, actual normal-speed908.372-unit route, one legal glyphs step, invalid/remote/direct-completion denials and exact-ID deduplication survive restart. Legacy1..5 files and replay1/2 metadata/events/snapshots/authorization retain their bounds and bytes; six known future types (room,match,history,features,station,map) refuse without quarantine. The prior synthetic uncertain daily reservation$0.01 remains byte-exact, without refund/reset.
+
+Both actual main children exited0 through their real SIGTERM handlers, empty stderr; sockets and ownership/recovery locks cleaned up, restart acquired a distinct lock token and retained identities/receipts. Provider fetch attempts0, outbound attempts0, forced stops0, socket errors0; no preparation/checker/cleanup error.
+
+| Final artifact | SHA256 |
+| --- | --- |
+| Exact Git source tar | `5a192c32b8597cda5a853142d24769553ccf489c0a22eb697cfcd6c65fbdf0cd` |
+| Preparer source manifest | `d419f16d103d8c66550ac32cb4d4a5ae21b9517e97cd4981ca0c79072df4f6c8` |
+| Adjacent checker manifest | `7b94dbcdff899b8d05d354233a35f3b7996c175120881aba1590a1fb9bcffb59` |
+| Production report | `74d6606fbb619aa192106d983f4e5ea3397ddbc3cb81672063af9808b67102a9` |
+| Unchanged checker | `60b604d320a5451c6c243b6a004cd4fc7d51f7c91427dcb0e094358973cf5ad9` |
+| Unchanged preparer | `4af84f864e79bf0e53d8deff0f53f5033fce4c2d4dcd2367f7e7be014a47eb14` |
+| package-lock.json | `69d8d16c85c641063313fb66033ecab494e56c6f3463d1319a725560b1d35162` |
+
+Report: `_artifacts/quality-production-25b39a7-run-ToaWRw/report.json`. Raw tar, manifests, offline-install/dependency proof, checker output, frozen hashes and final-summary.json are preserved under `_artifacts/focus-final-production/`, with generated private data isolated to this run. App/shared/config/runner/preparer/package sources remain exactly the frozen pin. This is the final requested actual-main WS-only production qualification; it does not itself exercise Escape/browser focus or claim full-suite, CI, Docker-container, live-provider or deployment qualification. No Chrome, model/paid calls, runtime edits, main/push/merge/deploy or prior-tree modification. Stop after this receipt commit.
