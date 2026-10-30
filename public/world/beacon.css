@@ -73,3 +73,37 @@
  .lw-world:has(.lw-council:not([hidden])) .lw-critical{top:64px;max-height:72px}
  .lw-world:has(.lw-council:not([hidden])) .lw-critical>span:last-child{max-height:28px}
 }
+
+/* Fallen chat is an explicit owner panel, never a hit surface over movement.
+   The transparent dock passes clicks through outside its toggle/open pane. */
+.lw-world .lw-ghost-chat{position:absolute;inset:0;z-index:26;width:auto;max-width:none;max-height:none;padding:0;border:0;border-radius:0;background:none;overflow:visible;pointer-events:none}
+.lw-world .lw-ghost-chat .lw-ghost-toggle{position:absolute;right:16px;top:194px;min-height:44px;width:148px;padding:6px 8px;border:2px solid #c4afe8;border-radius:10px;font-size:12px;line-height:14px;pointer-events:auto}
+.lw-world .lw-ghost-pane{position:absolute;right:16px;top:246px;bottom:200px;width:310px;max-width:calc(100% - 32px);max-height:420px;overflow:auto;overscroll-behavior:contain;scroll-padding-block:52px;pointer-events:auto;padding:12px;border:2px solid #c4afe8;border-radius:14px;background:#152f45;color:#efe5ff}
+.lw-world .lw-ghost-heading{position:sticky;top:0;z-index:1;display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:44px;background:#152f45}
+.lw-world .lw-ghost-heading h2{margin:0;font-size:13px}.lw-world .lw-ghost-chat .lw-ghost-close{min-height:44px;min-width:60px;font-size:12px}
+.lw-world .lw-ghost-pane ol{margin:8px 0;max-height:90px;overflow:auto;overscroll-behavior:contain}.lw-world .lw-ghost-pane ol:empty{display:none}
+.lw-world .lw-ghost-pane form{display:grid;gap:8px}.lw-world .lw-ghost-pane textarea{min-width:0;min-height:72px;max-height:140px;padding:8px;font-size:16px;line-height:1.4;resize:vertical}
+.lw-world .lw-ghost-pane form button{min-height:44px;padding:8px;font-size:13px}.lw-world .lw-ghost-pane p{margin:6px 0 0;font-size:10px;line-height:1.4}
+@media(max-width:700px),(max-height:540px) and (min-width:560px){
+ .lw-world .lw-ghost-chat .lw-ghost-toggle{left:108px;right:auto;top:auto;bottom:8px;width:44px;height:44px;min-height:44px;padding:3px;font-size:10px;line-height:12px}
+ .lw-world .lw-ghost-pane{left:12px;right:12px;top:76px;bottom:300px;width:auto;max-width:none;max-height:420px}
+}
+@media(max-height:540px) and (min-width:560px){
+ .lw-world .lw-ghost-pane{left:126px;right:100px;top:64px;bottom:72px;max-height:none}
+ .lw-world .lw-ghost-pane ol{max-height:60px}
+ .lw-world .lw-ghost-pane form{grid-template-columns:minmax(0,1fr) auto;align-items:end}
+ .lw-world .lw-ghost-pane textarea{min-height:64px;max-height:100px}
+ .lw-world .lw-ghost-pane form button{min-width:110px}
+}
+
+/* Keep the deadline visible above an explicitly opened fallen channel too. */
+@media(max-width:700px),(max-height:540px) and (min-width:560px){
+ .lw-world[data-critical=true] .lw-ghost-pane{top:188px}
+ .lw-world:has(.lw-ghost-pane:not([hidden])) .lw-critical{top:76px;max-height:104px}
+ .lw-world:has(.lw-ghost-pane:not([hidden])) .lw-critical>span:last-child{max-height:48px;overflow:auto;overscroll-behavior:contain}
+}
+@media(max-height:540px) and (min-width:560px){
+ .lw-world[data-critical=true] .lw-ghost-pane{top:144px}
+ .lw-world:has(.lw-ghost-pane:not([hidden])) .lw-critical{top:64px;max-height:72px}
+ .lw-world:has(.lw-ghost-pane:not([hidden])) .lw-critical>span:last-child{max-height:28px}
+}
