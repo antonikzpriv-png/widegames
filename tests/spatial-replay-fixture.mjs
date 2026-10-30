@@ -4,9 +4,9 @@ import * as engine from '../server/engine/index.mjs';
 import {WORLD,WORLD_STATIONS,distance} from '../shared/world.mjs';
 
 /** Authoritative actions and clocks; private role inspection selects demo fixtures only. */
-export function spatialFixture(id='spatial_fixture_room_0001'){
+export function spatialFixture(id='spatial_fixture_room_0001',{mode='human'}={}){
  let state,now=1000,serial=0;
- for(let seed=0;seed<100;seed++){state=engine.createMatch({id,world:true,seed,now,config:{initialKillCooldownMs:1,killCooldownMs:1,sabotageCooldownMs:1,meetingCooldownMs:1,taskCooldownMs:1,discussionMs:10000,votingMs:10000,criticalDurationMs:120000,roamDeadlineMs:600000,maxMatchMs:1800000}});if(state.players[5].role==='saboteur')break;}
+ for(let seed=0;seed<100;seed++){state=engine.createMatch({id,mode,world:true,seed,now,config:{initialKillCooldownMs:1,killCooldownMs:1,sabotageCooldownMs:1,meetingCooldownMs:1,taskCooldownMs:1,discussionMs:10000,votingMs:10000,criticalDurationMs:120000,roamDeadlineMs:600000,maxMatchMs:1800000}});if(state.players[5].role==='saboteur')break;}
  const initial=structuredClone(state);
  function act(actor,type,fields={}){
   if(type==='task')while(true){

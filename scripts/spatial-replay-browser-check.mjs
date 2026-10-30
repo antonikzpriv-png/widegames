@@ -9,6 +9,7 @@ import {fileURLToPath} from 'node:url';
 import puppeteer from 'puppeteer-core';
 import {createGameServer} from '../server/transport.mjs';
 import {spatialFixture} from '../tests/spatial-replay-fixture.mjs';
+import {validateRoomSnapshot} from '../server/store.mjs';
 
 const root=fileURLToPath(new URL('../',import.meta.url));await mkdir(path.join(root,'_artifacts'),{recursive:true});const output=await mkdtemp(path.join(root,'_artifacts/spatial-browser-'));
 const report={fixture:'Seeded legal engine actions and accelerated clocks produce a completed match. Native app, authenticated HTTP and WebSocket paths; demo/idle scheduling, no provider calls. This is playback qualification, not a full AI strategy evaluation.',checks:[],screenshots:[],errors:[],consoleErrors:[],sourceCommit:execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8'}).trim()};
@@ -24,9 +25,11 @@ try{
  page.on('pageerror',e=>report.errors.push(e.message));page.on('console',m=>{if(m.type()==='error')report.consoleErrors.push(m.text());});
  const writes=[];page.on('request',req=>{if(req.method()==='POST'&&req.url().includes('/api/rooms'))writes.push(new URL(req.url()).pathname);});
  await page.goto(origin,{waitUntil:'domcontentloaded'});await page.click('.harbor-watch');await page.waitForSelector('.lw-lobby:not([hidden])');await page.click('.lw-lobby .lw-primary');await page.waitForSelector('.lw-spectator:not([hidden])');
- const roomId=new URL(page.url()).pathname.split('/')[2];await page.select('[aria-label="Follow a keeper"]','p2');await page.select('[aria-label="Inspect world object"]','player:p2');const observer=await page.evaluate(async id=>(await fetch('/api/rooms/'+id).then(response=>response.json())).game,roomId);check(await page.$eval('.lw-inspector',n=>!n.hidden&&n.textContent.includes('Roles are revealed to observers'))&&observer.inspection?.mode==='all-ai-observer'&&observer.players.every(player=>!Object.hasOwn(player,'role')),'all-AI observer inspection reveals roles separately from redacted player views');await page.click('[aria-label="Close inspector"]');
+ const roomId=new URL(page.url()).pathname.split('/')[2];await page.select('[aria-label="Follow a keeper"]','p2');await page.select('[aria-label="Inspect world object"]','player:p2');const observer=await page.evaluate(async id=>(await fetch('/api/rooms/'+id).then(response=>response.json())).game,roomId);check(await page.$eval('.lw-inspector',n=>!n.hidden&&n.textContent.includes('Private owner observatory'))&&observer.inspection?.mode==='all-ai-observer'&&observer.players.every(player=>!Object.hasOwn(player,'role')),'authenticated all-AI owner inspection reveals roles separately from redacted player views');await page.click('[aria-label="Close inspector"]');
  check(await page.$eval('.lw-ai',n=>n.textContent.includes('DEMO')),'live demo label remains visible');await shot('01-live-ai-spectator');
- const f=spatialFixture(roomId);await game.rooms.get(roomId).queue;game.rooms.get(roomId).data.state=f.state;
+ // Generate a legal ended match in the actual room's mode, then validate it at
+ // the serialized fixture boundary; no winner, role or coordinate is invented.
+ const f=spatialFixture(roomId,{mode:'spectator'}),entry=game.rooms.get(roomId);const install=entry.queue.then(async()=>{const next={...entry.data,state:f.state};await validateRoomSnapshot(next);entry.data=next;});entry.queue=install.catch(()=>{});await install;
  await page.reload({waitUntil:'domcontentloaded'});await page.waitForSelector('.lw-results:not([hidden])');const beforePlayback=writes.length;
  await page.click('.lw-results>.lw-primary');await page.waitForSelector('.lw-replay-canvas');
  check(await page.$eval('.lw-replay-coverage',n=>n.textContent.includes('Full recorded history')),'new full recording loads from authoritative initial anchor');
