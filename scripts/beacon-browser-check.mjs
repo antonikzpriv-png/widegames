@@ -36,7 +36,16 @@ async function panel(){if(await page.$eval('.lw-beacon-pane',n=>n.hidden)){if(pa
 async function closePanel(){if(await page.$('.lw-beacon-pane:not([hidden])')){if(page.viewport()?.hasTouch){await page.focus('.lw-beacon-pane .lw-secondary');await page.keyboard.press('Escape');}else await press('Close systems');await page.waitForSelector('.lw-beacon-pane[hidden]',{hidden:true});}}
 async function control(id){await panel();await page.locator('[data-interaction-id="'+id+'"]').click();}
 async function shot(name,target=page){const file=name+'.png';await target.screenshot({path:path.join(output,file),fullPage:true});report.screenshots.push(file);}
-async function start(kind){scenario=kind;await page.goto(origin,{waitUntil:'domcontentloaded'});await page.locator('.harbor-play').click();await page.waitForSelector('.lw-lobby');roomId=new URL(page.url()).pathname.split('/')[2];await press('Begin the watch');await page.waitForSelector('.lw-role-scene:not([hidden])');await page.locator('.lw-role-scene button.lw-primary').click();await until(r=>r.game.beaconVersion===1,'default beacon startup');return (await view()).game.self.id;}
+async function start(kind){
+ scenario=kind;await page.goto(origin,{waitUntil:'domcontentloaded'});
+ // The launch room deliberately sends its chosen map. This compatibility gate
+ // instead exercises the supported unmapped Group1 API using a native browser
+ // request; the response's HttpOnly cookie owns the actual subsequent app UI.
+ const created=await page.evaluate(async()=>{const response=await fetch('/api/rooms',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mode:'human'})});return {status:response.status,room:await response.json()};});
+ assert.equal(created.status,201,JSON.stringify(created.room));assert.equal(created.room.map,undefined);assert.equal(created.room.mapId,undefined);
+ report.creation='Native same-origin POST /api/rooms {mode:human}, deliberately omitting mapId for legacy unmapped Group1 systems; subsequent controls use the actual app and response cookie.';
+ roomId=created.room.roomId;await page.goto(origin+'/r/'+roomId,{waitUntil:'domcontentloaded'});await page.waitForSelector('.lw-lobby');await press('Begin the watch');await page.waitForSelector('.lw-role-scene:not([hidden])');await page.locator('.lw-role-scene button.lw-primary').click();await until(r=>r.game.beaconVersion===1,'legacy unmapped beacon startup');return (await view()).game.self.id;
+}
 async function readDevice(id){await control('investigate:'+id);const reading=await until(r=>r.game.investigation.session?.status==='reading','read begins');await jumpTo(reading.game.investigation.session.deadlineAt+1);return until(r=>r.game.investigation.session?.status==='elapsed','dated sample completes');}
 try{
  const probe=net.createServer();await new Promise(r=>probe.listen(0,'127.0.0.1',r));const port=probe.address().port;await new Promise(r=>probe.close(r));origin='http://127.0.0.1:'+port;
