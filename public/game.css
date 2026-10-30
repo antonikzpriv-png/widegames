@@ -27,3 +27,43 @@
 .lw-world .lw-map-pane{width:min(620px,calc(100vw - 40px));height:auto;max-height:calc(100dvh - 260px);overflow:auto;overscroll-behavior:contain}.lw-world .lw-mini-map{height:340px}.lw-world .lw-map-legend{margin:10px 0 0;padding-left:26px;display:grid;grid-template-columns:1fr 1fr;gap:5px 18px;font-size:12px;color:#e3ead5}.lw-world .lw-map-legend li{padding-left:2px;overflow-wrap:anywhere}
 @media(max-width:700px){.lw-world .lw-map-pane{right:12px;top:153px;width:calc(100vw - 24px);max-height:calc(100dvh - 225px)}.lw-world .lw-mini-map{height:280px}.lw-world .lw-map-legend{font-size:11px;gap:6px 14px}}
 @media(max-height:540px) and (min-width:560px){.lw-world .lw-map-pane{top:102px;bottom:72px;max-height:calc(100dvh - 174px)}.lw-world .lw-mini-map{height:190px}}
+/* Postgame playback and safe live AI observation share the illustrated map. */
+.lw-results:has(.lw-replay:not([hidden])){width:min(1260px,100%)}
+.lw-replay{max-width:1200px;min-width:0}
+.lw-replay-canvas{display:block;width:100%;height:clamp(300px,58vh,650px);border:2px solid #315966;border-radius:12px;margin:14px 0;touch-action:auto}
+.lw-replay-toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.lw-world .lw-replay select,.lw-world .lw-spectator select{max-width:100%;min-height:38px;background:#fff4d9;color:#183b4a;border:2px solid #688f90;border-radius:7px;padding:5px;font:700 12px system-ui}
+.lw-replay-toolbar button{min-height:38px;font-size:12px}
+.lw-replay-toolbar [aria-pressed=true]{outline:2px solid #438c8a;outline-offset:2px}
+.lw-replay-coverage,.lw-replay-limits,.lw-replay-usage,.lw-replay-time,.lw-replay-ballots{font-size:12px;line-height:1.6;overflow-wrap:anywhere;margin:8px 0!important}
+.lw-replay-coverage{font-weight:850}
+.lw-replay-history{margin-top:20px;max-height:390px;overflow:auto;border-top:2px solid #9cb2a2;padding-top:12px;font-size:13px;line-height:1.6;overflow-wrap:anywhere}
+.lw-replay-history h3{font-size:14px;margin:14px 0 8px}
+.lw-replay-history p{margin:7px 0}
+.lw-replay-claim{background:#fff6df;border-left:4px solid #487e7c;padding:12px;margin:12px 0;border-radius:5px}
+.lw-replay-claim small{display:block;line-height:1.5;color:#38565c}
+.lw-spectator{position:absolute;right:20px;top:152px;z-index:5;width:min(310px,calc(100% - 40px));padding:14px;background:#102e42ed;border:2px solid #6c979b;border-radius:12px;display:flex;flex-wrap:wrap;gap:8px;color:#e5f0d4;font-size:12px}
+.lw-spectator strong,.lw-spectator p{width:100%;overflow-wrap:anywhere;margin:0;line-height:1.5}
+.lw-spectator p:last-child{max-height:100px;overflow:auto;color:#efcf91}
+.lw-world .lw-spectator button{font-size:11px;padding:5px}
+@media(max-width:700px){.lw-replay{padding:12px 9px}.lw-replay-canvas{height:350px}.lw-replay-toolbar{gap:8px}.lw-replay-toolbar select{flex:1;min-width:100px}.lw-replay-history{font-size:12px}.lw-spectator{top:205px;right:10px;width:210px;padding:9px;font-size:10px}.lw-spectator p:last-child{max-height:58px}.lw-replay-controls{flex-wrap:wrap}}
+/* Optional presets and the private fallen channel share the existing game palette. */
+.lw-presets {display:grid;gap:10px;max-width:580px;margin:12px auto;text-align:left;font-size:14px}
+.lw-presets label {display:flex;align-items:center;gap:10px;justify-content:center}
+.lw-presets select,.lw-ward-target {background:#f4e8c1;color:#17384a;border:2px solid #769b9c;border-radius:8px;padding:7px;max-width:100%}
+.lw-ability-info {font-size:12px;color:#f6e5ba}
+.lw-ghost-chat {position:absolute;z-index:45;right:16px;bottom:104px;width:min(310px,calc(100% - 32px));max-height:38vh;overflow:auto;padding:12px;border:2px solid #c4afe8;border-radius:12px;background:#152f45f2;color:#efe5ff;font-size:12px}
+.lw-ghost-chat h2 {font-size:14px;margin:0 0 8px}.lw-ghost-chat ol {padding-left:18px;max-height:100px;overflow:auto;overflow-wrap:anywhere}
+.lw-ghost-chat textarea {width:100%;box-sizing:border-box;background:#f5efd8;color:#17384a;border-radius:6px}.lw-ghost-chat button {background:#d2b9ed;color:#17384a;border:0;border-radius:6px;padding:7px;min-height:36px}.lw-ghost-chat p {font-size:11px}
+.lw-actions {flex-wrap:wrap}
+@media(max-width:600px){.lw-ghost-chat {bottom:95px;right:8px;width:210px;max-height:28vh}.lw-ghost-chat h2{font-size:12px}.lw-ghost-chat p{margin:4px 0}.lw-presets{font-size:12px;gap:5px}.lw-ability-info{max-width:160px}}
+
+/* Equipment stays below persistent status/Exit; scroll the panel instead of
+   letting a tall glyph grid cover its close control at narrow phone heights. */
+@media(max-width:700px),(max-height:540px) and (min-width:560px){
+ .lw-world .lw-scene-overlay:has(.lw-task-modal:not([hidden])){display:block;padding-top:105px;padding-bottom:16px;box-sizing:border-box}
+ .lw-world .lw-scene-overlay>.lw-task-modal{box-sizing:border-box;min-height:0;max-height:calc(100dvh - 181px);overflow:auto;overscroll-behavior:contain;margin:0 auto;flex-shrink:0}
+ .lw-world .lw-task-modal .lw-modal-title{position:sticky;top:0;z-index:2;background:#e9dfbd;padding-block:4px}
+ .lw-world[data-critical=true] .lw-scene-overlay:has(.lw-task-modal:not([hidden])){padding-top:370px}
+ .lw-world[data-critical=true] .lw-scene-overlay>.lw-task-modal{max-height:calc(100dvh - 446px)}
+}

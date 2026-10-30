@@ -29,14 +29,14 @@ export function drawKeeper(ctx,player,x,y,{scale=1,step=0,selected=false,ghost=f
  if(label){text(ctx,player.name||'Keeper',0,36,14,'#102d3e');ctx.lineWidth=4;ctx.strokeStyle='#eff8e8';ctx.strokeText(player.name||'Keeper',0,36);text(ctx,player.name||'Keeper',0,36,14,'#102d3e');}
  ctx.restore();
 }
-export function createWorldScene(canvas,{reduced=false,mapResolver=getMap,motionFactory}={}){
+export function createWorldScene(canvas,{reduced=false,playback=false,mapResolver=getMap,motionFactory}={}){
  const ctx=canvas.getContext('2d'),samples=motionFactory?motionFactory({mapResolver}):new ActorSamples({mapResolver,world:true});let map=mapResolver(),world=map.geometry;let room=null,lastKey=null,camera={x:800,y:400},view={width:1,height:1,zoom:1},stopped=false,lastOwner=null,lastAt=-Infinity,lastVersion=-1;
  const cameraTrack=new ObservedCamera();
  const cache=createStaticLayer({paint:paintEnvironment,makeCanvas:(w,h)=>{if(typeof OffscreenCanvas!=='undefined')return new OffscreenCanvas(w,h);return canvas.ownerDocument?.createElement?.('canvas')||globalThis.document?.createElement?.('canvas');}});
  function update(next,at){
   const nextMap=mapResolver(next?.game?.map??next?.map),game=next?.game;
   const owner=JSON.stringify([next?.roomId,game?.matchId,nextMap.id,nextMap.version,game?.self?.id]);
-  if(owner===lastOwner&&(at<lastAt||Number.isFinite(game?.version)&&game.version<lastVersion))return;
+  if(!playback&&owner===lastOwner&&(at<lastAt||Number.isFinite(game?.version)&&game.version<lastVersion))return;
   const key=JSON.stringify([owner,game?.phase,game?.self?.alive,!!(game?.self?.transit||game?.systems?.selfTransit),game?.vision?.mode]);
   map=nextMap;world=map.geometry;
   const target=!game?{x:world.WORLD_VIEWPOINT.x,y:world.WORLD_VIEWPOINT.y+25}:(visionFrame(game,map)?.origin||game?.self?.position||world.WORLD_VIEWPOINT);
@@ -45,7 +45,7 @@ export function createWorldScene(canvas,{reduced=false,mapResolver=getMap,motion
   room=next;samples.update(game,at);
  }
 
- function draw(time,{overview=false}={}){
+ function draw(time,{overview=false,follow:followId=null}={}){
   if(stopped)return;const rect=canvas.getBoundingClientRect();if(!rect.width||!rect.height)return;
   const dpr=Math.min(2,globalThis.devicePixelRatio||1),width=rect.width,height=rect.height;
   if(canvas.width!==Math.round(width*dpr)||canvas.height!==Math.round(height*dpr)){canvas.width=Math.round(width*dpr);canvas.height=Math.round(height*dpr);}
@@ -54,7 +54,8 @@ export function createWorldScene(canvas,{reduced=false,mapResolver=getMap,motion
   if(!reduced){ctx.strokeStyle='#93c2d01c';ctx.lineWidth=2;for(let i=0;i<45;i++){const x=(i*137+time*.014)% (width+80)-40,y=(i*83+time*.038)%(height+80)-40;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x-12,y+27);ctx.stroke();}}
   const game=room?.game,lobby=!game;
   const vision=visionFrame(game,map);
-  camera=cameraTrack.at(time,reduced)||{...world.WORLD_VIEWPOINT};
+  const followed=game?.players?.find(p=>p.id===followId&&point(p.position));
+  camera=(playback||!game?.self)&&followed?{...followed.position}:cameraTrack.at(time,reduced)||{...world.WORLD_VIEWPOINT};
 
   const zoom=overview?Math.min((width-30)/world.WORLD.width,(height-30)/world.WORLD.height):lobby?Math.min(width/620,height/390):clamp(Math.min(width/650,height/650),.64,1.28);
   if(overview)camera={x:world.WORLD.width/2,y:world.WORLD.height/2};view={width,height,zoom,camera:{...camera}};
@@ -63,17 +64,19 @@ export function createWorldScene(canvas,{reduced=false,mapResolver=getMap,motion
   if(overview)paintEnvironment(ctx,map,bounds);else cache.draw(ctx,map,bounds);
   drawRoomLabels(ctx,map,bounds,{overview,zoom});
   for(const r of world.WORLD_ROOMS){const station=world.WORLD_STATIONS[r.id];if(!station||!intersects({x:station.x-40,y:station.y-40,width:80,height:80},bounds))continue;
-   const task=game?.self?.tasks?.find(t=>!t.completed&&t.roomId===r.id),critical=game?.beaconVersion!==1&&game?.sabotage?.active&&game.sabotage.roomId===r.id;
+   const task=game?.self?.tasks?.find(t=>!t.completed&&t.roomId===r.id)||(playback&&game?.replayTaskRooms?.includes(r.id)?{kind:'recorded'}:null),critical=game?.beaconVersion!==1&&game?.sabotage?.active&&game.sabotage.roomId===r.id;
    const kind=task?.challenge?.kind||map.taskKinds?.[r.id]||({bridge:'circuit',workshop:'circuit',lantern:'signal',engine:'alignment',archive:'sequence',galley:'manifolds'})[r.id]||'glyphs';
    drawStation(ctx,station,kind,{active:!!task,critical,time,reduced});
   }
   drawBeaconFixtures(ctx,game,map);
   circle(ctx,world.WORLD_BELL.x,world.WORLD_BELL.y,19,'#e1a34f');circle(ctx,world.WORLD_BELL.x,world.WORLD_BELL.y,9,'#fff0ba',undefined,2);
   for(const body of visibleBodies(game)){ctx.save();ctx.translate(body.position.x,body.position.y);ctx.rotate(-.25);const color=game.players.find(p=>p.id===body.playerId)?.color||'#d3b48b';round(ctx,-25,-10,48,24,12,color);round(ctx,-15,-8,20,13,5,'#274958',undefined,3);ctx.restore();text(ctx,'FALLEN',body.position.x,body.position.y+31,11,'#fbf1d5');}
-  const actors=lobby?(room?.roster||CHARACTERS).map((p,i,list)=>({...p,position:{x:world.WORLD_VIEWPOINT.x+((i%Math.ceil(Math.sqrt(list.length)))-(Math.ceil(Math.sqrt(list.length))-1)/2)*100,y:world.WORLD_VIEWPOINT.y-45+Math.floor(i/Math.ceil(Math.sqrt(list.length)))*95},alive:true})):Array.from(samples.samples.values(),s=>s.player);
+  for(const effect of game?.effects||[]){const position=effect.kind==='echo'?effect.position:game.players.find(p=>p.id===effect.targetId)?.position;if(!point(position))continue;ctx.save();ctx.strokeStyle=effect.kind==='echo'?'#eaaaf0':'#a9f7e0';ctx.lineWidth=4;ctx.setLineDash(effect.kind==='echo'?[8,6]:[]);ctx.beginPath();ctx.arc(position.x,position.y,40,0,Math.PI*2);ctx.stroke();text(ctx,effect.kind==='echo'?'SIGNAL ECHO':'HARBOR WARD',position.x,position.y-48,12,'#fff4cc');ctx.restore();}
+  const actors=lobby?(room?.roster||CHARACTERS).map((p,i,list)=>({...p,position:{x:world.WORLD_VIEWPOINT.x+((i%Math.ceil(Math.sqrt(list.length)))-(Math.ceil(Math.sqrt(list.length))-1)/2)*100,y:world.WORLD_VIEWPOINT.y-45+Math.floor(i/Math.ceil(Math.sqrt(list.length)))*95},alive:true})):playback?(game?.players||[]).filter(p=>(p.alive||p.ghost)&&point(p.position)):Array.from(samples.samples.values(),s=>s.player);
   for(const player of actors.sort((a,b)=>a.position.y-b.position.y)){
-   const p=lobby?player.position:samples.at(player.id,time,reduced);if(!p)continue;
-   drawKeeper(ctx,player,p.x,p.y,{selected:player.id===game?.self?.id,step:!reduced&&player.moving&&(player.id===game?.self?.id||time-(samples.samples.get(player.id)?.at||0)<300)?time/95:0,scale:1.02});
+   const p=lobby||playback?player.position:samples.at(player.id,time,reduced);if(!p)continue;
+   drawKeeper(ctx,player,p.x,p.y,{selected:player.id===(followId||game?.self?.id),step:!reduced&&player.moving&&(player.id===game?.self?.id||time-(samples.samples.get(player.id)?.at||0)<300)?time/95:0,scale:1.02,ghost:player.alive===false});
+   if(playback&&game.replayRoles&&player.role)text(ctx,player.role.toUpperCase(),p.x,p.y+53,11,player.role==='saboteur'?'#ffb8a1':'#e3f4d2');
   }
   drawForeground(ctx,map,bounds);
   ctx.restore();
@@ -82,5 +85,5 @@ export function createWorldScene(canvas,{reduced=false,mapResolver=getMap,motion
    const fog=ctx.createRadialGradient(sx,sy,radius*.35,sx,sy,radius);fog.addColorStop(0,'#091d3000');fog.addColorStop(.82,'#091d3038');fog.addColorStop(1,'#091d30e8');ctx.fillStyle=fog;ctx.fillRect(0,0,width,height);
   }
  }
- return {update,draw,setIntent(input,at){return samples.setIntent?.(input,at)||false;},suspend(){samples.clear();cameraTrack.clear();lastKey=null;},toWorld(clientX,clientY){const r=canvas.getBoundingClientRect();return {x:(clientX-r.left-view.width/2)/view.zoom+view.camera.x,y:(clientY-r.top-view.height/2)/view.zoom+view.camera.y};},stats(){return cache.stats();},dispose(){stopped=true;samples.clear();cameraTrack.clear();cache.dispose();}};
+ return {update,draw,setIntent(input,at){return samples.setIntent?.(input,at)||false;},suspend(){samples.clear();cameraTrack.clear();lastKey=null;},toWorld(clientX,clientY){if(playback)return null;const r=canvas.getBoundingClientRect();return {x:(clientX-r.left-view.width/2)/view.zoom+view.camera.x,y:(clientY-r.top-view.height/2)/view.zoom+view.camera.y};},stats(){return cache.stats();},dispose(){stopped=true;samples.clear();cameraTrack.clear();cache.dispose();}};
 }
