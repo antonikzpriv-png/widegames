@@ -1,0 +1,33 @@
+{
+  "sourceCommit": "b9b36bc678f1d82a42b81d73dcbf29ae16c51821",
+  "modifiedPaths": "",
+  "fixture": "Real server, app modules, independent browser contexts, cookies and WebSockets. Local idle AI and controlled clock; legal engine council votes by fixture AI actors finish the match. No paid calls.",
+  "checks": [
+    "unsaved settings survive focus loss and room refresh",
+    "15 keeper roster rendered",
+    "invitation code opens the same room in a separate identity",
+    "custom raincoat color persists with its unique numbered badge",
+    "host can configure settings",
+    "guest settings are read only",
+    "start is gated by readiness",
+    "independent identities receive only their own assignment",
+    "game locks the selected roster and settings",
+    "merged ghost and ability presets work in a 15-player lobby",
+    "human HTTP projections hide other roles",
+    "one browser moves its own keeper without steering the other",
+    "second human keyboard input cannot steer the host"
+  ],
+  "errors": [],
+  "screenshots": [
+    "01-configurable-lobby-15.png",
+    "01b-host-settings.png",
+    "02-guest-lobby-mobile.png",
+    "03-multiplayer-world.png",
+    "03b-second-human-controls.png",
+    "failure-0.png",
+    "failure-1.png",
+    "failure-2.png",
+    "failure-3.png"
+  ],
+  "failure": "TimeoutError: Navigation timeout of 12000 ms exceeded\n    at new Deferred (file:///workspace/widegames/node_modules/puppeteer-core/lib/puppeteer/util/Deferred.js:57:34)\n    at Deferred.create (file:///workspace/widegames/node_modules/puppeteer-core/lib/puppeteer/util/Deferred.js:18:16)\n    at new LifecycleWatcher (file:///workspace/widegames/node_modules/puppeteer-core/lib/puppeteer/cdp/LifecycleWatcher.js:70:46)\n    at CdpFrame.goto (file:///workspace/widegames/node_modules/puppeteer-core/lib/puppeteer/cdp/Frame.js:152:29)\n    at CdpFrame.<anonymous> (file:///workspace/widegames/node_modules/puppeteer-core/lib/puppeteer/util/decorators.js:101:27)\n    at CdpPage.goto (file:///workspace/widegames/node_modules/puppeteer-core/lib/puppeteer/api/Page.js:582:43)\n    at file:///workspace/widegames/scripts/multiplayer-browser-check.mjs:49:17"
+}

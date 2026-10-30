@@ -1,0 +1,31 @@
+{
+  "sourceCommit": "870f7d6629eb1843cc3c3578eef82db8a831e3a0",
+  "modifiedPaths": "",
+  "fixture": "Real launch app and real task panels with real authenticated HTTP/WS transport, actual authoritative engine and strict private store. For exhaustive panel coverage only, each fresh fixture match replaces its first human task kind before start with a selected edition-3 family and gives it the Bridge station. Safe owner snapshots drive an isolated test-only panel host; no completion is fabricated. Local idle AI and accelerated server clock; no paid calls.",
+  "checks": [
+    "launch computer sits left and wardrobe right",
+    "keyboard opens computer and moves focus into its dialog",
+    "launch scene fits 390px mobile",
+    "launch scene fits 320px mobile",
+    "computer settings reach the authenticated room",
+    "wardrobe name and color reach the real human seat"
+  ],
+  "errors": [],
+  "screenshots": [
+    "01-waiting-room-desktop.png",
+    "02-watch-computer.png",
+    "03-wardrobe.png",
+    "04-waiting-room-mobile-390.png",
+    "04-waiting-room-mobile-320.png",
+    "failure.png"
+  ],
+  "families": [],
+  "panelHashes": {
+    "public/world/puzzles.mjs": "1e4c170b915e7637306748ccf29c25fbc60f5c72baf573dde889a31c35ceb798",
+    "public/task-panels.css": "a2f36400710301b3c772612d5c7a474ffb9060b6a8cc130e07d29614b8f9be9f"
+  },
+  "failure": "TimeoutError: Timed out after waiting 12000ms\n    at file:///workspace/widegames/node_modules/puppeteer-core/lib/puppeteer/common/util.js:222:19\n    at file:///workspace/widegames/node_modules/puppeteer-core/lib/third_party/rxjs/rxjs.js:1944:31\n    at OperatorSubscriber2._this._next (file:///workspace/widegames/node_modules/puppeteer-core/lib/third_party/rxjs/rxjs.js:1001:9)\n    at Subscriber2.next (file:///workspace/widegames/node_modules/puppeteer-core/lib/third_party/rxjs/rxjs.js:704:12)\n    at AsyncAction2.<anonymous> (file:///workspace/widegames/node_modules/puppeteer-core/lib/third_party/rxjs/rxjs.js:2288:20)\n    at AsyncAction2._execute (file:///workspace/widegames/node_modules/puppeteer-core/lib/third_party/rxjs/rxjs.js:1368:12)\n    at AsyncAction2.execute (file:///workspace/widegames/node_modules/puppeteer-core/lib/third_party/rxjs/rxjs.js:1357:22)\n    at AsyncScheduler2.flush (file:///workspace/widegames/node_modules/puppeteer-core/lib/third_party/rxjs/rxjs.js:1435:26)\n    at listOnTimeout (node:internal/timers:635:17)\n    at process.processTimers (node:internal/timers:571:7)",
+  "failureDetails": {
+    "url": "/r/xMr8jobRULObnR9MRuTcWc0b"
+  }
+}

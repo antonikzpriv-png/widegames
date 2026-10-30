@@ -1,0 +1,76 @@
+{
+  "cases": 5,
+  "passed": true,
+  "results": [
+    {
+      "mapId": "beacon",
+      "roomSchema": 5,
+      "matchSchema": 5,
+      "players": 15,
+      "saboteurs": 1,
+      "tasks": 280,
+      "stationTasks": 140,
+      "edition3Tasks": 140,
+      "fileBytes": 253366,
+      "reload": "exact bytes and deep state unchanged",
+      "httpStatus": 200,
+      "providerCalls": 0
+    },
+    {
+      "mapId": "stormbreak-annex",
+      "roomSchema": 5,
+      "matchSchema": 5,
+      "players": 15,
+      "saboteurs": 1,
+      "tasks": 280,
+      "stationTasks": 140,
+      "edition3Tasks": 140,
+      "fileBytes": 251114,
+      "reload": "exact bytes and deep state unchanged",
+      "httpStatus": 200,
+      "providerCalls": 0
+    },
+    {
+      "mapId": "beacon-illustrated",
+      "roomSchema": 5,
+      "matchSchema": 2,
+      "players": 15,
+      "saboteurs": 1,
+      "tasks": 280,
+      "stationTasks": 0,
+      "edition3Tasks": 280,
+      "fileBytes": 135086,
+      "reload": "exact bytes and deep state unchanged",
+      "httpStatus": 200,
+      "providerCalls": 0
+    },
+    {
+      "mapId": "storm-foundry",
+      "roomSchema": 5,
+      "matchSchema": 2,
+      "players": 15,
+      "saboteurs": 1,
+      "tasks": 280,
+      "stationTasks": 0,
+      "edition3Tasks": 280,
+      "fileBytes": 142038,
+      "reload": "exact bytes and deep state unchanged",
+      "httpStatus": 200,
+      "providerCalls": 0
+    },
+    {
+      "mapId": "tidal-observatory",
+      "roomSchema": 5,
+      "matchSchema": 2,
+      "players": 15,
+      "saboteurs": 1,
+      "tasks": 280,
+      "stationTasks": 0,
+      "edition3Tasks": 280,
+      "fileBytes": 141863,
+      "reload": "exact bytes and deep state unchanged",
+      "httpStatus": 200,
+      "providerCalls": 0
+    }
+  ]
+}

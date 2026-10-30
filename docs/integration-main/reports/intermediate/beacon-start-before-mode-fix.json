@@ -1,0 +1,42 @@
+{
+  "sourceCommit": "14775afeb0b53bc1214f671b123fff7e0f7e3c95",
+  "modifiedPaths": "",
+  "fixture": "Legacy schema3 Group1 compatibility on the current app. Actual native HTTP/WS/store/engine. Seeded roles, accelerated clock and explicitly server-directed demo AI queues stage legal actions through the normal AI scheduler. No state, health, winner or HTTP response is fabricated. This targeted scenario is separate from complete autonomous demo-match qualification.",
+  "checks": [],
+  "privacyChecks": 0,
+  "errors": [
+    "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\nundefined !== 1\n",
+    "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\nundefined !== 1\n",
+    "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\nundefined !== 1\n",
+    "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\nundefined !== 1\n",
+    "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\nundefined !== 1\n",
+    "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\nundefined !== 1\n",
+    "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\nundefined !== 1\n",
+    "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\nundefined !== 1\n",
+    "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\nundefined !== 1\n",
+    "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\nundefined !== 1\n",
+    "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\nundefined !== 1\n",
+    "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\nundefined !== 1\n",
+    "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\nundefined !== 1\n",
+    "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\nundefined !== 1\n",
+    "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\nundefined !== 1\n",
+    "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\nundefined !== 1\n",
+    "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\nundefined !== 1\n",
+    "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\nundefined !== 1\n"
+  ],
+  "consoleErrors": [],
+  "screenshots": [
+    "failure.png"
+  ],
+  "cleanup": {
+    "browserClosed": true,
+    "serverClosed": true,
+    "ownedDataRemoved": true
+  },
+  "browser": "Chrome/154.0.8037.57",
+  "failure": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\nundefined !== 1\n\n    at safe (file:///workspace/widegames/scripts/beacon-browser-check.mjs:23:68)\n    at view (file:///workspace/widegames/scripts/beacon-browser-check.mjs:26:204)\n    at async until (file:///workspace/widegames/scripts/beacon-browser-check.mjs:27:112)\n    at async start (file:///workspace/widegames/scripts/beacon-browser-check.mjs:39:383)\n    at async file:///workspace/widegames/scripts/beacon-browser-check.mjs:47:14",
+  "summary": {
+    "passed": 0,
+    "failed": 0
+  }
+}

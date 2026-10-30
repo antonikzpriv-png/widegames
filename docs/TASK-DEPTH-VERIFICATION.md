@@ -1,3 +1,5 @@
+**Superseded for current main integration by [the final validation](INTEGRATION-MAIN-VALIDATION.md).** The exact earlier receipts below remain historical evidence.
+
 # Detailed tasks and waiting-room qualification
 
 ## Final integrated qualification — 2026-10-30

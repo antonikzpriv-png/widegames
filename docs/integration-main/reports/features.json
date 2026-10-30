@@ -1,0 +1,34 @@
+{
+  "taskEdition": 1,
+  "mapRevision": 1,
+  "fixture": "Real app, HTTP, WebSocket, cookie identity, engine and persistence; seeded assignments, idle demo bots and an accelerated server clock. The fixture saboteur submits legal engine actions. No paid calls.",
+  "checks": [
+    "Lobby selections reach real persisted match",
+    "Harbor Ward assignment is separate from crew faction",
+    "Ward target selector activates real one-hit protection",
+    "Eliminated human remains dead with playable ghost controls",
+    "Ghost WASD reaches real authenticated input path",
+    "Fallen chat renders literal text with no markup",
+    "Fallen message cannot create HTML",
+    "Ghost reload restores private identity without a living assignment modal",
+    "Fallen ability controls are unavailable",
+    "Authenticated spectator receives neither ghost chat nor ghost coordinates",
+    "Public UI hides fallen channel",
+    "Ghost puzzle completes without resurrection",
+    "Ghost completion preserves task total and corpse",
+    "Mobile ghost controls fit viewport",
+    "Signal Echo assignment preserves saboteur faction",
+    "Decoy is explicitly labeled and not an impersonated keeper",
+    "Decoy forges no death or witness",
+    "Echo expires before its cooldown ends",
+    "No browser page errors"
+  ],
+  "errors": [],
+  "screenshots": [
+    "01-optional-lobby.png",
+    "02-harbor-ward.png",
+    "03-ghost-tasks-chat.png",
+    "04-mobile-ghost.png",
+    "05-signal-echo.png"
+  ]
+}

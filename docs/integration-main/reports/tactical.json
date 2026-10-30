@@ -1,0 +1,296 @@
+{
+  "sourceCommit": "242bed32a64c1f6dd5b771adb5aecf1f507504c8",
+  "modifiedPaths": "",
+  "fixture": "Real default-config app/HTTP/WS/storage/engine and UI controls. Seeded roles, accelerated authoritative clock, explicit server-directed demo AI queues stage only validated actions. No response, position, health or winner is fabricated. Separate autonomous demo matches are tested by test:browser and default-rule engine simulations. Desktop uses reduced motion; mobile uses native touch events. No paid provider.",
+  "checks": [
+    {
+      "map": "beacon",
+      "scenario": "crew",
+      "name": "actual lobby selection, private role and server movement",
+      "passed": true
+    },
+    {
+      "map": "beacon",
+      "scenario": "crew",
+      "name": "camera card is an attributed, scoped, owner-only dated sample",
+      "passed": true
+    },
+    {
+      "map": "beacon",
+      "scenario": "crew",
+      "name": "occupancy uses all actual map rooms and gives no identities",
+      "passed": true
+    },
+    {
+      "map": "beacon",
+      "scenario": "crew",
+      "name": "undiscovered death and vitals stay private across HTTP and spectator WS",
+      "passed": true
+    },
+    {
+      "map": "beacon",
+      "scenario": "crew",
+      "name": "communications cancels access but preserves dated evidence",
+      "passed": true
+    },
+    {
+      "map": "beacon",
+      "scenario": "crew",
+      "name": "lights alter actual server-permitted sight and map fog, then repair",
+      "passed": true
+    },
+    {
+      "map": "beacon",
+      "scenario": "crew",
+      "name": "door warning becomes real collision and a local panel reopens it",
+      "passed": true
+    },
+    {
+      "map": "beacon",
+      "scenario": "crew",
+      "name": "occupied threshold jams open without moving or naming the occupant",
+      "passed": true
+    },
+    {
+      "map": "beacon",
+      "scenario": "crew",
+      "name": "new closure invalidates an accepted click route at the exact boundary",
+      "passed": true
+    },
+    {
+      "map": "beacon",
+      "scenario": "crew",
+      "name": "two distinct crew repair actual separated flood sites",
+      "passed": true
+    },
+    {
+      "map": "beacon",
+      "scenario": "crew",
+      "name": "critical time survives a real reported-body council and ends by deadline with replay",
+      "passed": true
+    },
+    {
+      "map": "beacon",
+      "scenario": "saboteur",
+      "name": "new room has fresh map-bound role, notes, observations and muted sound",
+      "passed": true
+    },
+    {
+      "map": "beacon",
+      "scenario": "saboteur",
+      "name": "explicit hatch exit uses legal travel and only local endpoint witnesses",
+      "passed": true
+    },
+    {
+      "map": "beacon",
+      "scenario": "saboteur",
+      "name": "real private field note and role survive cookie reconnect",
+      "passed": true
+    },
+    {
+      "map": "beacon",
+      "scenario": "saboteur",
+      "name": "native mobile equipment tap, keyboard close and responsive layouts",
+      "passed": true
+    },
+    {
+      "map": "beacon",
+      "scenario": "saboteur",
+      "name": "sound is explicit opt-in, then actual elimination/report/vote gives a role reveal",
+      "passed": true
+    },
+    {
+      "map": "stormbreak-annex",
+      "scenario": "crew",
+      "name": "actual lobby selection, private role and server movement",
+      "passed": true
+    },
+    {
+      "map": "stormbreak-annex",
+      "scenario": "crew",
+      "name": "camera card is an attributed, scoped, owner-only dated sample",
+      "passed": true
+    },
+    {
+      "map": "stormbreak-annex",
+      "scenario": "crew",
+      "name": "occupancy uses all actual map rooms and gives no identities",
+      "passed": true
+    },
+    {
+      "map": "stormbreak-annex",
+      "scenario": "crew",
+      "name": "undiscovered death and vitals stay private across HTTP and spectator WS",
+      "passed": true
+    },
+    {
+      "map": "stormbreak-annex",
+      "scenario": "crew",
+      "name": "communications cancels access but preserves dated evidence",
+      "passed": true
+    },
+    {
+      "map": "stormbreak-annex",
+      "scenario": "crew",
+      "name": "lights alter actual server-permitted sight and map fog, then repair",
+      "passed": true
+    },
+    {
+      "map": "stormbreak-annex",
+      "scenario": "crew",
+      "name": "door warning becomes real collision and a local panel reopens it",
+      "passed": true
+    },
+    {
+      "map": "stormbreak-annex",
+      "scenario": "crew",
+      "name": "occupied threshold jams open without moving or naming the occupant",
+      "passed": true
+    },
+    {
+      "map": "stormbreak-annex",
+      "scenario": "crew",
+      "name": "new closure invalidates an accepted click route at the exact boundary",
+      "passed": true
+    },
+    {
+      "map": "stormbreak-annex",
+      "scenario": "crew",
+      "name": "two distinct crew repair actual separated flood sites",
+      "passed": true
+    },
+    {
+      "map": "stormbreak-annex",
+      "scenario": "crew",
+      "name": "critical time survives a real reported-body council and ends by deadline with replay",
+      "passed": true
+    },
+    {
+      "map": "stormbreak-annex",
+      "scenario": "saboteur",
+      "name": "new room has fresh map-bound role, notes, observations and muted sound",
+      "passed": true
+    },
+    {
+      "map": "stormbreak-annex",
+      "scenario": "saboteur",
+      "name": "explicit hatch exit uses legal travel and only local endpoint witnesses",
+      "passed": true
+    },
+    {
+      "map": "stormbreak-annex",
+      "scenario": "saboteur",
+      "name": "real private field note and role survive cookie reconnect",
+      "passed": true
+    },
+    {
+      "map": "stormbreak-annex",
+      "scenario": "saboteur",
+      "name": "native mobile equipment tap, keyboard close and responsive layouts",
+      "passed": true
+    },
+    {
+      "map": "stormbreak-annex",
+      "scenario": "saboteur",
+      "name": "sound is explicit opt-in, then actual elimination/report/vote gives a role reveal",
+      "passed": true
+    }
+  ],
+  "privacyChecks": 2309,
+  "errors": [],
+  "consoleErrors": [],
+  "screenshots": [
+    "beacon-crew-01-world.png",
+    "beacon-crew-01b-overview.png",
+    "beacon-crew-02-camera.png",
+    "beacon-crew-03-occupancy.png",
+    "beacon-crew-04-vitals.png",
+    "beacon-crew-05-comms.png",
+    "beacon-crew-06-lights.png",
+    "beacon-crew-07-closed-door.png",
+    "beacon-crew-08-jammed-door.png",
+    "beacon-crew-09-route-stopped.png",
+    "beacon-crew-10-flood.png",
+    "beacon-crew-11-critical-council.png",
+    "beacon-crew-12-critical-replay.png",
+    "beacon-saboteur-13-passage.png",
+    "beacon-saboteur-14a-joystick.png",
+    "beacon-saboteur-14-mobile.png",
+    "beacon-saboteur-14b-mobile-council.png",
+    "beacon-saboteur-14c-mobile-vote.png",
+    "beacon-saboteur-15-ejection.png",
+    "stormbreak-annex-crew-01-world.png",
+    "stormbreak-annex-crew-01b-overview.png",
+    "stormbreak-annex-crew-02-camera.png",
+    "stormbreak-annex-crew-03-occupancy.png",
+    "stormbreak-annex-crew-04-vitals.png",
+    "stormbreak-annex-crew-05-comms.png",
+    "stormbreak-annex-crew-06-lights.png",
+    "stormbreak-annex-crew-07-closed-door.png",
+    "stormbreak-annex-crew-08-jammed-door.png",
+    "stormbreak-annex-crew-09-route-stopped.png",
+    "stormbreak-annex-crew-10-flood.png",
+    "stormbreak-annex-crew-11-critical-council.png",
+    "stormbreak-annex-crew-12-critical-replay.png",
+    "stormbreak-annex-saboteur-13-passage.png",
+    "stormbreak-annex-saboteur-14a-joystick.png",
+    "stormbreak-annex-saboteur-14-mobile.png",
+    "stormbreak-annex-saboteur-14b-mobile-council.png",
+    "stormbreak-annex-saboteur-14c-mobile-vote.png",
+    "stormbreak-annex-saboteur-15-ejection.png"
+  ],
+  "outcomes": [
+    {
+      "map": "beacon",
+      "winner": "saboteur",
+      "reason": "critical",
+      "at": 1793385622266
+    },
+    {
+      "map": "beacon",
+      "winner": "crew",
+      "reason": "ejection",
+      "at": 1793385706127
+    },
+    {
+      "map": "stormbreak-annex",
+      "winner": "saboteur",
+      "reason": "critical",
+      "at": 1793385954428
+    },
+    {
+      "map": "stormbreak-annex",
+      "winner": "crew",
+      "reason": "ejection",
+      "at": 1793386031586
+    }
+  ],
+  "cleanup": {
+    "browserClosed": true,
+    "serverClosed": true,
+    "ownedDataRemoved": true
+  },
+  "outboundFetches": 0,
+  "canceledAuditResponses": [],
+  "browser": "Chrome/154.0.8037.57",
+  "nativeTouchAcks": [
+    {
+      "map": "beacon",
+      "requestId": "ae2d5697-25a4-4de9-b20b-4c852b9846e9",
+      "status": 200,
+      "notes": 2
+    },
+    {
+      "map": "stormbreak-annex",
+      "requestId": "fd365553-b46c-45db-b289-36d2cff7be94",
+      "status": 200,
+      "notes": 2
+    }
+  ],
+  "sourceUnchanged": true,
+  "providerCalls": 0,
+  "summary": {
+    "passed": 32,
+    "failed": 0
+  }
+}

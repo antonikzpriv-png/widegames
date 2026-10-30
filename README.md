@@ -2,7 +2,7 @@
 
 New configurable rooms support 4–15 keepers, 1–3 saboteurs with a crew majority, authenticated human seats, AI fill, readiness, invitations and generation-isolated rematches. Open `/` for the gray assembly room: use the left computer for match settings, the right wardrobe for your name and appearance, then choose **Play with AI** or **Watch AI**. Existing map selections and tactical station equipment remain available.
 
-The expanded catalogue adds 12 equipment and 13 original local CAPTCHA families with server-confirmed progress. See [multiplayer rules](docs/MULTIPLAYER.md), [task mechanics](docs/TASK-DEPTH-MECHANICS.md), [task evidence](docs/TASK-DEPTH-VERIFICATION.md), and the final main-integration validation record when available. Older qualification records below describe their exact source pins.
+The expanded catalogue adds 12 equipment and 13 original local CAPTCHA families with server-confirmed progress. See [multiplayer rules](docs/MULTIPLAYER.md), [task mechanics](docs/TASK-DEPTH-MECHANICS.md), [task evidence](docs/TASK-DEPTH-VERIFICATION.md), and [final main-integration validation](docs/INTEGRATION-MAIN-VALIDATION.md). Older qualification records below describe their exact source pins.
 
 Additional checks: `npm run test:multiplayer-browser` and `npm run test:tasks:browser`. These supplement the retained gameplay/browser gates below.
 

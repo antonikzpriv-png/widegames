@@ -1,0 +1,194 @@
+{
+  "runtimeSource": "242bed32a64c1f6dd5b771adb5aecf1f507504c8",
+  "browserSuites": 12,
+  "browserChecks": 462,
+  "unit": {
+    "total": 1767,
+    "passed": 1761,
+    "skipped": 6,
+    "failed": 0
+  },
+  "syntaxModules": 349,
+  "gates": [
+    {
+      "command": [
+        "npm",
+        "run",
+        "test:browser"
+      ],
+      "source": "242bed32a64c1f6dd5b771adb5aecf1f507504c8",
+      "exitCode": 0,
+      "durationSeconds": 34.7,
+      "log": "/tmp/main-integration-browser-test-browser.log",
+      "name": "world",
+      "checks": 34,
+      "artifactDirectory": "/workspace/widegames/_artifacts/world-browser-hIoZWn",
+      "report": "reports/world.json"
+    },
+    {
+      "command": [
+        "npm",
+        "run",
+        "test:task-browser"
+      ],
+      "source": "242bed32a64c1f6dd5b771adb5aecf1f507504c8",
+      "exitCode": 0,
+      "durationSeconds": 29.38,
+      "log": "/tmp/main-integration-browser-test-task-browser.log",
+      "name": "legacy-tasks",
+      "checks": 42,
+      "artifactDirectory": "/workspace/widegames/_artifacts/world-browser-HfPwpK",
+      "report": "reports/legacy-tasks.json"
+    },
+    {
+      "command": [
+        "npm",
+        "run",
+        "test:beacon-browser"
+      ],
+      "source": "242bed32a64c1f6dd5b771adb5aecf1f507504c8",
+      "exitCode": 0,
+      "durationSeconds": 19.01,
+      "log": "/tmp/main-integration-browser-test-beacon-browser.log",
+      "name": "beacon",
+      "checks": 13,
+      "artifactDirectory": "/workspace/widegames/_artifacts/beacon-browser-y6ttj9",
+      "report": "reports/beacon.json"
+    },
+    {
+      "command": [
+        "npm",
+        "run",
+        "test:tactical-browser"
+      ],
+      "source": "242bed32a64c1f6dd5b771adb5aecf1f507504c8",
+      "exitCode": 0,
+      "durationSeconds": 55.54,
+      "log": "/tmp/main-integration-browser-test-tactical-browser.log",
+      "name": "tactical",
+      "checks": 32,
+      "artifactDirectory": "/workspace/widegames/_artifacts/tactical-browser-EPGoqJ",
+      "report": "reports/tactical.json"
+    },
+    {
+      "command": [
+        "npm",
+        "run",
+        "test:tasks:browser"
+      ],
+      "source": "242bed32a64c1f6dd5b771adb5aecf1f507504c8",
+      "exitCode": 0,
+      "durationSeconds": 28.93,
+      "log": "/tmp/main-integration-browser-test-tasks-browser.log",
+      "name": "tasks",
+      "checks": 98,
+      "artifactDirectory": "/workspace/widegames/_artifacts/task-depth-browser-UxBHN9",
+      "report": "reports/tasks.json"
+    },
+    {
+      "command": [
+        "npm",
+        "run",
+        "test:multiplayer-browser"
+      ],
+      "source": "242bed32a64c1f6dd5b771adb5aecf1f507504c8",
+      "exitCode": 0,
+      "durationSeconds": 17.88,
+      "log": "/tmp/main-integration-browser-test-multiplayer-browser.log",
+      "name": "multiplayer",
+      "checks": 26,
+      "artifactDirectory": "/workspace/widegames/_artifacts/multiplayer-browser-FHnUiK",
+      "report": "reports/multiplayer.json"
+    },
+    {
+      "command": [
+        "npm",
+        "run",
+        "test:maps:browser"
+      ],
+      "source": "242bed32a64c1f6dd5b771adb5aecf1f507504c8",
+      "exitCode": 0,
+      "durationSeconds": 23.42,
+      "log": "/tmp/main-integration-browser-test-maps-browser.log",
+      "name": "maps",
+      "checks": 39,
+      "artifactDirectory": "/workspace/widegames/_artifacts/maps-captcha-browser-zuYwZW",
+      "report": "reports/maps.json"
+    },
+    {
+      "command": [
+        "npm",
+        "run",
+        "test:illustrated:browser"
+      ],
+      "source": "242bed32a64c1f6dd5b771adb5aecf1f507504c8",
+      "exitCode": 0,
+      "durationSeconds": 64.21,
+      "log": "/tmp/main-integration-browser-test-illustrated-browser.log",
+      "name": "illustrated",
+      "checks": 68,
+      "artifactDirectory": "/workspace/widegames/_artifacts/illustrated-maps-browser-9WCFtn",
+      "report": "reports/illustrated.json"
+    },
+    {
+      "command": [
+        "npm",
+        "run",
+        "test:spectator:browser"
+      ],
+      "source": "242bed32a64c1f6dd5b771adb5aecf1f507504c8",
+      "exitCode": 0,
+      "durationSeconds": 47.15,
+      "log": "/tmp/main-integration-browser-test-spectator-browser.log",
+      "name": "spectator",
+      "checks": 51,
+      "artifactDirectory": "/workspace/widegames/_artifacts/spectator-browser-T5rqko",
+      "report": "reports/spectator.json"
+    },
+    {
+      "command": [
+        "npm",
+        "run",
+        "test:features:browser"
+      ],
+      "source": "242bed32a64c1f6dd5b771adb5aecf1f507504c8",
+      "exitCode": 0,
+      "durationSeconds": 7.25,
+      "log": "/tmp/main-integration-browser-test-features-browser.log",
+      "name": "features",
+      "checks": 19,
+      "artifactDirectory": "/workspace/widegames/_artifacts/ghost-abilities-browser-3nzMFv",
+      "report": "reports/features.json"
+    },
+    {
+      "command": [
+        "npm",
+        "run",
+        "test:spatial-browser"
+      ],
+      "source": "242bed32a64c1f6dd5b771adb5aecf1f507504c8",
+      "exitCode": 0,
+      "durationSeconds": 5.39,
+      "log": "/tmp/main-integration-browser-test-spatial-browser.log",
+      "name": "replay",
+      "checks": 21,
+      "artifactDirectory": "/workspace/widegames/_artifacts/spatial-browser-VamffZ",
+      "report": "reports/replay.json"
+    },
+    {
+      "command": [
+        "node",
+        "--test",
+        "tests/world-ui-browser.test.mjs"
+      ],
+      "source": "242bed32a64c1f6dd5b771adb5aecf1f507504c8",
+      "exitCode": 0,
+      "durationSeconds": 20.21,
+      "log": "/tmp/main-integration-browser-tests-world-ui-browser.test.mjs.log",
+      "name": "independent-ui",
+      "checks": 19,
+      "artifactDirectory": "/workspace/widegames/_artifacts/world-ui-r2llrl",
+      "report": "reports/independent-ui.json"
+    }
+  ]
+}
