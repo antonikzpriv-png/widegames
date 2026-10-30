@@ -38,3 +38,12 @@
 .lw-world .lw-lobby-archives {margin-top:18px;text-align:left;}
 .lw-world .lw-lobby-archives summary {cursor:pointer;font-weight:800;padding:12px;}
 .lw-world .lw-archive-log {max-height:280px;overflow:auto;font-size:12px;overflow-wrap:anywhere;padding-left:28px;}
+.lw-world .lw-member-controls {position:absolute;inset:0;z-index:45;background:#0c253aeb;display:flex;align-items:center;justify-content:center;padding:24px;}
+.lw-world .lw-member-box {width:min(620px,100%);max-height:90%;overflow:auto;background:#123448;border:2px solid #9abcb5;border-radius:16px;padding:22px;}
+.lw-world .lw-member-box p {font-size:13px;line-height:1.5;margin:12px 0;}
+.lw-world .lw-member-box ul {list-style:none;padding:0;}
+.lw-world .lw-member-box li {display:flex;align-items:center;flex-wrap:wrap;gap:10px;padding:10px 0;border-bottom:1px solid #9abcb555;}
+.lw-world .lw-member-box li span {font-size:12px;flex:1;}
+.lw-world .lw-member-box button {font-size:12px;}
+.lw-world .lw-settings-state {font-size:12px;min-height:1.5em;}
+@media(max-width:700px){.lw-world .lw-topbar:has([aria-controls$="-member-panel"]) .lw-brand{font-size:9px;letter-spacing:.5px}.lw-world .lw-topbar>.lw-secondary{font-size:10px;padding:6px 8px;min-height:30px;}}

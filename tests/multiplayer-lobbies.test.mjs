@@ -126,7 +126,7 @@ test('multiple saboteurs: ejecting one does not end; ejecting all wins; living p
  assert.equal(large.bodies.length,6);for(let i=10;i<=15;i++)assert(large.bodies.some(b=>b.id==='body-p'+i));
  const room=createRoom('human',1,true);issueIdentity(room,true);room.settings=settings;room.roster=rosterFor(15);large.id=room.id;room.state=large;room.startId='body-start';room.updatedAt=large.updatedAt;await validateRoomSnapshot(room);
  const directory=await mkdtemp(path.join(tmpdir(),'lantern-bodies-')),store=await createRoomStore(directory);try{await store.save(room);const [restored]=await store.load();assert.equal(restored.state.bodies.length,6);assert(restored.state.bodies.some(b=>b.id==='body-p15'));}finally{await store.close();await rm(directory,{recursive:true,force:true});}
- for(const mutate of [r=>r.identities.push({...r.identities[0],hash:'b'.repeat(64),host:false}),r=>r.state.players[14].id='p1',r=>r.state.bodies[0].id='body-p16',r=>r.state.players[14].role='saboteur',r=>r.state.lobbySettings.speed=999]){const bad=structuredClone(room);mutate(bad);await assert.rejects(validateRoomSnapshot(bad));}
+ for(const mutate of [r=>r.identities.push({...r.identities[0],hash:'b'.repeat(64),host:false}),r=>r.state.players[14].id='p1',r=>r.state.bodies[0].id='body-p16',r=>r.state.players[14].role='saboteur',r=>r.state.lobbySettings.speed=999,r=>r.state.players[14].badge='1',r=>r.state.players[14].persona='Changed persona',r=>r.lastRematch={from:0}]){const bad=structuredClone(room);mutate(bad);await assert.rejects(validateRoomSnapshot(bad));}
 });
 
 test('rematch fences pending AI/provider/reservations/actions/input, resets context and preserves budget/replay/group',async t=>{
@@ -161,4 +161,65 @@ test('valid historical room schema1 with legacy or world state survives byte-pre
  const directory=await mkdtemp(path.join(tmpdir(),'lantern-legacy-'));const store=await createRoomStore(directory);t.after(async()=>{await store.close();await rm(directory,{recursive:true,force:true});});
  for(const world of [false,true]){const room=createRoom('human',100000);issueIdentity(room,true);room.startId='old';room.state=engine.createMatch({id:room.id,now:100000,world});await store.save(room);const file=path.join(directory,`room-${room.id}.json`),before=await readFile(file,'utf8');assert((await store.load()).some(r=>r.id===room.id));assert.equal(await readFile(file,'utf8'),before);}
  assert(!(await readdir(directory)).some(p=>p.includes('quarantine')));
+});
+
+test('audit: named legacy create remains compatible',async t=>{
+ const f=await fixture(t,{worldMode:false});
+ const named=await f.request('/api/rooms',{mode:'human',name:'Legacy captain'});
+ assert.equal(named.status,201,JSON.stringify(named.body));assert.equal(named.body.seatId,'p1');
+});
+
+test('audit: retrying auto-claim retains the same ready seat even when the lobby is full',async t=>{
+ const f=await fixture(t),host=await f.create();await f.request(host.route+'/settings',{settings:{capacity:4}},host.cookie);
+ const people=await Promise.all(Array.from({length:3},()=>f.request(host.route+'/join',{intent:'play'})));
+ const guest=people[0];await f.request(host.route+'/ready',{ready:true},guest.cookie);
+ const retry=await f.request(host.route+'/seat',{seatId:'auto'},guest.cookie);
+ assert.equal(retry.status,200);assert.equal(retry.body.seatId,guest.body.seatId);assert.equal(retry.body.ready,true);
+ assert.equal(new Set(f.game.rooms.get(host.id).data.identities.map(i=>i.seatId)).size,4);
+});
+
+test('audit: host authorization also applies to duplicate rematch requests',async t=>{
+ const f=await fixture(t,{rules:{maxMatchMs:1}}),host=await f.create(),guest=await f.request(host.route+'/join',{});
+ await f.request(host.route+'/start',{id:'terminal-start'},host.cookie);f.advance(2);await until(()=>f.game.rooms.get(host.id).data.state.phase==='paused','paused');
+ const input={id:'known-rematch-id',generation:1};assert.equal((await f.request(host.route+'/rematch',input,host.cookie)).status,200);
+ assert.equal((await f.request(host.route+'/rematch',input,guest.cookie)).status,403);
+ assert.equal((await f.request(host.route+'/rematch',input,host.cookie)).status,200);
+});
+
+test('audit: disabled emergency bell does not divert suspicious crew from unfinished stations',async()=>{
+ const {worldCandidates}=await import('../server/ai/world.mjs');
+ const settings=changeSettings(LOBBY_DEFAULTS,{emergencyMeetingsEnabled:false});
+ const state=engine.createMatch({id:'no-bell',settings,world:true,now:100000,seed:'no-bell',config:{meetingCooldownMs:1}}),actor=state.players.find(p=>p.role==='crew');
+ actor.position={x:800,y:250};actor.roomId='bridge';actor.tasks[0].roomId='galley';
+ const view=engine.getPlayerView(state,actor.id,100002);view.self.tasks=view.self.tasks.slice(0,1);
+ const proposal=worldCandidates(view,{},state.players.find(p=>p.id!==actor.id).id)[0];
+ assert.equal(proposal.type,'navigate');assert.equal(proposal.x,370);assert.equal(proposal.y,960);
+});
+
+test('audit: every supported capacity/faction ratio creates a private, restorable dynamic roster',async()=>{
+ const before=JSON.stringify(WORLD);
+ for(let capacity=4;capacity<=15;capacity++)for(let saboteurs=1;saboteurs<=3;saboteurs++){
+  if(2*saboteurs>=capacity)continue;
+  const settings=changeSettings(LOBBY_DEFAULTS,{capacity,saboteurs,tasksPerCrew:8,sabotageEnabled:false,emergencyMeetingsEnabled:false});
+  const room=createRoom('human',100000,true);issueIdentity(room,true);room.settings=settings;room.roster=rosterFor(capacity);room.startId='all-settings';
+  room.state=engine.createMatch({id:room.id,settings,roster:room.roster,world:true,now:100000,seed:`ratio-${capacity}-${saboteurs}`});
+  assert.equal(room.state.players.filter(p=>p.role==='saboteur').length,saboteurs);assert.equal(room.state.players.flatMap(p=>p.tasks).length,(capacity-saboteurs)*8);
+  await validateRoomSnapshot(JSON.parse(JSON.stringify(room)));
+  for(const player of room.state.players){const v=engine.getPlayerView(room.state,player.id,200000);assert(!v.availableActions.includes('sabotage'));assert(!v.availableActions.includes('meeting'));assert(v.players.every(p=>!Object.hasOwn(p,'role')));if(player.role==='saboteur')assert.equal(v.self.teammates.length,saboteurs-1);else assert(!Object.hasOwn(v.self,'teammates'));}
+ }
+ assert.equal(JSON.stringify(WORLD),before);
+});
+
+for(const capacity of [4,15])test(`audit: real dynamic demo bots complete a ${capacity}-keeper world without paid calls`,async()=>{
+ const settings=changeSettings(LOBBY_DEFAULTS,{capacity,saboteurs:capacity===15?3:1,tasksPerCrew:1});
+ let state=engine.createMatch({id:`demo-${capacity}`,mode:'spectator',settings,roster:rosterFor(capacity),world:true,now:100000,seed:`demo-dynamic-${capacity}`});
+ const context={},controller=createAiController({config:{provider:'demo',decisionIntervalMs:1}});
+ for(let step=1;step<=400&&state.phase!=='ended';step++){
+  const now=100000+step*1000;state=engine.tick(state,now).state;
+  for(const p of state.players.filter(p=>p.alive)){
+   const action=await controller.decide({view:engine.getPlayerView(state,p.id,now),player:PERSONAS.find(a=>a.id===p.id),context});
+   if(action){const result=engine.applyAction(state,p.id,action,now);assert(result.accepted,JSON.stringify(result.error));state=result.state;}
+  }
+ }
+ assert.equal(state.phase,'ended');assert(['crew','saboteur'].includes(state.outcome.winner));assert.equal(controller.describe(context).calls,0);assert.equal(controller.describe(context).costUsd,0);
 });

@@ -73,10 +73,10 @@ export async function createGameServer(config,dependencies={}) {
   function claim(data,identity,seatId,name){
     lobbyOnly(data);
     if(seatId!==null){
-      const chosen=seatId==='auto'?data.roster.find(p=>!data.identities.some(i=>i.seatId===p.id))?.id:seatId;
+      const chosen=seatId==='auto'?(identity.seatId??data.roster.find(p=>!data.identities.some(i=>i.seatId===p.id))?.id):seatId;
       if(!data.roster.some(p=>p.id===chosen)||data.identities.some(i=>i.hash!==identity.hash&&i.seatId===chosen))fail(409,'SEAT_UNAVAILABLE','Choose an unclaimed seat.');
       if(identity.seatId!==chosen)identity.ready=false;
-      identity.seatId=chosen;if(name!==undefined)data.roster.find(p=>p.id===chosen).name=nameInput(name);
+      identity.seatId=chosen;if(name!==undefined){const profile=data.roster.find(p=>p.id===chosen),normalized=nameInput(name);if(profile.name!==normalized)identity.ready=false;profile.name=normalized;}
     }else{identity.seatId=null;identity.ready=false;}
   }
   const server=http.createServer((req,res)=>track(handle(req,res)));
@@ -127,6 +127,7 @@ export async function createGameServer(config,dependencies={}) {
         if(Object.keys(input).some(k=>!allowed.includes(k)&&k!=='generation'))fail(400,'INVALID_LOBBY_REQUEST','Unknown lobby fields.');
         await run(room,async data=>{
           identity=authenticate(room,req);
+          if(route==='rematch')hostOnly(identity);
           if(route==='rematch'&&data.lastRematch?.id===input.id&&data.lastRematch?.from===(input.generation??0))return;
           generation(data,input);const next=structuredClone(data);
           if(route==='rematch'){
@@ -237,7 +238,7 @@ export async function createGameServer(config,dependencies={}) {
     const player=room.data.state.players.filter(p=>!p.human&&(room.nextDecision.get(p.id)||0)<=now()&&engine.getPlayerView(room.data.state,p.id,now()).self?.alive).sort((a,b)=>(room.nextDecision.get(a.id)||0)-(room.nextDecision.get(b.id)||0))[0];
     if(!player)return;
     room.nextDecision.set(player.id,now()+Math.max(100,config.ai?.decisionIntervalMs??1800));room.aiBusy=true;const work=Symbol(),matchId=room.data.state.id,abort=room.abort;room.aiWork=work;
-    const current=()=>room.data.state?.id===matchId&&room.abort===abort&&!abort.signal.aborted&&!closing;
+    const current=()=>room.data.state?.id===matchId&&!['ended','paused'].includes(room.data.state.phase)&&room.abort===abort&&!abort.signal.aborted&&!closing;
     track((async()=>{
       const context=structuredClone(room.data.aiContext),snapshot=engine.getPlayerView(room.data.state,player.id,now());
       try {

@@ -10,6 +10,7 @@ import {harbor} from './harbor.mjs';
 const main=document.querySelector('#main');
 const feedback=document.querySelector('#feedback');
 let room=null,roomId=null,controller=null,socket=null,poll=null;
+let pendingOperation=null;
 let epoch=0,pending=false,offset=0,connected=false,networkReady=false,connectionIssue=false;
 let draft='',draftMeeting=null,confirmTarget=null,replay=null,replayIndex=0,retry=null,retryContext=null;
 const attemptedJoins=new Set();
@@ -71,7 +72,7 @@ async function worldInput(owner,input){
   accept(data);return data;
  }catch(error){
   if(ownsWorld(owner)&&current===epoch&&error.name!=='AbortError'){
-   const unavailable=error.status==null||error.status>=500;
+   const unavailable=error.status==null||error.status>=500||[401,403,404].includes(error.status);
    if(unavailable){networkReady=false;connectionIssue=true;}
    if(Date.now()-lastInputFailure>5000){lastInputFailure=Date.now();if(unavailable)connectionFailure(error.message);else tell(error.message,true);}
    if(unavailable)render();
@@ -127,17 +128,17 @@ function stop(){
  epoch++;
  controller?.abort();controller=null;
  clearTimeout(poll);poll=null;
- connected=false;networkReady=false;pending=false;retry=null;retryContext=null;
+ connected=false;networkReady=false;pending=false;pendingOperation=null;retry=null;retryContext=null;
  if(uncertain)connectionFailure('Resynchronizing the room. Check its current state before acting again.');
  if(socket){socket.onclose=null;socket.onerror=null;socket.close();socket=null;}
 }
 async function busy(fn){
  if(pending)return {ok:false,error:'Wait for the current action to finish.'};
- const current=epoch,focus=saveFocus();
- pending=true;render();
- try{return await fn();}
- catch(error){if(current===epoch&&error.name!=='AbortError')tell(error.message,true);return {ok:false,error:error.message};}
- finally{if(current===epoch){const lostFocus=document.activeElement===document.body;pending=false;render();if(lostFocus)restoreFocus(focus);}}
+ const current=epoch,focus=saveFocus(),operation={};
+ pendingOperation=operation;pending=true;render();
+ try{return await fn(()=>current===epoch&&pendingOperation===operation);}
+ catch(error){if(current===epoch&&pendingOperation===operation&&error.name!=='AbortError')tell(error.message,true);return {ok:false,error:error.message};}
+ finally{if(current===epoch&&pendingOperation===operation){pendingOperation=null;const lostFocus=document.activeElement===document.body;pending=false;render();if(lostFocus)restoreFocus(focus);}}
 }
 function accept(data){
  const next=roomFrom(data);
@@ -148,7 +149,7 @@ function accept(data){
  const newWatch=nextGeneration>previousGeneration;
  if(room?.game&&!next.game&&!newWatch)return;
  if(!newWatch&&room?.game&&next.game&&(next.game.version<room.game.version||(next.game.version===room.game.version&&next.game.serverNow<room.game.serverNow)))return;
- if(newWatch||room?.game?.matchId!==next.game?.matchId){releaseWorld();replay=null;replayIndex=0;draft='';draftMeeting=null;confirmTarget=null;retry=null;retryContext=null;pending=false;feedback.textContent='';tell('Current watch state synchronized.');}
+ if(newWatch||room?.game?.matchId!==next.game?.matchId){releaseWorld();replay=null;replayIndex=0;draft='';draftMeeting=null;confirmTarget=null;retry=null;retryContext=null;pending=false;pendingOperation=null;feedback.textContent='';tell('Current watch state synchronized.');}
  if(room?.game?.matchId!==next.game?.matchId||room?.game?.phase!==next.game?.phase||room?.game?.self?.id!==next.game?.self?.id)worldActionGeneration++;
  room=next;
  networkReady=true;
@@ -200,7 +201,7 @@ async function openRoom(id,initial,{remembered=false}={}){
  }catch(error){
   if(ownsOpen()&&error.name!=='AbortError'){
    if(remembered&&error.status===404){home();tell('Your previous watch is unavailable. Start a new watch.');return;}
-   if([401,403,404].includes(error.status))tell(error.message,true);
+   if([401,403,404].includes(error.status)){networkReady=false;tell(error.message,true);}
    else{connectionFailure(error.message);schedulePoll(current);}
    render();
   }
@@ -216,7 +217,7 @@ function schedulePoll(current,delay=2000){
    accept(data);schedulePoll(current);
   }catch(error){
    if(current!==epoch||error.name==='AbortError')return;
-   if([401,403,404].includes(error.status)){tell(`${error.message} Reopen your original browser to recover its seat.`,true);return;}
+   if([401,403,404].includes(error.status)){networkReady=false;retry=null;retryContext=null;tell(`${error.message} Reopen your original browser to recover its seat.`,true);render();return;}
    connectionFailure(`Connection interrupted. Retrying: ${error.message}`);
    schedulePoll(current,Math.min(delay*2,30000));
   }
@@ -241,14 +242,14 @@ function connect(current){
 async function mutation(suffix,body,onSuccess){
  if(room?.generation!==undefined)body={generation:room.generation,...(suffix==='/action'?{matchId:room.game?.matchId}:{}),...body};
  const generation=room?.generation,current=epoch,id=roomId,context=suffix==='/action'?captureActionContext(body):null;
- return busy(async()=>{
+ return busy(async isCurrent=>{
   try{
    const data=await request(roomPath(id,suffix),{method:'POST',body,signal:controller.signal});
-   if(current!==epoch||(generation!==room?.generation&&suffix!=='/rematch'))return {ok:false,stale:true,error:'The watch changed.'};
+   if(!isCurrent()||current!==epoch||generation!==room?.generation)return {ok:false,stale:true,error:'The watch changed.'};
    retry=null;retryContext=null;accept(data);if(onSuccess)onSuccess();else tell('Action confirmed.');
    return {ok:true,data};
   }catch(error){
-   if(current!==epoch||error.name==='AbortError')return;
+   if(!isCurrent()||current!==epoch||error.name==='AbortError')return;
    if(generation!==room?.generation||(context&&!actionContextCurrent(context)))return {ok:false,stale:true,error:'The action context changed.'};
    if(error.status==null||error.status>=500){retryContext=context;retry=()=>mutation(suffix,body,onSuccess);tell('The request could not be confirmed. Retry keeps the same request ID so an accepted action cannot run twice.',true);}
    else{retry=null;retryContext=null;tell(error.message,true);}

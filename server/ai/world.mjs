@@ -71,7 +71,7 @@ export function worldCandidates(view, memory, suspect) {
   } else {
     const here = ordered((self.tasks ?? []).filter(task => !task.completed && task.roomId === self.roomId));
     if (allowed.has('task') && ready(view, 'taskAt') && at(view, WORLD_STATIONS[self.roomId], WORLD.interactionRadius) && here.length) return [{ type: 'task', taskId: here[0].id }];
-    if (!critical?.active && self.meetingsRemaining > 0 && ready(view, 'meetingAt') && suspect !== 'skip') {
+    if (view.settings?.emergencyMeetingsEnabled!==false && !critical?.active && self.meetingsRemaining > 0 && ready(view, 'meetingAt') && suspect !== 'skip') {
       if (allowed.has('meeting') && at(view, WORLD_BELL, WORLD.interactionRadius)) return [{ type: 'meeting' }];
       return navigate(bellApproach());
     }
