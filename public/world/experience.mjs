@@ -58,13 +58,15 @@ export function createWorldExperience(host,callbacks,{mapResolver=getMap,motionF
  const preset=make('div','lw-presets'),deathLabel=make('label','','After death '),deathSelect=make('select','lw-death-policy'),abilityLabel=make('label','',' Optional ability roles '),abilityToggle=make('input','lw-ability-preset');
  for(const [value,title]of [['transfer','Transfer tasks (classic)'],['ghost-tasks','Ghost tasks + fallen chat']]){const option=make('option','',title);option.value=value;deathSelect.append(option);}
  abilityToggle.type='checkbox';deathLabel.append(deathSelect);abilityLabel.append(abilityToggle);preset.append(deathLabel,abilityLabel,make('p','','Harbor Ward shields one nearby keeper. Signal Echo creates a labeled distraction. Factions stay secret.'));
- let presetRoom=null,ghostGeneration=0,ghostComposing=false,ghostSending=false;
+ let presetRoom=null,ghostGeneration=0,ghostComposing=false,ghostSending=false,ghostOpen=false;
  const lobbyNote=make('p','lw-lobby-note'),lobbyEyebrow=make('p','lw-eyebrow');lobby.append(lobbyEyebrow,lobbyTitle,lobbySub,roster,lobbyMap.node,preset,start,lobbyNote);
  const unavailable=make('section','lw-map-unavailable'),unavailableTitle=make('h2','','Map unavailable'),unavailableCopy=make('p');unavailableTitle.tabIndex=-1;unavailable.append(unavailableTitle,unavailableCopy);unavailable.hidden=true;stage.append(unavailable);
- const ghostChat=make('aside','lw-ghost-chat'),ghostTitle=make('h2','','FALLEN CHANNEL'),ghostMessages=make('ol'),ghostForm=make('form'),ghostInput=make('textarea'),ghostSend=make('button','','Send to fallen'),ghostHint=make('p','','Only fallen keepers receive this channel. 20 messages each per watch; 2 seconds between messages.');
- ghostInput.rows=2;ghostInput.maxLength=280;ghostInput.setAttribute('aria-label','Message to fallen keepers');ghostMessages.setAttribute('aria-live','polite');ghostMessages.setAttribute('aria-label','Private fallen messages');ghostSend.type='submit';ghostForm.append(ghostInput,ghostSend);ghostChat.append(ghostTitle,ghostMessages,ghostForm,ghostHint);ghostChat.hidden=true;const ghostRows=new Map();
+ const ghostChat=make('aside','lw-ghost-chat'),ghostToggle=button('Fallen chat',()=>setGhostChatOpen(!ghostOpen,true),'lw-ghost-toggle'),ghostPane=make('section','lw-ghost-pane'),ghostHeader=make('header','lw-ghost-heading'),ghostTitle=make('h2','','FALLEN CHANNEL'),ghostClose=button('Close',()=>setGhostChatOpen(false,true),'lw-ghost-close'),ghostMessages=make('ol'),ghostForm=make('form'),ghostInput=make('textarea'),ghostSend=make('button','','Send to fallen'),ghostHint=make('p','','Only fallen keepers receive this channel. 20 messages each per watch; 2 seconds between messages.');
+ ghostToggle.setAttribute('aria-label','Fallen chat');ghostToggle.setAttribute('aria-controls',uid+'-fallen');ghostToggle.setAttribute('aria-expanded','false');ghostClose.setAttribute('aria-label','Close fallen chat');ghostPane.id=uid+'-fallen';ghostPane.setAttribute('role','region');ghostTitle.id=uid+'-fallen-title';ghostPane.setAttribute('aria-labelledby',ghostTitle.id);ghostPane.hidden=true;ghostHeader.append(ghostTitle,ghostClose);
+ ghostPane.addEventListener('keydown',event=>{if(event.key==='Escape'){event.preventDefault();setGhostChatOpen(false,true);}});
+ ghostInput.rows=2;ghostInput.maxLength=280;ghostInput.setAttribute('aria-label','Message to fallen keepers');ghostMessages.setAttribute('aria-live','polite');ghostMessages.setAttribute('aria-label','Private fallen messages');ghostSend.type='submit';ghostForm.append(ghostInput,ghostSend);ghostPane.append(ghostHeader,ghostMessages,ghostForm,ghostHint);ghostChat.append(ghostToggle,ghostPane);ghostChat.hidden=true;const ghostRows=new Map();
  ghostInput.addEventListener('compositionstart',()=>ghostComposing=true);ghostInput.addEventListener('compositionend',()=>ghostComposing=false);
- ghostForm.addEventListener('submit',async event=>{event.preventDefault();const text=ghostInput.value.trim();if(ghostComposing||event.isComposing||ghostSending||document.hidden||!text||!room?.game?.availableActions?.includes('ghostSay'))return;const pin=ghostGeneration,key=actionKey(room),draft=ghostInput.value;ghostSending=true;try{await perform('ghostSay',{text});if(!disposed&&pin===ghostGeneration&&key===actionKey(room)&&!ghostComposing&&ghostInput.value===draft)ghostInput.value='';}catch(error){if(!disposed&&!document.hidden&&pin===ghostGeneration&&key===actionKey(room)&&error?.name!=='AbortError')setFeedback(error.message);}finally{ghostSending=false;}});
+ ghostForm.addEventListener('submit',async event=>{event.preventDefault();const text=ghostInput.value.trim();if(disposed||ghostComposing||event.isComposing||ghostSending||document.hidden||!text||!room?.game?.availableActions?.includes('ghostSay'))return;const pin=ghostGeneration,key=actionKey(room),draft=ghostInput.value;ghostSending=true;try{await perform('ghostSay',{text});if(!disposed&&pin===ghostGeneration&&key===actionKey(room)&&!ghostComposing&&ghostInput.value===draft)ghostInput.value='';}catch(error){if(!disposed&&!document.hidden&&pin===ghostGeneration&&key===actionKey(room)&&error?.name!=='AbortError')setFeedback(error.message);}finally{ghostSending=false;}});
  const overlay=make('div','lw-scene-overlay');overlay.hidden=true;
  const roleScene=make('section','lw-role-scene');roleScene.hidden=true;roleScene.setAttribute('role','dialog');roleScene.setAttribute('aria-modal','true');roleScene.setAttribute('aria-labelledby',`${uid}-role-title`);
  const revealArt=make('canvas','lw-reveal-keeper');revealArt.width=240;revealArt.height=250;
@@ -90,10 +92,20 @@ export function createWorldExperience(host,callbacks,{mapResolver=getMap,motionF
  for(const pane of [council.node,results.node,confirmation,ejection,paused]){pane.hidden=true;overlay.append(pane);}
  roleScene.addEventListener('keydown',event=>{if(event.key==='Escape'){revealed.add(room.game.matchId);render();canvas.focus();}else trapDialog(roleScene,event);});
  confirmation.addEventListener('keydown',event=>{if(event.key==='Escape'){event.preventDefault();closeConfirmation();}else trapDialog(confirmation,event);});
+ function setGhostChatOpen(value,restore=false){
+  if(disposed)return;
+  if(value&&(document.hidden||mapError||!room?.game?.self?.ghost||['ended','paused'].includes(room.game.phase)||puzzle||confirmTarget))return;
+  const hadFocus=ghostPane.contains(document.activeElement);
+  if(!value&&ghostOpen)ghostGeneration++;
+  ghostOpen=value;ghostPane.hidden=!value;ghostToggle.setAttribute('aria-expanded',String(value));
+  if(value){input.stop();beaconPanel?.suspend();mapOpen=false;mapPane.hidden=true;mapToggle.setAttribute('aria-expanded','false');ghostInput.focus();}
+  else if(restore&&hadFocus&&!ghostChat.hidden&&!document.hidden)restoreTrigger(ghostToggle);
+ }
  function validElimination(){const g=room?.game;if(g?.beaconVersion===1)return g.phase==='roam'&&g.self?.alive&&g.self.role==='saboteur'&&!g.systems?.selfTransit&&!g.self.transit&&hasActionDescriptor(g,'eliminate',{targetId:confirmTarget});const target=g?.players?.find(p=>p.id===confirmTarget);return g?.phase==='roam'&&g.self?.alive&&g.self.role==='saboteur'&&target?.alive&&(g.beaconVersion!==1||knowledge(g,target)==='alive')&&point(target.position)&&distance(g.self.position,target.position)<=world.WORLD.killRadius&&g.availableActions?.includes('eliminate');}
  function closeConfirmation(restore=true){confirmTarget=null;render();if(restore)restoreTrigger(actionButtons.eliminate);}
  function closeTask(restore=true){const current=puzzle,hadFocus=current?.node.contains(document.activeElement);puzzle=null;taskSession=null;current?.dispose();render();if(restore){restoreTrigger(actionButtons.use);if(hadFocus&&document.activeElement===document.body&&!disposed&&!document.hidden&&room?.game?.phase==='roam'&&canViewAct(room.game)&&overlay.hidden&&roleScene.hidden)restoreTrigger(canvas);}}
  function openTask(task){
+  setGhostChatOpen(false);
   taskSession={taskId:task.id,roomId:room.roomId,matchId:room.game.matchId,mapKey:mapKey(room.game.map??room.map),location:room.game.self.roomId,...(task.progress?{progressKey:JSON.stringify([task.progress.v,task.progress.kind,task.progress.target,task.progress.sequence,task.progress.pressure,task.progress.total])}:{}),...(task.kind==='station'?{challengeKey:JSON.stringify([task.challenge?.version,task.challenge?.kind,task.challenge?.puzzle])}:{})};
   puzzle=createTaskPuzzle({id:uid,task,kind:taskKind(task,room.game.self.tasks.indexOf(task)),onClose:()=>closeTask(),onSubmit:async stationInput=>{
    if(document.hidden)return;
@@ -124,7 +136,7 @@ export function createWorldExperience(host,callbacks,{mapResolver=getMap,motionF
  function pending(){return options.pending||localPending>0;}
  function setFeedback(message){if(disposed)return;localFeedback=String(message||'');setText(feedback,localFeedback);}
  async function request(fn){if(disposed||mapError||pending()||lobbyMap.pending)return;const generation=actionGeneration,key=actionKey(room);localPending++;render();try{return await fn();}catch(error){if(!disposed&&!document.hidden&&generation===actionGeneration&&key===actionKey(room)&&error?.name!=='AbortError')setFeedback(error?.message||'The request failed. Try again.');}finally{if(!disposed){localPending--;render();}}}
- function toggleMap(){mapOpen=!mapOpen;mapPane.hidden=!mapOpen;mapToggle.setAttribute('aria-expanded',String(mapOpen));if(mapOpen){mini.update(room,performance.now());mini.draw(performance.now(),{overview:true});}}
+ function toggleMap(){setGhostChatOpen(false);mapOpen=!mapOpen;mapPane.hidden=!mapOpen;mapToggle.setAttribute('aria-expanded',String(mapOpen));if(mapOpen){mini.update(room,performance.now());mini.draw(performance.now(),{overview:true});}}
  function enabledWardHints(){const game=room?.game;return game?.phase==='roam'&&game.self?.alive&&!game.systems?.selfTransit&&!game.self.transit?actionDescriptors(game).filter(h=>h.type==='protect'&&h.enabled===true):[];}
  function actionContext(key){
   const context=contexts(room?.game,world)[key];
@@ -145,7 +157,7 @@ export function createWorldExperience(host,callbacks,{mapResolver=getMap,motionF
  }
  function render(){
   if(!room||disposed)return;const game=room.game,isLobby=!game,canWalk=game?.phase==='roam'&&canViewAct(game)&&!game.systems?.selfTransit&&!game.self?.transit;
-  if(mapError){shell.dataset.critical=String(!!game?.sabotage?.active);canvas.hidden=true;unavailable.hidden=false;setText(unavailableCopy,mapError+' Exit and open a compatible watch.');lobby.hidden=assignment.hidden=progress.hidden=actions.hidden=joystick.hidden=mapToggle.hidden=mapPane.hidden=overlay.hidden=roleScene.hidden=true;critical.hidden=!game?.sabotage?.active;setText(criticalClock,clock(game?.sabotage?.deadlineAt,options.now));setText(criticalTitle,'CRITICAL ALERT');setText(criticalInfo,'The deadline continues; this client cannot render map equipment.');phaseClock.hidden=true;setText(mode,aiLabel(room.ai));if(beaconPanel)beaconPanel.node.hidden=true;setText(status,options.connected?'Connected':'Reconnecting');return;}
+  if(mapError){setGhostChatOpen(false);ghostChat.hidden=true;shell.dataset.critical=String(!!game?.sabotage?.active);canvas.hidden=true;unavailable.hidden=false;setText(unavailableCopy,mapError+' Exit and open a compatible watch.');lobby.hidden=assignment.hidden=progress.hidden=actions.hidden=joystick.hidden=mapToggle.hidden=mapPane.hidden=overlay.hidden=roleScene.hidden=true;critical.hidden=!game?.sabotage?.active;setText(criticalClock,clock(game?.sabotage?.deadlineAt,options.now));setText(criticalTitle,'CRITICAL ALERT');setText(criticalInfo,'The deadline continues; this client cannot render map equipment.');phaseClock.hidden=true;setText(mode,aiLabel(room.ai));if(beaconPanel)beaconPanel.node.hidden=true;setText(status,options.connected?'Connected':'Reconnecting');return;}
   canvas.hidden=false;unavailable.hidden=true;mapToggle.hidden=false;
   const keepers=room.game?.players||room.roster||CHARACTERS;
   for(const [id,row]of lobbyRows)if(!keepers.some(p=>p.id===id)){row.remove();lobbyRows.delete(id);}
@@ -162,6 +174,8 @@ export function createWorldExperience(host,callbacks,{mapResolver=getMap,motionF
 
   if(isLobby){if(presetRoom!==room.roomId){presetRoom=room.roomId;deathSelect.value=room.features?.deathPolicy||'transfer';abilityToggle.checked=room.features?.abilities===true;}deathSelect.disabled=abilityToggle.disabled=!room.isHost||pending();}
   ghostChat.hidden=!game?.self?.ghost||['ended','paused'].includes(game?.phase);
+  if(ghostChat.hidden||puzzle||confirmTarget)setGhostChatOpen(false);
+  ghostPane.hidden=!ghostOpen;ghostToggle.setAttribute('aria-expanded',String(ghostOpen));ghostToggle.disabled=!!puzzle||!!confirmTarget;
   for(const message of game?.ghostChat||[]){if(ghostRows.has(message.id))continue;const item=make('li','',`${game.players.find(p=>p.id===message.playerId)?.name||'Fallen keeper'}: ${message.text}`);ghostRows.set(message.id,item);ghostMessages.append(item);}
   ghostSend.disabled=pending()||!options.connected||!game?.availableActions?.includes('ghostSay');
   setText(role,roleLabel(game));role.dataset.role=game?.self?.role||'spectator';setText(location,game?.self?`${game.self.alive?'':'Fallen · '}${roomName(game.self.roomId)}`:`Public observation · roles ${game?.phase==='ended'?'revealed':'hidden'}`);
@@ -221,15 +235,15 @@ export function createWorldExperience(host,callbacks,{mapResolver=getMap,motionF
   input.sync();
  }
  function frame(now){raf=0;if(disposed||document.hidden)return;scene.draw(now,{overview:!room?.game?.self&&!!room?.game&&spectatorWide,follow:!room?.game?.self?spectatorFollow.value:null});if(mapOpen)mini.draw(now,{overview:true});raf=requestAnimationFrame(frame);}
- function blur(){ghostGeneration++;council.suspend?.();scene.suspend?.();mini.suspend?.();navigationEpoch++;actionGeneration++;beaconPanel?.suspend();lobbyMap.suspend();sound.suspend();}
+ function blur(){setGhostChatOpen(false);ghostGeneration++;council.suspend?.();scene.suspend?.();mini.suspend?.();navigationEpoch++;actionGeneration++;beaconPanel?.suspend();lobbyMap.suspend();sound.suspend();}
  window.addEventListener('blur',blur);
- function visibility(){ghostGeneration++;council.suspend?.();navigationEpoch++;actionGeneration++;beaconPanel?.suspend();lobbyMap.suspend();sound.suspend();if(document.hidden){scene.suspend?.();mini.suspend?.();cancelAnimationFrame(raf);raf=0;input.stop();}else if(!disposed&&!raf){scene.update(room,performance.now());mini.update(room,performance.now());scene.draw(performance.now());raf=requestAnimationFrame(frame);}}
+ function visibility(){if(document.hidden)setGhostChatOpen(false);ghostGeneration++;council.suspend?.();navigationEpoch++;actionGeneration++;beaconPanel?.suspend();lobbyMap.suspend();sound.suspend();if(document.hidden){scene.suspend?.();mini.suspend?.();cancelAnimationFrame(raf);raf=0;input.stop();}else if(!disposed&&!raf){scene.update(room,performance.now());mini.update(room,performance.now());scene.draw(performance.now());raf=requestAnimationFrame(frame);}}
  document.addEventListener('visibilitychange',visibility);if(!document.hidden)raf=requestAnimationFrame(frame);
  const api={update(next,nextOptions={}){
   if(disposed)return;let nextMap;
-  try{nextMap=mapResolver(next.game?.map??next.map);}catch(error){navigationEpoch++;actionGeneration++;input.stop();puzzle?.dispose();puzzle=null;taskSession=null;confirmTarget=null;beaconPanel?.suspend();sound.suspend();room=next;options={...options,...nextOptions};mapError=error?.message||'Unsupported map/version.';render();unavailableTitle.focus();return;}
+  try{nextMap=mapResolver(next.game?.map??next.map);}catch(error){setGhostChatOpen(false);navigationEpoch++;actionGeneration++;input.stop();puzzle?.dispose();puzzle=null;taskSession=null;confirmTarget=null;beaconPanel?.suspend();sound.suspend();room=next;options={...options,...nextOptions};mapError=error?.message||'Unsupported map/version.';render();unavailableTitle.focus();return;}
   const nextActionKey=actionKey(next);if(lastActionKey!==null&&lastActionKey!==nextActionKey)actionGeneration++;lastActionKey=nextActionKey;const scope=equipmentOwner(next);
-  if(lastScope&&lastScope!==scope){ghostGeneration++;navigationEpoch++;input.stop();puzzle?.dispose();puzzle=null;taskSession=null;confirmTarget=null;beaconPanel?.suspend();}
+  if(lastScope&&lastScope!==scope){setGhostChatOpen(false);ghostGeneration++;navigationEpoch++;input.stop();puzzle?.dispose();puzzle=null;taskSession=null;confirmTarget=null;beaconPanel?.suspend();}
   const changed=selectedMap.id!==nextMap.id||selectedMap.version!==nextMap.version;
   if(lastRoom&&(lastRoom!==next.roomId||changed||room?.game?.matchId!==next.game?.matchId||room?.game?.self?.id!==next.game?.self?.id)){ejectionKey=null;seenEjections.clear();revealed.clear();ghostRows.clear();ghostMessages.replaceChildren();ghostInput.value='';ghostGeneration++;spectatorFollow.value='';spectatorWide=true;localFeedback='';lastRole=null;}
   lastScope=scope;lastRoom=next.roomId;mapError='';selectedMap=nextMap;world=selectedMap.geometry;room=next;options={...options,...nextOptions};scene.update(room,performance.now());mini.update(room,performance.now());sound.update(room);render();

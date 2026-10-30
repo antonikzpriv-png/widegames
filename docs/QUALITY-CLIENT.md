@@ -229,3 +229,28 @@ $env:TEMP='D:/Widegames-work/temp'; $env:TMP=$env:TEMP
 node --test tests/quality-client-council-layout.test.mjs
 node --test tests/quality-client-main-ward-selection.test.mjs tests/quality-client-regression-audit.test.mjs tests/tactical-client-mobile-layout.test.mjs
 ```
+
+
+## Native fallen-channel hit-target blocker closure candidate
+
+Base `1cbe87bfc2779068906d5cacd42d6b6657967006` on codex/ship-quality-ward-target-20261030 preserves Ward d377 and bounded council layout. Independent Reviewer actual frozen f9 evidence is `D:/Widegames-work/ship-quality-audit-20261030/_artifacts/quality-browser-final-f9b3215-42yuaB/report.json` and failure.png. The report's native elementFromPoint at(347.5,724) hit a fallen-chat P instead of USE rectangle left315/top684/right380/bottom764. The screenshot confirms the old always-open channel physically covered USE. This is preserved native red evidence, not a speculative visual concern or a new browser run by this worker.
+
+Fallen chat now starts collapsed. Its stable native button is named **Fallen chat** (aria-expanded/aria-controls); activating it focuses the existing private textarea. **Close fallen chat** or Escape collapses the pane and restores the still-valid toggle focus. Ordinary safe-view updates keep the textarea node, current draft, focus and IME state. The full-stage dock has pointer-events:none; only its toggle and open pane accept pointers. On320/390 the44x44 toggle occupies the real rail gap between Sound and Systems; the open pane ends above the joystick and task actions. On844x390 the pane occupies the central region between joystick and USE and ends above the rail. Desktop uses a separate right-side toggle/pane above the action area. The pane/history scroll, input uses16px text and Send/Close targets are at least44px. An active critical countdown retains a separate reserved band above the open mobile pane.
+
+USE remains operable with the chat pane open: opening equipment collapses chat without deleting its draft, then focuses normal station controls. The chat toggle is disabled until that equipment closes. Actual ghost movement and all task/network permissions are unchanged. Map opening, phase/life/visibility/blur changes close the pane; existing room/match/actor/immutable-map context resets still clear old private data as before. Closing/reopening revokes pending private-chat completion feedback so an old rejection cannot overwrite a new draft. Disposed old controls cannot send. No permission, task protocol, server/shared or council/Ward action handler was changed.
+
+### Native gate integration note
+
+The new UI intentionally requires clicking the button named **Fallen chat** before filling the private textarea. Update native drivers to take that real user step; retain the original positive USE elementFromPoint assertion and actual task/chat assertions. Native selected-target Ward, council layout and fallen-channel hit testing must still run on the final integrated pin. This worker used no Chrome, so the following module/style results are not completion of that gate.
+
+Evidence `_artifacts/fallen-channel-closure-20261030`: before-experience.mjs/before-beacon.css retain the prior source; closure-receipt.json records exact candidate/native-red hashes. fallen-final-2.log:17 pass/0 fail/0 skip. Nine real-engine/controller DOM checks cover default collapse, focus/draft retention, steering and actual USE/taskInteract progress, actual returned ghostSay/private text, IME, phase/life/hidden/context/dispose guards and pending-close ABA. Eight actual-stylesheet geometry checks cover320x740,390x844,844x390,1440x1000 with critical on/off, pointer passthrough, bounded scrolling and disjoint chat/toggle versus joystick/USE/Sound/Systems/Exit. They additionally clear the exact observed390px USE failure rectangle. Actors are explicitly positioned at stations in the engine fixture; no HTTP walking/native workflow is claimed. The CSS evaluator is a limited contract calculation, not actual elementFromPoint/text-layout/touch proof.
+
+retained.log:54 pass/0 fail/0 skip from unchanged Ward8, council16, task/council/input lifecycle13, real replay2/ghost13 and existing mobile rail4 checks. These overlap prior receipts and are not71 independent complete matches. dom-first.log preserves an initial map-boundary test expectation that a draft should survive an immutable map replacement; it was corrected to assert the pre-existing private-context clear, rather than changing runtime privacy behavior. layout-harness-first.log preserves a fixture CSS-unit TypeError (numeric44 instead of44px); all disjoint assertions remain intact. Backend/shared bytes remain equal to base. Syntax/diff checks pass.
+
+No root/server/shared/movement/other-worktree edits, Chrome/native server/full suite/providers/main/push/deploy or production self-approval. Reviewer retains Chrome; no owned long-lived process remains. OS virtual-keyboard geometry/physical phones/audio and final native hit targets remain unqualified here.
+
+```powershell
+$env:TEMP='D:/Widegames-work/temp'; $env:TMP=$env:TEMP
+node --test tests/quality-client-fallen-channel.test.mjs
+node --test tests/quality-client-main-ward-selection.test.mjs tests/quality-client-council-layout.test.mjs tests/quality-client-regression-audit.test.mjs tests/quality-client-main-replay2.test.mjs tests/tactical-client-mobile-layout.test.mjs
+```
