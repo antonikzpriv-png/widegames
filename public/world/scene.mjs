@@ -82,9 +82,28 @@ function acquireOverview(canvas,map,bounds,width,height){
 }
 function releaseOverview(entry){if(entry&&--entry.users===0){overviewLayers.delete(entry);entry.image.width=entry.image.height=0;}}
 export function createWorldScene(canvas,{reduced=false,playback=false,mapResolver=getMap,motionFactory}={}){
- const ctx=canvas.getContext('2d'),samples=motionFactory?motionFactory({mapResolver,timelineDelayMs:100}):new ActorSamples({mapResolver,world:true});let map=mapResolver(),world=map.geometry;let room=null,lastKey=null,camera={x:800,y:400},view={width:1,height:1,zoom:1},stopped=false,lastOwner=null,lastAt=-Infinity,lastVersion=-1,paintedActors=[],overviewLayer=null;
+ const ctx=canvas.getContext('2d'),samples=motionFactory?motionFactory({mapResolver,timelineDelayMs:100}):new ActorSamples({mapResolver,world:true});let map=mapResolver(),world=map.geometry;let room=null,lastKey=null,camera={x:800,y:400},view={width:1,height:1,zoom:1},stopped=false,lastOwner=null,lastAt=-Infinity,lastVersion=-1,paintedActors=[],overviewLayer=null,terrainLayer=null,fogLayer=null;
  const cameraTrack=new ObservedCamera();
  const cache=createStaticLayer({paint:paintSceneEnvironment,makeCanvas:(w,h)=>{if(typeof OffscreenCanvas!=='undefined')return new OffscreenCanvas(w,h);return canvas.ownerDocument?.createElement?.('canvas')||globalThis.document?.createElement?.('canvas');}});
+ const glows=new Map();
+ function raster(w,h){const image=typeof OffscreenCanvas!=='undefined'?new OffscreenCanvas(w,h):canvas.ownerDocument?.createElement?.('canvas')||globalThis.document?.createElement?.('canvas');const context=image?.getContext?.('2d');if(!context)return null;image.width=w;image.height=h;return {image,context,bytes:w*h*4};}
+ function release(layer){if(layer)layer.image.width=layer.image.height=0;}
+ function clearTransient(){release(terrainLayer);terrainLayer=null;release(fogLayer);fogLayer=null;for(const layer of glows.values())release(layer);glows.clear();}
+ function terrain(bounds){
+  if(terrainLayer&&(terrainLayer.map!==map||bounds.x<terrainLayer.bounds.x||bounds.y<terrainLayer.bounds.y||bounds.x+bounds.width>terrainLayer.bounds.x+terrainLayer.bounds.width||bounds.y+bounds.height>terrainLayer.bounds.y+terrainLayer.bounds.height)){release(terrainLayer);terrainLayer=null;}
+  if(!terrainLayer){const b={x:Math.floor(bounds.x/128)*128-64,y:Math.floor(bounds.y/128)*128-64,width:Math.ceil((bounds.width+256)/128)*128,height:Math.ceil((bounds.height+256)/128)*128},scale=Math.min(1,1024/b.width,1024/b.height),layer=raster(Math.ceil(b.width*scale),Math.ceil(b.height*scale));
+   if(layer){layer.context.setTransform(layer.image.width/b.width,0,0,layer.image.height/b.height,-b.x*layer.image.width/b.width,-b.y*layer.image.height/b.height);cache.draw(layer.context,map,b);terrainLayer={...layer,map,bounds:b};}
+  }
+  if(terrainLayer){const b=terrainLayer.bounds;ctx.drawImage(terrainLayer.image,b.x,b.y,b.width,b.height);}else cache.draw(ctx,map,bounds);
+ }
+ function glow(critical){
+  const key=!!critical;if(glows.has(key))return glows.get(key).image;const layer=raster(256,256);if(!layer)return null;
+  const c=layer.context;c.shadowColor=critical?'#ff6963':'#ffe895';c.shadowBlur=44;circle(c,128,128,62,critical?'#e87162':'#f3d98e',undefined,8);glows.set(key,layer);return layer.image;
+ }
+ function fog(radius){
+  if(fogLayer?.radius===radius)return fogLayer.image;release(fogLayer);fogLayer=null;const layer=raster(256,256);if(!layer)return null;
+  const c=layer.context;c.setTransform(256/(radius*2),0,0,256/(radius*2),0,0);const gradient=c.createRadialGradient(radius,radius,radius*.35,radius,radius,radius);gradient.addColorStop(0,'#091d3000');gradient.addColorStop(.82,'#091d3038');gradient.addColorStop(1,'#091d30e8');c.fillStyle=gradient;c.fillRect(0,0,radius*2,radius*2);fogLayer={...layer,radius};return layer.image;
+ }
  function update(next,at){
   const nextMap=mapResolver(mapReference(next)),game=observerGame(next?.game);
   const owner=JSON.stringify([next?.roomId,game?.matchId,mapKey(nextMap),game?.self?.id]);
@@ -114,14 +133,16 @@ export function createWorldScene(canvas,{reduced=false,playback=false,mapResolve
   ctx.save();ctx.translate(width/2,height/2);ctx.scale(zoom,zoom);ctx.translate(-camera.x,-camera.y);
   const bounds=viewportBounds(camera,width,height,zoom,0);
   if(overview){
+   release(terrainLayer);terrainLayer=null;
    if(overviewLayer&&(overviewLayer.map!==map||overviewLayer.width!==width||overviewLayer.height!==height)){releaseOverview(overviewLayer);overviewLayer=null;}
    overviewLayer??=acquireOverview(canvas,map,bounds,width,height);
    if(overviewLayer)ctx.drawImage(overviewLayer.image,bounds.x,bounds.y,bounds.width,bounds.height);else paintSceneEnvironment(ctx,map,bounds);
-  }else{releaseOverview(overviewLayer);overviewLayer=null;cache.draw(ctx,map,bounds);}
+  }else{releaseOverview(overviewLayer);overviewLayer=null;terrain(bounds);}
   if(world.metadata?.revision===2){drawInteriorLights(ctx,world,time,reduced);drawInteriorLabels(ctx,world,zoom);}else drawRoomLabels(ctx,map,bounds,{overview,zoom});
   for(const r of world.WORLD_ROOMS){const station=world.WORLD_STATIONS[r.id];if(!station||!intersects({x:station.x-40,y:station.y-40,width:80,height:80},bounds))continue;
    const task=game?.self?.tasks?.find(t=>!t.completed&&t.roomId===r.id)||(playback&&game?.replayTaskRooms?.includes(r.id)?{kind:'recorded'}:null),critical=game?.beaconVersion!==1&&game?.sabotage?.active&&game.sabotage.roomId===r.id;
    const kind=task?.challenge?.kind||map.taskKinds?.[r.id]||({bridge:'circuit',workshop:'circuit',lantern:'signal',engine:'alignment',archive:'sequence',galley:'manifolds'})[r.id]||'glyphs';
+   if(task||critical){const image=glow(critical),size=128*(reduced?1:1+Math.sin(time/250)*.045);if(image)ctx.drawImage(image,station.x-size/2,station.y-size/2,size,size);}
    drawStation(ctx,station,kind,{active:!!task,critical,time,reduced});
   }
   drawBeaconFixtures(ctx,game,map);
@@ -140,8 +161,10 @@ export function createWorldScene(canvas,{reduced=false,playback=false,mapResolve
   if(world.metadata?.revision!==2)drawForeground(ctx,map,bounds);
   ctx.restore();
   if(!overview&&((vision&&!vision.ended)||game?.beaconVersion!==1&&game?.self&&point(game.self.position))){
-   const origin=vision?.origin||game.self.position,sx=(origin.x-camera.x)*zoom+width/2,sy=(origin.y-camera.y)*zoom+height/2,radius=Math.max(.01,(vision?vision.radius:world.WORLD.visibilityRadius)*zoom);
-   const fog=ctx.createRadialGradient(sx,sy,radius*.35,sx,sy,radius);fog.addColorStop(0,'#091d3000');fog.addColorStop(.82,'#091d3038');fog.addColorStop(1,'#091d30e8');ctx.fillStyle=fog;ctx.fillRect(0,0,width,height);
+   const origin=vision?.origin||game.self.position,sx=(origin.x-camera.x)*zoom+width/2,sy=(origin.y-camera.y)*zoom+height/2,worldRadius=Math.max(.01,vision?vision.radius:world.WORLD.visibilityRadius),radius=worldRadius*zoom,image=fog(worldRadius);
+   if(image){const left=clamp(sx-radius,0,width),right=clamp(sx+radius,0,width),top=clamp(sy-radius,0,height),bottom=clamp(sy+radius,0,height);ctx.fillStyle='#091d30e8';ctx.fillRect(0,0,width,top);ctx.fillRect(0,bottom,width,height-bottom);ctx.fillRect(0,top,left,bottom-top);ctx.fillRect(right,top,width-right,bottom-top);ctx.drawImage(image,sx-radius,sy-radius,radius*2,radius*2);}
+   else{const gradient=ctx.createRadialGradient(sx,sy,radius*.35,sx,sy,radius);gradient.addColorStop(0,'#091d3000');gradient.addColorStop(.82,'#091d3038');gradient.addColorStop(1,'#091d30e8');ctx.fillStyle=gradient;ctx.fillRect(0,0,width,height);}
+
   }
  }
  function screenToWorld(clientX,clientY){if(stopped||!view.camera||!Number.isFinite(clientX)||!Number.isFinite(clientY))return null;const r=canvas.getBoundingClientRect();return {x:(clientX-r.left-view.width/2)/view.zoom+view.camera.x,y:(clientY-r.top-view.height/2)/view.zoom+view.camera.y};}
@@ -164,5 +187,5 @@ export function createWorldScene(canvas,{reduced=false,playback=false,mapResolve
   for(const [index,item]of (world.WORLD_DECOR||[]).entries()){if(!Number.isFinite(item.x)||!Number.isFinite(item.y))continue;const width=item.width||20,height=item.height||20;if(target.x>=item.x-10&&target.x<=item.x+width+10&&target.y>=item.y-10&&target.y<=item.y+height+10)return {type:'decor',id:item.id||`decor-${index}`,roomId:world.worldRoomAt(target),kind:item.kind};}
   const roomId=world.worldRoomAt(target);return roomId?{type:'room',id:roomId,roomId}:null;
  }
- return {update,draw,pick,screenToWorld,worldToScreen,getCamera(){return {...(view.camera||cameraTrack.at(lastAt,true)||world.WORLD_VIEWPOINT)};},setIntent(input,at){return samples.setIntent?.(input,at)||false;},suspend(){releaseOverview(overviewLayer);overviewLayer=null;paintedActors=[];samples.clear();cameraTrack.clear();lastKey=null;},toWorld(clientX,clientY){if(playback)return null;const r=canvas.getBoundingClientRect();return {x:(clientX-r.left-view.width/2)/view.zoom+view.camera.x,y:(clientY-r.top-view.height/2)/view.zoom+view.camera.y};},stats(){return {...cache.stats(),overviewBytes:overviewLayer?.bytes||0,overviewSharedBytes:[...overviewLayers].reduce((n,e)=>n+e.bytes,0),maxOverviewBytes:8*1024*1024};},dispose(){stopped=true;releaseOverview(overviewLayer);overviewLayer=null;paintedActors=[];samples.clear();cameraTrack.clear();cache.dispose();}};
+ return {update,draw,pick,screenToWorld,worldToScreen,getCamera(){return {...(view.camera||cameraTrack.at(lastAt,true)||world.WORLD_VIEWPOINT)};},setIntent(input,at){return samples.setIntent?.(input,at)||false;},suspend(){clearTransient();releaseOverview(overviewLayer);overviewLayer=null;paintedActors=[];samples.clear();cameraTrack.clear();lastKey=null;},toWorld(clientX,clientY){if(playback)return null;const r=canvas.getBoundingClientRect();return {x:(clientX-r.left-view.width/2)/view.zoom+view.camera.x,y:(clientY-r.top-view.height/2)/view.zoom+view.camera.y};},stats(){return {...cache.stats(),terrainViewportBytes:terrainLayer?.bytes||0,effectBytes:(fogLayer?.bytes||0)+[...glows.values()].reduce((n,l)=>n+l.bytes,0),maxTerrainViewportBytes:4*1024*1024,maxEffectBytes:3*256*256*4,overviewBytes:overviewLayer?.bytes||0,overviewSharedBytes:[...overviewLayers].reduce((n,e)=>n+e.bytes,0),maxOverviewBytes:8*1024*1024};},dispose(){stopped=true;clearTransient();releaseOverview(overviewLayer);overviewLayer=null;paintedActors=[];samples.clear();cameraTrack.clear();cache.dispose();}};
 }

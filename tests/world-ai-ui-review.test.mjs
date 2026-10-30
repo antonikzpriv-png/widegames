@@ -30,7 +30,7 @@ const sceneDependencies = /from ['"]\.\/beacon-scene\.mjs['"]/.test(source('publ
 const { visionFrame, drawBeaconFixtures } = sceneDependencies;
 // Supply real new transitive helpers to this historical import-stripping VM.
 const qualitySceneHelpers={};
-if(/from ['"]\.\/environment\.mjs['"]/.test(source('public/world/scene.mjs')))for(const file of ['environment','camera','static-layer','movement'])Object.assign(qualitySceneHelpers,await import(new URL('public/world/'+file+'.mjs',uiRoot)));
+if(/from ['"]\.\/environment\.mjs['"]/.test(source('public/world/scene.mjs')))for(const file of ['environment','camera','static-layer','movement','interior-art'])Object.assign(qualitySceneHelpers,await import(new URL('public/world/'+file+'.mjs',uiRoot)));
 
 const annexHelpers = /annex-art/.test(source('public/world/scene.mjs')) ? await import(new URL('public/world/annex-art.mjs', uiRoot)) : {};
 

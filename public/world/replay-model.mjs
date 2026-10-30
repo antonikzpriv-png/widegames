@@ -1,6 +1,6 @@
 import {validMappedReplayEffect} from '../../shared/replay-v2.mjs';
 import {CHARACTERS} from '../../shared/contracts.mjs';
-import {getMap} from '../../shared/maps/index.mjs';
+import {getMap,mapIdentity} from '../../shared/maps/index.mjs';
 import {validateStationChallenge,stationComplete} from '../../shared/station-challenges.mjs';
 import {REPLAY_LIMITS,validateReplayMetadata,replaySequenceOf,validReplayTaskProgress,validReplayEffect} from '../../shared/replay.mjs';
 import {replayEvents} from '../presentation.mjs';
@@ -16,16 +16,21 @@ export function restoreReplayTime(value,events){
  return gap<=Number.EPSILON*Math.max(1,Math.abs(value))*32?nearest:value;
 }
 function base(roster){return {phase:'unknown',players:roster.map(p=>({id:p.id,name:p.name,color:p.color,position:null,alive:true,role:null,roomId:null,tasks:[],route:null,positionAt:null})),features:null,effects:[],bodies:[],sabotage:null,meeting:null,activity:[],observations:[],claims:[],outcome:null};}
-export function createReplayModel(response,{matchId,roomId,players,map:mapReference,mapId}={}){
+export function createReplayModel(response,{matchId,roomId,players,map:mapReference,mapId,mapRevision}={}){
+ if(mapRevision!==undefined&&![1,2].includes(mapRevision))throw new Error('Invalid expected map revision.');
  if(response?.roomId!==undefined&&roomId!==undefined&&response.roomId!==roomId)throw new Error('Replay belongs to another room.');
  if(response?.matchId!==undefined&&matchId!==undefined&&response.matchId!==matchId)throw new Error('Replay belongs to another match.');
  const requestedMatch=matchId??response?.matchId??response?.metadata?.matchId;
  const metadata=response?.metadata?copy(validateReplayMetadata(response.metadata,requestedMatch)):null;
- const recordedMap=metadata?.version===2?metadata.map:metadata?.version===1?{id:metadata.map==='lantern-wake-v1'?'beacon':metadata.map,version:1}:undefined;
- const started=replayEvents(response).find(e=>e.type==='started'),startedMap=started?.map??(started?.mapId===undefined?undefined:{id:started.mapId,version:1});
- const map=getMap(recordedMap??mapReference??(mapId===undefined?undefined:{id:mapId,version:1})??response?.map??(response?.mapId===undefined?undefined:{id:response.mapId,version:1})??startedMap),{WORLD,isWalkable,moveWorldPoint,distance,canSeeWorldPoint}=map.geometry;
- // Metadata fixes immutable geometry; a caller may not relabel that recording.
- for(const ref of [mapReference,mapId,response?.map,response?.mapId,startedMap])if(ref!==undefined){if(typeof ref==='string'){if(ref!==map.id)throw new Error('Replay belongs to another map.');}else{const supplied=getMap(ref);if(supplied.id!==map.id||supplied.version!==map.version)throw new Error('Replay belongs to another map.');}}
+ const legacy=(id,revision=1)=>({mapId:id==='lantern-wake-v1'?'beacon':id??'beacon',revision});
+ const recordedMap=metadata?.version===2?metadata.map:metadata?.version===1?legacy(metadata.map,metadata.mapRevision??1):undefined;
+ const started=replayEvents(response).find(e=>e.type==='started'),startedMap=started?.map??(started?.mapId!==undefined||started?.mapRevision!==undefined?legacy(started.mapId,started.mapRevision??1):undefined);
+ const callerMap=mapId!==undefined||mapRevision!==undefined?legacy(mapId,mapRevision??1):undefined,responseMap=response?.mapId!==undefined||response?.mapRevision!==undefined?legacy(response.mapId,response.mapRevision??1):undefined;
+ const map=getMap(recordedMap??mapReference??callerMap??response?.map??responseMap??startedMap),{WORLD,isWalkable,moveWorldPoint,distance,canSeeWorldPoint}=map.geometry;
+ const canonicalId=map.legacyMapId??map.id,isLegacy=map.legacyRevision!==undefined||map.id==='beacon'&&map.version===1&&metadata?.version!==2,selectedRevision=isLegacy?(map.legacyRevision??1):undefined;
+ for(const ref of [mapReference,response?.map,startedMap])if(ref!==undefined&&mapIdentity(ref)!==mapIdentity(map))throw new Error('Replay belongs to another map or revision.');
+ for(const id of [mapId,response?.mapId])if(id!==undefined&&id!==canonicalId&&id!==map.id)throw new Error('Replay belongs to another map.');
+ for(const revision of [mapRevision,response?.mapRevision])if(revision!==undefined&&(![1,2].includes(revision)||revision!==selectedRevision))throw new Error('Replay belongs to another map revision.');
 
  const point=p=>p&&Number.isFinite(p.x)&&Number.isFinite(p.y)&&isWalkable(p);
 function route(start,path,speed,at){
@@ -115,7 +120,7 @@ function project(r,at){
    if(e.type==='task_progress'&&typeof e.completed==='boolean'){const task=p?.tasks.find(t=>t.id===e.taskId);if(task)task.completed=e.completed;}
    if(e.type==='effect_started'){
     const effect={id:e.effectId??e.id,kind:e.kind,playerId:e.playerId,createdAt:e.createdAt,expiresAt:e.expiresAt,...(e.kind==='ward'?{targetId:e.targetId}:{position:copy(e.position)})};
-    if(metadata?.version===2?validMappedReplayEffect(effect,metadata.map,roster.map(p=>p.id)):validReplayEffect(effect,metadata?.version===1?metadata.map:map.taskProtocol==='taskStep'?map.id:undefined)){s.effects=s.effects.filter(f=>f.id!==effect.id);s.effects.push(effect);}
+    if(metadata?.version===2?validMappedReplayEffect(effect,metadata.map,roster.map(p=>p.id)):validReplayEffect(effect,metadata?.version===1?metadata.map:map.taskProtocol==='taskStep'?(canonicalId==='beacon'?'lantern-wake-v1':canonicalId):undefined,selectedRevision??1)){s.effects=s.effects.filter(f=>f.id!==effect.id);s.effects.push(effect);}
    }
    if(e.type==='effect_ended')s.effects=s.effects.filter(f=>f.id!==e.effectId);
    if(e.type==='tasks_reassigned'){interrupt(p);for(const assignment of e.assignments||[]){const task=p?.tasks.find(t=>t.id===assignment.taskId),owner=get(assignment.playerId);if(task&&owner){p.tasks=p.tasks.filter(t=>t!==task);owner.tasks.push(task);}}}
@@ -129,14 +134,14 @@ function project(r,at){
   }
   for(const p of s.players){p.ghost=!p.alive&&(s.features?.deathPolicy==='ghost-tasks'||!!p.recordedFallenMotion);if((p.alive||p.ghost)&&p.route)p.position=project(p.route,time);}
   s.activity=s.activity.slice(-12);s.replayTaskRooms=s.activity.filter(e=>['task','taskStep','taskInteract'].includes(e.action?.type)&&time-e.at<=3000).map(e=>s.players.flatMap(p=>p.tasks).find(t=>t.id===e.action.taskId)?.roomId).filter(Boolean);s.time=time;s.events=s.bodies.filter(b=>!b.reported).map(b=>({...b,type:'body',bodyId:b.id}));
-  s.self=null;s.map={id:map.id,version:map.version};if(map.taskProtocol==='taskStep')s.mapId=map.id;s.worldVersion=1;s.matchId=requestedMatch??'legacy';s.roles=Object.fromEntries(roles);return s;
+  s.self=null;s.map={id:map.id,version:map.version};if(map.taskProtocol==='taskStep'&&canonicalId!=='beacon')s.mapId=canonicalId;if(selectedRevision===2)s.mapRevision=2;s.worldVersion=1;s.matchId=requestedMatch??'legacy';s.roles=Object.fromEntries(roles);return s;
  }
  function perspective(s,id){
   const self=s.players.find(p=>p.id===id),visible=self&&point(self.position)?s.players.filter(p=>point(p.position)&&(p.id===id||(!p.ghost||!self.alive)&&distance(self.position,p.position)<=WORLD.visibilityRadius&&canSeeWorldPoint(self.position,p.position))):[];
   return {label:'Reconstructed visibility at recorded positions; not proof of attention or model input.',visible:visible.map(p=>p.id),bodies:s.bodies.filter(b=>self&&point(self.position)&&point(b.position)&&distance(self.position,b.position)<=WORLD.visibilityRadius&&canSeeWorldPoint(self.position,b.position)).map(b=>b.id),observations:s.observations.filter(e=>Array.isArray(e.visibleTo)&&e.visibleTo.includes(id)),ownRole:self?.role??null};
  }
  function claims(s,id){return s.claims.filter(e=>!id||e.playerId===id).slice(-12).map(claim=>({claim,evidence:events.filter(e=>e.at<=s.time&&Math.abs(e.at-claim.at)<=10000&&(e.type==='witness'||e.type==='action'&&e.action?.type!=='say'&&e.action?.type!=='wait')).slice(-6),label:'Context comparison only. A public claim is not verified by nearby events; absence of evidence is not contradiction.'}));}
- return {events,coverage,at,perspective,claims,metadata,mapId:map.id,mapName:map.name};
+ return {events,coverage,at,perspective,claims,metadata,mapId:canonicalId,...(selectedRevision===2?{mapRevision:2}:{}),mapName:map.name};
 }
 
 /** Clock owns no network or input callbacks. Seek resets wall-clock accumulation. */

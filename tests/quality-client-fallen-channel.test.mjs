@@ -126,3 +126,5 @@ for(const view of [{width:320,height:740},{width:390,height:844},{width:844,heig
  if(view.width===390){const observedUse={left:315,top:684,right:380,bottom:764};assert(disjoint(pane,observedUse),'candidate must clear the exact independently observed native failure rectangle');assert(disjoint(toggle,observedUse));}
  if(view.width<=700||view.height<=540)assert(pane.bottom<=view.height-60,'open pane remains above the control rail');
 });
+
+test('CSS fixture preserves normal and explicitly active forced-colors media semantics',()=>{assert.equal(media('(forced-colors:active)',{width:320,height:740}),false);assert.equal(media('(forced-colors:active)',{width:320,height:740,forcedColors:true}),true);assert.equal(media('(forced-colors:none)',{width:320,height:740,forcedColors:true}),false);});
