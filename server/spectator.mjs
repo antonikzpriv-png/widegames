@@ -1,11 +1,12 @@
 import {isGhost} from '../shared/features.mjs';
-import {getWorld} from '../shared/world.mjs';
+import {mapFor} from '../shared/maps/index.mjs';
+import {stationProgress} from '../shared/station-challenges.mjs';
 import {taskProgress} from './engine/tasks.mjs';
 
 const point=value=>value&&Number.isFinite(value.x)&&Number.isFinite(value.y)?{x:value.x,y:value.y}:null;
-const actions=Object.freeze({navigate:'Set a walking destination',move:'Set a room route',taskStep:'Completed a station step',task:'Completed a task',eliminate:'Eliminated a keeper',report:'Reported a body',say:'Made a public claim',vote:'Cast a ballot',sabotage:'Started sabotage',repair:'Contributed to repair',meeting:'Called council',wait:'Waited',protect:'Activated a ward',decoy:'Created a signal echo'});
+const actions=Object.freeze({navigate:'Set a walking destination',move:'Set a room route',taskInteract:'Submitted a station interaction',systemSabotage:'Started a system disruption',systemRepair:'Contributed to system repair',vent:'Entered a maintenance passage',investigate:'Used equipment',deviceCancel:'Cancelled equipment use',taskStep:'Completed a station step',task:'Completed a task',eliminate:'Eliminated a keeper',report:'Reported a body',say:'Made a public claim',vote:'Cast a ballot',sabotage:'Started sabotage',repair:'Contributed to repair',meeting:'Called council',wait:'Waited',protect:'Activated a ward',decoy:'Created a signal echo'});
 const cooldownKeys=['moveAt','taskAt','killAt','sabotageAt','meetingAt'];
-const goals=Object.freeze({task:'Work on an assigned task',task_route:'Visit assigned tasks in order',repair:'Contribute to critical repair',follow:'Follow a keeper',avoid:'Keep distance from a keeper',isolate:'Find an isolated target',sabotage:'Look for a sabotage opportunity',report:'Approach a recorded body to report it',fake_work:'Appear to work at a station',alibi:'Position near a station for an alibi',investigate:'Investigate a previous sighting',position:'Move to a station'});
+const goals=Object.freeze({task:'Work on an assigned task',task_route:'Visit assigned tasks in order',repair:'Contribute to critical repair',follow:'Follow a keeper',avoid:'Keep distance from a keeper',isolate:'Find an isolated target',sabotage:'Look for a sabotage opportunity',report:'Approach a recorded body to report it',fake_work:'Appear to work at a station',alibi:'Position near a station for an alibi',investigate:'Investigate a previous sighting',position:'Move to a station',device:'Use recorded equipment',passage:'Use a maintenance passage'});
 
 /** Summarize a structural selected goal, never free-form model text. Even a
  * time-valid saved intention may await replanning, so it is explicitly historical
@@ -20,7 +21,7 @@ function selectedPlan(state,player,context,now){
   plan.startedAt<state.startedAt||plan.startedAt>now||plan.expiresAt<=now||plan.expiresAt>plan.startedAt+30000||memory.planProgress?.failures>=3)return null;
  const result={goal:plan.goal,label:goals[plan.goal],source:'recorded-controller-state',recordedAt:plan.startedAt,expiresAt:plan.expiresAt,status:'last-selected',notice:'Last selected plan; may no longer be current. This is not private thoughts.'};
  if(['task','repair','fake_work','alibi','position','investigate'].includes(plan.goal)){
-  if(!getWorld(state.mapId,state.mapRevision??1).WORLD_ROOMS.some(room=>room.id===plan.roomId))return null;result.roomId=plan.roomId;
+  if(!mapFor(state).geometry.WORLD_ROOMS.some(room=>room.id===plan.roomId))return null;result.roomId=plan.roomId;
  }
  if(plan.goal==='task'){
   if(player.role!=='crew'||!player.tasks.some(task=>task.id===plan.taskId&&task.roomId===plan.roomId&&!task.completed))return null;
@@ -36,7 +37,26 @@ function selectedPlan(state,player,context,now){
   result.targetId=plan.targetId;
  }
  if(plan.goal==='sabotage'&&(player.role!=='saboteur'||state.sabotage?.active))return null;
- if(plan.goal==='repair'&&(player.role!=='crew'||!state.sabotage?.active||state.sabotage.deadlineAt!==plan.deadlineAt||memory.worldRepairDeadline===plan.deadlineAt))return null;
+ if(plan.goal==='repair'){
+  if(player.role!=='crew')return null;
+  if(state.beaconVersion){
+   if(!['lights','communications','power','flood'].includes(plan.systemId))return null;
+   const effect=['lights','communications'].includes(plan.systemId)?state.systems?.[plan.systemId]:state.sabotage;
+   const site=(effect?.sites??mapFor(state).fixtures.repairs[plan.systemId]??[]).find(s=>s.id===plan.siteId&&s.roomId===plan.roomId&&s.progress!==1);
+   if(!effect?.active||effect.deadlineAt!==plan.deadlineAt||!site||(['power','flood'].includes(plan.systemId)&&effect.kind!==plan.systemId))return null;
+   result.systemId=plan.systemId;result.siteId=plan.siteId;
+  }else if(!state.sabotage?.active||state.sabotage.deadlineAt!==plan.deadlineAt||memory.worldRepairDeadline===plan.deadlineAt)return null;
+ }
+ if(plan.goal==='device'){
+  const device=mapFor(state).fixtures.devices.find(d=>d.id===plan.deviceId&&d.roomId===plan.roomId);
+  if(player.role!=='crew'||!device||state.systems?.communications?.active)return null;
+  result.deviceId=device.id;result.roomId=device.roomId;
+ }
+ if(plan.goal==='passage'){
+  const vents=mapFor(state).fixtures.vents,entry=vents.find(v=>v.id===plan.entryId),exit=vents.find(v=>v.id===plan.exitId);
+  if(player.role!=='saboteur'||!entry||!exit||!entry.links.includes(exit.id))return null;
+  result.entryId=entry.id;result.exitId=exit.id;
+ }
  if(plan.goal==='report'){
   if(!state.bodies.some(body=>body.id===plan.bodyId&&!body.reported))return null;result.bodyId=plan.bodyId;
  }
@@ -50,8 +70,8 @@ function selectedPlan(state,player,context,now){
  * explicit inspection consent for the current watch. It never copies memories,
  * prompts, reasoning, errors or fallen chat; mixed-human watches are ineligible.
  */
-export function spectatorInspection(state,{mode,seatId,now=Date.now(),context}={}){
- if(mode!=='spectator'||seatId!==null||!state||state.mode!=='spectator'||state.worldVersion!==1||!Array.isArray(state.players)||state.players.some(player=>player.human))return null;
+export function spectatorInspection(state,{mode,seatId,identity,now=Date.now(),context}={}){
+ if(identity?.host!==true||identity.seatId!==null||mode!=='spectator'||seatId!==null||!state||state.mode!=='spectator'||state.worldVersion!==1||!Array.isArray(state.players)||state.players.some(player=>player.human))return null;
  const recent=new Map(),claims=new Map();
  // Bounded single pass, rather than scanning the complete replay per agent/view.
  for(const event of (state.replay??[]).slice(-256).reverse()){
@@ -76,7 +96,7 @@ export function spectatorInspection(state,{mode,seatId,now=Date.now(),context}={
    meetingsRemaining:player.meetingsRemaining,cooldowns,
    ...(plan?{plan}:{}),
    ...(player.ability&&['ward','echo'].includes(player.ability.type)?{ability:{type:player.ability.type,readyAt:player.ability.readyAt}}:{}),
-   tasks:(player.tasks??[]).slice(0,32).map(task=>{const progress=taskProgress(task);return {id:task.id,label:task.label,roomId:task.roomId,completed:task.completed,progress:{kind:progress.kind,index:progress.index,total:progress.total,readyAt:progress.readyAt}};}),
+   tasks:(player.tasks??[]).slice(0,32).map(task=>{const station=task.challenge?stationProgress(task.challenge):null,progress=station?{kind:task.challenge.kind,index:station.progress,total:station.total,readyAt:0}:taskProgress(task);return {id:task.id,label:task.label,roomId:task.roomId,completed:task.completed,progress:{kind:progress.kind,index:progress.index,total:progress.total,readyAt:progress.readyAt}};}),
    activity:{label,source:'recorded-state'},recentActions:recent.get(player.id)??[],claims:claims.get(player.id)??[]};
  })};
 }

@@ -6,6 +6,7 @@ import {replayEvents,aiNotice,aiLabel} from './presentation.mjs';
 import {createWorldExperience} from './world/experience.mjs';
 import {worldInputEnvelope} from './world-input-envelope.mjs';
 import {harbor} from './harbor.mjs';
+import {createWatchPanels} from './features/watch-panels.mjs';
 
 const main=document.querySelector('#main');
 const feedback=document.querySelector('#feedback');
@@ -14,16 +15,26 @@ let pendingOperation=null;
 let epoch=0,pending=false,offset=0,connected=false,networkReady=false,connectionIssue=false;
 let draft='',draftMeeting=null,confirmTarget=null,replay=null,replayIndex=0,retry=null,retryContext=null;
 const attemptedJoins=new Set();
+let featurePanels=null;
 let worldExperience=null,worldSession=null,lastInputFailure=0,worldActionGeneration=0;
 
+function beaconContextKey(game){
+ // Retained world2 task steps and tactical stations both own async context.
+ if(game?.worldVersion!==1)return null;
+ const self=game.self;
+ return JSON.stringify([game.map,game.preset,self?.position,self?.roomId,self?.alive,self?.transit,game.systems?.selfTransit,game.investigation?.session,game.vision?.radius,self?.tasks?.map(t=>[t.id,t.completed,t.progress,t.challenge?.progress]),game.interactions?.map(h=>[h.id,h.type,h.fields,h.enabled])]);
+}
 function captureActionContext(body){
  const game=room?.game,self=game?.self;if(!game?.worldVersion||!body.type)return null;
- return {generation:worldActionGeneration,matchId:game.matchId,phase:game.phase,type:body.type,actor:self?.id,location:self?.roomId,position:self?.position?{...self.position}:null,taskId:body.taskId,knownTask:self?.tasks?.some(task=>task.id===body.taskId)};
+ return {generation:worldActionGeneration,matchId:game.matchId,phase:game.phase,type:body.type,actor:self?.id,location:self?.roomId,position:self?.position?{...self.position}:null,taskId:body.taskId,knownTask:self?.tasks?.some(task=>task.id===body.taskId),beacon:beaconContextKey(game)};
 }
 function actionContextCurrent(context){
- if(!context)return true;const game=room?.game,self=game?.self;
+ if(!context)return true;
+ if(context.scope==='settings')return context.generation===worldActionGeneration&&roomId===context.roomId&&!room?.game&&room?.isHost&&room.settingsRevision===context.revision;
+ const game=room?.game,self=game?.self;
  if(context.generation!==worldActionGeneration||game?.matchId!==context.matchId||game.phase!==context.phase||self?.id!==context.actor||!(self?.alive||self?.ghost))return false;
- if(context.type==='task'||context.type==='taskStep'){
+ if(context.beacon!==null&&context.beacon!==beaconContextKey(game))return false;
+ if(['task','taskInteract','taskStep'].includes(context.type)){
   if(self.roomId!==context.location)return false;
   if(context.position&&self.position&&Math.hypot(self.position.x-context.position.x,self.position.y-context.position.y)>.1)return false;
   if(context.knownTask&&!self.tasks?.some(task=>task.id===context.taskId&&!task.completed))return false;
@@ -41,8 +52,8 @@ function stopWorldMovement(){
 }
 function releaseWorld(){
  stopWorldMovement();
- const instance=worldExperience,owner=worldSession;worldExperience=null;
- try{instance?.dispose();}finally{if(worldSession===owner)worldSession=null;}
+ const instance=worldExperience,owner=worldSession,panels=featurePanels;worldExperience=null;featurePanels=null;
+ try{panels?.dispose();instance?.dispose();}finally{if(worldSession===owner)worldSession=null;}
 }
 function ownsWorld(owner){return worldSession===owner&&roomId===owner.id&&owner.generation===room?.generation&&owner.matchId===room?.game?.matchId&&!document.hidden&&controller&&!controller.signal.aborted;}
 async function worldInput(owner,input){
@@ -103,9 +114,11 @@ function renderWorld(){
    action:(type,fields={})=>worldMutation(owner,'/action',actionEnvelope(type,fields)),
    input:input=>worldInput(owner,input),start:(features,mapId)=>worldMutation(owner,'/start',{id:crypto.randomUUID(),...(features?{features}:{}),...(mapId?{mapId}:{})}),
    archive:matchId=>worldReplay(owner,matchId),lobby:(suffix,body)=>worldMutation(owner,suffix,body),rematch:()=>worldMutation(owner,'/rematch',{id:crypto.randomUUID()}),
+   settings:mapId=>{if(!ownsWorld(owner)||room?.game||!room?.isHost||!networkReady)return Promise.reject(new DOMException('Map settings are unavailable.','AbortError'));return worldMutation(owner,'/settings',{id:crypto.randomUUID(),mapId,expectedRevision:room.settingsRevision});},
    leave:()=>{if(worldSession===owner)home();},loadReplay:options=>worldReplay(owner,options)
   });
  }
+ if(room?.game?.beaconVersion===1){if(!featurePanels)featurePanels=createWatchPanels(document.querySelector('#world-host'));featurePanels.update(room);}
  worldExperience.update(room,{now:Date.now()+offset,connected:networkReady,pending,feedback:feedback.textContent});
 }
 
@@ -149,9 +162,10 @@ function accept(data){
  if(nextGeneration===previousGeneration&&(next.revision??0)<(room?.revision??0))return;
  const newWatch=nextGeneration>previousGeneration;
  if(room?.game&&!next.game&&!newWatch)return;
+ if(!newWatch&&!room?.game&&!next.game&&Number.isSafeInteger(room?.settingsRevision)&&(!Number.isSafeInteger(next.settingsRevision)||next.settingsRevision<room.settingsRevision))return;
  if(!newWatch&&room?.game&&next.game&&(next.game.version<room.game.version||(next.game.version===room.game.version&&next.game.serverNow<room.game.serverNow)))return;
  if(newWatch||room?.game?.matchId!==next.game?.matchId){releaseWorld();replay=null;replayIndex=0;draft='';draftMeeting=null;confirmTarget=null;retry=null;retryContext=null;pending=false;pendingOperation=null;feedback.textContent='';tell('Current watch state synchronized.');}
- if(room?.game?.matchId!==next.game?.matchId||room?.game?.phase!==next.game?.phase||room?.game?.self?.id!==next.game?.self?.id||room?.game?.self?.alive!==next.game?.self?.alive)worldActionGeneration++;
+ if(room?.settingsRevision!==next.settingsRevision||JSON.stringify(room?.map)!==JSON.stringify(next.map)||room?.game?.matchId!==next.game?.matchId||room?.game?.phase!==next.game?.phase||room?.game?.self?.id!==next.game?.self?.id||room?.game?.self?.alive!==next.game?.self?.alive||room?.game?.self?.ghost!==next.game?.self?.ghost||beaconContextKey(room?.game)!==beaconContextKey(next.game))worldActionGeneration++;
  room=next;
  networkReady=true;
  if(retryContext&&!actionContextCurrent(retryContext)){retry=null;retryContext=null;tell('Current watch state synchronized.');}
@@ -249,13 +263,14 @@ function connect(current){
 }
 async function mutation(suffix,body,onSuccess){
  if(room?.generation!==undefined)body={generation:room.generation,...(suffix==='/action'?{matchId:room.game?.matchId}:{}),...body};
- const generation=room?.generation,current=epoch,id=roomId,context=suffix==='/action'?captureActionContext(body):null;
+ const generation=room?.generation,current=epoch,id=roomId,context=suffix==='/action'?captureActionContext(body):suffix==='/settings'&&body.expectedRevision!==undefined?{scope:'settings',generation:worldActionGeneration,roomId,revision:body.expectedRevision}:null;
  return busy(async isCurrent=>{
   try{
    const data=await request(roomPath(id,suffix),{method:'POST',body,signal:controller.signal});
    if(!isCurrent()||current!==epoch||generation!==room?.generation)return {ok:false,stale:true,error:'The watch changed.'};
-   if(context&&['task','taskStep'].includes(context.type)&&!actionContextCurrent(context))return {ok:false,stale:true,error:'The action context changed.'};
-   retry=null;retryContext=null;accept(data);if(onSuccess)onSuccess();else tell('Action confirmed.');
+   const stillCurrent=!context||actionContextCurrent(context);
+   retry=null;retryContext=null;accept(data);if(!stillCurrent)return {ok:true,stale:true,data};
+   if(onSuccess)onSuccess();else tell('Action confirmed.');
    return {ok:true,data};
   }catch(error){
    if(!isCurrent()||current!==epoch||error.name==='AbortError')return;
@@ -271,7 +286,7 @@ function act(type,fields={}){
  return mutation('/action',actionEnvelope(type,fields),()=>{
   if(type==='say')draft='';
   confirmTarget=null;
-  tell(({move:'You moved to the next room.',task:'Task complete.',taskStep:'Station step confirmed.',repair:'Repair contribution received.',vote:'Your vote is recorded.',say:'Message sent.',report:'Report received.',meeting:'Emergency bell rung.',sabotage:'Critical sabotage triggered.',eliminate:'Elimination received.'})[type]||'Action received.');
+  tell(({move:'You moved to the next room.',task:room?.game?.self?.tasks?.find(t=>t.id===fields.taskId)?.kind==='station'?'Station access confirmed.':'Task complete.',taskStep:'Station step confirmed.',repair:'Repair contribution received.',vote:'Your vote is recorded.',say:'Message sent.',report:'Report received.',meeting:'Emergency bell rung.',sabotage:'Critical sabotage triggered.',eliminate:'Elimination received.'})[type]||'Action received.');
  });
 }
 async function loadReplay(){

@@ -1,12 +1,14 @@
+import * as featureHelpers from '../shared/features.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import {readFileSync} from 'node:fs';
 import {keeperLabel,nameOf} from '../public/presentation.mjs';
 import * as model from '../public/world/model.mjs';
-import * as world from '../shared/world.mjs';
-import {observerAgents} from '../public/world/spectator.mjs';
 import {CHARACTERS} from '../shared/contracts.mjs';
+import {getMap} from '../shared/maps/index.mjs';
+import * as mapHelpers from '../public/world/map-model.mjs';
+import * as beaconHelpers from '../public/world/beacon-model.mjs';
 
 // Actual experience render with a small DOM and inert drawing/input/phase panes.
 // Safe-view/geometry fixtures test labels, not engine actions or browser accessibility.
@@ -16,16 +18,22 @@ function fixture(){
   constructor(tag){this.tagName=tag;this.children=[];this.attrs={};this.dataset={};this.style={};this.text='';this.hidden=false;Object.assign(this,events());}
   setAttribute(key,value){this.attrs[key]=String(value);}getAttribute(key){return this.attrs[key];}
   append(...nodes){for(const node of nodes){node.remove();node.parent=this;this.children.push(node);}}
-  replaceChildren(...nodes){for(const child of [...this.children])child.remove();this.text='';this.append(...nodes);}
+  replaceChildren(...nodes){for(const child of [...this.children])child.remove();this.children=[];this.text='';this.append(...nodes);}
   remove(){if(this.parent)this.parent.children=this.parent.children.filter(node=>node!==this);this.parent=null;}
   set textContent(value){this.text=String(value);this.children=[];}get textContent(){return this.text+this.children.map(node=>node.textContent).join('');}
+  contains(node){return this===node||this.children.some(child=>child.contains(node));}
   focus(){}getContext(){return {clearRect(){}};}
  }
  const document={...events(),hidden:false,createElement:tag=>new Node(tag)};
  const pane=()=>({node:new Node('section'),update(){},focus(){},dispose(){}});
- const context=vm.createContext({...model,keeperLabel,nameOf,world,CHARACTERS,document,window:events(),Date,performance:{now:()=>100},matchMedia:()=>({matches:true}),requestAnimationFrame:()=>1,cancelAnimationFrame(){},
-  observerAgents,createSpectatorInput:()=>({stop(){},step(){},dispose(){}}),createSpectatorInspector:()=>({node:new Node('aside'),update(){},reset(){}}),
+ const world={WORLD:{interactionRadius:92,killRadius:70,reportRadius:130},WORLD_STATIONS:{bridge:{x:100,y:100}},WORLD_BELL:{x:200,y:100}};
+ const context=vm.createContext({...model,...mapHelpers,mapRoomName:mapHelpers.roomName,...beaconHelpers,...featureHelpers,keeperLabel,nameOf,getMap,world,CHARACTERS,document,window:events(),Date,performance:{now:()=>100},matchMedia:()=>({matches:true}),requestAnimationFrame:()=>1,cancelAnimationFrame(){},
   drawKeeper(){},createWorldScene:()=>({update(){},draw(){},dispose(){}}),createWorldInput:()=>({stop(){},sync(){},dispose(){}}),createCouncil:pane,createResults:pane,restoreTrigger(){},trapDialog(){}});
+ const module=(file,names)=>Object.assign(context,vm.runInContext(`(()=>{${readFileSync(new URL('../public/world/'+file+'.mjs',import.meta.url),'utf8').replace(/^\uFEFF/,'').replace(/^import .*$/gm,'').replace(/^export /gm,'')};return {${names}};})()`,context));
+ module('dom','dom,control,setText,trapDialog,restoreTrigger');
+ module('lobby-map','createLobbyMapSelector');
+ module('sound','createLocalSound');
+ module('spectator','createSpectatorInput,createSpectatorInspector,observerAgents,observerGame');
  const source=readFileSync(new URL('../public/world/experience.mjs',import.meta.url),'utf8').replace(/^\uFEFF/,'').replace(/^import .*$/gm,'').replace(/^export /gm,'');
  const create=vm.runInContext(`(()=>{${source};return createWorldExperience;})()`,context),host=new Node('main');
  const experience=create(host,{action:async()=>{throw Error('Unexpected action in label fixture');},input:async()=>{},start:async()=>{},leave(){},loadReplay:async()=>({replay:[]})});

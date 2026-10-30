@@ -1,14 +1,19 @@
-import {parseMapId,getWorld} from '../shared/world.mjs';
 import {parseFeatures} from '../shared/features.mjs';
 import {randomBytes,createHash} from 'node:crypto';
 import {LOBBY_DEFAULTS,rosterFor} from '../shared/lobby.mjs';
 import {ROOM_ID,validateRoom} from './store.mjs';
+import {normalizeRoster,publicRoster} from './features/lobbies/index.mjs';
+import {getMap,getLegacyMap,PUBLIC_MAP_CATALOG} from '../shared/maps/index.mjs';
 import {spectatorInspection} from './spectator.mjs';
+import {hasTacticalFixtures} from './config.mjs';
+import {CHARACTERS} from '../shared/contracts.mjs';
+import {TACTICAL_PRESET} from '../shared/tactical.mjs';
 
 export class ServiceError extends Error {
   constructor(status,code,message){super(message);this.status=status;this.code=code;}
 }
 export const fail=(status,code,message)=>{throw new ServiceError(status,code,message);};
+export const isConfigurableRoom=room=>Array.isArray(room?.roster)&&Number.isSafeInteger(room.generation);
 export const requestId=id=>typeof id==='string' && /^[A-Za-z0-9:_-]{1,100}$/.test(id);
 const hash=token=>createHash('sha256').update(token).digest('hex');
 export const cookieName=id=>`lw_${id}`;
@@ -22,19 +27,45 @@ export function identityFor(room,header='') {
 export function issueIdentity(room,host=false) {
   if(room.identities.length>=128)fail(429,'ROOM_FULL','This room has reached its visitor limit.');
   const token=randomBytes(32).toString('hex');
-  const identity={hash:hash(token),host,seatId:host && room.mode==='human'?'p1':null,...(room.schema===2?{ready:host&&room.mode==='human',revoked:false}:{})};
-  room.identities.push(identity);return {token,identity};
+  const identity={hash:hash(token),host,seatId:host&&room.mode==='human'?(room.lobby?.humanPlayerIds[0]??'p1'):null,...(isConfigurableRoom(room)?{ready:host&&room.mode==='human',revoked:false}:{})};
+  room.identities.push(identity);if(room.schema===5&&room.lobby)room.lobby.humanPlayerIds=room.identities.filter(i=>i.seatId).map(i=>i.seatId);return {token,identity};
 }
 export function cookie(roomId,token,secure) {
   return `${cookieName(roomId)}=${token}; Path=/api/rooms/${roomId}; HttpOnly; SameSite=Strict; Max-Age=604800${secure?'; Secure':''}`;
 }
-export function createRoom(mode,now,configurable=false) {
+/** Reprofile an unstarted lobby only; identities, receipts and budgets are retained. */
+export function selectRoomMap(room,reference,{tactical=true,stationTasks=true,mapRevision}={}) {
+  if(room.state)fail(409,'ALREADY_STARTED','The map is fixed after the watch begins.');
+  if(mapRevision!==undefined&&![1,2].includes(mapRevision))throw new TypeError('Invalid map revision');
+  const legacy=!tactical&&typeof reference==='string'&&['beacon','storm-foundry','tidal-observatory'].includes(reference);
+  const selected=legacy?getLegacyMap(reference,mapRevision??(reference==='beacon'?1:getMap(reference).legacyRevision)):getMap(reference),systems=tactical&&hasTacticalFixtures(selected);
+  const dynamic=isConfigurableRoom(room);
+  const humanPlayerIds=dynamic?room.identities.filter(i=>i.seatId).map(i=>i.seatId):room.lobby?.humanPlayerIds;
+  const setup=normalizeRoster({...room.lobby,...(dynamic?{roster:room.roster,saboteurCount:room.settings.saboteurs,humanPlayerIds,mode:humanPlayerIds.length?'human':'spectator'}:{mode:room.mode,...(room.mode==='spectator'?{humanPlayerIds:[]}:{})})});
+  if(!dynamic&&!systems&&(setup.players.length!==6||setup.saboteurCount!==1||setup.players.some((p,i)=>p.id!==CHARACTERS[i].id||p.name!==CHARACTERS[i].name||p.color!==CHARACTERS[i].color)||setup.humanPlayerIds.some(id=>id!=='p1')))fail(409,'MAP_ROSTER_UNSUPPORTED','This walking map requires the original six keeper seats and one saboteur.');
+  room.lobby={roster:setup.players,saboteurCount:setup.saboteurCount,humanPlayerIds:setup.humanPlayerIds};
+  room.schema=dynamic?5:systems?(stationTasks?4:3):2;
+  room.map={id:selected.id,version:selected.version};
+  if(!systems||Object.hasOwn(room,'mapId'))room.mapId=selected.legacyMapId??selected.id;
+  if(!systems&&selected.legacyRevision===2)room.mapRevision=2;else delete room.mapRevision;
+  if(dynamic)room.mapSettings??={revision:0,requests:[]};else room.settings??={revision:0,requests:[]};
+  if(systems){room.preset={id:TACTICAL_PRESET.id,version:TACTICAL_PRESET.version};if(stationTasks)room.stationTasksVersion=1;else delete room.stationTasksVersion;}
+  else {delete room.preset;delete room.stationTasksVersion;}
+  return room;
+}
+export function createRoom(mode,now,lobbyConfig,{tactical=false,mapId,mapRevision,stationTasks=false,configurable=lobbyConfig===true}={}) {
+  if(mapRevision!==undefined&&![1,2].includes(mapRevision))throw new TypeError('Invalid map revision');
+  if(typeof stationTasks!=='boolean'||stationTasks&&!tactical)throw new TypeError('Invalid station task mode');
   const id=randomBytes(18).toString('base64url');
-  if(!configurable)return {schema:1,id,mode,createdAt:now,updatedAt:now,identities:[],state:null,startId:null,aiContext:{}};
-  return {schema:2,id,mode,createdAt:now,updatedAt:now,identities:[],state:null,startId:null,aiContext:{},generation:1,revision:0,settings:{...LOBBY_DEFAULTS},roster:rosterFor(6),inviteCode:randomBytes(6).toString('hex').toUpperCase(),archives:[]};
+  const setup=(lobbyConfig||tactical||configurable)?normalizeRoster({...lobbyConfig,mode,...(mode==='spectator'?{humanPlayerIds:[]}: {})}):null;
+  const room={schema:setup?2:1,...(setup?{lobby:{roster:setup.players,saboteurCount:setup.saboteurCount,humanPlayerIds:setup.humanPlayerIds}}:{}),id,mode,createdAt:now,updatedAt:now,identities:[],state:null,startId:null,aiContext:{}};
+  if(configurable)Object.assign(room,{schema:lobbyConfig===true?2:5,generation:1,revision:0,settings:{...LOBBY_DEFAULTS},roster:rosterFor(6),inviteCode:randomBytes(6).toString('hex').toUpperCase(),archives:[]});
+  if(lobbyConfig===true)delete room.lobby;
+  if(tactical||mapId!==undefined||mapRevision!==undefined)selectRoomMap(room,mapId===undefined?'beacon':mapId,{tactical,stationTasks,mapRevision});
+  return room;
 }
 
-export function createRooms({store,engine,ai,now=Date.now,maxActiveRooms=12,roomTtlMs=3600000,configurable=false}) {
+export function createRooms({store,engine,ai,now=Date.now,maxActiveRooms=12,roomTtlMs=3600000,lobbyConfig,tacticalMode=false,mapId,mapRevision,stationTasksMode=false,configurable=false}) {
   const rooms=new Map();let creationQueue=Promise.resolve();
   const entry=data=>({data,queue:Promise.resolve(),sockets:new Set(),aiBusy:false,aiGeneration:0,aiBlocked:false,nextDecision:new Map(),abort:new AbortController(),removed:false});
   const get=id=>{if(!ROOM_ID.test(id)||!rooms.has(id))fail(404,'ROOM_NOT_FOUND','Room not found.');return rooms.get(id);};
@@ -42,7 +73,7 @@ export function createRooms({store,engine,ai,now=Date.now,maxActiveRooms=12,room
     const result=room.queue.catch(()=>{}).then(()=>{if(room.removed)fail(404,'ROOM_NOT_FOUND','Room not found.');return fn(room.data);});
     room.queue=result.catch(()=>{});return result;
   }
-  async function commit(room,next){if(next.schema===2)next.revision=(room.data.revision??0)+1;next.updatedAt=Math.max(next.updatedAt,now());validateRoom(next);await store.save(next);
+  async function commit(room,next){if(isConfigurableRoom(next)){next.revision=(room.data.revision??0)+1;if(next.schema===5)next.lobby={roster:next.roster.map(({id,name,color,persona})=>({id,name,color,persona})),saboteurCount:next.settings.saboteurs,humanPlayerIds:next.identities.filter(i=>i.seatId).map(i=>i.seatId)};}next.updatedAt=Math.max(next.updatedAt,now());validateRoom(next);await store.save(next);
     const fence=state=>JSON.stringify([state?.id,state?.startedAt,state?.phase,state?.meeting?.id,state?.meetingCount,(state?.players??[]).map(p=>[p.id,p.alive])]);
     if(fence(room.data.state)!==fence(next.state))room.aiGeneration++;
     room.data=next;}
@@ -55,12 +86,15 @@ export function createRooms({store,engine,ai,now=Date.now,maxActiveRooms=12,room
     const notices=Array.isArray(data.aiContext.notices)?data.aiContext.notices.filter(x=>typeof x==='string').slice(-10).map(x=>x.slice(0,240)):[];
     if(safeAi.mode==='live')notices.push(safeAi.strategy==='strategic'?'Strategic AI: model plans and council; local legal execution.':'Hybrid AI: live model council; navigation and deck actions use local policy.');
     if(room.aiBlocked)notices.push('AI paused because durable storage or budget reservation failed.');
-    const inspectionAvailable=!!data.state&&data.mode==='spectator'&&!identity.seatId&&!data.state.players.some(p=>p.human);
+    const inspectionAvailable=!!data.state&&identity.host===true&&data.mode==='spectator'&&!identity.seatId&&!data.state.players.some(p=>p.human);
     const inspectionEnabled=inspectionAvailable&&identity.inspection===true;
     const at=now(),game=data.state?engine.getPlayerView(data.state,identity.seatId,at):null;
-    const inspection=inspectionEnabled?spectatorInspection(data.state,{mode:data.mode,seatId:identity.seatId,now:at,context:data.aiContext}):null;
-    if(game&&inspection)game.inspection=inspection;
-    return {...(data.mapRevision===2?{mapRevision:2}:{}),inspectionAvailable,inspectionEnabled,...(data.mapId?{mapId:data.mapId}:{}),...(data.features?{features:structuredClone(data.features)}:{}),roomId:data.id,...(data.schema===2?{generation:data.generation,revision:data.revision,inviteCode:data.inviteCode,settings:structuredClone(data.settings),ready:identity.ready,seats:data.roster.map(p=>({...p,persona:undefined,human:data.identities.some(i=>i.seatId===p.id),ready:data.identities.some(i=>i.seatId===p.id&&i.ready&&!i.revoked),revoked:data.identities.some(i=>i.seatId===p.id&&i.revoked),host:data.identities.some(i=>i.seatId===p.id&&i.host)})),archives:data.archives.map(a=>({matchId:a.matchId,generation:a.generation}))}:{}),mode:data.mode,isHost:identity.host,seatId:identity.seatId,phase:data.state?.phase||'lobby',connection:'connected',game,ai:safeAi,notices,createdAt:data.createdAt};
+    // Only the identity resolved from this room's cookie grants private inspection.
+    if(game&&inspectionEnabled){
+      const inspection=spectatorInspection(data.state,{mode:data.mode,identity,seatId:identity.seatId,now:at,context:data.aiContext});
+      if(inspection)game.inspection=inspection;
+    }
+    return {inspectionAvailable,inspectionEnabled,...(data.features?{features:structuredClone(data.features)}:{}),...(data.stationTasksVersion===1?{stationTasksVersion:1}:{}),...(data.mapId?{mapId:data.mapId}:{}),...(data.mapRevision===2?{mapRevision:2}:{}),...(data.map?{map:{...data.map},...(data.preset?{preset:{...data.preset}}:{}),availableMaps:PUBLIC_MAP_CATALOG,...((isConfigurableRoom(data)?data.mapSettings:data.settings)?{settingsRevision:(isConfigurableRoom(data)?data.mapSettings:data.settings).revision}:{})}:{}),...([2,3,4].includes(data.schema)&&!isConfigurableRoom(data)?{roster:data.lobby.roster.map(({id,name,color,persona})=>({id,name,color,persona}))}:{}),...(isConfigurableRoom(data)?{generation:data.generation,revision:data.revision,inviteCode:data.inviteCode,settings:structuredClone(data.settings),ready:identity.ready,seats:data.roster.map(p=>({...p,persona:undefined,human:data.identities.some(i=>i.seatId===p.id),ready:data.identities.some(i=>i.seatId===p.id&&i.ready&&!i.revoked),revoked:data.identities.some(i=>i.seatId===p.id&&i.revoked),host:data.identities.some(i=>i.seatId===p.id&&i.host)})),archives:data.archives.map(a=>({matchId:a.matchId,generation:a.generation}))}:{}),roomId:data.id,mode:data.mode,isHost:identity.host,seatId:identity.seatId,phase:data.state?.phase||'lobby',connection:'connected',game,ai:safeAi,notices,createdAt:data.createdAt};
   }
   async function restore() {
     for(const data of await store.load()) {
@@ -74,12 +108,10 @@ export function createRooms({store,engine,ai,now=Date.now,maxActiveRooms=12,room
     }
     if(rooms.size>maxActiveRooms)throw new Error('Persisted rooms exceed configured room limit');
   }
-  async function create(mode,name,features,mapId,mapRevision=1) {
-    if(name&&typeof name==='object'){mapRevision=mapId??mapRevision;mapId=features;features=name;name=undefined;}
+  async function create(mode,name,features,selectedMap=mapId) {
     const work=creationQueue.catch(()=>{}).then(async()=>{
       if(rooms.size>=maxActiveRooms)fail(429,'ROOM_LIMIT','All room slots are in use.');
-      if(![1,2].includes(mapRevision))throw new TypeError('Invalid map revision');
-      const data=createRoom(mode,now(),configurable);if(mapRevision===2)data.mapRevision=2;if(features!==undefined)data.features=parseFeatures(features);const selectedMap=parseMapId(mapId);if(selectedMap!=='beacon'){data.mapId=selectedMap;if(data.settings)data.settings.tasksPerCrew=getWorld(selectedMap,mapRevision).metadata.tasksPerCrew;}const issued=issueIdentity(data,true);if(name&&issued.identity.seatId&&data.roster)data.roster[0].name=name;await store.save(data);
+      const data=createRoom(mode,now(),lobbyConfig,{tactical:tacticalMode,mapId:selectedMap??undefined,...(!tacticalMode&&mapRevision!==undefined?{mapRevision}:{}),stationTasks:stationTasksMode,configurable});if(features!==undefined)data.features=parseFeatures(features);const issued=issueIdentity(data,true);if(name&&issued.identity.seatId&&isConfigurableRoom(data)){data.roster[0].name=name;if(data.lobby)data.lobby.roster[0].name=name;}await store.save(data);
       const room=entry(data);rooms.set(data.id,room);return {room,...issued};
     });creationQueue=work;return work;
   }

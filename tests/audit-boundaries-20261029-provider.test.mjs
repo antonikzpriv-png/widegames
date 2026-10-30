@@ -70,10 +70,21 @@ test('abort after response headers interrupts a stalled body without retry or re
   const pending=controller.decide(args);await started;await delay(5);abort.abort();assert.equal(await pending,null);assert(headers.signal.aborted);assert.equal(requests,1);assert.equal(state(args.context).calls,1);assert(state(args.context).costUsd>0);assert.equal(state(args.context).reservations.length,1);
 });
 
-test('late persistence acknowledgement after timeout never starts a provider request',async t=>{
-  const directory=await fixture(t,'late-ack'),budget=await createDailyBudget({directory,maxCostUsd:1}),controller=live({timeoutMs:150}),args=input();let release;
-  const gate=new Promise(resolve=>{release=resolve;});args.commitReservation=async reservation=>{await budget.reserve({id:reservation.id,amount:reservation.amountUsd});await gate;};
-  const fetch=t.mock.method(globalThis,'fetch',async()=>{throw new Error('late send forbidden');});const action=await controller.decide(args);assert.equal(action.type,'say');assert.equal(controller.describe(args.context).limitReason,'reservation_failed');assert.equal(fetch.mock.callCount(),0);release();await delay(20);assert.equal(fetch.mock.callCount(),0);assert.equal(state(args.context).calls,1);assert(budget.status().reservedUsd>0);
+test('late persistence acknowledgement after timeout never starts a provider request',{timeout:10000},async t=>{
+  const directory=await fixture(t,'late-ack'),budget=await createDailyBudget({directory,maxCostUsd:1}),controller=live({timeoutMs:150}),args=input();let release,acknowledgement,reservationId;
+  const gate=new Promise(resolve=>{release=resolve;});
+  args.commitReservation=reservation=>acknowledgement=(async()=>{reservationId=reservation.id;await budget.reserve({id:reservation.id,amount:reservation.amountUsd});await gate;})();
+  const fetch=t.mock.method(globalThis,'fetch',async()=>{throw new Error('late send forbidden');});
+  try{
+    const action=await controller.decide(args);assert.equal(action.type,'say');assert.equal(controller.describe(args.context).limitReason,'reservation_failed');assert.equal(fetch.mock.callCount(),0);
+  }finally{
+    release();let timer;
+    try{assert(acknowledgement,'controller invoked the durable reservation callback');await Promise.race([acknowledgement,new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error('Durable reservation acknowledgement timed out')),5000);})]);}
+    finally{clearTimeout(timer);}
+  }
+  assert.equal(fetch.mock.callCount(),0);assert.equal(state(args.context).calls,1);assert(budget.status().reservedUsd>0);
+  const ledger=JSON.parse(await readFile(path.join(directory,'ai-daily-budget.json'),'utf8'));
+  assert.deepEqual(Object.keys(ledger.reservations),[reservationId]);assert.equal(ledger.total,budget.status().reservedUsd);assert.equal(ledger.reservations[reservationId],state(args.context).reservations[0].amountUsd);
 });
 
 test('stalled response timeout cannot obtain a retry when its first send exhausted the call cap',async t=>{

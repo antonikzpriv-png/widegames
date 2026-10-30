@@ -1,0 +1,438 @@
+{
+  "checkout": "247250e5c6bf4b342bf2ba8816dd2979b614ef5c",
+  "modifiedPaths": "M docs/TACTICAL-VERIFICATION.md\n?? docs/evidence/tactical-browser-report.json\n?? docs/evidence/tactical-legacy-beacon-report.json\n?? docs/evidence/tactical-legacy-world-report.json\n?? docs/evidence/tactical-normal-browser-report.json\n?? docs/evidence/tactical-offline-tests.txt\n?? docs/evidence/tactical-production-manifest.json\n?? docs/evidence/tactical-production-report.json\n?? docs/evidence/tactical-runtime-manifest.json\n?? docs/tactical-screenshots/",
+  "runtimeCheckout": "247250e5c6bf4b342bf2ba8816dd2979b614ef5c",
+  "runtimeModifiedPaths": "M docs/TACTICAL-VERIFICATION.md\n?? docs/evidence/tactical-browser-report.json\n?? docs/evidence/tactical-legacy-beacon-report.json\n?? docs/evidence/tactical-legacy-world-report.json\n?? docs/evidence/tactical-normal-browser-report.json\n?? docs/evidence/tactical-offline-tests.txt\n?? docs/evidence/tactical-production-manifest.json\n?? docs/evidence/tactical-production-report.json\n?? docs/evidence/tactical-runtime-manifest.json\n?? docs/tactical-screenshots/",
+  "fixture": "Real transport, cookies, WS and engine. Seeded roles/tasks, idle AI scheduling and a controlled clock; no API responses mocked. Long transit uses real navigate actions. Critical-council preconditions use legal engine actions by fixture AI seats; this is not a full demo-AI match or performance claim.",
+  "checks": [
+    {
+      "name": "lobby: all six original keeper seats and real host start",
+      "pass": true
+    },
+    {
+      "name": "crew assignment: private own role reveal, status and exit remain visible",
+      "pass": true
+    },
+    {
+      "name": "real keyboard movement refreshes integer leases and stops after keyup",
+      "pass": true,
+      "detail": {
+        "start": {
+          "x": 728,
+          "y": 272
+        },
+        "end": {
+          "x": 871.2799999999999,
+          "y": 272
+        },
+        "leases": 5
+      }
+    },
+    {
+      "name": "stage layout and map: desktop, 320, 390, 768 and mobile landscape",
+      "pass": true,
+      "detail": [
+        {
+          "width": 1440,
+          "height": 1000,
+          "stage": {
+            "width": 1440,
+            "height": 1000
+          }
+        },
+        {
+          "width": 320,
+          "height": 740,
+          "stage": {
+            "width": 320,
+            "height": 740
+          }
+        },
+        {
+          "width": 390,
+          "height": 844,
+          "stage": {
+            "width": 390,
+            "height": 844
+          }
+        },
+        {
+          "width": 768,
+          "height": 1024,
+          "stage": {
+            "width": 768,
+            "height": 1024
+          }
+        },
+        {
+          "width": 844,
+          "height": 390,
+          "stage": {
+            "width": 844,
+            "height": 390
+          }
+        }
+      ]
+    },
+    {
+      "name": "actual touch joystick releases to zero; click-to-walk arrives without extrapolating position",
+      "pass": true
+    },
+    {
+      "name": "synthetic blur event stops a real lease and idle updates preserve canvas identity",
+      "pass": true
+    },
+    {
+      "name": "an open task is invalidated by actual movement before any task request",
+      "pass": true
+    },
+    {
+      "name": "real spectator cookie + HTTP polling fallback exposes no private assignment or action controls",
+      "pass": true
+    },
+    {
+      "name": "actual wires task: puzzle gates one real task completion",
+      "pass": true
+    },
+    {
+      "name": "actual tuning task: puzzle gates one real task completion",
+      "pass": true
+    },
+    {
+      "name": "actual sequence task: puzzle gates one real task completion",
+      "pass": true
+    },
+    {
+      "name": "emergency transition + persistent live chat draft/focus and literal text",
+      "pass": true
+    },
+    {
+      "name": "vote cast status hides targets until tally; server ejection ends match",
+      "pass": true
+    },
+    {
+      "name": "role-revealed results/replay are attributed, readable and keyboard scrubbable",
+      "pass": true
+    },
+    {
+      "name": "saboteur Q confirmation: keyboard Cancel restores only valid trigger; confirm is real",
+      "pass": true
+    },
+    {
+      "name": "report key opens actual reported-body council; no invented opponent roles",
+      "pass": true
+    },
+    {
+      "name": "nonterminal ejection scene states only the role supplied by the safe server view",
+      "pass": true
+    },
+    {
+      "name": "critical countdown stays visible on mobile; real crew USE contributes an actual repair",
+      "pass": true
+    },
+    {
+      "name": "critical deadline continues through a real reported-body council",
+      "pass": true
+    }
+  ],
+  "errors": [],
+  "screenshots": [
+    "D:\\Widegames-work\\tactical-annex-coordinator-20261029\\_artifacts\\world-ui-GYUI6A\\desktop-lobby.png",
+    "D:\\Widegames-work\\tactical-annex-coordinator-20261029\\_artifacts\\world-ui-GYUI6A\\desktop-role.png",
+    "D:\\Widegames-work\\tactical-annex-coordinator-20261029\\_artifacts\\world-ui-GYUI6A\\world-1440x1000.png",
+    "D:\\Widegames-work\\tactical-annex-coordinator-20261029\\_artifacts\\world-ui-GYUI6A\\world-320x740.png",
+    "D:\\Widegames-work\\tactical-annex-coordinator-20261029\\_artifacts\\world-ui-GYUI6A\\world-390x844.png",
+    "D:\\Widegames-work\\tactical-annex-coordinator-20261029\\_artifacts\\world-ui-GYUI6A\\world-768x1024.png",
+    "D:\\Widegames-work\\tactical-annex-coordinator-20261029\\_artifacts\\world-ui-GYUI6A\\world-844x390.png",
+    "D:\\Widegames-work\\tactical-annex-coordinator-20261029\\_artifacts\\world-ui-GYUI6A\\desktop-map.png",
+    "D:\\Widegames-work\\tactical-annex-coordinator-20261029\\_artifacts\\world-ui-GYUI6A\\spectator-mobile.png",
+    "D:\\Widegames-work\\tactical-annex-coordinator-20261029\\_artifacts\\world-ui-GYUI6A\\task-wires.png",
+    "D:\\Widegames-work\\tactical-annex-coordinator-20261029\\_artifacts\\world-ui-GYUI6A\\task-tuning.png",
+    "D:\\Widegames-work\\tactical-annex-coordinator-20261029\\_artifacts\\world-ui-GYUI6A\\task-sequence.png",
+    "D:\\Widegames-work\\tactical-annex-coordinator-20261029\\_artifacts\\world-ui-GYUI6A\\desktop-discussion.png",
+    "D:\\Widegames-work\\tactical-annex-coordinator-20261029\\_artifacts\\world-ui-GYUI6A\\mobile-discussion.png",
+    "D:\\Widegames-work\\tactical-annex-coordinator-20261029\\_artifacts\\world-ui-GYUI6A\\desktop-vote.png",
+    "D:\\Widegames-work\\tactical-annex-coordinator-20261029\\_artifacts\\world-ui-GYUI6A\\desktop-results.png",
+    "D:\\Widegames-work\\tactical-annex-coordinator-20261029\\_artifacts\\world-ui-GYUI6A\\desktop-replay.png",
+    "D:\\Widegames-work\\tactical-annex-coordinator-20261029\\_artifacts\\world-ui-GYUI6A\\mobile-replay.png",
+    "D:\\Widegames-work\\tactical-annex-coordinator-20261029\\_artifacts\\world-ui-GYUI6A\\saboteur-role.png",
+    "D:\\Widegames-work\\tactical-annex-coordinator-20261029\\_artifacts\\world-ui-GYUI6A\\saboteur-fallen.png",
+    "D:\\Widegames-work\\tactical-annex-coordinator-20261029\\_artifacts\\world-ui-GYUI6A\\report-council.png",
+    "D:\\Widegames-work\\tactical-annex-coordinator-20261029\\_artifacts\\world-ui-GYUI6A\\ejection-scene.png",
+    "D:\\Widegames-work\\tactical-annex-coordinator-20261029\\_artifacts\\world-ui-GYUI6A\\mobile-critical.png",
+    "D:\\Widegames-work\\tactical-annex-coordinator-20261029\\_artifacts\\world-ui-GYUI6A\\mobile-critical-repair.png",
+    "D:\\Widegames-work\\tactical-annex-coordinator-20261029\\_artifacts\\world-ui-GYUI6A\\critical-council.png"
+  ],
+  "cleanup": {
+    "browserClosed": true,
+    "serverClosed": true,
+    "ownedDataRemoved": true
+  },
+  "browserPid": 20028,
+  "browserVersion": "Chrome/156.0.8078.73",
+  "nodeVersion": "v24.20.0",
+  "serverOrigin": "http://127.0.0.1:57997",
+  "movement": {
+    "start": {
+      "x": 728,
+      "y": 272
+    },
+    "now": {
+      "id": "p1",
+      "role": "crew",
+      "alive": true,
+      "roomId": "bridge",
+      "position": {
+        "x": 871.2799999999999,
+        "y": 272
+      },
+      "inputSeq": 5,
+      "moving": false,
+      "destination": null,
+      "tasks": [
+        {
+          "id": "tfc13153beb111b70114c",
+          "label": "Service Bridge relay",
+          "roomId": "bridge",
+          "completed": false
+        },
+        {
+          "id": "tb98a15069c6535b6f5af",
+          "label": "Service Galley relay",
+          "roomId": "galley",
+          "completed": false
+        },
+        {
+          "id": "ta9c3a944c6f874a136b9",
+          "label": "Service Engine relay",
+          "roomId": "engine",
+          "completed": false
+        }
+      ],
+      "cooldowns": {
+        "moveAt": 1793317255338,
+        "taskAt": 1793317255338,
+        "killAt": 1793317255339,
+        "sabotageAt": 1793317255339,
+        "meetingAt": 1793317255339
+      },
+      "meetingsRemaining": 1
+    },
+    "requests": [
+      {
+        "path": "/api/rooms/NXouIxjG5bFJgPL95dJhp-8o/input",
+        "body": {
+          "seq": 1,
+          "dx": 1,
+          "dy": 0
+        }
+      },
+      {
+        "path": "/api/rooms/NXouIxjG5bFJgPL95dJhp-8o/input",
+        "body": {
+          "seq": 2,
+          "dx": 1,
+          "dy": 0
+        }
+      },
+      {
+        "path": "/api/rooms/NXouIxjG5bFJgPL95dJhp-8o/input",
+        "body": {
+          "seq": 3,
+          "dx": 1,
+          "dy": 0
+        }
+      },
+      {
+        "path": "/api/rooms/NXouIxjG5bFJgPL95dJhp-8o/input",
+        "body": {
+          "seq": 4,
+          "dx": 1,
+          "dy": 0
+        }
+      },
+      {
+        "path": "/api/rooms/NXouIxjG5bFJgPL95dJhp-8o/input",
+        "body": {
+          "seq": 5,
+          "dx": 0,
+          "dy": 0
+        }
+      }
+    ]
+  },
+  "pointerEvents": [
+    {
+      "type": "pointerdown",
+      "id": 2,
+      "x": 88,
+      "y": 912,
+      "hidden": false
+    },
+    {
+      "type": "pointermove",
+      "id": 2,
+      "x": 88,
+      "y": 942,
+      "hidden": false
+    },
+    {
+      "type": "pointerup",
+      "id": 2,
+      "x": 88,
+      "y": 942,
+      "hidden": false
+    },
+    {
+      "type": "lostpointercapture",
+      "id": 2,
+      "x": 88,
+      "y": 942,
+      "hidden": false
+    }
+  ],
+  "touch": {
+    "before": {
+      "x": 871.2799999999999,
+      "y": 272
+    },
+    "touched": {
+      "id": "p1",
+      "role": "crew",
+      "alive": true,
+      "roomId": "bridge",
+      "position": {
+        "x": 871.2799999999999,
+        "y": 322.22
+      },
+      "inputSeq": 8,
+      "moving": false,
+      "destination": null,
+      "tasks": [
+        {
+          "id": "tfc13153beb111b70114c",
+          "label": "Service Bridge relay",
+          "roomId": "bridge",
+          "completed": false
+        },
+        {
+          "id": "tb98a15069c6535b6f5af",
+          "label": "Service Galley relay",
+          "roomId": "galley",
+          "completed": false
+        },
+        {
+          "id": "ta9c3a944c6f874a136b9",
+          "label": "Service Engine relay",
+          "roomId": "engine",
+          "completed": false
+        }
+      ],
+      "cooldowns": {
+        "moveAt": 1793317255338,
+        "taskAt": 1793317255338,
+        "killAt": 1793317255339,
+        "sabotageAt": 1793317255339,
+        "meetingAt": 1793317255339
+      },
+      "meetingsRemaining": 1
+    },
+    "events": [
+      {
+        "type": "pointerdown",
+        "id": 2,
+        "x": 88,
+        "y": 912,
+        "hidden": false
+      },
+      {
+        "type": "pointermove",
+        "id": 2,
+        "x": 88,
+        "y": 942,
+        "hidden": false
+      },
+      {
+        "type": "pointerup",
+        "id": 2,
+        "x": 88,
+        "y": 942,
+        "hidden": false
+      },
+      {
+        "type": "lostpointercapture",
+        "id": 2,
+        "x": 88,
+        "y": 942,
+        "hidden": false
+      }
+    ],
+    "requests": [
+      {
+        "path": "/api/rooms/NXouIxjG5bFJgPL95dJhp-8o/input",
+        "body": {
+          "seq": 1,
+          "dx": 1,
+          "dy": 0
+        }
+      },
+      {
+        "path": "/api/rooms/NXouIxjG5bFJgPL95dJhp-8o/input",
+        "body": {
+          "seq": 2,
+          "dx": 1,
+          "dy": 0
+        }
+      },
+      {
+        "path": "/api/rooms/NXouIxjG5bFJgPL95dJhp-8o/input",
+        "body": {
+          "seq": 3,
+          "dx": 1,
+          "dy": 0
+        }
+      },
+      {
+        "path": "/api/rooms/NXouIxjG5bFJgPL95dJhp-8o/input",
+        "body": {
+          "seq": 4,
+          "dx": 1,
+          "dy": 0
+        }
+      },
+      {
+        "path": "/api/rooms/NXouIxjG5bFJgPL95dJhp-8o/input",
+        "body": {
+          "seq": 5,
+          "dx": 0,
+          "dy": 0
+        }
+      },
+      {
+        "path": "/api/rooms/NXouIxjG5bFJgPL95dJhp-8o/input",
+        "body": {
+          "seq": 6,
+          "dx": 0,
+          "dy": 1
+        }
+      },
+      {
+        "path": "/api/rooms/NXouIxjG5bFJgPL95dJhp-8o/input",
+        "body": {
+          "seq": 7,
+          "dx": 0,
+          "dy": 1
+        }
+      },
+      {
+        "path": "/api/rooms/NXouIxjG5bFJgPL95dJhp-8o/input",
+        "body": {
+          "seq": 8,
+          "dx": 0,
+          "dy": 0
+        }
+      }
+    ]
+  },
+  "sourceUnchanged": true
+}

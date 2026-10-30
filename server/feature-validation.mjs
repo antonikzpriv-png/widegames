@@ -1,6 +1,7 @@
-import {getWorld} from '../shared/world.mjs';
+import {mapFor} from '../shared/maps/index.mjs';
+import {isGhost} from './engine/features.mjs';
 import {ROOM_LAYOUT} from '../shared/contracts.mjs';
-import {parseFeatures,isGhost,ABILITY_RULES as R} from '../shared/features.mjs';
+import {parseFeatures,ABILITY_RULES as R} from '../shared/features.mjs';
 const object=v=>v&&typeof v==='object'&&!Array.isArray(v);
 const time=v=>Number.isSafeInteger(v)&&v>=0;
 const exact=(v,keys)=>object(v)&&Object.keys(v).length===keys.length&&keys.every(k=>Object.hasOwn(v,k));
@@ -12,14 +13,13 @@ export function validateFeatures(room){
   assert(!room.features||(room.features.deathPolicy==='transfer'&&!room.features.abilities));
   assert(!Object.hasOwn(s,'effects')&&!Object.hasOwn(s,'ghostChat')&&!s.players.some(p=>Object.hasOwn(p,'ability')));return;
  }
- assert(s.schemaVersion===2&&exact(s.features,['version','deathPolicy','abilities'])&&s.features.version===1);
+ assert([2,3,4,5].includes(s.schemaVersion)&&exact(s.features,['version','deathPolicy','abilities'])&&s.features.version===1);
  const f=parseFeatures({deathPolicy:s.features.deathPolicy,abilities:s.features.abilities});
  assert(f.deathPolicy==='ghost-tasks'||f.abilities);
  if(room.features)assert(room.features.deathPolicy===f.deathPolicy&&room.features.abilities===f.abilities);
- const taskRooms=getWorld(s.mapId,s.mapRevision??1).ROOM_LAYOUT;
  const tasks=s.players.flatMap(p=>p.tasks||[]);
  assert(tasks.length===s.rules.tasksPerCrew*s.players.filter(p=>p.role==='crew').length&&new Set(tasks.map(t=>t.id)).size===tasks.length);
- assert(tasks.every(t=>object(t)&&/^t[a-f0-9]{20}$/.test(t.id)&&typeof t.completed==='boolean'&&taskRooms.some(r=>r.id===t.roomId)&&typeof t.label==='string'&&t.label.length<=200));
+ assert(tasks.every(t=>object(t)&&/^t[a-f0-9]{20}$/.test(t.id)&&typeof t.completed==='boolean'&&(s.map||s.mapId||s.mapRevision!==undefined?mapFor(s).roomLayout:ROOM_LAYOUT).some(r=>r.id===t.roomId)&&typeof t.label==='string'&&t.label.length<=200));
  assert(new Set(s.bodies.map(b=>b.playerId)).size===s.bodies.length&&s.bodies.every(b=>s.players.some(p=>p.id===b.playerId&&!p.alive)));
  if(f.deathPolicy==='ghost-tasks'){
   assert(Array.isArray(s.ghostChat)&&s.ghostChat.length<=R.ghostChatLimit);

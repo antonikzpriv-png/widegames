@@ -1,5 +1,5 @@
 import {element as h,button} from './ui.mjs';
-import * as world from '../shared/world.mjs';
+import {PUBLIC_MAP_CATALOG} from '../shared/maps/index.mjs';
 import {createWaitingRoomScene} from './waiting-room-scene.mjs';
 import {createPregameCustomization,normalisePregameDraft} from './pregame-customization.mjs';
 
@@ -27,6 +27,6 @@ export function harbor(options){
  join.onsubmit=event=>{event.preventDefault();if(!callbacks.pending)callbacks.joinInvitation(code.value);};join.append(code,joinButton);
  bottom.append(summary,h('div',{class:'harbor-actions'},play,watch),join,resume,h('p',{class:'launch-demo'},'Use the left computer to configure your watch. Open the right wardrobe to change your keeper. Demo AI needs no account or provider key.'));
  node.append(scene.node,bottom,customization.node);
- function refresh(){const draft=launchDraft,map=world.MAPS?.find(m=>m.id===draft.mapId),count=draft.settings.saboteurs;summary.replaceChildren(h('strong',{},map?.name||'Lantern Wake'),` · ${draft.settings.capacity} keepers · ${count} saboteur${count===1?'':'s'} · ${draft.settings.tasksPerCrew} tasks / crew`);scene.update(draft.profile,{pending:callbacks.pending});resume.hidden=!callbacks.resume;resume.disabled=!!callbacks.pending;for(const b of [play,watch,joinButton])b.disabled=!!callbacks.pending;code.disabled=!!callbacks.pending;customization.update(snapshot(),{pending:!!callbacks.pending});}
+ function refresh(){const draft=launchDraft,map=PUBLIC_MAP_CATALOG.find(m=>m.id===draft.mapId),count=draft.settings.saboteurs;summary.replaceChildren(h('strong',{},map?.name||'Lantern Wake'),` · ${draft.settings.capacity} keepers · ${count} saboteur${count===1?'':'s'} · ${draft.settings.tasksPerCrew} tasks / crew`);scene.update(draft.profile,{pending:callbacks.pending});resume.hidden=!callbacks.resume;resume.disabled=!!callbacks.pending;for(const b of [play,watch,joinButton])b.disabled=!!callbacks.pending;code.disabled=!!callbacks.pending;customization.update(snapshot(),{pending:!!callbacks.pending});}
  mounted={node,update(next){callbacks=next;refresh();}};refresh();return node;
 }

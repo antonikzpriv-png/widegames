@@ -1,4 +1,32 @@
-# Stable integration contract v1
+Current-main integration43c079999506785196ab85750105ceb102ba9314 is included. Optional features retain version1, taskStep remains supported for world2 progress, and map-aware replay2 is documented in [QUALITY-MAIN-REPLAY-CONTRACT.md](QUALITY-MAIN-REPLAY-CONTRACT.md). Saved start request IDs bind their accepted feature settings; conflicting reuse returns409. New histories must match their actual map, actors and clocks.
+
+# Current gameplay-quality contract
+
+New normal startup opts into room schema4 / match schema5 / stationTasksVersion1. Exact old formats1..4 remain supported. [QUALITY-CONTRACT.md](QUALITY-CONTRACT.md) specifies ownership and pure station payloads; [QUALITY-INTERFACES.md](QUALITY-INTERFACES.md) lists the executable additions. getMap(string) chooses the latest registered version, while getMap({id,version}) must resolve the exact retained version; getMap(undefined) remains legacy Beacon1. No live hidden-state projection, provider budget or seat identity contract is relaxed.
+
+# Current tactical integration contract
+
+Normal new rooms use room schema3, match schema4/worldVersion1/beaconVersion1/tacticalVersion1 and an immutable map/version plus tactical preset. See [TACTICAL-INTERFACES.md](TACTICAL-INTERFACES.md) for actual exports, HTTP settings, observations and extension examples, [TACTICAL-CONTRACT.md](TACTICAL-CONTRACT.md) for ownership and [TACTICAL-RULES.md](TACTICAL-RULES.md) for semantics. Room/match schemas1/2/3 retain their original behavior. Unsupported future versions stop restoration with the original file preserved. The earlier contracts below are historical and apply to their stated versions.
+
+---
+
+# Current beacon integration contract
+
+New normal-start rooms use room schema2 and match schema3/worldVersion1/beaconVersion1. Existing room/match schema1 and world schema2 remain compatible and retain their original semantics. This additive section and docs/BEACON-GROUP1-CONTRACT.md / NEXT_FEATURE_INTERFACES.md supersede the historical v1 assumptions below. main is the actual default branch; Group1 work is on codex/beacon-systems-20261029 from90bb6e8.
+
+Actor identity is derived from the authenticated same-room HttpOnly cookie and validated against actual human seats. Roster IDs need not be p1..p6, and counts are configurable through the validated server interface (4..12 keepers,1..3 saboteurs with crew majority). The existing visitor join route still grants spectators; Group2 owns explicit multiplayer seat allocation. Host need not stay connected. Never let a client pick another actor.
+
+All existing engine exports remain; getReplaySnapshots(state) is added and is ended-only. createMatch adds systems,roster,saboteurCount,humanPlayerIds,beaconRules. Normal configuration enables systems for new rooms; restored lobby metadata controls its saved version. Stateful rules stay synchronous and authoritative. No provider or browser directly mutates engine state.
+
+Safe beacon game views add vision{origin,radius,mode,lights}, systems{lights,communications,doors,critical,selfTransit,cooldowns}, investigation{devices,session,observations,status}, abilities{notes}, and interactions. Systems transit/cooldowns and investigation sessions/samples are owner-only where applicable. Public critical sites omit repairer IDs. Roster players add status unknown/alive/dead and alive null/true/false as permitted knowledge; unseen coordinates remain null. Fixed Bridge spectator knowledge is not omniscient. Own self includes its permitted transit and task progress. Only ended views reveal roles. Never expose configuration, full knowledge maps, raw replay, private actor motion, identity hashes or AI memory.
+
+Every interaction descriptor has {id,type,fields,label,enabled,position?,roomId?,reason?}; root emits exact legal base task/report/eliminate/meeting targets as well as system, terminal and field-note proposals. Client uses these exact fields, not guessed targets or distance-only authority. Existing action types remain. New bounded fields in shared/beacon.mjs: systemSabotage{kind,targetId}, systemRepair{systemId,siteId}, vent{entryId,exitId}, investigate{deviceId}, deviceCancel{}, taskInteract{taskId,interactionId,value}, ability{abilityId,targetId}. All use the existing authenticated action route and lifetime request-ID rules. Movement uses the existing /input endpoint with {seq,dx,dy}; denied sequence receipts remain idempotent through restart.
+
+Device samples are {id,deviceId,kind,at,data}, where cameras data.frames contain {cameraId,limited,players:[{id,position}]}, occupancy data.rooms contain {roomId,count}, and vitals data.players contain {id,status}. They describe that instant, not live tracking or attacker identity. Only owner samples may update its vitals knowledge. Local observation events may be body,witness,muster,vitals,vent_enter,vent_exit, with original at and observedAt where appropriate. Hatch traces expose only one endpoint, never a recipient list or hidden destination.
+
+Authenticated ended replay returns {roomId,replay,snapshots} for beacon matches. Snapshots remain private until resolution. Versioned persistence validates every module, custom identities and saved action/spending receipts; corrupt files are quarantined without silently resetting them. Current rule and deadline precedence is documented in RULES.md. Current directory ownership and Group2 reservations are in AGENTS.md and NEXT_FEATURE_INTERFACES.md.
+
+## Historical stable integration contract v1
 
 **Current extension:** [Multiplayer lobbies and rematches](MULTIPLAYER.md) supersedes fixed-roster, p1-only ownership, immutable-start-only lifecycle and historical owner/path allocations below. These original contracts remain the compatibility baseline for historical rooms.
 

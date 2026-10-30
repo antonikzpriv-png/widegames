@@ -1,11 +1,15 @@
-import {getWorld} from '../../shared/world.mjs';
+import {observerAgents,observerGame} from './spectator.mjs';
+import {canViewAct} from '../../shared/features.mjs';
+import {MotionTrack} from './movement.mjs';
+import {mapKey,mapReference} from './map-model.mjs';
+import {knowledge,descriptors,actionDescriptors,hasActionDescriptor} from './beacon-model.mjs';
 /** Pure presentation rules. Inputs are redacted views, never engine state. */
 export const point = p => p && Number.isFinite(p.x) && Number.isFinite(p.y);
 export const distance = (a,b) => point(a)&&point(b)?Math.hypot(a.x-b.x,a.y-b.y):Infinity;
 export const clamp = (n,min,max) => Math.min(max,Math.max(min,n));
 export function remaining(deadline,now){return Math.max(0,Math.ceil(((deadline||now)-now)/1000));}
 export function clock(deadline,now){const n=remaining(deadline,now);return `${Math.floor(n/60)}:${String(n%60).padStart(2,'0')}`;}
-export function visiblePlayers(game){return (game?.players||[]).filter(p=>(p.alive||(game?.self?.ghost&&p.id===game.self.id))&&point(p.position));}
+export function visiblePlayers(game){const inspected=observerAgents(game).length>0;game=observerGame(game);return (game?.players||[]).filter(p=>((game?.beaconVersion===1?knowledge(game,p)==='alive':p.alive)||(game?.self?.ghost===true&&p.id===game.self.id)||(inspected&&p.ghost===true))&&point(p.position));}
 export function visibleBodies(game){return (game?.events||[]).filter(e=>e.type==='body'&&e.bodyId&&point(e.position));}
 export function roleLabel(game){if(game?.self?.ghost)return 'Ghost · '+(game.self.role==='crew'?'Crew':'Saboteur');return !game?.self?'Spectator':game.self.role==='saboteur'?'Saboteur':'Crew';}
 export function aiLabel(ai){return ai?.mode==='live'&&ai.strategy==='strategic'?'STRATEGIC · model plans / local execution':ai?.mode==='live'?'HYBRID · live council / local navigation':ai?.mode==='demo'?'DEMO · local keepers':'AI mode pending';}
@@ -18,7 +22,21 @@ export function taskKind(task,index=0){
  // Engine relay tasks share a label; equipment varies by the actual station.
  return ({bridge:'wires',workshop:'wires',lantern:'tuning',engine:'tuning',archive:'sequence',galley:'sequence'})[task.roomId]||['wires','tuning','sequence'][index%3];
 }
+function beaconContexts(game){
+ const self=game.self,active=game.phase==='roam'&&canViewAct(game)&&!game.systems?.selfTransit&&!self?.transit,hints=actionDescriptors(game),enabled=type=>active?hints.filter(h=>h.type===type&&h.enabled===true):[];
+ const context=(h,label,hint)=>({type:h?.type,label:h?.label||label,fields:{...h?.fields},enabled:!!h,hint});
+ const taskHint=enabled('task').find(h=>self.tasks?.some(t=>t.id===h.fields.taskId&&!t.completed)),task=taskHint&&self.tasks.find(t=>t.id===taskHint.fields.taskId),bell=enabled('meeting')[0];
+ const equipment=descriptors(game),repair=active&&equipment.find(h=>h.type==='systemRepair'&&h.enabled===true),other=active&&equipment.find(h=>['investigate','vent'].includes(h.type)&&h.enabled===true);
+ let use;
+ if(repair)use={type:'beaconPanel',descriptorId:repair.id,label:repair.label,enabled:true,hint:''};
+ else if(taskHint)use={...context(taskHint,'Task station','Approach a permitted task station.'),task};
+ else if(bell)use=context(bell,'Emergency bell','Approach the permitted bell.');
+ else if(other)use={type:'beaconPanel',descriptorId:other.id,label:other.label,enabled:true,hint:''};
+ else use={type:'beaconPanel',label:'Beacon equipment',enabled:active,hint:'Open Systems & evidence for server-permitted actions.'};
+ return {use,protect:context(enabled('protect')[0],'Harbor Ward','No permitted ward target.'),decoy:context(enabled('decoy')[0],'Signal Echo','No permitted echo action.'),report:context(enabled('report')[0],'Report body','No permitted report target. Approach an observed fallen keeper.'),eliminate:context(self?.role==='saboteur'?enabled('eliminate').find(h=>h.fields.targetId!==self.id):null,'Eliminate','No permitted elimination target.'),sabotage:{type:'beaconPanel',label:'System sabotage options',enabled:active&&self?.role==='saboteur',hint:'Open Systems & evidence for sabotage choices and cooldowns.'}};
+}
 export function contexts(game,world){
+ if(game?.beaconVersion===1)return beaconContexts(game);
  const self=game?.self,pos=self?.position,available=game?.availableActions||[];
  const active=game?.phase==='roam'&&(self?.alive||self?.ghost)&&point(pos)&&game.worldVersion===1;
  const station=world.WORLD_STATIONS[self?.roomId];
@@ -33,7 +51,7 @@ export function contexts(game,world){
  const taskAction={type:'task',label:task?.label||'Task station',fields:{taskId:task?.id},task,enabled:nearby&&allowed('task'),hint:nearby?'Task equipment is unavailable or cooling down.':'Reach your glowing task station.'};
  const bellAction={type:'meeting',label:'Emergency bell',fields:{},enabled:bell&&allowed('meeting'),hint:bell?'Bell unavailable: check cooldown, remaining emergencies and critical status.':'Use the bell in the Bridge. Unavailable during critical sabotage.'};
  // A distant unfinished Bridge task must not hide a bell that is actually in reach.
- const use=repair&&repairAction.enabled?repairAction:task&&taskAction.enabled?taskAction:bellAction.enabled?bellAction:repair?repairAction:task?taskAction:bellAction;
+ let use=repair&&repairAction.enabled?repairAction:task&&taskAction.enabled?taskAction:bellAction.enabled?bellAction:repair?repairAction:task?taskAction:bellAction;
  return {
   use,
   report:{type:'report',label:'Report body',fields:{bodyId:body?.bodyId},enabled:!!body&&allowed('report'),hint:'Approach a visible fallen keeper.'},
@@ -43,56 +61,32 @@ export function contexts(game,world){
   sabotage:{type:'sabotage',label:'Sabotage',fields:{},enabled:self?.role==='saboteur'&&allowed('sabotage'),hint:'Sabotage is unavailable or cooling down.'}
  };
 }
-function receivedSegment(from,to,isWalkable){
- // Geometry-free fixtures and legacy maps retain their existing display rules.
- if(!from||!isWalkable(from)||!isWalkable(to))return true;
- const steps=Math.max(1,Math.ceil(distance(from,to)/7));
- for(let i=1;i<steps;i++)if(!isWalkable({x:from.x+(to.x-from.x)*i/steps,y:from.y+(to.y-from.y)*i/steps}))return false;
- return true;
-}
-/** Render a bounded received-position timeline one server tick behind the network.
- * Restarting an easing curve on every packet causes visible acceleration pulses;
- * a shared sample clock keeps both actors and their camera moving at steady speed.
- * There is no extrapolation, and newly hidden actors are removed immediately.
- */
+/** Rendering blends only two received positions. Missing actors are removed immediately. */
 export class ActorSamples{
- constructor(){this.samples=new Map();this.delayMs=100;this.mapKey=null;}
+ constructor(options={}){this.track=new MotionTrack({...options,timelineDelayMs:options.timelineDelayMs??100,allowRawFixtures:options.world!==true});this.legacy=new Map();this.usingWorld=false;this.forceWorld=options.world===true;}
+ get samples(){return this.track.samples;}
+ get intent(){return this.usingWorld?this.track.intent:null;}
+ setIntent(input,at){return this.usingWorld?this.track.setIntent(input,at):false;}
  update(game,at){
-  const mapId=game?.mapId??'beacon',revision=game?.mapRevision??1,mapKey=`${mapId}:${revision}`;
-  if(this.mapKey!==mapKey){this.samples.clear();this.mapKey=mapKey;}
-  const {isWalkable}=getWorld(mapId,revision);
-  const seen=new Set();
-  for(const player of visiblePlayers(game)){
-   seen.add(player.id);const old=this.samples.get(player.id);
-   if(old&&distance(old.to,player.position)<.001){old.receivedAt=at;old.player={...player,moving:player.id===game.self?.id?game.self.moving:old.player.moving};continue;}
-   const position={...player.position},history=old?.history||[];
-   if(old&&old.receivedAt>history.at(-1).at)history.push({at:old.receivedAt,position:old.to,interpolate:true});
-   const replace=history.length&&at<=history.at(-1).at,prior=history.at(replace?-2:-1)?.position;
-   const snapshot={at,position,interpolate:receivedSegment(prior,position,isWalkable)};
-   if(replace)history[history.length-1]=snapshot;
-   else history.push(snapshot);
-   while(history.length>8)history.shift();
-   this.samples.set(player.id,{history,to:position,at,receivedAt:at,player:{...player,moving:player.id===game.self?.id?game.self.moving:!!old}});
-  }
-  for(const id of this.samples.keys())if(!seen.has(id))this.samples.delete(id);
+  game=observerGame(game);
+  // Every production world view has version/rooms or a map/beacon marker.
+  // Only historical unit-only Cartesian fixtures lack all these identifiers.
+  const realWorld=this.forceWorld||game?.beaconVersion===1||game?.map!==undefined||!!game?.worldVersion&&(Number.isFinite(game.version)||Array.isArray(game.rooms));
+  const privateObserver=observerAgents(game).length>0;
+  if(realWorld){let map;try{map=this.track.resolveMap(mapReference({game}));}catch{this.clear();return;}const owner=JSON.stringify([game?.matchId,mapKey(map),game?.self?.id]);if(this.track.owner===owner&&(at<this.track.receivedAt||Number.isFinite(game?.version)&&game.version<this.track.version))return;game={...game,map:map.reference??{id:map.id,version:map.version}};}
+  if(realWorld!==this.usingWorld||privateObserver!==this.privateObserver){this.clear();this.usingWorld=realWorld;this.privateObserver=privateObserver;}
+  {this.track.update(game,at);this.observerGhostIds=new Set();if(this.track.receivedAt===at)for(const a of observerAgents(game)){if(!a.ghost||!point(a.position)||!this.track.walk(a.position))continue;const p=game.players?.find(p=>p.id===a.id);if(!p)continue;const to={x:a.position.x,y:a.position.y};this.track.samples.set(a.id,{history:[{at,position:{...to},interpolate:false}],receivedAt:at,from:to,to,at,player:{...p,position:to,ghost:true,moving:!!a.moving}});this.observerGhostIds.add(a.id);}if(game?.self?.ghost===true&&point(game.self.position)&&this.track.receivedAt===at){const p=game.players?.find(p=>p.id===game.self.id);if(p){const to={...game.self.position};this.track.samples.set(p.id,{history:[{at,position:{...to},interpolate:false}],receivedAt:at,from:to,to,at,player:{...p,position:to,ghost:true,moving:!!game.self.moving}});this.ghostId=p.id;}}else this.ghostId=null;return;}
  }
- at(id,now,reduced=false){
-  const sample=this.samples.get(id);if(!sample)return null;
-  const {history}=sample,time=now-this.delayMs;
-  if(reduced||time>=history.at(-1).at)return {...sample.to};
-  if(time<=history[0].at)return {...history[0].position};
-  for(let i=1;i<history.length;i++){
-   const from=history[i-1],to=history[i];if(time>to.at)continue;
-   // A missing turn is not permission to draw a shortcut through a wall.
-   if(to.interpolate===false)return {...from.position};
-   const t=clamp((time-from.at)/(to.at-from.at),0,1);
-   return {x:from.position.x+(to.position.x-from.position.x)*t,y:from.position.y+(to.position.y-from.position.y)*t};
-  }
-  return {...sample.to};
- }
- clear(){this.samples.clear();}
+
+ at(id,now,reduced=false){if(id===this.ghostId||this.observerGhostIds?.has(id)){const p=this.track.samples.get(id)?.to;return p?{...p}:null;}return this.track.at(id,now,reduced);}
+ clear(){this.privateObserver=null;this.observerGhostIds=new Set();this.track.clear();this.legacy.clear();this.ghostId=null;this.usingWorld=false;}
 }
 export function validTaskSession(session,room,world){
  const game=room?.game,task=game?.self?.tasks?.find(t=>t.id===session?.taskId);
- return !!session&&room.roomId===session.roomId&&game?.matchId===session.matchId&&game.phase==='roam'&&(game.self?.alive||game.self?.ghost)&&task&&!task.completed&&game.self.roomId===session.location&&task.roomId===session.location&&distance(game.self.position,world.WORLD_STATIONS[task.roomId])<=world.WORLD.interactionRadius&&game.availableActions?.includes('task');
+ const current=!!session&&room.roomId===session.roomId&&game?.matchId===session.matchId&&game.phase==='roam'&&canViewAct(game)&&!game.systems?.selfTransit&&!game.self?.transit&&task&&!task.completed&&game.self.roomId===session.location;
+ if(current&&session.progressKey!==undefined&&session.progressKey!==JSON.stringify([task.progress?.v,task.progress?.kind,task.progress?.target,task.progress?.sequence,task.progress?.pressure,task.progress?.total]))return false;
+ if(current&&session.challengeKey!==undefined&&session.challengeKey!==JSON.stringify([task.challenge?.version,task.challenge?.kind,task.challenge?.puzzle]))return false;
+ if(!current||session.mapKey!==undefined&&session.mapKey!==mapKey(mapReference(room)))return false;
+ if(game.beaconVersion===1)return hasActionDescriptor(game,'task',{taskId:session.taskId});
+ return task.roomId===session.location&&distance(game.self.position,world.WORLD_STATIONS[task.roomId])<=world.WORLD.interactionRadius&&game.availableActions?.includes('task');
 }

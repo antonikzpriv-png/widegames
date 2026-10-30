@@ -1,11 +1,12 @@
 import {randomBytes} from 'node:crypto';
 import {parseFeatures,isGhost,ABILITY_RULES as R} from '../../shared/features.mjs';
 export {isGhost};
+export const canWorldAct=(state,p)=>!!p&&(p.alive||isGhost(state,p));
 export function initializeFeatures(state,options,random){
  if(options===undefined)return;
  const config=parseFeatures(options);
  if(config.deathPolicy==='transfer'&&!config.abilities)return;
- if(state.schemaVersion!==2)throw new TypeError('Optional features require a world match');
+ if(![2,3,4,5].includes(state.schemaVersion))throw new TypeError('Optional features require a world match');
  state.features={version:1,...config};
  if(config.deathPolicy==='ghost-tasks')state.ghostChat=[];
  if(config.abilities){
@@ -56,13 +57,13 @@ export function activateFeature(state,p,a,now,record){
  const kind=a.type==='protect'?'ward':'echo';
  const effect={id:'fx-'+randomBytes(16).toString('hex'),kind,playerId:p.id,createdAt:now,expiresAt:now+(kind==='ward'?R.wardDurationMs:R.echoDurationMs),...(kind==='ward'?{targetId:a.targetId}:{position:{x:a.x,y:a.y}})};
  state.effects.push(effect);p.ability.readyAt=now+(kind==='ward'?R.wardCooldownMs:R.echoCooldownMs);
- record(state,'effect_started',now,structuredClone(effect));return true;
+ record(state,'effect_started',now,{...structuredClone(effect),effectId:effect.id});return true;
 }
 export function safeEffects(state,p,world,now){
  return (state.effects||[]).filter(e=>e.expiresAt>now).flatMap(e=>{
   const target=e.kind==='ward'?state.players.find(q=>q.id===e.targetId):null;
   const position=target?.position||e.position;
-  if(p&&!world.sees(p.position,position,state.lobbySettings?.vision))return [];
+  if((p||world.observerOrigin)&&!world.sees(p?.position??world.observerOrigin,position,state.lobbySettings?.vision))return [];
   return [{id:e.id,kind:e.kind,expiresAt:e.expiresAt,...(target?{targetId:target.id}:{position:structuredClone(position),label:'Signal echo · distraction'})}];
  });
 }

@@ -1,7 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm } from 'node:fs/promises';
 import { once } from 'node:events';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+const temporary=fileURLToPath(new URL('../_artifacts/test-temp/',import.meta.url));
 import { createGameServer } from '../server/transport.mjs';
 import { createAiController } from '../server/ai/index.mjs';
 import * as actualEngine from '../server/engine/index.mjs';
@@ -9,7 +12,9 @@ const origin='http://strategic-audit.test';
 const delay=ms=>new Promise(r=>setTimeout(r,ms));
 async function until(check,label){for(let n=0;n<300;n++){if(check())return;await delay(10);}assert.fail('Timed out: '+label);}
 async function fixture(t,{roamDeadlineMs=100000,maxMatchMs=900000,features}={}){
- const directory=await mkdtemp('/tmp/strategic-transport-');let now=1000,seen,release,apiCalls=0,captured,decisions=0;
+ await mkdir(temporary,{recursive:true});
+ const directory=await mkdtemp(path.join(temporary,'strategic-transport-'));let now=1000,seen,release,apiCalls=0,captured,decisions=0,game;
+ t.after(async()=>{release?.();await game?.close();const relative=path.relative(temporary,directory);assert(relative&&!relative.startsWith('..')&&!path.isAbsolute(relative),'cleanup stays inside repository test temp');await rm(directory,{recursive:true,force:true});});
  const seed=Array.from({length:100},(_,i)=>i).find(seed=>actualEngine.createMatch({id:'probe',seed,now}).players[0].role==='saboteur');assert.notEqual(seed,undefined);
  const realFetch=globalThis.fetch;
  t.mock.method(globalThis,'fetch',async(url,options)=>{
@@ -21,8 +26,7 @@ async function fixture(t,{roamDeadlineMs=100000,maxMatchMs=900000,features}={}){
  const real=createAiController({config});
  const wrapper={describe:real.describe,async decide(args){if(decisions++)return null;captured=args;return real.decide(args);}};
  const engine={...actualEngine,createMatch:args=>actualEngine.createMatch({...args,seed})};
- const game=await createGameServer(config,{engine,aiController:wrapper});game.server.listen(0,'127.0.0.1');await once(game.server,'listening');const base=`http://127.0.0.1:${game.server.address().port}`;
- t.after(async()=>{release?.();await game.close();await rm(directory,{recursive:true,force:true});});
+ game=await createGameServer(config,{engine,aiController:wrapper});game.server.listen(0,'127.0.0.1');await once(game.server,'listening');const base=`http://127.0.0.1:${game.server.address().port}`;
  async function request(route,data,cookie){const r=await realFetch(base+route,{method:data===undefined?'GET':'POST',headers:{Origin:origin,...(data===undefined?{}:{'Content-Type':'application/json'}),...(cookie?{Cookie:cookie}:{})},...(data===undefined?{}:{body:JSON.stringify(data)})});return {status:r.status,body:await r.json(),cookie:r.headers.get('set-cookie')?.split(';')[0]};}
  const host=await request('/api/rooms',{mode:'human'}),route=`/api/rooms/${host.body.roomId}`;assert.equal(host.status,201);
  assert.equal((await request(route+'/start',{id:'start'},host.cookie)).status,200);

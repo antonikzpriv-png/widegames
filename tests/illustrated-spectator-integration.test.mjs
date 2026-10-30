@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {mkdtemp,rm} from 'node:fs/promises';
-import {tmpdir} from 'node:os';
-import {join} from 'node:path';
+import {mkdir,mkdtemp,rm} from 'node:fs/promises';
+import {fileURLToPath} from 'node:url';
+import {join,relative,isAbsolute} from 'node:path';
 import {once} from 'node:events';
 import {WebSocket} from 'ws';
 import * as engine from '../server/engine/index.mjs';
@@ -12,6 +12,8 @@ import {createGameServer} from '../server/transport.mjs';
 import {install} from '../server/ai/strategic.mjs';
 
 const maps=['beacon','storm-foundry','tidal-observatory'];
+const hostObserver={host:true,seatId:null}; // Explicit trusted projection-call fixture; HTTP identity is tested below.
+const temporary=fileURLToPath(new URL('../_artifacts/test-temp/',import.meta.url));
 let serial=0;
 function walk(state,id,target){const w=getWorld(state.mapId,state.mapRevision??1),player=state.players.find(p=>p.id===id),route=w.findWorldPath(player.position,target);assert(route);let length=0,previous=player.position;for(const point of route){length+=w.distance(previous,point);previous=point;}const result=engine.applyAction(state,id,{id:'inspect-route-'+(++serial),type:'navigate',x:target.x,y:target.y},state.updatedAt);assert(result.accepted,JSON.stringify(result.error));return engine.tick(result.state,state.updatedAt+Math.ceil(length/w.WORLD.speed*1000)+1).state;}
 
@@ -20,25 +22,26 @@ for(const mapId of maps)test(`illustrated ${mapId}: observer projection, ghost m
  const world=getWorld(mapId,2),crew=state.players.find(p=>p.role==='crew'),task=crew.tasks[0],memory={privateReasoning:'NEVER_PUBLISH_THOUGHTS'};
  install(memory,{type:'intend',goal:'task',taskId:task.id,roomId:task.roomId},engine.getPlayerView(state,crew.id,1000));
  const context={activeMatchId:state.id,matches:{['match:'+state.id]:{mode:'live',memories:{['actor:'+crew.id]:memory}}}};
- const inspect=spectatorInspection(state,{mode:'spectator',seatId:null,now:1001,context}),agent=inspect.agents.find(p=>p.id===crew.id);
+ const inspect=spectatorInspection(state,{mode:'spectator',seatId:null,identity:hostObserver,now:1001,context}),agent=inspect.agents.find(p=>p.id===crew.id);
  assert.deepEqual(agent.position,world.worldSpawn(crew.id));assert.equal(agent.plan.roomId,task.roomId);assert.equal(agent.tasks.length,mapId==='beacon'?3:12);assert(!JSON.stringify(inspect).includes('NEVER_PUBLISH'));
- const mixed=structuredClone(state);mixed.players[0].human=true;assert.equal(spectatorInspection(mixed,{mode:'spectator',seatId:null}),null,'explicit all-AI helper cannot inspect a mixed-human watch');
- assert.equal(engine.getPlayerView(state,null,1001).inspection,undefined);assert.equal(spectatorInspection(state,{mode:'human',seatId:null}),null);assert.equal(spectatorInspection(state,{mode:'spectator',seatId:crew.id}),null);
+ const mixed=structuredClone(state);mixed.players[0].human=true;assert.equal(spectatorInspection(mixed,{mode:'spectator',seatId:null,identity:hostObserver}),null,'explicit all-AI helper cannot inspect a mixed-human watch');
+ assert.equal(engine.getPlayerView(state,null,1001).inspection,undefined);assert.equal(spectatorInspection(state,{mode:'human',seatId:null,identity:hostObserver}),null);assert.equal(spectatorInspection(state,{mode:'spectator',seatId:crew.id,identity:hostObserver}),null);
+ assert.equal(spectatorInspection(state,{mode:'spectator',seatId:null}),null,'Missing authentication cannot grant an inspector');assert.equal(spectatorInspection(state,{mode:'spectator',seatId:null,identity:{host:false,seatId:null}}),null,'Joined observer cannot grant itself host inspection');assert.equal(spectatorInspection(state,{mode:'spectator',seatId:null,identity:{host:true,seatId:crew.id}}),null,'A seated host cannot inherit observer inspection');
  const killer=state.players.find(p=>p.role==='saboteur');state=walk(state,killer.id,crew.position);
  const eliminated=engine.applyAction(state,killer.id,{id:'inspect-elimination',type:'eliminate',targetId:crew.id},state.updatedAt);assert(eliminated.accepted,JSON.stringify(eliminated.error));state=eliminated.state;
  const corpse=structuredClone(state.bodies[0]),ghost=state.players.find(p=>p.id===crew.id),destination=world.WORLD_STATIONS[ghost.tasks[0].roomId];
  const moving=engine.applyAction(state,crew.id,{id:'inspect-ghost-walk',type:'navigate',x:destination.x,y:destination.y},state.updatedAt);assert(moving.accepted,JSON.stringify(moving.error));
  const before=structuredClone(moving.state),tick=engine.tick(moving.state,moving.state.updatedAt+100).state;assert.notEqual(tick,moving.state);assert.equal(tick.mapRevision,2);assert.equal(tick.replayHistory.mapRevision,2);assert.deepEqual(moving.state,before);
  assert.equal(tick.players.find(p=>p.id===crew.id).alive,false);assert.deepEqual(tick.bodies[0],corpse);assert(world.isWalkable(tick.players.find(p=>p.id===crew.id).position));
- const observed=spectatorInspection(tick,{mode:'spectator',seatId:null,now:tick.updatedAt});assert(observed.agents.find(p=>p.id===crew.id).ghost);assert.deepEqual(observed.agents.find(p=>p.id===crew.id).position,tick.players.find(p=>p.id===crew.id).position);
+ const observed=spectatorInspection(tick,{mode:'spectator',seatId:null,identity:hostObserver,now:tick.updatedAt});assert(observed.agents.find(p=>p.id===crew.id).ghost);assert.deepEqual(observed.agents.find(p=>p.id===crew.id).position,tick.players.find(p=>p.id===crew.id).position);
  const living=engine.getPlayerView(tick,killer.id,tick.updatedAt);assert.equal(living.players.find(p=>p.id===crew.id).position,null);assert.equal(living.inspection,undefined);assert.equal(living.ghostChat,undefined);
  const clonedActor=tick.players.find(p=>p.id===crew.id);clonedActor.position.x=-100;assert.deepEqual(moving.state,before,'optimized copies cannot share revised positions/history');
 });
 
-test('revision-2 HTTP and WebSocket inspection requires per-identity consent and stays unavailable in mixed watches',async t=>{
- const directory=await mkdtemp(join(tmpdir(),'illustrated-inspect-')),origin='http://v2-inspection.test',idle={describe:()=>({mode:'demo',provider:'demo'}),decide:async()=>null};
+test('revision-2 HTTP and WebSocket inspection requires explicit owner consent and rejects mixed watches',async t=>{
+ await mkdir(temporary,{recursive:true});const directory=await mkdtemp(join(temporary,'illustrated-inspect-')),origin='http://v2-inspection.test',idle={describe:()=>({mode:'demo',provider:'demo'}),decide:async()=>null};
  const service=await createGameServer({dataDir:directory,publicOrigin:origin,worldMode:true,mapRevision:2,tickMs:600000,now:()=>1000,ai:{provider:'demo'}},{aiController:idle});
- t.after(async()=>{await service.close();await rm(directory,{recursive:true,force:true});});service.server.listen(0,'127.0.0.1');await once(service.server,'listening');const base='http://127.0.0.1:'+service.server.address().port;
+ t.after(async()=>{await service.close();const inside=relative(temporary,directory);assert(inside&&!inside.startsWith('..')&&!isAbsolute(inside),'cleanup stays inside repository test temp');await rm(directory,{recursive:true,force:true});});service.server.listen(0,'127.0.0.1');await once(service.server,'listening');const base='http://127.0.0.1:'+service.server.address().port;
  async function request(route,{body,cookie}={}){const response=await fetch(base+route,{method:body?'POST':'GET',headers:{Origin:origin,...(body?{'Content-Type':'application/json'}:{}),...(cookie?{Cookie:cookie}:{})},...(body?{body:JSON.stringify(body)}:{})});return {status:response.status,body:await response.json(),cookie:response.headers.get('set-cookie')?.split(';')[0]};}
  function rolePrivate(view){assert.equal(view.mapRevision,2);assert.equal(view.game.mapRevision,2);assert.equal(view.game.self,null);assert.equal(view.game.inspection,undefined);assert.equal(view.inspectionEnabled,false);for(const player of view.game.players)for(const key of ['role','tasks','destination','ability','plan'])assert(!Object.hasOwn(player,key));}
  async function until(check){const end=Date.now()+2000;while(Date.now()<end){if(check())return;await new Promise(resolve=>setTimeout(resolve,5));}assert.fail('Expected socket projection did not arrive');}

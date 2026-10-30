@@ -1,5 +1,6 @@
 import {captchaChallenge} from '../../shared/captcha.mjs';
 import {taskDisplay} from '../../shared/task-catalog.mjs';
+import {createStationPuzzle} from '../features/tasks/station.mjs';
 import {dom,control,setText,trapDialog} from './dom.mjs';
 
 /** Local puzzles gate a real task request; their solved state has no server authority. */
@@ -7,7 +8,7 @@ function createLegacyPuzzle({task,kind,onSubmit,onClose,id}){
  let solved=false,closed=false,selected=null,sent=false;
  const node=dom('section','lw-task-modal');node.setAttribute('role','dialog');node.setAttribute('aria-modal','true');node.setAttribute('aria-labelledby',`${id}-title`);node.tabIndex=-1;
  const heading=dom('h2','',task.label);heading.id=`${id}-title`;
- const top=dom('div','lw-modal-title'),close=control('Close station',()=>onClose(),'lw-close');top.append(dom('p','lw-eyebrow','FIELD EQUIPMENT'),close);
+ const top=dom('div','lw-modal-title'),close=control('Close station',()=>{if(!closed)onClose();},'lw-close');top.append(dom('p','lw-eyebrow','FIELD EQUIPMENT'),close);
  const copy=dom('p','lw-task-instruction'),area=dom('div',`lw-puzzle lw-puzzle-${kind}`),status=dom('p','lw-puzzle-status');status.setAttribute('role','status');
  const submit=control('Send completed task',()=>{if(!solved||sent||closed)return;onSubmit();},'lw-primary');submit.disabled=true;
  const footer=dom('p','lw-modal-footnote','The server confirms completion. Leaving this station or entering council closes the equipment.');
@@ -35,7 +36,7 @@ function createLegacyPuzzle({task,kind,onSubmit,onClose,id}){
   area.append(order,grid);
   for(let n=1;n<=4;n++){const tile=control(String(n),()=>{if(solved)return;if(n!==sequence[entered.length]){entered=[];tiles.forEach(t=>t.dataset.done='false');setText(status,'Sequence reset. Begin again with 2.');return;}entered.push(n);tile.dataset.done='true';setText(status,`${entered.length} of 4 steps restored.`);if(entered.length===4){tiles.forEach(t=>t.disabled=true);finish();}},'lw-sequence-tile');tile.setAttribute('aria-label',`Sequence tile ${n}`);tiles.push(tile);grid.append(tile);}
  }
- node.addEventListener('keydown',event=>{if(event.key==='Escape'){event.preventDefault();onClose();}else trapDialog(node,event);});
+ node.addEventListener('keydown',event=>{if(event.key==='Escape'){event.preventDefault();if(!closed)onClose();}else trapDialog(node,event);});
  return {node,focus(){close.focus();},setPending(value){sent=value;submit.disabled=value||!solved;close.disabled=value;setText(submit,value?'Sending…':'Send completed task');},dispose(){closed=true;node.remove();}};
 }
 
@@ -96,12 +97,13 @@ function sliderControl({area,id,label,value=0,min=0,max=100,onChange,className='
 
 /** All equipment is a view of saved progress. Local gestures never award credit. */
 export function createTaskPuzzle(options){
+ if(options.task?.kind==='station')return createStationPuzzle(options);
  if(!options.task.progress)return createLegacyPuzzle(options);
- const {id,onClose,onSubmit}=options;let task=options.task,pending=false,closed=false,key='',focusBeforePending=null,refreshTimer=()=>{};
+ const {id,onClose,onSubmit}=options;let task=options.task,pending=false,closed=false,key='',renderEpoch=0,focusBeforePending=null,refreshTimer=()=>{};
  const now=()=>options.getServerNow?.()??Date.now();
  const node=dom('section','lw-task-modal lw-instrument-modal');node.setAttribute('role','dialog');node.setAttribute('aria-modal','true');node.tabIndex=-1;
  const heading=dom('h2','',task.label);heading.id=`${id}-title`;node.setAttribute('aria-labelledby',heading.id);
- const close=control('Close station',onClose,'lw-close'),top=dom('div','lw-instrument-top'),title=dom('p','lw-equipment-type'),serial=dom('span','lw-equipment-serial',`STATION ${task.roomId.toUpperCase()} · ${task.id.slice(-6).toUpperCase()}`);
+ const close=control('Close station',()=>{if(!closed)onClose();},'lw-close'),top=dom('div','lw-instrument-top'),title=dom('p','lw-equipment-type'),serial=dom('span','lw-equipment-serial',`STATION ${task.roomId.toUpperCase()} · ${task.id.slice(-6).toUpperCase()}`);
  top.append(dom('span','lw-equipment-brand','LANTERN / FIELD SYSTEMS'),close);const copy=dom('p','lw-task-instruction'),area=dom('div','lw-puzzle'),status=dom('p','lw-puzzle-status'),progress=dom('progress','lw-task-step-meter'),stages=dom('div','lw-task-stage-track'),ack=dom('span','lw-equipment-ack','AWAITING INPUT');area.tabIndex=-1;area.setAttribute('role','group');area.setAttribute('aria-label','Equipment controls and progress');status.setAttribute('role','status');status.setAttribute('aria-live','polite');progress.setAttribute('aria-label','Server-confirmed task steps');stages.setAttribute('aria-hidden','true');
  const footer=dom('div','lw-equipment-footer');footer.append(ack,dom('span','','↵ / SPACE SELECT · ESC CLOSE'));
  node.append(top,title,heading,serial,copy,stages,progress,area,status,footer,dom('p','lw-modal-footnote','Confirmed steps are saved. Meetings or leaving close the panel. Running diagnostics restart; completed steps remain.'));
@@ -110,8 +112,8 @@ export function createTaskPuzzle(options){
  function lockControls(){for(const control of node.querySelectorAll('button,input'))control.disabled=pending||control.dataset.confirmed==='true'||control.dataset.blocked==='true';}
  function send(input){if(!pending&&!closed)onSubmit(input===undefined?undefined:{step:task.progress.index,input});}
  function render(){
-  const c=task.progress,next=JSON.stringify(c);if(next===key){refreshTimer();return;}key=next;refreshTimer=()=>{};
-  const sendStep=input=>{if(key===next&&!closed)send(input);};
+  const c=task.progress,next=JSON.stringify(c);if(next===key){refreshTimer();return;}key=next;const epoch=++renderEpoch;refreshTimer=()=>{};
+  const sendStep=input=>{if(epoch===renderEpoch&&key===next&&!closed)send(input);};
   area.replaceChildren();area.className=`lw-puzzle lw-instrument lw-puzzle-${c.kind}`;area.dataset.taskKind=c.kind;area.dataset.taskStep=String(c.index);node.dataset.taskKind=c.kind;status.dataset.error='false';
   title.textContent=instrumentNames[c.kind]||'FIELD EQUIPMENT';status.textContent=`${c.index} / ${c.total} steps confirmed by the beacon`;progress.max=c.total;progress.value=c.index;stages.replaceChildren(...Array.from({length:c.total},(_,i)=>{const step=dom('span','lw-task-stage',String(i+1));step.dataset.state=i<c.index?'done':i===c.index?'current':'waiting';return step;}));
   const answer=(label,value,className='lw-secondary',code='answer')=>{const b=control(label,()=>sendStep(String(value)),className);b.dataset.taskControl=code;b.dataset.taskInput=String(value);return b;};
@@ -126,8 +128,8 @@ export function createTaskPuzzle(options){
     const b=control(`Left cable ${n+1}`,()=>{if(n!==c.index){status.textContent=`Cable ${c.index+1} is ready to patch next.`;return;}selected=n;for(const [i,other]of controls.entries())other.setAttribute('aria-pressed',String(i===n));status.textContent=`Cable ${n+1} selected. Match ${symbols[n]} / ${n+1} on the right.`;},'lw-socket lw-source-socket');b.style.setProperty('--wire-color',colors[n]);b.setAttribute('aria-label',`Left cable ${n+1}`);b.setAttribute('aria-pressed','false');b.dataset.taskControl='wire-source';b.dataset.wireIndex=String(n);b.dataset.active=String(n===c.index);b.dataset.confirmed=String(n<c.index);b.disabled=n<c.index;
     let suppressClick=false;
     b.addEventListener('click',event=>{if(suppressClick){suppressClick=false;event.stopImmediatePropagation();}},true);
-    b.addEventListener('pointerdown',event=>{if(pending||closed||key!==next||n!==c.index||event.button>0)return;selected=n;b.setPointerCapture?.(event.pointerId);b.setAttribute('aria-pressed','true');status.textContent=`Drag cable ${n+1} to ${symbols[n]} / ${n+1}, then release.`;});
-    b.addEventListener('pointerup',event=>{if(pending||closed||key!==next||selected!==n)return;const target=document.elementFromPoint?.(event.clientX,event.clientY)?.closest?.('[data-task-control="wire-destination"]');if(target&&area.contains(target)&&!target.disabled){suppressClick=true;sendStep(`${n}:${target.dataset.taskInput}`);}});
+    b.addEventListener('pointerdown',event=>{if(pending||closed||(key!==next||epoch!==renderEpoch)||n!==c.index||event.button>0)return;selected=n;b.setPointerCapture?.(event.pointerId);b.setAttribute('aria-pressed','true');status.textContent=`Drag cable ${n+1} to ${symbols[n]} / ${n+1}, then release.`;});
+    b.addEventListener('pointerup',event=>{if(pending||closed||(key!==next||epoch!==renderEpoch)||selected!==n)return;const target=document.elementFromPoint?.(event.clientX,event.clientY)?.closest?.('[data-task-control="wire-destination"]');if(target&&area.contains(target)&&!target.disabled){suppressClick=true;sendStep(`${n}:${target.dataset.taskInput}`);}});
     b.dataset.wireSymbol=`${symbols[n]} · ${n+1}`;left.append(b);controls.push(b);const line=dom('span','lw-connected-wire',n<c.index?'━━ ● ━━':'┄┄ ◇ ┄┄');line.style.setProperty('--wire-color',colors[n]);line.dataset.connected=String(n<c.index);links.append(line);
    }
    const socketOrder=c.v===3?order:[2,0,1];for(const [position,n]of socketOrder.entries()){const b=control(`Right socket ${c.v===3?position+1:n+1}`,()=>{if(selected===null){status.textContent='Choose the highlighted left cable first.';return;}sendStep(`${selected}:${c.v===3?position:n}`);},'lw-socket lw-destination-socket');b.dataset.wireSymbol=`${symbols[n]} · ${n+1}`;b.style.setProperty('--wire-color',colors[n]);b.setAttribute('aria-label',`Right socket ${c.v===3?position+1:n+1}`);b.dataset.taskControl='wire-destination';b.dataset.taskInput=String(c.v===3?position:n);b.dataset.confirmed=String(n<c.index);b.disabled=n<c.index;right.append(b);}
@@ -141,14 +143,14 @@ export function createTaskPuzzle(options){
    const tape=dom('div','lw-memory-tape');let entered=[],watching=false,played=!memory;
    const monitor=dom('strong','lw-memory-monitor',memory?'PLAY THE PATTERN':'REPEAT THE RECORD');monitor.setAttribute('aria-live','polite');
    if(memory){
-    const replay=control('Play pattern',()=>{if(watching||closed||key!==next||pending)return;watching=true;played=false;entered=[];for(const b of keys)b.dataset.blocked='true';lockControls();replay.disabled=true;monitor.textContent='WATCH';let step=0;if(globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches){watching=false;played=true;monitor.textContent=`PATTERN: ${c.sequence.slice(0,required).join(' → ')}`;keys.forEach(b=>b.dataset.blocked='false');replay.disabled=pending;lockControls();return;}
-     const flash=()=>{if(closed||key!==next)return;if(step>=required){watching=false;played=true;monitor.textContent=`REPEAT ${required} KEY${required===1?'':'S'}`;keys.forEach(b=>{b.dataset.flash='false';b.dataset.blocked='false';});replay.disabled=pending;lockControls();keys[0]?.focus();return;}
-      keys.forEach((b,i)=>b.dataset.flash=String(i+1===c.sequence[step]));monitor.textContent=`SIGNAL ${step+1}: ${c.sequence[step]}`;step++;setTimeout(()=>{if(closed||key!==next)return;keys.forEach(b=>b.dataset.flash='false');setTimeout(flash,180);},480);
+    const replay=control('Play pattern',()=>{if(watching||closed||(key!==next||epoch!==renderEpoch)||pending)return;watching=true;played=false;entered=[];for(const b of keys)b.dataset.blocked='true';lockControls();replay.disabled=true;monitor.textContent='WATCH';let step=0;if(globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches){watching=false;played=true;monitor.textContent=`PATTERN: ${c.sequence.slice(0,required).join(' → ')}`;keys.forEach(b=>b.dataset.blocked='false');replay.disabled=pending;lockControls();return;}
+     const flash=()=>{if(closed||(key!==next||epoch!==renderEpoch))return;if(step>=required){watching=false;played=true;monitor.textContent=`REPEAT ${required} KEY${required===1?'':'S'}`;keys.forEach(b=>{b.dataset.flash='false';b.dataset.blocked='false';});replay.disabled=pending;lockControls();keys[0]?.focus();return;}
+      keys.forEach((b,i)=>b.dataset.flash=String(i+1===c.sequence[step]));monitor.textContent=`SIGNAL ${step+1}: ${c.sequence[step]}`;step++;setTimeout(()=>{if(closed||(key!==next||epoch!==renderEpoch))return;keys.forEach(b=>b.dataset.flash='false');setTimeout(flash,180);},480);
      };flash();
-    },'lw-secondary');replay.dataset.taskControl='memory-playback';const assist=control('Show accessible pattern',()=>{if(watching||closed||key!==next)return;played=true;entered=[];monitor.textContent=`PATTERN: ${c.sequence.slice(0,required).join(' → ')}`;keys.forEach(b=>b.dataset.blocked='false');lockControls();},'lw-secondary');assist.dataset.taskControl='memory-assist';area.append(monitor,replay,assist);
+    },'lw-secondary');replay.dataset.taskControl='memory-playback';const assist=control('Show accessible pattern',()=>{if(watching||closed||(key!==next||epoch!==renderEpoch))return;played=true;entered=[];monitor.textContent=`PATTERN: ${c.sequence.slice(0,required).join(' → ')}`;keys.forEach(b=>b.dataset.blocked='false');lockControls();},'lw-secondary');assist.dataset.taskControl='memory-assist';area.append(monitor,replay,assist);
    }else for(const [i,value]of c.sequence.entries()){const n=dom('span','',String(value));n.dataset.state=i<c.index?'done':i===c.index?'current':'waiting';tape.append(n);}
    const keys=[];for(let n=1;n<=4;n++){
-    const b=control(String(n),()=>{if(!memory){sendStep(String(n));return;}if(!played||watching||pending||closed||key!==next)return;entered.push(n);monitor.textContent=`${entered.length} / ${required} KEYS ENTERED`;if(entered.length===required){const input=entered.join(',');entered=[];sendStep(input);}},'lw-sequence-tile');b.dataset.taskControl='sequence-key';b.dataset.taskInput=String(n);b.dataset.blocked=String(memory&&!played);b.setAttribute('aria-label',`Sequence tile ${n}`);keys.push(b);grid.append(b);
+    const b=control(String(n),()=>{if(!memory){sendStep(String(n));return;}if(!played||watching||pending||closed||(key!==next||epoch!==renderEpoch))return;entered.push(n);monitor.textContent=`${entered.length} / ${required} KEYS ENTERED`;if(entered.length===required){const input=entered.join(',');entered=[];sendStep(input);}},'lw-sequence-tile');b.dataset.taskControl='sequence-key';b.dataset.taskInput=String(n);b.dataset.blocked=String(memory&&!played);b.setAttribute('aria-label',`Sequence tile ${n}`);keys.push(b);grid.append(b);
    }
    if(!memory)area.append(tape);area.append(grid);
 
@@ -167,8 +169,8 @@ export function createTaskPuzzle(options){
   lockControls();
   function timer(deadline,action,label){const line=dom('div','lw-diagnostic-timer'),clock=dom('strong'),meter=dom('progress');meter.max=1;line.append(dom('span','',label),clock,meter);area.append(line);const duration=Math.max(1,deadline-now());refreshTimer=()=>{const left=Math.max(0,deadline-now());clock.textContent=left>0?`${(left/1000).toFixed(1)} SEC`:'READY TO VERIFY';meter.value=Math.min(1,1-left/duration);action.dataset.blocked=String(left>0);action.disabled=pending||left>0;line.dataset.ready=String(left===0);};refreshTimer();}
  }
- node.addEventListener('keydown',e=>{if(e.key==='Escape'){e.preventDefault();onClose();}else trapDialog(node,e);});render();
- return {node,focus(){close.focus();},update(next){if(next){const restore=area.contains(document.activeElement),before=key;task=next;render();lockControls();if(restore&&before!==key)restoreEquipmentFocus(null);}},setPending(value){if(value)focusBeforePending=area.contains(document.activeElement)?document.activeElement:null;pending=value;node.dataset.pending=String(value);ack.textContent=value?'TRANSMITTING…':'AWAITING INPUT';lockControls();if(!value&&focusBeforePending){restoreEquipmentFocus(focusBeforePending);focusBeforePending=null;}},feedback(message){status.textContent=message;status.dataset.error='true';},dispose(){closed=true;refreshTimer=()=>{};node.remove();}};
+ node.addEventListener('keydown',e=>{if(e.key==='Escape'){e.preventDefault();if(!closed)onClose();}else trapDialog(node,e);});render();
+ return {node,focus(){close.focus();},update(next){if(!closed&&next){const restore=area.contains(document.activeElement),before=key;task=next;render();lockControls();if(restore&&before!==key)restoreEquipmentFocus(null);}},setPending(value){if(value)focusBeforePending=area.contains(document.activeElement)?document.activeElement:null;pending=value;node.dataset.pending=String(value);ack.textContent=value?'TRANSMITTING…':'AWAITING INPUT';lockControls();if(!value&&focusBeforePending){restoreEquipmentFocus(focusBeforePending);focusBeforePending=null;}},feedback(message){status.textContent=message;status.dataset.error='true';},dispose(){closed=true;refreshTimer=()=>{};node.remove();}};
 }
 
 function renderExtended(area,c,d,{id,copy,status,answer,send,timer}){

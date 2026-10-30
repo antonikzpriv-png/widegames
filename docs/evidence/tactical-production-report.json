@@ -1,0 +1,113 @@
+{
+  "pin": "104f494d6c575901b113cbf2ba57960365326355",
+  "node": "v24.20.0",
+  "sourceRoot": "D:\\Widegames-work\\tactical-maps-builder-20261029\\_artifacts\\tactical-production-104f494",
+  "dataDir": "D:\\Widegames-work\\tactical-maps-builder-20261029\\_artifacts\\tactical-production-104f494-run-MWbXsv\\private-data",
+  "startedAt": "2026-10-29T23:37:15.934Z",
+  "checks": [
+    "All raw committed blobs match exact source manifest",
+    "Offline production graph contains only local ws8.22.0; Puppeteer absent",
+    "Normal schema4 defaults, port3000, actual start and Docker COPY groups are intact",
+    "All deployed local module and browser asset references resolve within shipped groups",
+    "Real budget API seeded labeled uncertain reservation and real store seeded paused legacy1/2/3 fixtures",
+    "Actual production main starts with isolated store ownership and public health",
+    "Every actual public/shared asset fetched byte-exact with local imports, MIME and CSP",
+    "Private source/data/dependency/traversal paths reject; foreign mutation origin rejects",
+    "beacon: authenticated pre-start selection and retry persist; spectators/identity conflicts reject",
+    "beacon: normal-default real start is schema4 with safe roles, map knowledge and fixed spectator view",
+    "beacon: real private note and bounded input cleanup persist; no owner data or action authority for spectators",
+    "beacon: actual authenticated owner/spectator WebSockets keep map/role/position/data scopes",
+    "stormbreak-annex: authenticated pre-start selection and retry persist; spectators/identity conflicts reject",
+    "stormbreak-annex: normal-default real start is schema4 with safe roles, map knowledge and fixed spectator view",
+    "stormbreak-annex: real private note and bounded input cleanup persist; no owner data or action authority for spectators",
+    "stormbreak-annex: actual authenticated owner/spectator WebSockets keep map/role/position/data scopes",
+    "Actual HTTP/WS reject missing/cross-room identities and foreign socket origin",
+    "Actual main SIGTERM handler exits0, closes sockets and releases store/recovery locks",
+    "Durable schema4 maps/settings/seat/input/private notes and accepted action receipts retained without quarantine",
+    "Second actual main restores same DATA_DIR under a new isolated lock token",
+    "beacon: restart keeps exact identity/map/settings/note receipts; original retries cause no extra owner actions",
+    "stormbreak-annex: restart keeps exact identity/map/settings/note receipts; original retries cause no extra owner actions",
+    "Restarted actual main gracefully exits0 and releases its own lock",
+    "Labeled uncertain daily reservation and sampled legacy1/2/3 files remain byte-exact across both mains",
+    "All source blobs unchanged; zero external provider fetches, forced kills and socket privacy errors"
+  ],
+  "children": [
+    {
+      "pid": 16132,
+      "origin": "http://127.0.0.1:58634",
+      "stdout": "Lantern Wake — open http://127.0.0.1:58634\nListening on 127.0.0.1:58634. AI provider: demo. Provider credentials stay server-side.\n",
+      "stderr": "",
+      "messages": [
+        {
+          "type": "main-loaded",
+          "handlers": 1
+        },
+        {
+          "type": "shutdown-handler",
+          "handlers": 1
+        }
+      ],
+      "exit": {
+        "code": 0,
+        "signal": null
+      }
+    },
+    {
+      "pid": 24440,
+      "origin": "http://127.0.0.1:58653",
+      "stdout": "Lantern Wake — open http://127.0.0.1:58653\nListening on 127.0.0.1:58653. AI provider: demo. Provider credentials stay server-side.\n",
+      "stderr": "",
+      "messages": [
+        {
+          "type": "main-loaded",
+          "handlers": 1
+        },
+        {
+          "type": "shutdown-handler",
+          "handlers": 1
+        }
+      ],
+      "exit": {
+        "code": 0,
+        "signal": null
+      }
+    }
+  ],
+  "providerFetchAttempts": 0,
+  "forcedStops": 0,
+  "socketErrors": [],
+  "maps": [
+    {
+      "id": "beacon",
+      "roomId": "oeRI5HW3VUwxlgB2hdicB2Py",
+      "seat": "p1",
+      "settingsRevision": 2
+    },
+    {
+      "id": "stormbreak-annex",
+      "roomId": "izeMaZSsN1eJoU0HJzV_K6SV",
+      "seat": "p1",
+      "settingsRevision": 1
+    }
+  ],
+  "sourceFiles": 288,
+  "tarSha256": "b5dab45f3e363befc30acffe6aa4eea5833709047112c1b97a3b109992975eb8",
+  "updater": "N/A: web service",
+  "runtimeFiles": 72,
+  "staticAssets": 43,
+  "importEdges": 150,
+  "browserReferences": 5,
+  "uncertainReservation": {
+    "id": "fixture:uncertain:production-no-send",
+    "amount": 0.01,
+    "label": "Synthetic uncertain reservation; no provider send occurred"
+  },
+  "legacySchemas": [
+    1,
+    2,
+    3
+  ],
+  "status": "passed",
+  "finishedAt": "2026-10-29T23:37:22.543Z",
+  "elapsedMs": 6609
+}

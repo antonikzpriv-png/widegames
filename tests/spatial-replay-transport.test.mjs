@@ -1,13 +1,15 @@
+import nodePath from 'node:path';
+import {fileURLToPath} from 'node:url';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {mkdtemp,rm} from 'node:fs/promises';
+import {mkdir,mkdtemp,rm} from 'node:fs/promises';
 import {createGameServer} from '../server/transport.mjs';
 import {spatialFixture} from './spatial-replay-fixture.mjs';
 
 test('replay API binds exact completed match to room authorization, denies live/paused/archive mismatches and excludes private context',async t=>{
- const directory=await mkdtemp('/workspace/widegames/_artifacts/spatial-http-');
+ const parent=new URL('../_artifacts/test-temp/',import.meta.url);await mkdir(parent,{recursive:true});const directory=await mkdtemp(new URL('spatial-http-',parent));
  let origin;const service=await createGameServer({dataDir:directory,publicOrigin:'http://localhost:3000',worldMode:true,tickMs:60000,now:()=>1000,ai:{provider:'demo'}},{aiController:{describe:()=>({mode:'demo',strategy:'demo',calls:2,tokens:40,costUsd:.01}),async decide(){return null;}}});
- t.after(async()=>{await service.close();await rm(directory,{recursive:true,force:true});});await new Promise(r=>service.server.listen(0,'127.0.0.1',r));origin='http://127.0.0.1:'+service.server.address().port;
+ t.after(async()=>{await service.close();assert.equal(nodePath.dirname(directory),nodePath.resolve(fileURLToPath(parent)));await rm(directory,{recursive:true,force:true});});await new Promise(r=>service.server.listen(0,'127.0.0.1',r));origin='http://127.0.0.1:'+service.server.address().port;
  async function req(path,{cookie,body}={}){const r=await fetch(origin+path,{method:body?'POST':'GET',headers:{Origin:'http://localhost:3000',...(cookie?{Cookie:cookie}:{}),...(body?{'Content-Type':'application/json'}:{})},...(body?{body:JSON.stringify(body)}:{})});return {status:r.status,body:await r.json(),cookie:r.headers.get('set-cookie')?.split(';')[0]};}
  const host=await req('/api/rooms',{body:{mode:'human'}}),other=await req('/api/rooms',{body:{mode:'human'}}),path='/api/rooms/'+host.body.roomId+'/replay';
  await req('/api/rooms/'+host.body.roomId+'/start',{cookie:host.cookie,body:{id:'spatial-start'}});

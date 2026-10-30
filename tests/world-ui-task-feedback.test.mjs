@@ -13,8 +13,15 @@ const uiRoot = process.env.WORLD_UI_TEST_UI_ROOT ? pathToFileURL(resolve(process
 const world = await import(new URL('shared/world.mjs', sourceRoot));
 const { CHARACTERS } = await import(new URL('shared/contracts.mjs', sourceRoot));
 const source = path => readFileSync(new URL(path, uiRoot), 'utf8');
-const strip = text => text.replace(/^\uFEFF/, '').replace(/^import .*$/gm, '').replace(/^export /gm, '');
+const strip = text => text.replace(/^\uFEFF/gm, '').replace(/^import .*$/gm, '').replace(/^export /gm, '');
 const flush = () => new Promise(resolve => setImmediate(resolve));
+const {getMap} = await import(new URL('shared/maps/index.mjs', sourceRoot));
+const mapHelpers = await import(new URL('public/world/map-model.mjs', uiRoot));
+const beaconHelpers = await import(new URL('public/world/beacon-model.mjs', uiRoot));
+const spectatorHelpers=await import(new URL('public/world/spectator.mjs',uiRoot));
+// Real shared dependency introduced by merged ghost/task UI, no behavior stub.
+const featureHelpers=/canViewAct/.test(source('public/world/experience.mjs'))?await import(new URL('shared/features.mjs',uiRoot)):{};
+
 
 // Actual frontend logic, controlled network completions, minimal DOM. These
 // adversarial retained callbacks are not claims about native click scheduling.
@@ -43,9 +50,7 @@ function fixture() {
   }
   document.createElement = tag => new Node(tag); document.body = new Node('body'); document.activeElement = document.body;
   const win = { ...events(), setInterval: () => 1, clearInterval() {} }, calls = [];
-  const context = vm.createContext({ document, window: win, world, isWalkable: world.isWalkable, getWorld:world.getWorld, CHARACTERS, console, Date, performance: { now: () => 100 }, matchMedia: () => ({ matches: true }), requestAnimationFrame: () => 1, cancelAnimationFrame() {},
-    // This fixture exercises human task ownership; observer UI is inert.
-    observerAgents: () => [], createSpectatorInput: () => ({step(){},stop(){},dispose(){}}), createSpectatorInspector: () => ({node:document.createElement('aside'),update(){},reset(){}}),
+  const context = vm.createContext({ document, window: win, world, CHARACTERS, getMap, ...mapHelpers, mapRoomName:mapHelpers.roomName, ...beaconHelpers, ...featureHelpers, ...spectatorHelpers, console, Date, performance: { now: () => 100 }, matchMedia: () => ({ matches: true }), requestAnimationFrame: () => 1, cancelAnimationFrame() {},
     drawKeeper() {}, createWorldScene: () => ({ update() {}, draw() {}, toWorld() { return { x: 0, y: 0 }; }, dispose() {} }), replayText: event => event.type, replayEvents: value => value.replay ?? [], outcomeText: reason => reason });
   const module = (path, names) => Object.assign(context, vm.runInContext(`(()=>{${strip(source(path))};return {${names}};})()`, context));
   module('public/presentation.mjs', 'keeperLabel,nameOf');
@@ -54,6 +59,15 @@ function fixture() {
   module('public/world/input.mjs', 'createWorldInput');
   module('public/world/puzzles.mjs', 'createTaskPuzzle');
   module('public/world/phases.mjs', 'createCouncil,createResults');
+  // New dependencies are actual modules in the fixture DOM, never inert replacements.
+  // Preserve the historical 9e equipment fixture whose source predates these imports.
+  if (/createLocalSound/.test(source('public/world/experience.mjs'))) {
+    module('public/world/lobby-map.mjs', 'createLobbyMapSelector');
+    module('public/world/sound.mjs', 'createLocalSound');
+    module('public/world/camera-cards.mjs', 'createCameraCards');
+    module('public/world/beacon-panel.mjs', 'createBeaconPanel');
+  }
+  if(/createSpectatorInput/.test(source('public/world/experience.mjs')))module('public/world/spectator.mjs','createSpectatorInput,createSpectatorInspector,observerAgents,observerGame');
   module('public/world/experience.mjs', 'createWorldExperience');
   const host = document.createElement('main'); document.body.append(host);
   let action = async (type, fields) => { calls.push({ type, fields }); };

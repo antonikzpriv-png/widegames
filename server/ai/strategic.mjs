@@ -1,6 +1,7 @@
-import { getWorld, WORLD, WORLD_STATIONS, distance, findWorldPath, canSeeWorldPoint } from '../../shared/world.mjs';
-import { visibleWorldPlayer, worldTaskAction } from './world.mjs';
+import {getMap,mapFor,mapIdentity} from '../../shared/maps/index.mjs';
+import { visibleWorldPlayer, worldTaskAction, worldGeometry, worldRoute } from './world.mjs';
 
+const distance=(a,b)=>a&&b&&Number.isFinite(a.x)&&Number.isFinite(b.x)?Math.hypot(a.x-b.x,a.y-b.y):Infinity;
 const visible = view => (view.players ?? []).filter(p => visibleWorldPlayer(view, p));
 const point = p => p && Number.isFinite(p.x) && Number.isFinite(p.y);
 const ready = (view, key) => (view.self.cooldowns?.[key] ?? 0) <= view.serverNow;
@@ -8,11 +9,14 @@ const ready = (view, key) => (view.self.cooldowns?.[key] ?? 0) <= view.serverNow
 const evidence = view => (view.events ?? []).filter(e => ['body', 'witness'].includes(e.type)).map(e => JSON.stringify([e.type,e.bodyId,e.playerId,e.targetId,e.at]));
 export function situation(view, memory = {}) {
   return JSON.stringify([view.meeting?.id, view.sabotage?.active ? view.sabotage.deadlineAt : null,
+    mapIdentity(mapFor(view)),view.self.id,view.self.alive,view.self.ghost===true,!!(view.self.transit||view.systems?.selfTransit),
+    (view.systems?.doors??[]).filter(d=>d.closed).map(d=>d.id).sort(),
+    view.sabotage?.sites?.map(s=>[s.id,s.progress]),
     (view.self.tasks ?? []).map(t => memory.intention?.goal === 'task_route' ? [t.id, t.roomId] : [t.id, !!t.completed]),
     memory.seenEvents ?? evidence(view)]);
 }
 export function remember(view, memory) {
-  const {WORLD,WORLD_STATIONS,findWorldPath,canSeeWorldPoint}=getWorld(view.mapId,view.mapRevision??1);
+  const {WORLD,WORLD_STATIONS,distance,canSeeWorldPoint}=worldGeometry(view);
   memory.seenEvents = Array.isArray(memory.seenEvents) ? memory.seenEvents.filter(s => typeof s === 'string' && s.length <= 240).slice(-48) : [];
   memory.observations = Array.isArray(memory.observations) ? memory.observations
     .filter(o => Number.isFinite(o?.at) && Array.isArray(o.players)).slice(-12)
@@ -39,11 +43,15 @@ export function remember(view, memory) {
   memory.suspicions = Object.entries(memory.suspicion ?? {}).slice(0, 24).map(([id, score]) => ({ id, score, at: view.serverNow }));
 }
 export function intentions(view, memory) {
-  const {WORLD,WORLD_STATIONS,findWorldPath,canSeeWorldPoint}=getWorld(view.mapId,view.mapRevision??1);
+  const {WORLD,WORLD_STATIONS,distance,canSeeWorldPoint}=worldGeometry(view);
   const choices = [];
   const add = (goal, fields = {}) => choices.push({ type: 'intend', goal, ...fields });
   if (view.self.role === 'crew') {
-    if (view.sabotage?.active && memory.worldRepairDeadline !== view.sabotage.deadlineAt) add('repair', { roomId: view.sabotage.roomId, deadlineAt: view.sabotage.deadlineAt });
+    if(view.beaconVersion){
+      if(view.sabotage?.active)for(const site of view.sabotage.sites??[])if(site.progress!==1)add('repair',{roomId:site.roomId,siteId:site.id,systemId:view.sabotage.kind,deadlineAt:view.sabotage.deadlineAt});
+      for(const systemId of ['lights','communications'])if(view.systems?.[systemId]?.active)for(const site of mapFor(view).fixtures.repairs[systemId])add('repair',{roomId:site.roomId,siteId:site.id,systemId,deadlineAt:view.systems[systemId].deadlineAt});
+      if(!view.sabotage?.active&&!view.systems?.communications?.active)for(const device of (view.investigation?.devices??[]).slice(0,3))if(point(device.position))add('device',{deviceId:device.id,roomId:device.roomId});
+    }else if (view.sabotage?.active && memory.worldRepairDeadline !== view.sabotage.deadlineAt) add('repair', { roomId: view.sabotage.roomId, deadlineAt: view.sabotage.deadlineAt });
     const work = (view.self.tasks ?? []).filter(t => !t.completed).slice(0, 8);
     for (const t of work) add('task', { taskId: t.id, roomId: t.roomId });
     if (work.length >= 2) {
@@ -51,11 +59,11 @@ export function intentions(view, memory) {
       add('task_route', { taskIds: work.slice(0, 3).map(t => t.id).reverse() });
     }
   } else {
-    if (view.settings?.sabotageEnabled !== false && !view.sabotage?.active) add('sabotage');
+    if(view.beaconVersion){for(const h of view.interactions??[])if(h.enabled&&h.type==='systemSabotage')add('sabotage',{kind:h.fields.kind,targetId:h.fields.targetId});for(const h of view.interactions??[])if(h.enabled&&h.type==='vent')add('passage',{entryId:h.fields.entryId,exitId:h.fields.exitId});}else if (view.settings?.sabotageEnabled!==false&&!view.sabotage?.active) add('sabotage');
     for (const p of visible(view).slice(0, 4)) add('isolate', { targetId: p.id });
     for (const roomId of Object.keys(WORLD_STATIONS).slice(0, 4)) add('fake_work', { roomId });
   }
-  for (const e of (view.events ?? []).filter(e => e.type === 'body' && !e.reported && e.position && canSeeWorldPoint(view.self.position, e.position, view.settings?.vision)).slice(-2)) {
+  for (const e of (view.events ?? []).filter(e => e.type === 'body' && !e.reported && e.position && (view.beaconVersion||canSeeWorldPoint(view.self.position, e.position, view.settings?.vision))).slice(-2)) {
     if (Number.isFinite(e.position.x) && Number.isFinite(e.position.y)) add('report', { bodyId: e.bodyId, position: { x: e.position.x, y: e.position.y } });
   }
   for (const p of visible(view).slice(0, 3)) {
@@ -83,18 +91,20 @@ export function install(memory, intention, view) {
 // Returns only legal engine action shapes. Historical sightings never supply a
 // moving player's current coordinate. The engine validates every proposal again.
 export function execute(view, memory) {
-  const {WORLD,WORLD_STATIONS,findWorldPath,canSeeWorldPoint}=getWorld(view.mapId,view.mapRevision??1);
+  const {WORLD,WORLD_STATIONS,distance,canSeeWorldPoint}=worldGeometry(view);
   const plan = memory.intention, progress = memory.planProgress;
   if (!plan || !progress || !Number.isFinite(plan.startedAt) || !Number.isFinite(plan.expiresAt) ||
       plan.startedAt > view.serverNow || plan.expiresAt > plan.startedAt + 30000 ||
       !Number.isSafeInteger(progress.steps) || progress.steps < 0 ||
       !Number.isSafeInteger(progress.failures) || progress.failures < 0) return null;
-  if (!['task', 'task_route', 'repair', 'follow', 'avoid', 'isolate', 'sabotage', 'report', 'fake_work', 'alibi', 'investigate', 'position'].includes(plan.goal) ||
-      view.phase !== 'roam' || !view.self.alive || plan.expiresAt <= view.serverNow ||
+  if (!['task', 'task_route', 'repair', 'follow', 'avoid', 'isolate', 'sabotage', 'report', 'fake_work', 'alibi', 'investigate', 'position', 'device', 'passage'].includes(plan.goal) ||
+      view.phase !== 'roam' || !view.self.alive || view.self.transit || view.systems?.selfTransit || plan.expiresAt <= view.serverNow ||
       plan.situation !== situation(view, memory) || progress.failures >= 3) return null;
   const allowed = new Set(view.availableActions ?? []), self = view.self;
   const wait = () => allowed.has('wait') ? { type: 'wait' } : null;
   const action = (type, fields = {}) => allowed.has(type) ? { type, ...fields } : wait();
+  const controls=(view.interactions??[]).filter(h=>h.enabled),proposal=h=>({type:h.type,...h.fields});
+  if(plan.goal==='passage'){const h=controls.find(h=>h.type==='vent'&&h.fields.entryId===plan.entryId&&h.fields.exitId===plan.exitId);return h?proposal(h):null;}
   let target = WORLD_STATIONS[plan.roomId], radius = WORLD.interactionRadius, taskId = plan.taskId;
   if (plan.goal === 'task_route') {
     if (self.role !== 'crew' || !Array.isArray(plan.taskIds) || !plan.taskIds.length || plan.taskIds.length > 3) return null;
@@ -106,12 +116,14 @@ export function execute(view, memory) {
     }
     if (progress.routeIndex >= plan.taskIds.length) return null;
   }
+  if(plan.goal==='device'){const d=(view.investigation?.devices??[]).find(d=>d.id===plan.deviceId);if(!d||view.systems?.communications?.active)return null;target=d.position;}
+  if(plan.goal==='repair'&&view.beaconVersion){const effect=['lights','communications'].includes(plan.systemId)?view.systems?.[plan.systemId]:view.sabotage;if(!effect?.active||effect.deadlineAt!==plan.deadlineAt)return null;const site=(effect.sites??mapFor(view).fixtures.repairs[plan.systemId]??[]).find(s=>s.id===plan.siteId&&s.progress!==1);if(!site)return null;target=site.position;}
   if (plan.goal === 'investigate' && plan.position) target = plan.position;
   if (['follow', 'avoid', 'isolate'].includes(plan.goal)) {
     const player = visible(view).find(p => p.id === plan.targetId);
     if (!player) return null;
     target = player.position;
-    if (plan.goal === 'avoid') target = Object.values(WORLD_STATIONS).filter(p => findWorldPath(self.position, p)).sort((a,b) => distance(b, player.position) - distance(a, player.position))[0];
+    if (plan.goal === 'avoid') target = Object.values(WORLD_STATIONS).filter(p => worldRoute(view,p)).sort((a,b) => distance(b, player.position) - distance(a, player.position))[0];
     if (plan.goal === 'isolate') {
       if (self.role !== 'saboteur') return null;
       radius = WORLD.killRadius;
@@ -120,18 +132,20 @@ export function execute(view, memory) {
     }
   }
   if (plan.goal === 'sabotage') {
-    if (self.role !== 'saboteur' || view.settings?.sabotageEnabled === false || view.sabotage?.active) return null;
+    if(self.role!=='saboteur'||view.settings?.sabotageEnabled===false)return null;
+    if(view.beaconVersion){const h=controls.find(h=>h.type==='systemSabotage'&&h.fields.kind===plan.kind&&h.fields.targetId===plan.targetId);return h?proposal(h):null;}
+    if(view.sabotage?.active)return null;
     // Waiting for fewer witnesses is a bounded timing decision.
     if (ready(view, 'sabotageAt') && visible(view).length <= 1) return action('sabotage');
     return wait();
   }
   if (plan.goal === 'report') {
     const body = (view.events ?? []).find(e => e.type === 'body' && e.bodyId === plan.bodyId && !e.reported && e.position);
-    if (!body || !canSeeWorldPoint(self.position, body.position, view.settings?.vision)) return null;
+    if (!body || (!view.beaconVersion&&!canSeeWorldPoint(self.position, body.position,view.settings?.vision))) return null;
     target = body.position; radius = WORLD.reportRadius;
   }
   if (plan.goal === 'task' && (self.role !== 'crew' || !(self.tasks ?? []).some(t => t.id === plan.taskId && !t.completed && t.roomId === plan.roomId))) return null;
-  if (plan.goal === 'repair' && (self.role !== 'crew' || !view.sabotage?.active || view.sabotage.deadlineAt !== plan.deadlineAt || memory.worldRepairDeadline === plan.deadlineAt)) return null;
+  if (plan.goal === 'repair' && !view.beaconVersion && (self.role !== 'crew' || !view.sabotage?.active || view.sabotage.deadlineAt !== plan.deadlineAt || memory.worldRepairDeadline === plan.deadlineAt)) return null;
   if (!target || !Number.isFinite(target.x) || !Number.isFinite(target.y) || !self.position) return null;
   const remaining = distance(self.position, target);
   progress.steps++;
@@ -140,6 +154,8 @@ export function execute(view, memory) {
     if (['task', 'task_route'].includes(plan.goal) && ready(view, 'taskAt') && allowed.has('task')) {
       return worldTaskAction(view, self.tasks.find(t => t.id === taskId));
     }
+    if(plan.goal==='repair'&&view.beaconVersion){const h=controls.find(h=>h.type==='systemRepair'&&h.fields.systemId===plan.systemId&&h.fields.siteId===plan.siteId);return h?proposal(h):null;}
+    if(plan.goal==='device'){const h=controls.find(h=>h.type==='investigate'&&h.fields.deviceId===plan.deviceId);return h?proposal(h):null;}
     if (plan.goal === 'repair') return action('repair');
     if (plan.goal === 'report') return action('report', { bodyId: plan.bodyId });
     return wait(); // fake work, alibi and positioning never complete crew tasks
@@ -155,7 +171,7 @@ export function execute(view, memory) {
   }
   progress.lastDistance = remaining;
   progress.lastPosition = { ...self.position };
-  if (!findWorldPath(self.position, target)) return null;
+  if (!worldRoute(view,target)) return null;
   if (self.moving && self.destination && distance(self.destination, target) < radius) return wait();
   return action('navigate', { x: target.x, y: target.y });
 }

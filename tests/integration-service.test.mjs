@@ -1,20 +1,24 @@
 /** Real HTTP/room/engine boundaries; explicitly stub only model decisions. */
 import test from 'node:test';import assert from 'node:assert/strict';
-import {mkdtemp,rm} from 'node:fs/promises';import os from 'node:os';import path from 'node:path';
+import {mkdir,mkdtemp,readFile,rm} from 'node:fs/promises';import path from 'node:path';import {fileURLToPath} from 'node:url';
 import {createGameServer} from '../server/transport.mjs';import {loadConfig} from '../server/config.mjs';
 const origin='http://lantern.test';
+const temporary=fileURLToPath(new URL('../_artifacts/test-temp/',import.meta.url));
 async function service(t,extras={},dependencies={}){
- const directory=await mkdtemp(path.join(os.tmpdir(),'lantern-integration-'));
+ await mkdir(temporary,{recursive:true});const directory=await mkdtemp(path.join(temporary,'lantern-integration-'));let game;
+ t.after(async()=>{await game?.close();const relative=path.relative(temporary,directory);assert(relative&&!relative.startsWith('..')&&!path.isAbsolute(relative),'cleanup stays inside the repository test temp');await rm(directory,{recursive:true,force:true});});
  const seen=new Set();let id=0;
  const aiController={describe:()=>({mode:'demo',provider:'demo',calls:0,tokens:0,costUsd:0}),async decide({view,player}){seen.add(player.id);assert.equal(view.self.id,player.id);assert(view.players.every(p=>!Object.hasOwn(p,'role')));return {id:'probe:'+id++,type:'wait'};}};
  // Historical scheduler/idempotency fixtures retain schema1 room-step movement.
- // Actual world input/navigation boundaries are exercised in world-* tests.
- const config={...loadConfig({DATA_DIR:directory,PUBLIC_ORIGIN:origin}),worldMode:false,mapRevision:1,tickMs:25,...extras};config.ai={...config.ai,decisionIntervalMs:100};
- const game=await createGameServer(config,{aiController,...dependencies});await new Promise(r=>game.server.listen(0,'127.0.0.1',r));
+ // Actual world/schema3 denial boundaries remain in world-* and beacon-* tests.
+ // Strip production map selection/revision entirely: even mapId:beacon or
+ // mapRevision:1 selects a versioned walking lobby rather than this board fixture.
+ const {mapId:productionMap,mapRevision:productionRevision,...baseConfig}=loadConfig({DATA_DIR:directory,PUBLIC_ORIGIN:origin,AI_PROVIDER:'demo'});
+ const config={...baseConfig,worldMode:false,systemsMode:false,tacticalMode:false,stationTasksMode:false,tickMs:25,...extras};config.ai={...config.ai,decisionIntervalMs:100};
+ game=await createGameServer(config,{aiController,...dependencies});await new Promise(r=>game.server.listen(0,'127.0.0.1',r));
  const base='http://127.0.0.1:'+game.server.address().port;
- t.after(async()=>{await game.close();await rm(directory,{recursive:true,force:true});});
- async function request(route,body,cookie){const response=await fetch(base+route,{method:body===undefined?'GET':'POST',headers:{Origin:origin,...(body===undefined?{}:{'Content-Type':'application/json'}),...(cookie?{Cookie:cookie}:{})},...(body===undefined?{}:{body:JSON.stringify(body)})});return {status:response.status,body:await response.json(),cookie:response.headers.get('set-cookie')?.split(';')[0]};}
- return {request,seen};
+ async function request(route,body,cookie){const response=await fetch(base+route,{method:body===undefined?'GET':'POST',headers:{Origin:origin,...(body===undefined?{}:{'Content-Type':'application/json'}),...(cookie?{Cookie:cookie}:{})},...(body===undefined?{}:{body:JSON.stringify(body)})});const bodyData=await response.json();if(route.endsWith('/start')&&response.status===200){assert.equal(game.rooms.get(bodyData.roomId).data.state.schemaVersion,1,'fixture must exercise board room-step rules');assert.equal(bodyData.game.worldVersion,undefined);}return {status:response.status,body:bodyData,cookie:response.headers.get('set-cookie')?.split(';')[0]};}
+ return {request,seen,directory};
 }
 test('real scheduler gives all six AI identities a turn when due times overlap',async t=>{
  const {request,seen}=await service(t);const made=await request('/api/rooms',{mode:'spectator'});assert.equal(made.status,201);
@@ -23,11 +27,12 @@ test('real scheduler gives all six AI identities a turn when due times overlap',
  assert.deepEqual([...seen].sort(),['p1','p2','p3','p4','p5','p6']);
 });
 test('HTTP denial state persists: a rejected request ID cannot become a different action',async t=>{
- let now=1000000;const {request}=await service(t,{now:()=>now});
+ let now=1000000;const {request,directory}=await service(t,{now:()=>now});
  const made=await request('/api/rooms',{mode:'human'}),route='/api/rooms/'+made.body.roomId;
  await request(route+'/start',{id:'start'},made.cookie);
  assert.equal((await request(route+'/action',{id:'move',type:'move',roomId:'archive'},made.cookie)).status,200);
  const denied=await request(route+'/action',{id:'denied',type:'move',roomId:'engine'},made.cookie);assert.equal(denied.status,409);assert.equal(denied.body.error.code,'INVALID_ROOM');
+ const saved=JSON.parse(await readFile(path.join(directory,'room-'+made.body.roomId+'.json'),'utf8')),receipt=saved.state.requests.p1.find(r=>r.id==='denied');assert.equal(receipt.accepted,false);assert.equal(receipt.error.code,'INVALID_ROOM','HTTP denial is durable before returning its error');
  now+=2000;
  const replayed=await request(route+'/action',{id:'denied',type:'move',roomId:'bridge'},made.cookie);
  assert.equal(replayed.status,409);assert.equal(replayed.body.error.code,'REQUEST_CONFLICT');
