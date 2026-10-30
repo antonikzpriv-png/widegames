@@ -24,11 +24,11 @@ const stepTask=(state,t)=>!!t&&isWorld(state)&&!t.challenge&&(state.schemaVersio
 const featureWorld=(state,p)=>{const w=runtime(state);return {...w,sees:(a,b)=>w.sees(a,b,state,p?.id??null),nearby:(a,b,r)=>w.nearby(a,b,r,state,p?.id??null),walkable:a=>isBeacon(state)?w.walkable(a,state):w.walkable(a),observerOrigin:isBeacon(state)?w.projectWorld(state,p?.id??null,state.updatedAt).vision.origin:null};};
 const ownEntry=(map,id)=>map&&Object.hasOwn(map,id)?map[id]:undefined;
 const mapRuntimes=new Map();
-const mapGeometry=state=>state.map?getMap(state.map).geometry:state.mapId&&state.mapId!=='beacon'?getMap(state.mapId).geometry:geometry;
-const layoutFor=state=>state.map?getMap(state.map).roomLayout:state.mapId&&state.mapId!=='beacon'?getMap(state.mapId).roomLayout:ROOM_LAYOUT;
+const mapGeometry=state=>state.map?getMap(state.map).geometry:state.mapId&&state.mapId!=='beacon'?getMap({id:state.mapId,version:1}).geometry:geometry;
+const layoutFor=state=>state.map?getMap(state.map).roomLayout:state.mapId&&state.mapId!=='beacon'?getMap({id:state.mapId,version:1}).roomLayout:ROOM_LAYOUT;
 const spatialFor=state=>{if(!state.map)return spatialEngine;const map=getMap(state.map),key=map.id+':'+map.version;if(!mapRuntimes.has(key))mapRuntimes.set(key,createSpatialWorld(map.geometry));return mapRuntimes.get(key);};
 const legacyRuntimes=new Map();
-const worldFor=state=>{if(!state.mapId||state.mapId==='beacon')return worldEngine;const map=getMap(state.mapId),key=map.id+':'+map.version;if(!legacyRuntimes.has(key))legacyRuntimes.set(key,worldRuntime(map.geometry));return legacyRuntimes.get(key);};
+const worldFor=state=>{if(!state.mapId||state.mapId==='beacon')return worldEngine;const map=getMap({id:state.mapId,version:1}),key=map.id+':'+map.version;if(!legacyRuntimes.has(key))legacyRuntimes.set(key,worldRuntime(map.geometry));return legacyRuntimes.get(key);};
 const runtime=state=>isBeacon(state)?spatialFor(state):worldFor(state);
 const preparedNavigation=new Set();
 /** Warm immutable navigation before accepting players; no match/AI state exists here. */
@@ -173,7 +173,7 @@ function advance(state,now) {
 export function createMatch({id,mode='human',humanPlayerId,now=Date.now(),seed,config={},world=false,systems=false,roster,saboteurCount=1,humanPlayerIds,beaconRules={},tactical=false,map,stationTasks=false,features,mapId}={}) {
   if(typeof stationTasks!=='boolean'||stationTasks&&!tactical||typeof tactical!=='boolean'||(!tactical&&map!==undefined))throw new TypeError('Invalid tactical option');
   if(mapId!==undefined&&(typeof mapId!=='string'||tactical))throw new TypeError('Invalid legacy map selection');
-  const expanded=mapId!==undefined&&mapId!=='beacon'?getMap(mapId):null;
+  const expanded=mapId!==undefined&&mapId!=='beacon'?getMap({id:mapId,version:1}):null;
   if(expanded&&(!world||systems||expanded.tactical!==false||expanded.taskProtocol!=='taskStep'))throw new TypeError('Expanded maps require their authored world2 mode');
   if(tactical){world=true;systems=true;}
   const selected=tactical?getMap(map):expanded,layout=selected?.roomLayout??ROOM_LAYOUT,roomIds=layout.map(r=>r.id);
