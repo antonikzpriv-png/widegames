@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import * as engine from '../server/engine/index.mjs';
 import {createAiController} from '../server/ai/index.mjs';
 import {getMap,TACTICAL_MAP_CATALOG} from '../shared/maps/index.mjs';
+import {worldTaskAction} from '../server/ai/world.mjs';
 import {localRoute,deviceFacts} from '../server/features/strategy/index.mjs';
 let request=0;
 const act=(s,p,type,fields,now)=>{const r=engine.applyAction(s,p,{id:'tactical-fixture:'+ ++request,type,...fields},now);assert(r.accepted,JSON.stringify({type,fields,error:r.error}));return r.state;};
@@ -18,7 +19,18 @@ test('eight custom keepers/two saboteurs finish Annex using the same tactical en
 });
 
 for(const map of TACTICAL_MAP_CATALOG)test('demo tactical equipment and passages are actual validated capabilities on '+map.id,async t=>{
- const outbound=t.mock.method(globalThis,'fetch',()=>{throw Error('No providers');}),m=getMap(map.id);let s=engine.createMatch({id:'capability-'+map.id,tactical:true,map:{id:map.id,version:map.version},seed:3,now:1000}),now=1000;const ai=createAiController({config:{provider:'demo',decisionIntervalMs:1,maxCalls:0}}),context={};const pair=s.players.flatMap(p=>p.role==='crew'?m.fixtures.devices.filter(d=>!p.tasks.some(t=>t.roomId===d.roomId)).map(d=>({p,d})):[])[0];assert(pair);const initial=await ai.decide({view:engine.getPlayerView(s,pair.p.id,now),player:pair.p,context});if(initial)s=act(s,pair.p.id,initial.type,Object.fromEntries(Object.entries(initial).filter(([k])=>!['type','id'].includes(k))),now);({s,now}=travel(s,pair.p.id,pair.d.position,now+1));now+=12001;s=engine.tick(s,now).state;const read=await ai.decide({view:engine.getPlayerView(s,pair.p.id,now),player:pair.p,context});assert.equal(read.type,'investigate');assert.equal(read.deviceId,pair.d.id);s=act(s,pair.p.id,read.type,{deviceId:read.deviceId},now);const deadline=s.investigation.sessions[pair.p.id].deadlineAt;s=engine.tick(s,deadline).state;now=deadline;const own=engine.getPlayerView(s,pair.p.id,now);assert.equal(own.investigation.observations.length,1);assert.deepEqual(deviceFacts(own)[0].map,s.map);assert.deepEqual(engine.getPlayerView(s,null,now).investigation.observations,[]);
+ const outbound=t.mock.method(globalThis,'fetch',()=>{throw Error('No providers');}),m=getMap(map.id);let s=engine.createMatch({id:'capability-'+map.id,tactical:true,map:{id:map.id,version:map.version},seed:3,now:1000}),now=1000;const ai=createAiController({config:{provider:'demo',decisionIntervalMs:1,maxCalls:0}}),context={};const pair=s.players.flatMap(p=>p.role==='crew'?m.fixtures.devices.filter(d=>!p.tasks.some(t=>t.roomId===d.roomId)).map(d=>({p,d})):[])[0];assert(pair);const initial=await ai.decide({view:engine.getPlayerView(s,pair.p.id,now),player:pair.p,context});if(initial)s=act(s,pair.p.id,initial.type,Object.fromEntries(Object.entries(initial).filter(([k])=>!['type','id'].includes(k))),now);// The task-commitment policy completes assigned jobs before optional equipment.
+ for(const assigned of pair.p.tasks){
+  ({s,now}=travel(s,pair.p.id,m.geometry.WORLD_STATIONS[assigned.roomId],now+1));
+  for(let step=0;step<20;step++){
+   const own=s.players.find(p=>p.id===pair.p.id).tasks.find(t=>t.id===assigned.id);if(own.completed)break;
+   now=Math.max(now,s.players.find(p=>p.id===pair.p.id).cooldowns.taskAt,own.progress?.readyAt??0);s=engine.tick(s,now).state;
+   const view=engine.getPlayerView(s,pair.p.id,now),task=view.self.tasks.find(t=>t.id===assigned.id),action=worldTaskAction(view,task);
+   assert.notEqual(action.type,'wait','Assigned task must make authoritative progress');s=act(s,pair.p.id,action.type,Object.fromEntries(Object.entries(action).filter(([key])=>key!=='type')),now);
+  }
+  assert(s.players.find(p=>p.id===pair.p.id).tasks.find(t=>t.id===assigned.id).completed);
+ }
+ ({s,now}=travel(s,pair.p.id,pair.d.position,now+1));now+=12001;s=engine.tick(s,now).state;const read=await ai.decide({view:engine.getPlayerView(s,pair.p.id,now),player:pair.p,context});assert.equal(read.type,'investigate');assert.equal(read.deviceId,pair.d.id);s=act(s,pair.p.id,read.type,{deviceId:read.deviceId},now);const deadline=s.investigation.sessions[pair.p.id].deadlineAt;s=engine.tick(s,deadline).state;now=deadline;const own=engine.getPlayerView(s,pair.p.id,now);assert.equal(own.investigation.observations.length,1);assert.deepEqual(deviceFacts(own)[0].map,s.map);assert.deepEqual(engine.getPlayerView(s,null,now).investigation.observations,[]);
  const sab=s.players.find(p=>p.role==='saboteur');({s,now}=travel(s,sab.id,m.fixtures.vents[0].position,now+1));s=act(s,sab.id,'systemSabotage',{kind:'lights',targetId:'beacon'},now);const vent=await ai.decide({view:engine.getPlayerView(s,sab.id,now),player:sab,context});assert.equal(vent.type,'vent');s=act(s,sab.id,'vent',{entryId:vent.entryId,exitId:vent.exitId},now);assert.equal(s.systems.transit[sab.id].exitId,vent.exitId);assert.equal(outbound.mock.callCount(),0);assert.equal(ai.describe(context).calls,0);
 });
 

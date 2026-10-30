@@ -10,6 +10,7 @@ async function fixture(t,changes={}){
  const ledger=await createDailyBudget({directory,maxCostUsd:5,now:()=>now});await ledger.reserve({id:'preexisting-review-reservation',amount:.0123});const budget=await readFile(path.join(directory,'ai-daily-budget.json'),'utf8');
  const config={...loadConfig({DATA_DIR:directory,PUBLIC_ORIGIN:origin}),tacticalMode:true,tickMs:100000,now:()=>now,...changes},aiController={describe:()=>({mode:'demo',calls:0,tokens:0,costUsd:0,apiKey:marker,memory:marker}),decide:async()=>null};
  t.after(async()=>{await server?.close();assert(path.resolve(directory).startsWith(path.resolve(temp)+path.sep));await rm(directory,{recursive:true,force:true});});
+ for(const key of Object.keys(config))if(config[key]===undefined)delete config[key];
  async function launch(){server=await createGameServer(config,{aiController});server.server.listen(0,'127.0.0.1');await once(server.server,'listening');base='http://127.0.0.1:'+server.server.address().port;}
  await launch();return {directory,budget,get server(){return server;},async restart(){await server.close();now+=100;await launch();},async request(route,body,cookie,headers={}){const r=await fetch(base+route,{method:body===undefined?'GET':'POST',headers:{Origin:origin,...(body===undefined?{}:{'Content-Type':'application/json'}),...(cookie?{Cookie:cookie}:{}),...headers},...(body===undefined?{}:{body:JSON.stringify(body)})});return {status:r.status,body:await r.json(),cookie:r.headers.get('set-cookie')?.split(';')[0]};}};
 }
@@ -51,7 +52,7 @@ test('root private metadata stays excluded and strict store binds map/preset/tas
 });
 
 test('legacy root constructor has no tactical lobby metadata or settings mutation',async t=>{
- const f=await fixture(t,{tacticalMode:false}),host=await room(f),before=JSON.stringify(f.server.rooms.get(host.id).data);for(const key of ['map','preset','availableMaps','settingsRevision'])assert.equal(host.body[key],undefined);
+ const f=await fixture(t,{tacticalMode:false,mapId:undefined,mapRevision:undefined}),host=await room(f),before=JSON.stringify(f.server.rooms.get(host.id).data);for(const key of ['map','preset','availableMaps','settingsRevision'])assert.equal(host.body[key],undefined);
  assert.equal((await f.request(host.route+'/settings',{id:'not-tactical',mapId:'stormbreak-annex',expectedRevision:0},host.cookie)).body.error.code,'SETTINGS_UNAVAILABLE');assert.equal(JSON.stringify(f.server.rooms.get(host.id).data),before);
 });
 
