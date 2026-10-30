@@ -34,7 +34,7 @@ const preparedNavigation=new Set();
 /** Warm immutable navigation before accepting players; no match/AI state exists here. */
 export function prepareNavigation(references=MAP_CATALOG.map(({id,version})=>({id,version}))){
  if(!Array.isArray(references)||references.length>8)throw new TypeError('Invalid navigation preparation');
- const result=[];for(const reference of references){const map=getMap(reference),key=map.id+':'+map.version;let warmed=false;if(!preparedNavigation.has(key)){const g=map.geometry,start=g.worldSpawn('p1'),target=Object.values(g.WORLD_STATIONS).sort((a,b)=>g.distance(start,b)-g.distance(start,a))[0];const state={map:{id:map.id,version:map.version},systems:{doors:[],transit:{}}};const route=map.fixtures?spatialFor(state).navigation({id:'prepare',alive:true,position:start},target,0,state):worldFor({mapId:map.id}).navigation({id:'prepare',alive:true,position:start},target,0);if(!route)throw new Error('Registered map navigation is unavailable');preparedNavigation.add(key);warmed=true;}result.push({id:map.id,version:map.version,warmed});}return result;
+ const result=[];for(const reference of references){const map=getMap(reference),key=map.id+':'+map.version;let warmed=false;if(!preparedNavigation.has(key)){const g=map.geometry,start=g.worldSpawn('p1'),target=Object.values(g.WORLD_STATIONS).sort((a,b)=>g.distance(start,b)-g.distance(start,a))[0];const state={map:{id:map.id,version:map.version},systems:{doors:[],transit:{}}};const route=map.tactical!==false?spatialFor(state).navigation({id:'prepare',alive:true,position:start},target,0,state):worldFor({mapId:map.id}).navigation({id:'prepare',alive:true,position:start},target,0);if(!route)throw new Error('Registered map navigation is unavailable');preparedNavigation.add(key);warmed=true;}result.push({id:map.id,version:map.version,warmed});}return result;
 }
 
 const nearby=(state,p,target,range=mapGeometry(state).WORLD.interactionRadius)=>runtime(state).nearby(p.position,target,range,state,p.id);
@@ -174,10 +174,10 @@ export function createMatch({id,mode='human',humanPlayerId,now=Date.now(),seed,c
   if(typeof stationTasks!=='boolean'||stationTasks&&!tactical||typeof tactical!=='boolean'||(!tactical&&map!==undefined))throw new TypeError('Invalid tactical option');
   if(mapId!==undefined&&(typeof mapId!=='string'||tactical))throw new TypeError('Invalid legacy map selection');
   const expanded=mapId!==undefined&&mapId!=='beacon'?getMap(mapId):null;
-  if(expanded&&(!world||systems||expanded.tactical!==false))throw new TypeError('Expanded maps require their authored world2 mode');
+  if(expanded&&(!world||systems||expanded.tactical!==false||expanded.taskProtocol!=='taskStep'))throw new TypeError('Expanded maps require their authored world2 mode');
   if(tactical){world=true;systems=true;}
   const selected=tactical?getMap(map):expanded,layout=selected?.roomLayout??ROOM_LAYOUT,roomIds=layout.map(r=>r.id);
-  if(tactical&&selected.tactical===false)throw new TypeError('Map does not support tactical systems');
+  if(tactical&&(selected.tactical===false||!selected.fixtures))throw new TypeError('Map does not support tactical systems');
   if (typeof world!=='boolean'||typeof systems!=='boolean'||(systems&&!world))throw new TypeError('Invalid world option');
   if (typeof id!=='string' || !/^[A-Za-z0-9_-]{1,100}$/.test(id) || !['human','spectator'].includes(mode) || !finiteTime(now) || (!systems&&(humanPlayerId??'p1')!=='p1')) throw new TypeError('Invalid match options');
   if (!config || typeof config!=='object' || Array.isArray(config)) throw new TypeError('Invalid rules');
