@@ -12,3 +12,14 @@
 /* Keep scene typography and controls legible alongside the root landing styles. */
 .lw-world h1,.lw-world h2,.lw-world h3{font-family:system-ui,sans-serif;font-weight:950}.lw-world .lw-secondary,.lw-world .lw-close,.lw-world .lw-vote-button{color:#f8ecd0}.lw-world .lw-replay-log summary{color:#254e5b}.lw-world .lw-feedback{z-index:35}.lw-ai-notice{font-size:10px;color:#f1d49c;margin-top:10px!important;max-width:240px;overflow-wrap:anywhere}.lw-council-heading h1{font-size:clamp(23px,2.7vw,35px)}
 @media(max-width:700px){.lw-ai-notice{font-size:9px}.lw-world[data-critical=true] .lw-assignment{max-height:185px;overflow:auto}.lw-world[data-critical=true] .lw-critical{top:300px}.lw-world[data-critical=true] .lw-scene-overlay,.lw-world[data-critical=true] .lw-scene-overlay:has(.lw-task-modal:not([hidden])),.lw-world[data-critical=true] .lw-scene-overlay:has(.lw-confirm:not([hidden])){padding-top:370px}.lw-world[data-critical=true] .lw-role-scene{padding-top:365px}.lw-council-heading h1{font-size:22px}}
+
+/* Optional presets and the private fallen channel share the existing game palette. */
+.lw-presets {display:grid;gap:10px;max-width:580px;margin:12px auto;text-align:left;font-size:14px}
+.lw-presets label {display:flex;align-items:center;gap:10px;justify-content:center}
+.lw-presets select,.lw-ward-target {background:#f4e8c1;color:#17384a;border:2px solid #769b9c;border-radius:8px;padding:7px;max-width:100%}
+.lw-ability-info {font-size:12px;color:#f6e5ba}
+.lw-ghost-chat {position:absolute;z-index:45;right:16px;bottom:104px;width:min(310px,calc(100% - 32px));max-height:38vh;overflow:auto;padding:12px;border:2px solid #c4afe8;border-radius:12px;background:#152f45f2;color:#efe5ff;font-size:12px}
+.lw-ghost-chat h2 {font-size:14px;margin:0 0 8px}.lw-ghost-chat ol {padding-left:18px;max-height:100px;overflow:auto;overflow-wrap:anywhere}
+.lw-ghost-chat textarea {width:100%;box-sizing:border-box;background:#f5efd8;color:#17384a;border-radius:6px}.lw-ghost-chat button {background:#d2b9ed;color:#17384a;border:0;border-radius:6px;padding:7px;min-height:36px}.lw-ghost-chat p {font-size:11px}
+.lw-actions {flex-wrap:wrap}
+@media(max-width:600px){.lw-ghost-chat {bottom:95px;right:8px;width:210px;max-height:28vh}.lw-ghost-chat h2{font-size:12px}.lw-ghost-chat p{margin:4px 0}.lw-presets{font-size:12px;gap:5px}.lw-ability-info{max-width:160px}}
