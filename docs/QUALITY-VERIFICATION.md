@@ -1,5 +1,7 @@
 # Gameplay-quality verification
 
+**Historical qualification against main43.** Subsequent main41/aa/668 integrations change application sources. The pins and green results below do not qualify that newer composition. See [current combined validation](QUALITY-FINAL-MAIN-VALIDATION.md), which remains in progress until all required gates pass.
+
 Lantern Wake now has an original larger walking world, six server-authoritative station puzzles and integrated tactical systems. The comparison used the official Among Us guide; it does not claim identical art, proprietary map dimensions or feature parity. See [reference and differences](QUALITY-REFERENCE.md), [rules](QUALITY-RULES.md), and [actual screenshots](quality-screenshots/README.md).
 
 ## Source and preserved work
