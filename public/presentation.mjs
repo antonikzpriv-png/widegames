@@ -40,6 +40,7 @@ export function aiNotice(reason){
  return ({demo_configured:'Demo mode: the keepers use local behavior.',missing_credentials:'Demo mode: live AI is not configured.',budget_calls:'Demo mode: this match reached its AI call limit.',budget_tokens:'Demo mode: this match reached its AI token limit.',budget_cost:'Demo mode: this match reached its AI spending limit.',provider_unavailable:'Demo mode: the live AI provider is unavailable.',timeout:'Demo mode: the live AI provider did not respond in time.',reservation_failed:'Demo mode: AI spending could not be reserved.'})[reason]||'Demo mode: live AI is unavailable for this watch.';
 }
 export function aiLabel(ai){
+ if(ai?.mode==='live'&&ai.strategy==='strategic')return 'Strategic: model plans / local execution';
  if(ai?.mode==='live')return 'Hybrid: live council / local navigation';
  if(ai?.mode==='demo')return 'Demo: local bots';
  return 'AI mode pending';

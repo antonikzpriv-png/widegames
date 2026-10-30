@@ -7,6 +7,16 @@ const point = value => value && Number.isFinite(value.x) && Number.isFinite(valu
 const ready = (view, key) => (view.self.cooldowns?.[key] ?? 0) <= view.serverNow;
 const at = (view, target, radius) => point(target) && distance(view.self.position, target) <= radius;
 
+/** One legal equipment proposal from the owner's permitted task view only. */
+export function worldTaskAction(view, task) {
+  if (!task.progress) return { type: 'task', taskId: task.id };
+  const progress = taskProgress(task);
+  if (progress.kind === 'repair' && progress.index === 3 && view.serverNow < progress.readyAt) return { type: 'wait' };
+  return progress.index < progress.total
+    ? { type: 'taskStep', taskId: task.id, step: progress.index, input: taskInput(task) }
+    : { type: 'task', taskId: task.id };
+}
+
 /** Only coordinates already visible in this actor's safe view are usable. */
 export function visibleWorldPlayer(view, player) {
   return player.id !== view.self.id && !view.self.teammates?.includes(player.id) && player.alive && point(player.position) && canSeeWorldPoint(view.self.position, player.position,view.settings?.vision);
@@ -91,7 +101,7 @@ export function worldCandidates(view, memory, suspect) {
     }
   } else {
     const here = ordered((self.tasks ?? []).filter(task => !task.completed && task.roomId === self.roomId));
-    if (allowed.has('task') && ready(view, 'taskAt') && at(view, WORLD_STATIONS[self.roomId], WORLD.interactionRadius) && here.length) {const t=here[0];if(!t.progress)return [{type:'task',taskId:t.id}];const c=taskProgress(t);if(c.kind==='repair'&&c.index===3&&view.serverNow<c.readyAt)return [{type:'wait'}];return [c.index<c.total?{type:'taskStep',taskId:t.id,step:c.index,input:taskInput(t)}:{type:'task',taskId:t.id}];}
+    if (allowed.has('task') && ready(view, 'taskAt') && at(view, WORLD_STATIONS[self.roomId], WORLD.interactionRadius) && here.length) return [worldTaskAction(view, here[0])];
     if (view.settings?.emergencyMeetingsEnabled!==false && !critical?.active && self.meetingsRemaining > 0 && ready(view, 'meetingAt') && suspect !== 'skip') {
       if (allowed.has('meeting') && at(view, WORLD_BELL, WORLD.interactionRadius)) return [{ type: 'meeting' }];
       return navigate(bellApproach());

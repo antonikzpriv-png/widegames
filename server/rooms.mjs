@@ -32,15 +32,18 @@ export function createRoom(mode,now,configurable=false) {
   return {schema:2,id,mode,createdAt:now,updatedAt:now,identities:[],state:null,startId:null,aiContext:{},generation:1,revision:0,settings:{...LOBBY_DEFAULTS},roster:rosterFor(6),inviteCode:randomBytes(6).toString('hex').toUpperCase(),archives:[]};
 }
 
-export function createRooms({store,engine,ai,now=Date.now,maxActiveRooms=12,roomTtlMs=3600000,configurable=true}) {
+export function createRooms({store,engine,ai,now=Date.now,maxActiveRooms=12,roomTtlMs=3600000,configurable=false}) {
   const rooms=new Map();let creationQueue=Promise.resolve();
-  const entry=data=>({data,queue:Promise.resolve(),sockets:new Set(),aiBusy:false,aiBlocked:false,nextDecision:new Map(),abort:new AbortController(),removed:false});
+  const entry=data=>({data,queue:Promise.resolve(),sockets:new Set(),aiBusy:false,aiGeneration:0,aiBlocked:false,nextDecision:new Map(),abort:new AbortController(),removed:false});
   const get=id=>{if(!ROOM_ID.test(id)||!rooms.has(id))fail(404,'ROOM_NOT_FOUND','Room not found.');return rooms.get(id);};
   function run(room,fn) {
     const result=room.queue.catch(()=>{}).then(()=>{if(room.removed)fail(404,'ROOM_NOT_FOUND','Room not found.');return fn(room.data);});
     room.queue=result.catch(()=>{});return result;
   }
-  async function commit(room,next){if(next.schema===2)next.revision=(room.data.revision??0)+1;next.updatedAt=Math.max(next.updatedAt,now());validateRoom(next);await store.save(next);room.data=next;}
+  async function commit(room,next){if(next.schema===2)next.revision=(room.data.revision??0)+1;next.updatedAt=Math.max(next.updatedAt,now());validateRoom(next);await store.save(next);
+    const fence=state=>JSON.stringify([state?.id,state?.startedAt,state?.phase,state?.meeting?.id,state?.meetingCount,(state?.players??[]).map(p=>[p.id,p.alive])]);
+    if(fence(room.data.state)!==fence(next.state))room.aiGeneration++;
+    room.data=next;}
   function view(room,identity) {
     const data=room.data;
     identity=data.identities.find(i=>i.hash===identity?.hash&&!i.revoked);if(!identity)fail(401,'ROOM_AUTH_REQUIRED','This room identity has been revoked.');
@@ -48,7 +51,7 @@ export function createRooms({store,engine,ai,now=Date.now,maxActiveRooms=12,room
     // Explicit allowlist: private AI memory and provider errors never cross transport.
     const safeAi={};for(const key of ['mode','provider','model','calls','tokens','costUsd','limitReason','strategy','navigation','council'])if(['string','number'].includes(typeof summary?.[key]))safeAi[key]=summary[key];
     const notices=Array.isArray(data.aiContext.notices)?data.aiContext.notices.filter(x=>typeof x==='string').slice(-10).map(x=>x.slice(0,240)):[];
-    if(safeAi.mode==='live')notices.push('Hybrid AI: live model council; navigation and deck actions use local policy.');
+    if(safeAi.mode==='live')notices.push(safeAi.strategy==='strategic'?'Strategic AI: model plans and council; local legal execution.':'Hybrid AI: live model council; navigation and deck actions use local policy.');
     if(room.aiBlocked)notices.push('AI paused because durable storage or budget reservation failed.');
     return {...(data.features?{features:structuredClone(data.features)}:{}),roomId:data.id,...(data.schema===2?{generation:data.generation,revision:data.revision,inviteCode:data.inviteCode,settings:structuredClone(data.settings),ready:identity.ready,seats:data.roster.map(p=>({...p,persona:undefined,human:data.identities.some(i=>i.seatId===p.id),ready:data.identities.some(i=>i.seatId===p.id&&i.ready&&!i.revoked),revoked:data.identities.some(i=>i.seatId===p.id&&i.revoked),host:data.identities.some(i=>i.seatId===p.id&&i.host)})),archives:data.archives.map(a=>({matchId:a.matchId,generation:a.generation}))}:{}),mode:data.mode,isHost:identity.host,seatId:identity.seatId,phase:data.state?.phase||'lobby',connection:'connected',game:data.state?engine.getPlayerView(data.state,identity.seatId,now()):null,ai:safeAi,notices,createdAt:data.createdAt};
   }

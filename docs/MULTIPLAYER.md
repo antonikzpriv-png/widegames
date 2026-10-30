@@ -1,6 +1,6 @@
 # Multiplayer lobbies and rematches
 
-This contract extends the audited `90bb6e8` walking-world baseline and integrates main `fa7aaa0` (authoritative task puzzles, ghost tasks and optional abilities). Historical owner allocations, Windows workspace paths, fixed-six-only statements, and the original empty-remote status in older notes are historical. Development uses the current Cloud checkout and existing Node ESM/native HTTP/WebSocket stack. No deployment or paid provider call is needed.
+This contract extends the audited `90bb6e8` walking-world baseline and integrates main `22340f0` (authoritative task puzzles, ghost tasks, optional abilities and optional strategic AI). Historical owner allocations, Windows workspace paths, fixed-six-only statements, and the original empty-remote status in older notes are historical. Development uses the current Cloud checkout and existing Node ESM/native HTTP/WebSocket stack. No deployment or paid provider call is needed.
 
 ## Playing together
 
@@ -18,7 +18,7 @@ All human inputs and actions derive their actor from the current authenticated i
 
 Sockets retain only an identity digest as a lookup key. Every projection looks up the current identity and seat again; reassignment changes that socket's projection, and revocation closes it. Host member revocation is also available during a match through the authenticated API. A revoked or disconnected active seat stays reserved and idle, never silently becoming AI. There is no active-match takeover policy. New visitors can only spectate after start; lobby claims and settings are rejected while active. A rematch permits new claims again.
 
-Only a saboteur's private `self.teammates` lists fellow saboteur IDs. It includes no extra positions. Crew and spectator payloads do not contain this list; public player roles stay hidden until the end. The AI receives its actor's same safe view plus public persona only. Dynamic local policies and Anthropic snapshots support all 15 actors; only actors whose persisted `human` flag is false are scheduled. No strategic-planning feature is required.
+Only a saboteur's private `self.teammates` lists fellow saboteur IDs. It includes no extra positions. Crew and spectator payloads do not contain this list; public player roles stay hidden until the end. The AI receives its actor's same safe view plus public persona only. Dynamic local policies and Anthropic snapshots support all 15 actors; only actors whose persisted `human` flag is false are scheduled. The optional strategic feature merged in main remains available through `AI_STRATEGY=strategic`; ordinary demo/hybrid modes remain the defaults. Strategic choices use the same safe dynamic roster, private teammate list and configured vision/options, with the same rematch and spending fences. No strategic model or paid call is required for multiplayer.
 
 Crew win when every saboteur is ejected or all crew tasks are complete. Saboteurs win at living parity or an expired critical countdown. Saboteurs cannot eliminate teammates. Ejecting only one of several saboteurs does not declare crew victory. Existing tie, skip, abstention, task-transfer and deadline rules continue to apply.
 
@@ -53,7 +53,7 @@ All POST routes require the configured Origin and JSON. Room routes require the 
 
 ## Persistence compatibility
 
-Room container schema 1 continues to load without rewriting, deletion, migration or quarantine of valid historical data. Both legacy engine schema 1 and world engine schema 2 retain their original behavior. New configurable rooms use room container schema 2; their engine retains schema 1/2 according to legacy/world mode and carries a validated settings snapshot. The programmatic server constructor without `worldMode:true` and the `createRoom` fixture helper retain legacy defaults. Explicit lobby controls or a rematch can transition a historical lobby/group to the new container deliberately.
+Room container schema 1 continues to load without rewriting, deletion, migration or quarantine of valid historical data. Both legacy engine schema 1 and world engine schema 2 retain their original behavior. New configurable rooms use room container schema 2; their engine retains schema 1/2 according to legacy/world mode and carries a validated settings snapshot. The programmatic server constructor without `worldMode:true` and the `createRoom` / `createRooms` helpers without explicit configurable mode retain legacy defaults. Explicit lobby controls or a rematch can transition a historical lobby/group to the new container deliberately.
 
 New container validation checks settings and ratios, sequential unique actor IDs, public profiles, distinct identity digests/seat ownership, host/readiness/revocation, match/generation correspondence, human ownership, faction counts, tasks, receipts, bounded timelines and archives. Existing world motion, lease, body and walkability checks still run on save and restore, including `p10`–`p15` bodies. Existing exclusive writer locks, atomic private writes, and invalid-file handling remain intact.
 

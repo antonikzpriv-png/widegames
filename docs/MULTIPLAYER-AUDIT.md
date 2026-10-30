@@ -1,6 +1,6 @@
 # Multiplayer follow-up audit
 
-Audited in the Cloud workspace on 2026-10-30. The original implementation was rechecked against every requested backend, UI, persistence, privacy and rematch constraint. Main advanced from `90bb6e8` to `fa7aaa0` during the audit; the branch merges that revision and preserves its authoritative five-task protocol, optional ghost/ability gameplay, tests, documentation, CI jobs and historical evidence.
+Audited in the Cloud workspace on 2026-10-30. The original implementation was rechecked against every requested backend, UI, persistence, privacy and rematch constraint. Main advanced from `90bb6e8` through `fa7aaa0` to `22340f0` during the audit; the branch merges that revision and preserves its authoritative five-task protocol, optional ghost/ability gameplay, optional strategic AI, tests, documentation, CI jobs and historical evidence.
 
 ## Findings corrected
 
@@ -17,7 +17,7 @@ Audited in the Cloud workspace on 2026-10-30. The original implementation was re
 - The original per-address limits throttled multiple humans on the same network. Authenticated human charges now share that room's address allowance while retaining individual caps and the original single-human ceiling.
 - Duplicate names needed consistent numbered attribution beyond voting. Elimination/confirmation, chat, ejection and replay labels now retain keeper badges.
 
-The main integration also required dynamic crew task-accounting in optional-feature validation, ghost-aware human input and AI scheduling, generation-aware puzzle handling, configurable feature presets, and per-match vision for ability targeting/effect projection. A combined 15-player ghost/ability save/reload/rematch regression exercises these seams.
+The main integration also required dynamic crew task-accounting in optional-feature validation, ghost-aware human input and AI scheduling, generation-aware puzzle handling, configurable feature presets, and per-match vision for ability targeting/effect projection. A combined 15-player ghost/ability save/reload/rematch regression exercises these seams. The strategic merge retains current-view and phase/death fences alongside match-generation/work-token fences, and keeps public AI strategy labels and metadata. A real controller with a mocked provider proves a pending p15 strategic worker cannot carry its result or reservation context into a two-human rematch. Strategic candidates also honor disabled sabotage, extended/reduced vision and private allies. Internal `createRooms` retains its original legacy default; production explicitly enables configurable rooms.
 
 ## Request coverage
 
@@ -38,7 +38,7 @@ The main integration also required dynamic crew task-accounting in optional-feat
 | Old work cannot affect new generation | Old HTTP input/action/start, client responses/retries, queued AI/provider work and reservation callbacks fenced; deferred callbacks and fresh context tests. |
 | Deployment budget/uncertain old reservations survive | Real durable daily ledger retains reservations through terminal cancellation, rematch and reload; no refund or ledger reset. |
 | Strong historical persistence compatibility | Valid container schema 1 and engine schema 1/2 load byte-preservingly; dynamic saves/reloads at 4/6/15 and optional 15-player ghost state; malformed metadata still rejected. |
-| Integrated latest main | Merge of `fa7aaa0`; original feature/task tests and browser suites retained, plus combined multiplayer/ghost regressions. |
+| Integrated latest main | Merge of `22340f0`; original feature/task tests and browser suites retained, plus combined multiplayer/ghost regressions. |
 | Setup, required checks, screenshots and handoff | Exact final results and screenshots in [qualification](MULTIPLAYER-VERIFICATION.md); cloud setup instructions retained. Feature branch only, no deployment or paid calls. PR API access remains an explicit external blocker. |
 
 ## Limits of the evidence

@@ -36,7 +36,7 @@ try{
  await host.bringToFront();await host.$eval('[aria-label="Your keeper name"]',n=>{n.value='Marin';});await press(host,'Save appearance');await until(async()=>(await view(host)).seats[0].name==='Marin','host profile');
  check((await view(guest)).seats[1].color==='#73c9df','custom raincoat color persists with its unique numbered badge');
  check(await host.$eval('.lw-lobby-settings [name=capacity]',n=>!n.disabled),'host can configure settings');check(await guest.$eval('.lw-lobby-settings [name=capacity]',n=>n.disabled),'guest settings are read only');
- await shot(host,'01-configurable-lobby-15');await host.$eval('.lw-lobby',n=>{n.scrollTop=n.scrollHeight;});await shot(host,'01b-host-settings');await guest.setViewport({width:390,height:844});await shot(guest,'02-guest-lobby-mobile');
+ await host.$eval('.lw-lobby',n=>{n.scrollTop=0;});await shot(host,'01-configurable-lobby-15');await host.$eval('.lw-lobby',n=>{n.scrollTop=n.scrollHeight;});await shot(host,'01b-host-settings');await guest.setViewport({width:390,height:844});await guest.$eval('.lw-lobby',n=>{n.scrollTop=0;});await shot(guest,'02-guest-lobby-mobile');
  check(await host.$$eval('.lw-lobby button',nodes=>nodes.find(n=>n.textContent==='Begin the watch').disabled),'start is gated by readiness');
  await press(guest,'Ready');await press(host,'Ready');await until(async()=>(await view(host)).seats.filter(p=>p.human).every(p=>p.ready),'both humans ready');await press(host,'Begin the watch');
  await host.waitForSelector('.lw-role-scene:not([hidden])');await guest.waitForSelector('.lw-role-scene:not([hidden])');

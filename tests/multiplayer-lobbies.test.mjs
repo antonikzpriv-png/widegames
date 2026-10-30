@@ -268,3 +268,25 @@ test('audit: humans sharing one network address retain normal movement throughpu
  await f.request(host.route+'/ready',{ready:true},guest.cookie);assert.equal((await f.request(host.route+'/start',{id:'shared-address'},host.cookie)).status,200);f.advance(60001);
  for(let seq=1;seq<=310;seq++){const responses=await Promise.all([host.cookie,guest.cookie].map(cookie=>f.request(host.route+'/input',{seq,dx:0,dy:0},cookie)));assert(responses.every(r=>r.status===200),JSON.stringify({seq,responses}));}
 });
+
+test('integration: real strategic p15 worker cannot carry its provider result or budget context into a two-human rematch',async t=>{
+ const realFetch=globalThis.fetch;let release,requestBody,captured,started=false,attempts=0;
+ const response=new Promise(resolve=>{release=()=>resolve(new Response(JSON.stringify({stop_reason:'tool_use',content:[{type:'tool_use',name:'pick_action',input:{choice:0}}],usage:{input_tokens:100,output_tokens:20}})));});t.after(()=>release());
+ t.mock.method(globalThis,'fetch',async(url,options)=>{if(url!=='https://api.anthropic.com/v1/messages')return realFetch(url,options);attempts++;requestBody=JSON.parse(JSON.parse(options.body).messages[0].content);return response;});
+ const real=createAiController({config:{provider:'anthropic',apiKey:'offline',strategy:'strategic',maxTokens:250000,decisionIntervalMs:100}}),ai={describe:real.describe,async decide(args){if(args.player.id!=='p15'||started)return null;started=true;captured=args;return real.decide(args);}};
+ const settings=changeSettings(LOBBY_DEFAULTS,{capacity:15,saboteurs:3});let seed=0;while(engine.createMatch({id:'strategy-seed',settings,roster:rosterFor(15),seed,now:100000,world:true}).players[14].role!=='crew')seed++;
+ const f=await fixture(t,{ai,seed}),host=await f.create();await f.request(host.route+'/settings',{settings},host.cookie);const guest=await f.request(host.route+'/join',{intent:'play'});await f.request(host.route+'/ready',{ready:true},guest.cookie);assert.equal((await f.request(host.route+'/start',{id:'strategy-start'},host.cookie)).status,200);
+ await until(()=>requestBody,'dynamic strategic request');assert.equal(requestBody.self.id,'p15');assert.equal(requestBody.players.length,15);assert(requestBody.players.every(p=>!Object.hasOwn(p,'role')));assert(!Object.hasOwn(requestBody.self,'teammates'));
+ const before=JSON.parse(await readFile(path.join(f.directory,'ai-daily-budget.json'),'utf8'));assert(before.total>0);assert(Object.keys(before.reservations).some(id=>id.startsWith(host.id+':')));
+ f.advance(900001);await until(()=>f.game.rooms.get(host.id).data.state.phase==='paused','strategic pause');assert.equal((await f.request(host.route+'/rematch',{id:'strategic-rematch',generation:1},host.cookie)).status,200);assert.equal(captured.getCurrentView(),null);
+ await f.request(host.route+'/ready',{ready:true,generation:2},guest.cookie);assert.equal((await f.request(host.route+'/start',{id:'strategic-next',generation:2},host.cookie)).status,200);release();await delay(70);
+ const data=f.game.rooms.get(host.id).data;assert.equal(data.state.id,host.id+'_g2');assert.equal(data.state.players.filter(p=>p.human).length,2);assert.deepEqual(data.aiContext,{});assert(data.state.players.every(p=>!data.state.requests[p.id].length&&p.motion.seq===0));assert.equal(attempts,1);assert.deepEqual(JSON.parse(await readFile(path.join(f.directory,'ai-daily-budget.json'),'utf8')),before);
+});
+
+test('integration: strategic choices respect configured options, extended vision and private multi-saboteur allies',async()=>{
+ const {intentions,install,execute}=await import('../server/ai/strategic.mjs');
+ const settings=changeSettings(LOBBY_DEFAULTS,{capacity:15,saboteurs:3,vision:600,sabotageEnabled:false}),state=engine.createMatch({id:'strategic-settings',settings,roster:rosterFor(15),world:true,now:100000,seed:'strategy-options'}),actor=state.players.find(p=>p.role==='saboteur'),view=engine.getPlayerView(state,actor.id,100000);
+ const choices=intentions(view,{});assert(!choices.some(p=>p.goal==='sabotage'));assert(!choices.some(p=>view.self.teammates.includes(p.targetId)));
+ const memory={};install(memory,{goal:'sabotage'},view);assert.equal(execute(view,memory),null);
+ view.self.position={x:610,y:200};view.events=[{type:'body',bodyId:'body-p9',position:{x:990,y:200},at:99999}];assert(intentions(view,{}).some(p=>p.goal==='report'),'extended vision remains usable for a legal body route');view.settings.vision=120;assert(!intentions(view,{}).some(p=>p.goal==='report'),'reduced vision cannot be extended by strategic policy');
+});

@@ -7,7 +7,7 @@ export function clock(deadline,now){const n=remaining(deadline,now);return `${Ma
 export function visiblePlayers(game){return (game?.players||[]).filter(p=>(p.alive||(game?.self?.ghost&&p.id===game.self.id))&&point(p.position));}
 export function visibleBodies(game){return (game?.events||[]).filter(e=>e.type==='body'&&e.bodyId&&point(e.position));}
 export function roleLabel(game){if(game?.self?.ghost)return 'Ghost · '+(game.self.role==='crew'?'Crew':'Saboteur');return !game?.self?'Spectator':game.self.role==='saboteur'?'Saboteur':'Crew';}
-export function aiLabel(ai){return ai?.mode==='live'?'HYBRID · live council / local navigation':ai?.mode==='demo'?'DEMO · local keepers':'AI mode pending';}
+export function aiLabel(ai){return ai?.mode==='live'&&ai.strategy==='strategic'?'STRATEGIC · model plans / local execution':ai?.mode==='live'?'HYBRID · live council / local navigation':ai?.mode==='demo'?'DEMO · local keepers':'AI mode pending';}
 export function taskKind(task,index=0){
  if(task.progress)return task.progress.kind;
  const text=String(task.label||'').toLowerCase();

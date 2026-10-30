@@ -251,10 +251,11 @@ export async function createGameServer(config,dependencies={}) {
     };
     const player=room.data.state.players.filter(p=>!p.human&&(room.nextDecision.get(p.id)||0)<=now()&&canScheduleActor(p)).sort((a,b)=>(room.nextDecision.get(a.id)||0)-(room.nextDecision.get(b.id)||0))[0];
     if(!player)return;
-    room.nextDecision.set(player.id,now()+Math.max(100,config.ai?.decisionIntervalMs??1800));room.aiBusy=true;const work=Symbol(),matchId=room.data.state.id,abort=room.abort;room.aiWork=work;
-    const current=()=>room.data.state?.id===matchId&&!['ended','paused'].includes(room.data.state.phase)&&room.abort===abort&&!abort.signal.aborted&&!closing;
+    room.nextDecision.set(player.id,now()+Math.max(100,config.ai?.decisionIntervalMs??1800));room.aiBusy=true;const work=Symbol(),matchId=room.data.state.id,abort=room.abort,decisionGeneration=room.aiGeneration;room.aiWork=work;
+    const current=()=>!room.removed&&room.aiGeneration===decisionGeneration&&room.data.state?.id===matchId&&!['ended','paused'].includes(room.data.state.phase)&&room.abort===abort&&!abort.signal.aborted&&!closing;
     track((async()=>{
       const context=structuredClone(room.data.aiContext),snapshot=engine.getPlayerView(room.data.state,player.id,now());
+      const freshView=()=>current()?engine.getPlayerView(room.data.state,player.id,now()):null;
       try {
         const commitReservation=async({id,amountUsd})=>{
           if(!current()||['ended','paused'].includes(room.data.state?.phase))throw new Error('AI stopped');
@@ -265,7 +266,7 @@ export async function createGameServer(config,dependencies={}) {
           await daily.reserve({id:`${matchId}:${id}`,amount:amountUsd});
           if(!current())throw Error('AI match changed during reservation');
         };
-        const proposal=await ai.decide({view:snapshot,player:{id:player.id,name:player.name,color:player.color,persona:PERSONAS.find(p=>p.id===player.id)?.persona},context,signal:abort.signal,commitReservation});
+        const proposal=await ai.decide({view:snapshot,player:{id:player.id,name:player.name,color:player.color,persona:PERSONAS.find(p=>p.id===player.id)?.persona},context,signal:abort.signal,commitReservation,getCurrentView:freshView});
         if(!current())return;
         await run(room,async data=>{
           if(!current())return;
