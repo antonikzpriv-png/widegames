@@ -231,7 +231,7 @@ export async function createRoomStore(directory,{worldGeometry:providedGeometry}
           const candidate=JSON.parse(await readFile(file,'utf8'));refuseFuture(candidate);room=validateRoom(candidate);if(room.id!==match[1])throw new Error('Room ID mismatch');
         } catch(error) {if(['MAP_UNAVAILABLE','VERSION_UNAVAILABLE'].includes(error.code))throw error;await rename(file,`${file}.quarantine-${randomUUID()}`);continue;}
         // Missing deployment geometry is a setup error, not corrupt user data.
-        const geometry=[2,3].includes(room.state?.schemaVersion)?await worldGeometry(providedGeometry):undefined;
+        const geometry=[2,3].includes(room.state?.schemaVersion)&&!room.state?.mapId?await worldGeometry(providedGeometry):undefined;
         try{await validateRoomSnapshot(room,{worldGeometry:geometry});rooms.push(room);}catch{await rename(file,`${file}.quarantine-${randomUUID()}`);}
       }
       return rooms;
