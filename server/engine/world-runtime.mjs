@@ -1,4 +1,5 @@
-﻿/** Continuous world state is private. Geometry is supplied by the shared map. */
+import {canWorldAct} from './features.mjs';
+/** Continuous world state is private. Geometry is supplied by the shared map. */
 export function worldRuntime(geometry) {
   const {WORLD,worldRoomAt,isWalkable,moveWorldPoint,findWorldPath,canSeeWorldPoint,worldSpawn,distance,WORLD_STATIONS,WORLD_BELL}=geometry;
   const speed=WORLD.speed,lease=WORLD.inputLeaseMs,vision=WORLD.visibilityRadius;
@@ -30,7 +31,7 @@ export function worldRuntime(geometry) {
     let changed=false;
     if(state.phase!=='roam')return false;
     for(const p of state.players){
-      const m=p.motion;if(!p.alive||!m||until<=m.at)continue;
+      const m=p.motion;if(!canWorldAct(state,p)||!m||until<=m.at)continue;
       const active=m.manual||m.path.length>0;if(!active)continue;
       const start=m.at,end=m.manual?Math.min(until,m.leaseUntil):until;
       const initial=point(p.position);let budget=Math.max(0,end-start)*speed/1000,used=0,finishedAt=end,reason=null;
@@ -73,6 +74,6 @@ export function worldRuntime(geometry) {
     m.error=null;m.seq=request.seq;m.dx=request.dx;m.dy=request.dy;m.leaseUntil=now+lease;m.at=now;m.manual=!!(request.dx||request.dy);m.path=[];m.destination=null;
     return changed;
   }
-  const moving=(state,p,now)=>state.phase==='roam'&&p.alive&&!!(p.motion.path.length||(p.motion.manual&&now<p.motion.leaseUntil));
+  const moving=(state,p,now)=>state.phase==='roam'&&canWorldAct(state,p)&&!!(p.motion.path.length||(p.motion.manual&&now<p.motion.leaseUntil));
   return {WORLD,walkable:isWalkable,station,bell:WORLD_BELL?.position??WORLD_BELL,initialize,settle,stop,stopAll,navigation,navigate,input,moving,sees,nearby,point};
 }
