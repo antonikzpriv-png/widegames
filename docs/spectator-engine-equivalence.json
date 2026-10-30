@@ -1,0 +1,52 @@
+{
+  "baselineCommit": "41b4c6e2ddfce65882ac635c6dc5b7e4cf1fc4ef",
+  "result": "passed",
+  "comparedTransactions": 720,
+  "initialStatesCompared": 12,
+  "maps": [
+    "beacon",
+    "storm-foundry",
+    "tidal-observatory"
+  ],
+  "modes": [
+    "human",
+    "spectator"
+  ],
+  "featurePresets": [
+    "absent (legacy behavior)",
+    {
+      "deathPolicy": "ghost-tasks",
+      "abilities": true
+    }
+  ],
+  "methodology": "For each of 12 deterministic seeded fixtures, compare initial states and all returned objects after 60 sequential engine calls. Advance time by 83 + step % 5 milliseconds on each call. Step modulo 5 selects positive-sequence manual steering for p1 (0), p2 navigation alternating Archive/Bridge stations (1), p3 wait (2), or tick (3,4). Fixed deadlines: roam1000ms, discussion1200ms, voting1000ms, maximum6000ms. Deep equality covers complete states, replay records, event arrays, accepted/error/duplicate receipts across movement, input expiry and phase deadlines. Both engines receive independently created equal fixtures. This is behavioral equivalence for these fixtures, not an exhaustive proof. No network/providers/browser.",
+  "observedStdout": {
+    "baseline": "41b4c6e2ddfce65882ac635c6dc5b7e4cf1fc4ef",
+    "comparedTransactions": 720,
+    "maps": 3,
+    "modes": 2,
+    "featurePresets": 2,
+    "result": "identical engine states/events/receipts"
+  },
+  "driver": {
+    "path": "scripts/spectator-engine-equivalence.mjs",
+    "sha256": "341ba175abd5147b07129138ae53451ebe27d909788c4a6df8f251f2a395fa4b",
+    "baselinePreparation": "mkdir -p /tmp/movement-main-reference && git archive 41b4c6e2ddfce65882ac635c6dc5b7e4cf1fc4ef server/engine shared | tar -x -C /tmp/movement-main-reference",
+    "run": "node scripts/spectator-engine-equivalence.mjs"
+  },
+  "currentSourceSha256": {
+    "server/engine/index.mjs": "b109e61b502cd3ad92df644c6ccdd97bc074a84a152c06fa549a54ae95fcb6af",
+    "server/engine/world-runtime.mjs": "56d1623e201edb54121dc954701dbbb2159b2e3c5ad3a99a349d9d1406dcb683",
+    "server/engine/state-copy.mjs": "06c25b40bcf91d4d9bbda5785090eb7b7814c090c4f15bd0ee6ae9adf2412ebf",
+    "server/engine/features.mjs": "fd1a2cf42e75014a370700bd9f1816206dc2dd0031dd24efb9d7a19edba446b3",
+    "server/engine/tasks.mjs": "434705c37b0cca9460fb4fd8b61b7a545dd4280ff285e867a6e96df6d4c89b78",
+    "server/engine/replay-history.mjs": "766e000b99e64311a378dfa5c4b32bee1f5fa6942c88d7469a3d2dffcb915029",
+    "shared/world.mjs": "ad45586a051e64cae649566d6b129b2abf0b9f1662686b575563bbfba7b2e798",
+    "shared/maps/storm-foundry.mjs": "b5720f44c41e40b800785ded9c5507208789652a4c076508730d1240d8c5d547",
+    "shared/maps/tidal-observatory.mjs": "a1fd0dddaccf9233c3743760abd492a274b3b024dc996afb063556588a354f88",
+    "shared/contracts.mjs": "e432d31a70f7b41288abb6ad67c00c36dde27eb1dfc47d99f822a8d2f4a4d5f9",
+    "shared/features.mjs": "9279383ace5c705e29eff3395446c9a5cef99a824217ef78133e33be5bbdea0d",
+    "shared/replay.mjs": "c085ac5f4d047231541e5f3294f8258f6f64fda7a2d3ed9db9d2eadad3931b03",
+    "shared/captcha.mjs": "43ce676f540daba8d0a572ca8c97227e6d2437a9e608b31dfa3e22e74c785631"
+  }
+}

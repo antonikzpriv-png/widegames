@@ -1,0 +1,65 @@
+{
+  "method": "Same seeded world fixture, 120 idle ticks, 30 moving ticks, 120 recipient views. 12,000-record fixture is synthetic and bounded. Wall-clock timings are diagnostic, not frame-rate guarantees or CI thresholds.",
+  "current": [
+    {
+      "mode": "human",
+      "retainedRecords": 0,
+      "idleTickMs": 0.020865674999999938,
+      "movingTickMs": 0.6584195666666669,
+      "viewMs": 0.35563649166666667
+    },
+    {
+      "mode": "human",
+      "retainedRecords": 12000,
+      "idleTickMs": 0.0013012499999999724,
+      "movingTickMs": 46.75862313333334,
+      "viewMs": 0.862989941666666
+    },
+    {
+      "mode": "spectator",
+      "retainedRecords": 0,
+      "idleTickMs": 0.0017877999999996064,
+      "movingTickMs": 0.35367293333333694,
+      "viewMs": 0.055736516666667055
+    },
+    {
+      "mode": "spectator",
+      "retainedRecords": 12000,
+      "idleTickMs": 0.0008766416666674103,
+      "movingTickMs": 24.79503409999999,
+      "viewMs": 0.03200522500000034
+    }
+  ],
+  "baseline": [
+    {
+      "mode": "human",
+      "retainedRecords": 0,
+      "idleTickMs": 0.1729312000000012,
+      "movingTickMs": 0.22151703333332382,
+      "viewMs": 0.6426557749999992
+    },
+    {
+      "mode": "human",
+      "retainedRecords": 12000,
+      "idleTickMs": 47.53756840833333,
+      "movingTickMs": 47.9684144666667,
+      "viewMs": 0.8732411166666679
+    },
+    {
+      "mode": "spectator",
+      "retainedRecords": 0,
+      "idleTickMs": 0.3512924416666616,
+      "movingTickMs": 0.22499180000001312,
+      "viewMs": 0.05212074166667359
+    },
+    {
+      "mode": "spectator",
+      "retainedRecords": 12000,
+      "idleTickMs": 40.213528075000006,
+      "movingTickMs": 39.829418333333344,
+      "viewMs": 0.030016808333342245
+    }
+  ],
+  "baselineCommit": "43c079999506785196ab85750105ceb102ba9314",
+  "currentRuntimeCommit": "d362acaf6df039e0386b07cf970ad7b4b0f93b6b"
+}

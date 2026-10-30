@@ -1,3 +1,4 @@
+import {getWorld} from '../../shared/world.mjs';
 /** Pure presentation rules. Inputs are redacted views, never engine state. */
 export const point = p => p && Number.isFinite(p.x) && Number.isFinite(p.y);
 export const distance = (a,b) => point(a)&&point(b)?Math.hypot(a.x-b.x,a.y-b.y):Infinity;
@@ -42,20 +43,52 @@ export function contexts(game,world){
   sabotage:{type:'sabotage',label:'Sabotage',fields:{},enabled:self?.role==='saboteur'&&allowed('sabotage'),hint:'Sabotage is unavailable or cooling down.'}
  };
 }
-/** Rendering blends only two received positions. Missing actors are removed immediately. */
+function receivedSegment(from,to,isWalkable){
+ // Geometry-free fixtures and legacy maps retain their existing display rules.
+ if(!from||!isWalkable(from)||!isWalkable(to))return true;
+ const steps=Math.max(1,Math.ceil(distance(from,to)/7));
+ for(let i=1;i<steps;i++)if(!isWalkable({x:from.x+(to.x-from.x)*i/steps,y:from.y+(to.y-from.y)*i/steps}))return false;
+ return true;
+}
+/** Render a bounded received-position timeline one server tick behind the network.
+ * Restarting an easing curve on every packet causes visible acceleration pulses;
+ * a shared sample clock keeps both actors and their camera moving at steady speed.
+ * There is no extrapolation, and newly hidden actors are removed immediately.
+ */
 export class ActorSamples{
- constructor(){this.samples=new Map();}
+ constructor(){this.samples=new Map();this.delayMs=100;this.mapId=null;}
  update(game,at){
+  const mapId=game?.mapId??'beacon';if(this.mapId!==mapId){this.samples.clear();this.mapId=mapId;}
+  const {isWalkable}=getWorld(mapId);
   const seen=new Set();
   for(const player of visiblePlayers(game)){
    seen.add(player.id);const old=this.samples.get(player.id);
-   if(old&&distance(old.to,player.position)<.001){old.player={...player,moving:player.id===game.self?.id?game.self.moving:old.player.moving};continue;}
-   const prior=old?this.at(player.id,at):player.position;
-   this.samples.set(player.id,{from:prior,to:{...player.position},at,player:{...player,moving:player.id===game.self?.id?game.self.moving:!!old}});
+   if(old&&distance(old.to,player.position)<.001){old.receivedAt=at;old.player={...player,moving:player.id===game.self?.id?game.self.moving:old.player.moving};continue;}
+   const position={...player.position},history=old?.history||[];
+   if(old&&old.receivedAt>history.at(-1).at)history.push({at:old.receivedAt,position:old.to,interpolate:true});
+   const replace=history.length&&at<=history.at(-1).at,prior=history.at(replace?-2:-1)?.position;
+   const snapshot={at,position,interpolate:receivedSegment(prior,position,isWalkable)};
+   if(replace)history[history.length-1]=snapshot;
+   else history.push(snapshot);
+   while(history.length>8)history.shift();
+   this.samples.set(player.id,{history,to:position,at,receivedAt:at,player:{...player,moving:player.id===game.self?.id?game.self.moving:!!old}});
   }
   for(const id of this.samples.keys())if(!seen.has(id))this.samples.delete(id);
  }
- at(id,now,reduced=false){const sample=this.samples.get(id);if(!sample)return null;const t=reduced?1:clamp((now-sample.at)/140,0,1);return {x:sample.from.x+(sample.to.x-sample.from.x)*t,y:sample.from.y+(sample.to.y-sample.from.y)*t};}
+ at(id,now,reduced=false){
+  const sample=this.samples.get(id);if(!sample)return null;
+  const {history}=sample,time=now-this.delayMs;
+  if(reduced||time>=history.at(-1).at)return {...sample.to};
+  if(time<=history[0].at)return {...history[0].position};
+  for(let i=1;i<history.length;i++){
+   const from=history[i-1],to=history[i];if(time>to.at)continue;
+   // A missing turn is not permission to draw a shortcut through a wall.
+   if(to.interpolate===false)return {...from.position};
+   const t=clamp((time-from.at)/(to.at-from.at),0,1);
+   return {x:from.position.x+(to.position.x-from.position.x)*t,y:from.position.y+(to.position.y-from.position.y)*t};
+  }
+  return {...sample.to};
+ }
  clear(){this.samples.clear();}
 }
 export function validTaskSession(session,room,world){
