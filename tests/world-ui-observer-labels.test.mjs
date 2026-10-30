@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import {readFileSync} from 'node:fs';
+import {keeperLabel,nameOf} from '../public/presentation.mjs';
 import * as model from '../public/world/model.mjs';
 import {CHARACTERS} from '../shared/contracts.mjs';
 
@@ -20,7 +21,7 @@ function fixture(){
  const document={...events(),hidden:false,createElement:tag=>new Node(tag)};
  const pane=()=>({node:new Node('section'),update(){},focus(){},dispose(){}});
  const world={WORLD:{interactionRadius:92,killRadius:70,reportRadius:130},WORLD_STATIONS:{bridge:{x:100,y:100}},WORLD_BELL:{x:200,y:100}};
- const context=vm.createContext({...model,world,CHARACTERS,document,window:events(),Date,performance:{now:()=>100},matchMedia:()=>({matches:true}),requestAnimationFrame:()=>1,cancelAnimationFrame(){},
+ const context=vm.createContext({...model,keeperLabel,nameOf,world,CHARACTERS,document,window:events(),Date,performance:{now:()=>100},matchMedia:()=>({matches:true}),requestAnimationFrame:()=>1,cancelAnimationFrame(){},
   drawKeeper(){},createWorldScene:()=>({update(){},draw(){},dispose(){}}),createWorldInput:()=>({stop(){},sync(){},dispose(){}}),createCouncil:pane,createResults:pane,restoreTrigger(){},trapDialog(){}});
  const source=readFileSync(new URL('../public/world/experience.mjs',import.meta.url),'utf8').replace(/^\uFEFF/,'').replace(/^import .*$/gm,'').replace(/^export /gm,'');
  const create=vm.runInContext(`(()=>{${source};return createWorldExperience;})()`,context),host=new Node('main');

@@ -1,3 +1,6 @@
+import {validateFeatures} from './feature-validation.mjs';
+import {canWorldAct} from '../shared/features.mjs';
+import {validProgress} from './engine/tasks.mjs';
 import {mkdir, readdir, lstat, readFile, open, rename, unlink} from 'node:fs/promises';
 import path from 'node:path';
 import {randomUUID} from 'node:crypto';
@@ -30,6 +33,7 @@ export function validateRoom(room) {
       if(Object.hasOwn(state,'worldVersion')||state.players.some(p=>Object.hasOwn(p,'position')||Object.hasOwn(p,'motion')))throw new Error('Mixed legacy/world match');
     }else validateWorldStructure(state,room.schema===2);
   }
+  validateFeatures(room);
   return room;
 }
 
@@ -41,6 +45,7 @@ function validateWorldStructure(state,dynamic=false){
   const ids=new Set();
   for(const player of state.players){
     if(!object(player)||!(dynamic?ACTOR_ID.test(player.id):/^p[1-6]$/.test(player.id))||ids.has(player.id)||!['crew','saboteur'].includes(player.role)||typeof player.alive!=='boolean'||!roomIds.has(player.roomId)||(dynamic?typeof player.human!=='boolean':player.human!==(state.mode==='human'&&player.id==='p1'))||!point(player.position))throw new Error('Invalid world player');
+    if(!Array.isArray(player.tasks)||player.tasks.length>(dynamic?280:100)||player.tasks.some(t=>Object.hasOwn(t,'progress')&&!validProgress(t.progress,t,state)))throw new Error('Invalid task progress');
     ids.add(player.id);const motion=player.motion;
     if(!object(motion)||!Number.isSafeInteger(motion.seq)||motion.seq<0||![motion.dx,motion.dy].every(n=>Number.isInteger(n)&&n>=-1&&n<=1)||typeof motion.manual!=='boolean'||![motion.at,motion.leaseUntil,motion.recordedAt].every(finiteTime)||motion.at>state.updatedAt+1e-6||motion.recordedAt>state.updatedAt+1e-6||!Array.isArray(motion.path)||motion.path.length>4096||motion.path.some(p=>!point(p))||(motion.destination!==null&&!point(motion.destination)))throw new Error('Invalid world motion');
     // Early schema-2 checkpoints lack error; new Core persists null or a bounded receipt.
@@ -48,7 +53,7 @@ function validateWorldStructure(state,dynamic=false){
       const error=motion.error;
       if(!object(error)||Object.keys(error).length!==2||!Object.hasOwn(error,'code')||!Object.hasOwn(error,'message')||typeof error.code!=='string'||!/^[A-Z][A-Z0-9_]{0,63}$/.test(error.code)||typeof error.message!=='string'||error.message.length<1||error.message.length>240)throw new Error('Invalid world motion error');
     }
-    if((motion.manual&&(!(motion.dx||motion.dy)||motion.path.length||motion.destination!==null))||(motion.path.length===0)!==(motion.destination===null)||((!player.alive||state.phase!=='roam')&&(motion.manual||motion.path.length||motion.destination!==null)))throw new Error('Inconsistent world motion');
+    if((motion.manual&&(!(motion.dx||motion.dy)||motion.path.length||motion.destination!==null))||(motion.path.length===0)!==(motion.destination===null)||((!canWorldAct(state,player)||state.phase!=='roam')&&(motion.manual||motion.path.length||motion.destination!==null)))throw new Error('Inconsistent world motion');
   }
   if(state.players.filter(player=>player.role==='saboteur').length!==(dynamic?state.lobbySettings.saboteurs:1))throw new Error('Invalid world role assignment');
   for(const body of state.bodies)if(!object(body)||body.id!==`body-${body.playerId}`||!ACTOR_ID.test(body.playerId)||!ids.has(body.playerId)||!roomIds.has(body.roomId)||typeof body.reported!=='boolean'||!point(body.position)||!finiteTime(body.at)||body.at>state.updatedAt)throw new Error('Invalid world body');
@@ -105,6 +110,7 @@ export async function validateRoomSnapshot(room,{worldGeometry:provided}={}){
       if(!validPoint(player.position)||m.path.some(p=>!validPoint(p))||(m.destination!==null&&!validPoint(m.destination))||m.leaseUntil>m.at+WORLD.inputLeaseMs+1e-6)throw new Error('Invalid world position or input lease');
     }
     for(const body of room.state.bodies)if(!validPoint(body.position))throw new Error('Invalid world body position');
+    for(const e of room.state.effects||[])if(e.kind==='echo'&&!validPoint(e.position))throw new Error('Invalid echo position');
   }
   return room;
 }

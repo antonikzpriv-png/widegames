@@ -1,0 +1,78 @@
+{
+  "sourceCommit": "5dbc543e92b1dd89446aabab0f985c81ec60fcb4",
+  "modifiedPaths": [
+    "M scripts/world-browser-check.mjs"
+  ],
+  "fixture": "Actual app/main browser modules, native HTTP/WS, persistent store, seeded world engine and real labeled demo AI. Physical routes may use normal authenticated navigate requests and accelerated server time; no state/winner fabrication or provider calls.",
+  "checks": [
+    {
+      "name": "Original character game menu loads",
+      "passed": true
+    },
+    {
+      "name": "Menu help opens before joining",
+      "passed": true
+    },
+    {
+      "name": "Open menu help closes before the full-screen game",
+      "passed": true
+    },
+    {
+      "name": "Hovered primary game button retains readable measured contrast",
+      "passed": true
+    },
+    {
+      "name": "Normal production config starts a physical world and private human role",
+      "passed": true
+    },
+    {
+      "name": "Room seat remains HttpOnly",
+      "passed": true
+    },
+    {
+      "name": "Physical game fills the viewport without displaced content",
+      "passed": true
+    },
+    {
+      "name": "WASD diagonal moves the actual character through validated integer input",
+      "passed": true
+    },
+    {
+      "name": "Hiding the page cancels an authoritative walking route before arrival",
+      "passed": true
+    },
+    {
+      "name": "Keyboard focus survives repair step 0",
+      "passed": false
+    }
+  ],
+  "privacyChecks": 146,
+  "errors": [],
+  "consoleErrors": [
+    "Failed to load resource: the server responded with a status of 409 (Conflict)"
+  ],
+  "screenshots": [
+    "01-harbor.png",
+    "02-lobby.png",
+    "03-private-role.png",
+    "03b-world.png",
+    "04-task-repair.png",
+    "failure.png"
+  ],
+  "outcomes": [],
+  "inputPackets": 8,
+  "puzzleKinds": [
+    "repair"
+  ],
+  "expectedConflicts": 1,
+  "hoverColors": {
+    "foreground": "rgb(23, 56, 74)",
+    "background": "rgb(255, 221, 160)"
+  },
+  "failure": "AssertionError [ERR_ASSERTION]: Keyboard focus survives repair step 0\n    at check (file:///workspace/widegames/scripts/world-browser-check.mjs:25:70)\n    at solveTask (file:///workspace/widegames/scripts/world-browser-check.mjs:65:3)\n    at async file:///workspace/widegames/scripts/world-browser-check.mjs:98:73",
+  "cleanupErrors": [],
+  "summary": {
+    "passed": 9,
+    "failed": 1
+  }
+}

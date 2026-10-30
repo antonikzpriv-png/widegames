@@ -1,9 +1,9 @@
-﻿import {dom,control,setText} from './dom.mjs';
+import {dom,control,setText} from './dom.mjs';
 import {drawKeeper} from './scene.mjs';
 import {clock} from './model.mjs';
 import {replayEvents,outcomeText} from '../presentation.mjs';
 import {worldReplayText as readableReplay} from './replay.mjs';
-const nameOf=(game,id)=>game.players.find(p=>p.id===id)?.name||id||'The watch';
+const nameOf=(game,id)=>{const p=game.players.find(p=>p.id===id);return p?`${p.name}${p.badge?` #${p.badge}`:''}`:id||'The watch';};
 function avatar(player,size=64){const canvas=dom('canvas','lw-avatar');canvas.width=size;canvas.height=size;canvas.setAttribute('aria-hidden','true');drawKeeper(canvas.getContext('2d'),player,size/2,size*.72,{scale:size/90,label:false,ghost:player.alive===false});return canvas;}
 
 export function createCouncil({id,action,feedback,pending}){
@@ -35,7 +35,7 @@ export function createCouncil({id,action,feedback,pending}){
   form.hidden=!discussion||!game.self?.alive;send.disabled=sending||pending()||!game.availableActions?.includes('say');chat.readOnly=!game.availableActions?.includes('say');
   setText(hint,!game.availableActions?.includes('say')?'Council message limit reached. Your draft stays here.':'Up to 280 characters. Messages are limited per council.');
   skip.hidden=discussion;skip.disabled=!canVote;rules.hidden=discussion;
-  setText(ballots,discussion?!game.self?'Spectating: listen to the council.':!game.self.alive?'Fallen keepers can listen.':'Discuss what you actually observed.':`${votes.length}/${eligible.length} votes recorded. ${!game.self?'Spectators cannot vote.':!game.self.alive?'Fallen keepers cannot vote.':votes.some(v=>v.playerId===game.self.id)?'Your vote is final.':'Choose a keeper or skip.'}`);
+  setText(ballots,discussion?!game.self?'Spectating: listen to the council.':!game.self.alive?(game.self.ghost?'Fallen keepers listen here. Use the private FALLEN CHANNEL to speak; living keepers cannot hear it.':'Fallen keepers can listen.'):'Discuss what you actually observed.':`${votes.length}/${eligible.length} votes recorded. ${!game.self?'Spectators cannot vote.':!game.self.alive?'Fallen keepers cannot vote.':votes.some(v=>v.playerId===game.self.id)?'Your vote is final.':'Choose a keeper or skip.'}`);
  },focus(){if(!form.hidden&&!chat.readOnly)chat.focus();else heading.focus();}};
 }
 

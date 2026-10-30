@@ -1,3 +1,4 @@
+import {parseFeatures} from '../shared/features.mjs';
 import http from 'node:http';
 import {randomBytes} from 'node:crypto';
 const cryptoRandomCode=()=>randomBytes(6).toString('hex').toUpperCase();
@@ -27,10 +28,10 @@ async function body(req,max) {
 }
 function limiter(now) {
   const buckets=new Map();
-  return (key,limit,window=60000)=>{
+  return (key,limit,window=60000,weight=1)=>{
     const at=now();let bucket=buckets.get(key);
     if(!bucket||at>=bucket.until){if(buckets.size>=10000){for(const [id,b]of buckets)if(at>=b.until)buckets.delete(id);if(buckets.size>=10000)fail(429,'RATE_LIMIT','Too many requests. Try again later.');}bucket={until:at+window,count:0};buckets.set(key,bucket);}
-    if(++bucket.count>limit)fail(429,'RATE_LIMIT','Too many requests. Try again later.');
+    if((bucket.count+=weight)>limit+1e-7)fail(429,'RATE_LIMIT','Too many requests. Try again later.');
   };
 }
 
@@ -57,6 +58,9 @@ export async function createGameServer(config,dependencies={}) {
     if(['ended','paused'].includes(room.data.state?.phase))room.abort.abort();
     for(const ws of room.sockets){if(ws.readyState!==WebSocket.OPEN)continue;if(ws.bufferedAmount>256*1024){ws.close(1013,'Client too slow');continue;}try{const current=room.data.identities.find(i=>i.hash===ws.identity.hash&&!i.revoked);if(!current){ws.close(1008,'Identity revoked');continue;}ws.send(JSON.stringify({type:'state',room:view(room,current)}));}catch{ws.terminate();}}
   }
+  // A shared address can carry several authenticated humans. Charge each its
+  // share of the room's address budget; per-identity limits stay unchanged.
+  function addressShare(room,req){if(!room)return 1;const actor=identityFor(room.data,req.headers.cookie);if(!actor?.seatId)return 1;return 1/Math.max(1,room.data.identities.filter(i=>i.seatId&&!i.revoked).length);}
   const nameInput=value=>{try{return playerName(value);}catch(error){fail(400,'INVALID_NAME',error.message);}};
   function generation(data,input){
     if((input.generation!==undefined&&input.generation!==(data.generation??0))||((data.generation??0)>1&&input.generation!==data.generation))fail(409,'STALE_MATCH','This request belongs to an older watch. Resynchronize.');
@@ -88,13 +92,15 @@ export async function createGameServer(config,dependencies={}) {
       const url=new URL(req.url,'http://local');
       if(!url.pathname.startsWith('/api/')){await serveStatic(req,res);return;}
       checkOrigin(req,req.method!=='GET');
-      const ip=req.socket.remoteAddress||'unknown';limit(`all:${ip}`,600);
+      const ip=req.socket.remoteAddress||'unknown',candidateId=/^\/api\/rooms\/([A-Za-z0-9_-]+)(?:\/|$)/.exec(url.pathname)?.[1];limit(`all:${ip}`,600,60000,addressShare(rooms.get(candidateId),req));
       if(url.search)fail(400,'INVALID_REQUEST','API requests do not accept query parameters.');
       if(req.method==='GET'&&url.pathname==='/api/health'){json(res,200,{ok:true,game:'Lantern Wake',protocol:1});return;}
       if(req.method==='POST'&&url.pathname==='/api/rooms') {
         limit(`create:${ip}`,8);const input=await body(req,Math.min(config.maxBodyBytes??8192,8192));
-        if(!['human','spectator'].includes(input.mode)||Object.keys(input).some(k=>!['mode','name'].includes(k))||(input.name!==undefined&&(typeof input.name!=='string'||input.name.length>40)))fail(400,'INVALID_ROOM','Choose human or spectator mode.');
-        const {room,token,identity}=await service.create(input.mode,input.name===undefined?undefined:nameInput(input.name));json(res,201,view(room,identity),{'Set-Cookie':cookie(room.data.id,token,secure)});return;
+        if(!['human','spectator'].includes(input.mode)||Object.keys(input).some(k=>!['mode','name','features'].includes(k))||(input.name!==undefined&&(typeof input.name!=='string'||input.name.length>40)))fail(400,'INVALID_ROOM','Choose human or spectator mode.');
+        let features;try{features=parseFeatures(Object.hasOwn(input,'features')?input.features:config.features);}catch{fail(400,'INVALID_FEATURES','Choose a valid death policy and ability preset.');}
+        if((features.deathPolicy==='ghost-tasks'||features.abilities)&&config.worldMode!==true)fail(400,'WORLD_REQUIRED','Optional presets require world mode.');
+        const {room,token,identity}=await service.create(input.mode,input.name===undefined?undefined:nameInput(input.name),features);json(res,201,view(room,identity),{'Set-Cookie':cookie(room.data.id,token,secure)});return;
       }
       if(req.method==='POST'&&url.pathname==='/api/invitations'){
         limit(`join:${ip}`,40);const input=await body(req,8192);if(Object.keys(input).some(k=>k!=='code')||typeof input.code!=='string')fail(400,'INVALID_CODE','Enter an invitation code.');
@@ -121,9 +127,9 @@ export async function createGameServer(config,dependencies={}) {
         json(res,200,{roomId:room.data.id,matchId:room.data.state.id,generation:room.data.generation??0,replay:engine.getReplay(room.data.state)});return;
       }
       if(['seat','ready','profile','settings','members','rematch'].includes(route)&&req.method==='POST'){
-        limit(`write:${ip}`,180);limit(`actor:${room.data.id}:${identity.hash}`,60);
+        limit(`write:${ip}`,180,60000,addressShare(room,req));limit(`actor:${room.data.id}:${identity.hash}`,60);
         const input=await body(req,8192);
-        const allowed={seat:['seatId','name'],ready:['ready'],profile:['name','color'],settings:['settings'],members:['seatId','operation'],rematch:['id']}[route];
+        const allowed={seat:['seatId','name'],ready:['ready'],profile:['name','color'],settings:['settings','features'],members:['seatId','operation'],rematch:['id']}[route];
         if(Object.keys(input).some(k=>!allowed.includes(k)&&k!=='generation'))fail(400,'INVALID_LOBBY_REQUEST','Unknown lobby fields.');
         await run(room,async data=>{
           identity=authenticate(room,req);
@@ -161,7 +167,8 @@ export async function createGameServer(config,dependencies={}) {
               member.ready=false;
             }
             if(route==='settings'){
-              hostOnly(identity);try{next.settings=changeSettings(next.settings,input.settings);}catch(error){fail(400,'INVALID_SETTINGS',error.message);}
+              hostOnly(identity);if(input.settings!==undefined){try{next.settings=changeSettings(next.settings,input.settings);}catch(error){fail(400,'INVALID_SETTINGS',error.message);}}else if(!Object.hasOwn(input,'features'))fail(400,'INVALID_SETTINGS','Provide settings or feature presets.');
+              if(Object.hasOwn(input,'features')){try{next.features=parseFeatures(input.features);}catch{fail(400,'INVALID_FEATURES','Choose a valid death policy and ability preset.');}if((next.features.deathPolicy==='ghost-tasks'||next.features.abilities)&&config.worldMode!==true)fail(400,'WORLD_REQUIRED','Optional presets require world mode.');}
               if(next.identities.some(i=>i.seatId&&Number(i.seatId.slice(1))>next.settings.capacity))fail(409,'SEAT_OCCUPIED','Release occupied seats before reducing capacity.');
               next.roster=rosterFor(next.settings.capacity,next.roster);
               for(const member of next.identities)member.ready=member.host&&!!member.seatId;
@@ -171,7 +178,7 @@ export async function createGameServer(config,dependencies={}) {
         });broadcast(room);json(res,200,view(room,authenticate(room,req)));return;
       }
       if(route==='input'&&req.method==='POST') {
-        limit(`input-ip:${ip}`,600);limit(`input-actor:${room.data.id}:${identity.hash}`,600);
+        limit(`input-ip:${ip}`,600,60000,addressShare(room,req));limit(`input-actor:${room.data.id}:${identity.hash}`,600);
         if(!identity.seatId)fail(403,'SPECTATOR','Only a seated player can send movement input.');
         const envelope=await body(req,Math.min(config.maxBodyBytes??8192,8192)),input=coreInput(envelope);
         if(Object.keys(input).length!==3||!['seq','dx','dy'].every(key=>Object.hasOwn(input,key))||!Number.isSafeInteger(input.seq)||input.seq<=0||!['dx','dy'].every(key=>Number.isInteger(input[key])&&input[key]>=-1&&input[key]<=1))fail(400,'INVALID_INPUT','Movement requires exactly {seq,dx,dy}: a positive safe sequence and integer directions from -1 to 1.');
@@ -191,20 +198,23 @@ export async function createGameServer(config,dependencies={}) {
         json(res,200,view(room,identity));return;
       }
       if((route==='start'||route==='action')&&req.method==='POST') {
-        limit(`write:${ip}`,180);limit(`actor:${room.data.id}:${identity.hash}`,60);
+        limit(`write:${ip}`,180,60000,addressShare(room,req));limit(`actor:${room.data.id}:${identity.hash}`,60);
         const envelope=await body(req,Math.min(config.maxBodyBytes??8192,8192)),input=coreInput(envelope);
         if(!requestId(input.id))fail(400,'INVALID_ID','A bounded unique request ID is required.');
         await run(room,async data=>{
           identity=authenticate(room,req);generation(data,envelope);
           if(route==='start') {
             if(!identity.host)fail(403,'HOST_REQUIRED','Only the host can start this room.');
-            if(Object.keys(input).some(k=>k!=='id'))fail(400,'INVALID_START','Start accepts only a request ID.');
+            if(Object.keys(input).some(k=>!['id','features'].includes(k)))fail(400,'INVALID_START','Start accepts a request ID and optional feature presets.');
             if(data.startId===input.id)return;
             if(data.state)fail(409,'ALREADY_STARTED','This match has already started.');
             if(data.schema===2&&data.identities.some(i=>i.seatId&&(!i.ready||i.revoked)))fail(409,'NOT_READY','Every seated human must be ready.');
-            const next=structuredClone(data);next.startId=input.id;
+            const next=structuredClone(data);
+            if(Object.hasOwn(input,'features')){try{next.features=parseFeatures(input.features);}catch{fail(400,'INVALID_FEATURES','Choose a valid death policy and ability preset.');}}
+            if((next.features?.deathPolicy==='ghost-tasks'||next.features?.abilities)&&config.worldMode!==true)fail(400,'WORLD_REQUIRED','Optional presets require world mode.');
+            next.startId=input.id;
             const configured=data.schema===2;
-            next.state=engine.createMatch({id:configured&&data.generation>1?`${data.id}_g${data.generation}`:data.id,mode:data.mode,humanPlayerId:'p1',now:now(),config:{...(configured?matchRules(data.settings):{}),...config.rules},world:config.worldMode===true,...(configured?{settings:data.settings,roster:data.roster,humanPlayerIds:data.identities.filter(i=>i.seatId).map(i=>i.seatId)}:{})});await commit(room,next);
+            next.state=engine.createMatch({id:configured&&data.generation>1?`${data.id}_g${data.generation}`:data.id,mode:data.mode,humanPlayerId:'p1',now:now(),config:{...(configured?matchRules(data.settings):{}),...config.rules},world:config.worldMode===true,features:next.features,...(configured?{settings:data.settings,roster:data.roster,humanPlayerIds:data.identities.filter(i=>i.seatId).map(i=>i.seatId)}:{})});await commit(room,next);
           } else {
             if(!identity.seatId)fail(403,'SPECTATOR','Spectators cannot act.');
             if(!data.state)fail(409,'NOT_STARTED','Start the match first.');
@@ -235,7 +245,11 @@ export async function createGameServer(config,dependencies={}) {
   });
   function scheduleAi(room) {
     if(closing||room.aiBusy||room.aiBlocked||room.removed||!room.data.state||['ended','paused'].includes(room.data.state.phase))return;
-    const player=room.data.state.players.filter(p=>!p.human&&(room.nextDecision.get(p.id)||0)<=now()&&engine.getPlayerView(room.data.state,p.id,now()).self?.alive).sort((a,b)=>(room.nextDecision.get(a.id)||0)-(room.nextDecision.get(b.id)||0))[0];
+    const canScheduleActor=actor=>{
+      const v=engine.getPlayerView(room.data.state,actor.id,now());
+      return v.self?.alive||(v.self?.ghost&&v.phase==='roam'&&v.self.role==='crew'&&v.self.tasks.some(t=>!t.completed));
+    };
+    const player=room.data.state.players.filter(p=>!p.human&&(room.nextDecision.get(p.id)||0)<=now()&&canScheduleActor(p)).sort((a,b)=>(room.nextDecision.get(a.id)||0)-(room.nextDecision.get(b.id)||0))[0];
     if(!player)return;
     room.nextDecision.set(player.id,now()+Math.max(100,config.ai?.decisionIntervalMs??1800));room.aiBusy=true;const work=Symbol(),matchId=room.data.state.id,abort=room.abort;room.aiWork=work;
     const current=()=>room.data.state?.id===matchId&&!['ended','paused'].includes(room.data.state.phase)&&room.abort===abort&&!abort.signal.aborted&&!closing;

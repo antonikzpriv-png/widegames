@@ -68,6 +68,7 @@ export function createAiController({ config = {} } = {}) {
   }
   function envelope(action, view, memory) {
     if (!action) return null;
+    if (action.type === 'ghostSay') memory.ghostSpoken=true;
     if (action.type === 'say') memory.discussionCount = (memory.discussionCount ?? 0) + 1;
     if (view.worldVersion === 1 && action.type === 'repair') memory.worldRepairDeadline = view.sabotage?.deadlineAt;
     if (action.type === 'move' || action.type === 'navigate') memory.patrol = (memory.patrol ?? 0) + 1;
@@ -76,7 +77,7 @@ export function createAiController({ config = {} } = {}) {
   }
   return {
     async decide({ view, player, context, signal, commitReservation } = {}) {
-      if (signal?.aborted || !record(context) || !view?.self || !view.self.alive || typeof view.matchId !== 'string' || !Number.isFinite(view.serverNow) || !['roam', 'discussion', 'voting'].includes(view.phase)) return null;
+      if (signal?.aborted || !record(context) || !view?.self || (!view.self.alive&&!view.self.ghost) || typeof view.matchId !== 'string' || !Number.isFinite(view.serverNow) || !['roam', 'discussion', 'voting'].includes(view.phase)) return null;
       const persona=PERSONAS.find(p=>p.id===player?.id),publicActor=view.players?.find(p=>p.id===player?.id);
       const actor=persona&&publicActor?{...persona,name:publicActor.name,color:publicActor.color}:null;
       if (!actor || actor.id !== view.self.id) return null;
@@ -96,7 +97,7 @@ export function createAiController({ config = {} } = {}) {
         if (!choices.length) return null;
         const demo = () => envelope(choices[0], view, memory);
         // Local policy owns every roam action; only council decisions spend.
-        if (view.phase === 'roam' || (choices.length === 1 && choices[0].type === 'wait')) return demo();
+        if (view.self.ghost || view.phase === 'roam' || (choices.length === 1 && choices[0].type === 'wait')) return demo();
         if (state.mode === 'live' && view.phase === 'discussion' && (memory.discussionCount ?? 0) >= 2) return null;
         if (state.mode !== 'live') return demo();
         if (typeof commitReservation !== 'function') { fallback(context, state, 'reservation_required'); return demo(); }

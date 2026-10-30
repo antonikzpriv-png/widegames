@@ -20,6 +20,9 @@ jobs:
       - run: npm run test:browser
         env:
           CHROME_PATH: /usr/bin/google-chrome
+      - run: npm run test:features:browser
+        env:
+          CHROME_PATH: /usr/bin/google-chrome
       - run: node --test tests/world-ui-browser.test.mjs
         env:
           CHROME_PATH: /usr/bin/google-chrome
@@ -41,3 +44,5 @@ jobs:
             _artifacts/world-ui-*/*.png
             _artifacts/multiplayer-browser-*/report.json
             _artifacts/multiplayer-browser-*/*.png
+            _artifacts/ghost-abilities-browser-*/report.json
+            _artifacts/ghost-abilities-browser-*/*.png

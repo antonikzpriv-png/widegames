@@ -8,7 +8,8 @@ export function localBodies(game){
 export function localTargets(game){
  return (game?.players||[]).filter(player=>player.alive&&player.id!==game?.self?.id&&player.roomId===game?.self?.roomId);
 }
-export function nameOf(game,id){return game?.players?.find(player=>player.id===id)?.name||id||'The watch';}
+export const keeperLabel=player=>player?`${player.name}${player.badge?` #${player.badge}`:''}`:null;
+export function nameOf(game,id){return keeperLabel(game?.players?.find(player=>player.id===id))||id||'The watch';}
 export function roomName(id){return ({bridge:'Bridge',archive:'Archive',lantern:'Lantern',galley:'Galley',engine:'Engine',workshop:'Workshop'})[id]||id||'Unknown';}
 export function eventText(event,game){
  const name=id=>nameOf(game,id);

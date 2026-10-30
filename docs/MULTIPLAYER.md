@@ -1,14 +1,14 @@
 # Multiplayer lobbies and rematches
 
-This contract extends the audited `90bb6e8` walking-world baseline. Historical owner allocations, Windows workspace paths, fixed-six-only statements, and the original empty-remote status in older notes are historical. Development uses the current Cloud checkout and existing Node ESM/native HTTP/WebSocket stack. No deployment or paid provider call is needed.
+This contract extends the audited `90bb6e8` walking-world baseline and integrates main `fa7aaa0` (authoritative task puzzles, ghost tasks and optional abilities). Historical owner allocations, Windows workspace paths, fixed-six-only statements, and the original empty-remote status in older notes are historical. Development uses the current Cloud checkout and existing Node ESM/native HTTP/WebSocket stack. No deployment or paid provider call is needed.
 
 ## Playing together
 
 Choose **PLAY AS A KEEPER** to host with a human seat, or **WATCH THE AI** to host as a spectator. Defaults remain six keepers, one saboteur, three tasks per crew, and the existing timings. Copy the room invitation or enter its 12-character code through **Join friends**. Joining a link initially creates a spectator identity; **Claim a keeper** claims an available seat. Unclaimed seats become AI at start. The same HttpOnly room cookie restores a human's seat on reload.
 
-Each keeper has a stable actor ID (`p1`–`p15`), public persona, name and raincoat color. Names contain 1–24 visible normalized characters. Names may repeat; numbered badges remain distinct in lobby, world labels, council controls and results. Humans can edit their own name and color before starting. Hosts can remove other lobby occupants. Everyone with a human seat must ready up; spectators never block start. The host's initial seat is ready by default. Profile edits unready that human; applying settings unreadies guests and readies the seated host.
+Each keeper has a stable actor ID (`p1`–`p15`), public persona, name and raincoat color. Names contain 1–24 visible normalized characters. Names may repeat; numbered badges remain distinct in lobby, world labels, elimination controls, council/chat, ability targets, results and attributed replays. Humans can edit their own name and color before starting. Hosts can remove other lobby occupants. During a match, **Manage crew** opens authenticated access-revocation controls; the seat remains reserved and idle. Everyone with a human seat must ready up; spectators never block start. The host's initial seat is ready by default. Profile edits unready that human; applying settings unreadies guests and readies the seated host.
 
-Host controls are validated on the server. Capacity is 4–15, saboteurs 1–3, and saboteurs must be fewer than crew (`2 * saboteurs < capacity`): two saboteurs need at least five keepers; three need at least seven. Occupied seats cannot be removed by lowering capacity. Task quantity, movement speed, vision, initial and subsequent elimination cooldowns, task/sabotage/emergency cooldowns, critical countdown, discussion/voting time, emergency allowance, sabotage and emergency-bell options are configurable. The precise bounds/units are in `shared/lobby.mjs`; the UI shows seconds for millisecond fields.
+Host controls are validated on the server. Capacity is 4–15, saboteurs 1–3, and saboteurs must be fewer than crew (`2 * saboteurs < capacity`): two saboteurs need at least five keepers; three need at least seven. Occupied seats cannot be removed by lowering capacity. Task quantity, movement speed, vision, initial and subsequent elimination cooldowns, task/sabotage/emergency cooldowns, critical countdown, discussion/voting time, emergency allowance, sabotage and emergency-bell options are configurable. The precise bounds/units are in `shared/lobby.mjs`; the UI shows seconds for millisecond fields. The host can also choose classic task transfer or ghost tasks with private fallen chat, and optional Harbor Ward / Signal Echo abilities. These presets apply to every supported capacity and survive rematches. There is one ward owner among crew and one echo owner among saboteurs; abilities do not change factions. Applying presets also resets guest readiness. Unsaved settings survive background room updates and are applied before starting; guests must ready again after any settings change.
 
 Start locks the roster, human ownership and all gameplay settings. Settings live on that match, not on shared `WORLD`, geometry, module globals, or another room. Spawn points retain the original six positions and add nine walkable points at least two body radii apart. Static map geometry remains shared. Movement continues to use server time, collision checks, diagonal normalization and input leases.
 
@@ -34,7 +34,7 @@ The deployment-day budget ledger is never reset by rematch. Completed-watch repl
 
 ## API additions
 
-All POST routes require the configured Origin and JSON. Room routes require the room cookie except create/join; standard rate and body limits still apply. Responses are the current safe room envelope, with `generation`, monotonic room `revision`, public `settings`, `seats`, readiness, invitation code and archive metadata. No token hashes or AI memory are included.
+All POST routes require the configured Origin and JSON. Room routes require the room cookie except create/join; standard rate and body limits still apply. Authenticated seated humans share address-level counters at weight `1 / current non-revoked human seats`, so a group behind one network address can move normally. Individual movement remains capped at 600/minute, discrete writes at 60/minute; unauthenticated and spectator requests keep full address weight. A single human's existing overall 600/minute address ceiling is preserved. Responses are the current safe room envelope, with `generation`, monotonic room `revision`, public `settings`, `seats`, readiness, invitation code and archive metadata. No token hashes or AI memory are included.
 
 | Route | JSON / behavior |
 | --- | --- |
@@ -43,9 +43,9 @@ All POST routes require the configured Origin and JSON. Room routes require the 
 | `POST .../seat` | `{seatId:'auto' | 'pN' | null, name?, generation}` claims/switches/releases one's lobby seat. |
 | `POST .../profile` | `{name?, color?, generation}` edits one's own seated lobby profile. |
 | `POST .../ready` | `{ready:boolean, generation}` changes one's own readiness. |
-| `POST .../settings` | `{settings:partialSettings, generation}` is host-only and lobby-only. |
+| `POST .../settings` | `{settings?:partialSettings, features?:{deathPolicy,abilities}, generation}` is host-only and lobby-only. |
 | `POST .../members` | `{seatId, operation:'release' | 'revoke', generation}` is host-only; release is lobby-only. Hosts cannot remove themselves this way. |
-| `POST .../start` | `{id, generation}` is host-only; requires every human ready and retains start idempotency. |
+| `POST .../start` | `{id, generation, features?}` is host-only; requires every human ready and retains start idempotency. |
 | `POST .../rematch` | `{id, generation}` is host-only and terminal-only; repeats of the same transition remain idempotent. |
 | `POST .../input` | `{seq,dx,dy,generation,matchId}` controls only the current authenticated human. |
 | `POST .../action` | Existing action envelope plus `{generation,matchId}`; metadata is checked and stripped before engine validation. |
@@ -67,8 +67,9 @@ Run browser checks sequentially:
 CHROME_PATH=/usr/bin/chromium npm run test:browser
 CHROME_PATH=/workspace/.cloud-setup/bin/chromium-cloud LW_WORLD_BROWSER=1 node --test tests/world-ui-browser.test.mjs
 CHROME_PATH=/usr/bin/chromium npm run test:multiplayer-browser
+CHROME_PATH=/usr/bin/chromium npm run test:features:browser
 ```
 
-Use the cloud Chromium launcher for the independent world UI suite because its launcher otherwise requires a SUID sandbox unavailable in this container. Both npm browser scripts already pass the required container flag. CI uses its existing Chrome installation. The multiplayer driver uses three isolated cookie contexts (two humans plus spectator), real HTTP/WS, a controlled clock, and explicitly labelled local idle AI. Legal fixture AI council votes finish the real engine match; it does not fabricate winners. It verifies settings, names, claims/readiness, movement ownership, reconnect, spectator privacy, a complete multi-saboteur watch, archived replay and rematch role reveal. No paid calls occur. Reports/screenshots are generated under ignored `_artifacts/multiplayer-browser-*/`; selected screenshots are retained in `docs/screenshots/multiplayer/`.
+Use the cloud Chromium launcher for the independent world UI suite because its launcher otherwise requires a SUID sandbox unavailable in this container. The npm browser scripts already pass the required container flag. CI uses its existing Chrome installation. The multiplayer driver uses three isolated cookie contexts (two humans plus spectator), real HTTP/WS, a controlled clock, and explicitly labelled local idle AI. Legal fixture AI council votes finish the real engine match; it does not fabricate winners. It verifies settings, names, claims/readiness, movement ownership, reconnect, spectator privacy, a complete multi-saboteur watch, archived replay and rematch role reveal. No paid calls occur. Reports/screenshots are generated under ignored `_artifacts/multiplayer-browser-*/`; selected screenshots are retained in `docs/screenshots/multiplayer/`.
 
 Observed counts, exact commands and retained screenshots are in [Multiplayer qualification](MULTIPLAYER-VERIFICATION.md).

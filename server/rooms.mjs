@@ -1,3 +1,4 @@
+import {parseFeatures} from '../shared/features.mjs';
 import {randomBytes,createHash} from 'node:crypto';
 import {LOBBY_DEFAULTS,rosterFor} from '../shared/lobby.mjs';
 import {ROOM_ID,validateRoom} from './store.mjs';
@@ -49,7 +50,7 @@ export function createRooms({store,engine,ai,now=Date.now,maxActiveRooms=12,room
     const notices=Array.isArray(data.aiContext.notices)?data.aiContext.notices.filter(x=>typeof x==='string').slice(-10).map(x=>x.slice(0,240)):[];
     if(safeAi.mode==='live')notices.push('Hybrid AI: live model council; navigation and deck actions use local policy.');
     if(room.aiBlocked)notices.push('AI paused because durable storage or budget reservation failed.');
-    return {roomId:data.id,...(data.schema===2?{generation:data.generation,revision:data.revision,inviteCode:data.inviteCode,settings:structuredClone(data.settings),ready:identity.ready,seats:data.roster.map(p=>({...p,persona:undefined,human:data.identities.some(i=>i.seatId===p.id),ready:data.identities.some(i=>i.seatId===p.id&&i.ready&&!i.revoked),revoked:data.identities.some(i=>i.seatId===p.id&&i.revoked),host:data.identities.some(i=>i.seatId===p.id&&i.host)})),archives:data.archives.map(a=>({matchId:a.matchId,generation:a.generation}))}:{}),mode:data.mode,isHost:identity.host,seatId:identity.seatId,phase:data.state?.phase||'lobby',connection:'connected',game:data.state?engine.getPlayerView(data.state,identity.seatId,now()):null,ai:safeAi,notices,createdAt:data.createdAt};
+    return {...(data.features?{features:structuredClone(data.features)}:{}),roomId:data.id,...(data.schema===2?{generation:data.generation,revision:data.revision,inviteCode:data.inviteCode,settings:structuredClone(data.settings),ready:identity.ready,seats:data.roster.map(p=>({...p,persona:undefined,human:data.identities.some(i=>i.seatId===p.id),ready:data.identities.some(i=>i.seatId===p.id&&i.ready&&!i.revoked),revoked:data.identities.some(i=>i.seatId===p.id&&i.revoked),host:data.identities.some(i=>i.seatId===p.id&&i.host)})),archives:data.archives.map(a=>({matchId:a.matchId,generation:a.generation}))}:{}),mode:data.mode,isHost:identity.host,seatId:identity.seatId,phase:data.state?.phase||'lobby',connection:'connected',game:data.state?engine.getPlayerView(data.state,identity.seatId,now()):null,ai:safeAi,notices,createdAt:data.createdAt};
   }
   async function restore() {
     for(const data of await store.load()) {
@@ -63,10 +64,11 @@ export function createRooms({store,engine,ai,now=Date.now,maxActiveRooms=12,room
     }
     if(rooms.size>maxActiveRooms)throw new Error('Persisted rooms exceed configured room limit');
   }
-  async function create(mode,name) {
+  async function create(mode,name,features) {
+    if(name&&typeof name==='object'&&features===undefined){features=name;name=undefined;}
     const work=creationQueue.catch(()=>{}).then(async()=>{
       if(rooms.size>=maxActiveRooms)fail(429,'ROOM_LIMIT','All room slots are in use.');
-      const data=createRoom(mode,now(),configurable), issued=issueIdentity(data,true);if(name&&issued.identity.seatId&&data.roster)data.roster[0].name=name;await store.save(data);
+      const data=createRoom(mode,now(),configurable);if(features!==undefined)data.features=parseFeatures(features);const issued=issueIdentity(data,true);if(name&&issued.identity.seatId&&data.roster)data.roster[0].name=name;await store.save(data);
       const room=entry(data);rooms.set(data.id,room);return {room,...issued};
     });creationQueue=work;return work;
   }

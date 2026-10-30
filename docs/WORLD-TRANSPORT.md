@@ -1,5 +1,7 @@
 ﻿# World movement transport
 
+**Current extension:** [Multiplayer](MULTIPLAYER.md) specifies multiple authenticated seats, generation/match envelopes, schema-2 room containers and shared-address quotas. The original p1-only envelope and exact single-human quota example below remain historical compatibility coverage. All current queued writes and socket projections re-resolve identity ownership.
+
 `POST /api/rooms/:id/input` is the authenticated continuous-input boundary. It accepts exactly `{seq,dx,dy}`: sequence is a positive safe integer, directions are integers in -1..1, and a zero vector stops movement. The actor comes exclusively from this room's human p1 cookie. Missing/foreign room authentication, spectators, invalid origins, extra/private fields, malformed values and bodies over8KiB are rejected. Responses retain the normal permitted room envelope or safe `{error:{code,message}}`; no state/internal motion object is sent directly.
 
 Movement has separate per-address and per-identity 600/minute counters and does not consume the 60/minute discrete actor allowance or the discrete write bucket. Every input still consumes the existing overall600/minute HTTP cap. That total includes create/start/poll/action traffic: a fresh test's create+start leave598 successful input requests before the next request receives429. The separate buckets therefore provide isolation, not extra overall capacity. HTTP is the input channel; WebSocket clients receive safe state broadcasts and continue to use HTTP for writes.

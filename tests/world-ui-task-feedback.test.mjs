@@ -46,6 +46,7 @@ function fixture() {
   const context = vm.createContext({ document, window: win, world, CHARACTERS, console, Date, performance: { now: () => 100 }, matchMedia: () => ({ matches: true }), requestAnimationFrame: () => 1, cancelAnimationFrame() {},
     drawKeeper() {}, createWorldScene: () => ({ update() {}, draw() {}, toWorld() { return { x: 0, y: 0 }; }, dispose() {} }), replayText: event => event.type, replayEvents: value => value.replay ?? [], outcomeText: reason => reason });
   const module = (path, names) => Object.assign(context, vm.runInContext(`(()=>{${strip(source(path))};return {${names}};})()`, context));
+  module('public/presentation.mjs', 'keeperLabel,nameOf');
   module('public/world/dom.mjs', 'dom,control,setText,trapDialog,restoreTrigger');
   module('public/world/model.mjs', 'aiLabel,clock,contexts,distance,point,roleLabel,taskKind,validTaskSession,visiblePlayers');
   module('public/world/input.mjs', 'createWorldInput');

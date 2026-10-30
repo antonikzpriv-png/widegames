@@ -12,12 +12,14 @@ import {LOBBY_DEFAULTS,PERSONAS,rosterFor,changeSettings} from '../shared/lobby.
 import {WORLD,worldSpawn,isWalkable,distance} from '../shared/world.mjs';
 import {createAiController} from '../server/ai/index.mjs';
 import {makeRequest} from '../server/ai/anthropic.mjs';
+import {createDailyBudget} from '../server/budget.mjs';
+import {taskProgress,taskInput} from '../server/engine/tasks.mjs';
 const delay=ms=>new Promise(r=>setTimeout(r,ms));
 async function until(fn,label){for(let i=0;i<200;i++){const v=await fn();if(v)return v;await delay(10);}throw Error('Timeout: '+label);}
 const idle={describe:()=>({mode:'demo'}),decide:async()=>null};
-async function fixture(t,{ai=idle,rules={},worldMode=true}={}){
+async function fixture(t,{ai=idle,rules={},worldMode=true,daily,seed}={}){
  const directory=await mkdtemp(path.join(tmpdir(),'lantern-multiplayer-'));let now=100000,game,origin;
- async function boot(){game=await createGameServer({dataDir:directory,publicOrigin:'http://multiplayer.test',worldMode,tickMs:15,now:()=>now,rules,ai:{provider:'demo',decisionIntervalMs:100,maxDailyCostUsd:5}},{aiController:ai});await new Promise(r=>game.server.listen(0,'127.0.0.1',r));origin=`http://127.0.0.1:${game.server.address().port}`;}
+ async function boot(){game=await createGameServer({dataDir:directory,publicOrigin:'http://multiplayer.test',worldMode,tickMs:15,now:()=>now,rules,ai:{provider:'demo',decisionIntervalMs:100,maxDailyCostUsd:5}},{aiController:ai,...(daily?{dailyBudget:daily}:{}),...(seed===undefined?{}:{engine:{...engine,createMatch:options=>engine.createMatch({...options,seed})}})});await new Promise(r=>game.server.listen(0,'127.0.0.1',r));origin=`http://127.0.0.1:${game.server.address().port}`;}
  await boot();t.after(async()=>{await game.close();await rm(directory,{recursive:true,force:true});});
  async function request(route,body,cookie,extra={}){const r=await fetch(origin+route,{method:body===undefined?'GET':'POST',headers:{Origin:'http://multiplayer.test',...(body===undefined?{}:{'Content-Type':'application/json'}),...(cookie?{Cookie:cookie}:{}),...extra},...(body===undefined?{}:{body:JSON.stringify(body)})});return {status:r.status,body:await r.json(),cookie:r.headers.get('set-cookie')?.split(';')[0]};}
  async function socket(id,cookie){const frames=[],ws=new WebSocket(origin.replace('http:','ws:')+`/api/rooms/${id}/socket`,{headers:{Origin:'http://multiplayer.test',Cookie:cookie}});ws.on('message',b=>frames.push(JSON.parse(b)));await until(()=>frames.length,'socket initial frame');t.after(()=>ws.terminate());return {ws,frames};}
@@ -140,7 +142,8 @@ test('rematch fences pending AI/provider/reservations/actions/input, resets cont
   const player=entry.data.state.players.find(p=>p.id===actor.id);
   player.position={x:task.roomId==='bridge'?930:({archive:370,lantern:1450,workshop:930,galley:370,engine:1450})[task.roomId],y:({bridge:230,archive:510,lantern:510,workshop:730,galley:960,engine:960})[task.roomId]};
   player.roomId=task.roomId;player.cooldowns.taskAt=f.now;
-  entry.data.state=engine.applyAction(entry.data.state,player.id,{id:'complete-'+task.id,type:'task',taskId:task.id},f.now).state;
+  for(let step=0;step<5;step++){const current=entry.data.state.players.find(p=>p.id===player.id).tasks.find(t=>t.id===task.id),progress=taskProgress(current);if(progress.index>=progress.total)break;if(progress.kind==='repair'&&progress.index===3&&f.now<progress.readyAt)f.advance(progress.readyAt-f.now);const result=engine.applyAction(entry.data.state,player.id,{id:`step-${task.id}-${progress.index}`,type:'taskStep',taskId:task.id,step:progress.index,input:taskInput(current)},f.now);assert(result.accepted,JSON.stringify(result.error));entry.data.state=result.state;}
+  const completed=engine.applyAction(entry.data.state,player.id,{id:'complete-'+task.id,type:'task',taskId:task.id},f.now);assert(completed.accepted,JSON.stringify(completed.error));entry.data.state=completed.state;
  }
  assert.equal(entry.data.state.phase,'ended');
  const rematch=await f.request(host.route+'/rematch',{id:'again',generation:1},host.cookie);assert.equal(rematch.status,200,JSON.stringify(rematch.body));assert.equal(rematch.body.generation,2);assert.equal(rematch.body.game,null);assert.equal(rematch.body.inviteCode,host.body.inviteCode);assert.equal(entry.data.aiContext.oldMemory,undefined);
@@ -222,4 +225,46 @@ for(const capacity of [4,15])test(`audit: real dynamic demo bots complete a ${ca
   }
  }
  assert.equal(state.phase,'ended');assert(['crew','saboteur'].includes(state.outcome.winner));assert.equal(controller.describe(context).calls,0);assert.equal(controller.describe(context).costUsd,0);
+});
+
+
+test('audit: an in-flight daily reservation cannot grant an old provider send after rematch',async t=>{
+ let f,release,ledger,started=false,finished=false,called=false,sends=0;
+ const gate=new Promise(resolve=>{release=resolve;}),fallback=setTimeout(()=>release(),3500);fallback.unref();t.after(()=>{release();clearTimeout(fallback);});
+ const daily={async reserve(reservation){ledger??=await createDailyBudget({directory:f.directory,maxCostUsd:5,now:()=>f.now});const result=await ledger.reserve(reservation);started=true;await gate;return result;}};
+ const ai={describe:()=>({mode:'demo'}),async decide({context,commitReservation}){if(called)return null;called=true;context.olderGeneration='private';try{await commitReservation({id:'inflight_old',amountUsd:.2});sends++;return {id:'old-proposal',type:'wait'};}finally{finished=true;}}};
+ f=await fixture(t,{ai,daily,rules:{maxMatchMs:1}});const host=await f.create();await f.request(host.route+'/start',{id:'old-watch'},host.cookie);await until(()=>started,'old deployment reservation persisted');
+ f.advance(2);await until(()=>f.game.rooms.get(host.id).data.state.phase==='paused','old watch paused');
+ assert.equal((await f.request(host.route+'/rematch',{id:'new-watch',generation:1},host.cookie)).status,200);
+ assert.equal((await f.request(host.route+'/start',{id:'new-start',generation:2},host.cookie)).status,200);
+ release();await until(()=>finished,'old callback fenced');await delay(30);
+ const current=f.game.rooms.get(host.id);assert.equal(sends,0);assert.equal(current.data.aiContext.olderGeneration,undefined);assert.equal(current.aiBlocked,false);assert(current.data.state.players.every(p=>current.data.state.requests[p.id].length===0));
+ const budget=JSON.parse(await readFile(path.join(f.directory,'ai-daily-budget.json'),'utf8'));assert.equal(budget.total,.2);assert.equal(budget.reservations[host.id+':inflight_old'],.2);
+});
+
+test('integration: 15 keepers preserve ghost task/chat privacy, optional abilities and fresh rematches',async t=>{
+ const features={deathPolicy:'ghost-tasks',abilities:true},settings=changeSettings(LOBBY_DEFAULTS,{capacity:15,saboteurs:3,tasksPerCrew:1});
+ let seed=0,probe;do{probe=engine.createMatch({id:'combined-seed',settings,roster:rosterFor(15),world:true,now:100000,seed:seed++,features});}while(probe.players[14].role!=='crew');
+ const f=await fixture(t,{rules:{initialKillCooldownMs:1},seed:seed-1}),created=await f.request('/api/rooms',{mode:'human',features}),host={...created,id:created.body.roomId,route:'/api/rooms/'+created.body.roomId};assert.equal(created.status,201);
+ assert.equal((await f.request(host.route+'/settings',{settings},host.cookie)).status,200);
+ const guest=await f.request(host.route+'/join',{intent:'play'});assert.equal((await f.request(host.route+'/seat',{seatId:'p15'},guest.cookie)).status,200);await f.request(host.route+'/ready',{ready:true},guest.cookie);
+ const entry=f.game.rooms.get(host.id);await f.request(host.route+'/start',{id:'optional-start'},host.cookie);
+ const attacker=entry.data.state.players.find(p=>p.role==='saboteur'),destination=entry.data.state.players[14].position;
+ async function fixtureAction(action){const work=entry.queue.then(()=>{const result=engine.applyAction(entry.data.state,attacker.id,action,f.now);assert(result.accepted,JSON.stringify(result.error));entry.data={...entry.data,state:result.state,updatedAt:f.now};});entry.queue=work.catch(()=>{});await work;}
+ await fixtureAction({id:'approach-p15',type:'navigate',...destination});f.advance(5000);
+ await until(()=>distance(entry.data.state.players.find(p=>p.id===attacker.id).position,entry.data.state.players[14].position)<=WORLD.killRadius,'approach dynamic human');
+ await fixtureAction({id:'eliminate-p15',type:'eliminate',targetId:'p15'});
+ const privateView=await f.request(host.route,undefined,guest.cookie);assert.equal(privateView.body.game.self.id,'p15');assert.equal(privateView.body.game.self.ghost,true);assert.equal(privateView.body.game.self.tasks.length,1);const corpse=structuredClone(entry.data.state.bodies.find(b=>b.playerId==='p15'));
+ assert.equal((await f.request(host.route+'/action',{id:'p15-private-chat',type:'ghostSay',text:'Fallen p15 only'},guest.cookie)).status,200);
+ const spectator=await f.request(host.route+'/join',{}),spectatorSocket=await f.socket(host.id,spectator.cookie);assert.equal(spectator.body.game.players[14].position,null);assert(!Object.hasOwn(spectator.body.game,'ghostChat'));assert(!Object.hasOwn(spectatorSocket.frames[0].room.game,'ghostChat'));spectatorSocket.ws.terminate();
+ assert.equal((await f.request(host.route+'/input',{seq:1,dx:-1,dy:0},guest.cookie)).status,200);f.advance(100);await until(()=>distance(entry.data.state.players[14].position,corpse.position)>1,'dynamic ghost movement');assert.deepEqual(entry.data.state.bodies.find(b=>b.playerId==='p15'),corpse);
+ await f.restart();const restored=await f.request(host.route,undefined,guest.cookie);assert(restored.body.game.self.ghost);assert.equal(restored.body.game.ghostChat.length,1);assert.equal(f.game.rooms.get(host.id).data.state.players.filter(p=>p.ability?.type==='ward').length,1);assert.equal(f.game.rooms.get(host.id).data.state.players.filter(p=>p.ability?.type==='echo').length,1);
+ f.advance(900001);await until(()=>f.game.rooms.get(host.id).data.state.phase==='paused','optional pause');const next=await f.request(host.route+'/rematch',{id:'optional-rematch',generation:1},host.cookie);assert.equal(next.status,200);assert.deepEqual(next.body.features,features);await f.request(host.route+'/ready',{ready:true,generation:2},guest.cookie);
+ assert.equal((await f.request(host.route+'/start',{id:'optional-next',generation:2},host.cookie)).status,200);const fresh=await f.request(host.route,undefined,guest.cookie);assert.equal(fresh.body.game.self.alive,true);assert.equal(fresh.body.game.self.ghost,false);assert.equal(fresh.body.game.self.inputSeq,0);assert(!Object.hasOwn(fresh.body.game,'ghostChat'));assert.equal(fresh.body.game.effects.length,0);assert(!(await readdir(f.directory)).some(p=>p.includes('quarantine')));
+});
+
+test('audit: humans sharing one network address retain normal movement throughput',async t=>{
+ const f=await fixture(t),host=await f.create(),guest=await f.request(host.route+'/join',{intent:'play'});
+ await f.request(host.route+'/ready',{ready:true},guest.cookie);assert.equal((await f.request(host.route+'/start',{id:'shared-address'},host.cookie)).status,200);f.advance(60001);
+ for(let seq=1;seq<=310;seq++){const responses=await Promise.all([host.cookie,guest.cookie].map(cookie=>f.request(host.route+'/input',{seq,dx:0,dy:0},cookie)));assert(responses.every(r=>r.status===200),JSON.stringify({seq,responses}));}
 });
