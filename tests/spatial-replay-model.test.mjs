@@ -67,4 +67,5 @@ test('playback clock handles start/end, speed bounds, rewind, pause and disposal
 
 test('recorded AI labels distinguish mode/fallback and reservation ceilings from invoices',()=>{
  assert.match(recordedAiText({mode:'live',calls:2,tokens:100,costUsd:.01}),/HYBRID/);assert.match(recordedAiText({mode:'strategic'}),/STRATEGIC/);assert.match(recordedAiText({mode:'demo',limitReason:'provider_unavailable'}),/Fallback/);assert.match(recordedAiText({mode:'demo',costUsd:1}),/not provider invoices/);assert.match(recordedAiText(),/not recorded/);
+ assert.match(recordedAiText({mode:'live',strategy:'strategic',calls:2}),/STRATEGIC/);assert.doesNotMatch(recordedAiText({mode:'live',strategy:'strategic'}),/HYBRID/);assert.match(recordedAiText({mode:'demo',strategy:'demo',limitReason:'budget_calls'}),/DEMO.*Fallback/);
 });

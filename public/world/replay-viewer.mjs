@@ -7,10 +7,10 @@ import {replaySequenceOf} from '../../shared/replay.mjs';
 
 export function recordedAiText(ai){
  if(!ai)return 'AI mode and usage were not recorded for this history.';
- const mode=({demo:'DEMO · local keepers',live:'HYBRID · live council / local navigation',hybrid:'HYBRID · recorded provider and local policy',strategic:'STRATEGIC · recorded strategy'})[ai.mode]||'AI mode not recorded';
+ const mode=ai.mode==='live'&&ai.strategy==='strategic'?'STRATEGIC · model plans / local execution':({demo:'DEMO · local keepers',live:'HYBRID · live council / local navigation',hybrid:'HYBRID · recorded provider and local policy',strategic:'STRATEGIC · recorded strategy'})[ai.mode]||'AI mode not recorded';
  const fallback=ai.limitReason&&ai.limitReason!=='demo_configured'?` Fallback: ${aiNotice(ai.limitReason)}`:'';
  const usage=['calls','tokens','costUsd'].filter(k=>Number.isFinite(ai[k])&&ai[k]>=0).map(k=>`${k==='costUsd'?'USD reserved ceiling':k==='tokens'?'tokens reserved ceiling':'calls reserved'}: ${ai[k]}`).join(' · ');
- return `${mode}${ai.strategy&&!['demo','hybrid'].includes(ai.strategy)?` · ${String(ai.strategy).slice(0,160)}`:''}.${fallback} ${usage||'Usage counters unavailable.'} Completion totals only; conservative reservations are not provider invoices.`;
+ return `${mode}${ai.strategy&&!['demo','hybrid','strategic'].includes(ai.strategy)?` · ${String(ai.strategy).slice(0,160)}`:''}.${fallback} ${usage||'Usage counters unavailable.'} Completion totals only; conservative reservations are not provider invoices.`;
 }
 export function createSpatialReplay(host,response,{game,roomId}={}){
  const model=createReplayModel(response,{matchId:game.matchId,roomId,players:game.players});
