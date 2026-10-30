@@ -57,7 +57,7 @@ test('world UI: real room APIs, walking leases, three task puzzles, council focu
    })().catch(()=>{res.writeHead(404);res.end('Not found');});
   });
   await new Promise(resolve=>server.server.listen(port,'127.0.0.1',resolve));
-  browser=await puppeteer.launch({executablePath:process.env.CHROME_PATH||'C:/Program Files/Google/Chrome/Application/chrome.exe',headless:true,userDataDir:profile,args:[...(process.platform==='linux'?['--no-sandbox','--disable-dev-shm-usage']:[]),'--disable-gpu','--no-first-run','--disable-default-apps']});
+  browser=await puppeteer.launch({executablePath:process.env.CHROME_PATH||(process.platform==='win32'?'C:/Program Files/Google/Chrome/Application/chrome.exe':'/usr/bin/google-chrome'),headless:true,userDataDir:profile,args:[...(process.platform==='linux'?['--no-sandbox','--disable-dev-shm-usage']:[]),'--disable-gpu','--no-first-run','--disable-default-apps']});
   report.browserPid=browser.process()?.pid;report.browserVersion=await browser.version();report.nodeVersion=process.version;report.serverOrigin=origin;
   page=await browser.newPage();page.setDefaultTimeout(12000);page.on('pageerror',e=>report.errors.push(e.message));
   const requests=[];page.on('request',req=>{if(/\/(input|action|start)$/.test(req.url())){let body;try{body=JSON.parse(req.postData()||'{}');}catch{}requests.push({path:new URL(req.url()).pathname,body});}});
