@@ -15,7 +15,7 @@ for(const mapId of ['beacon','storm-foundry','tidal-observatory'])test('illustra
  assert.equal(state.replayHistory.mapRevision,2);validateReplayHistory(state.replayHistory);validateReplayHistoryState(state.replayHistory,state);
  const changed=structuredClone(state.replayHistory);delete changed.mapRevision;assert.throws(()=>validateReplayHistoryState(changed,state),/revision/);
  const unknown=structuredClone(state.replayHistory);unknown.mapRevision=3;assert.throws(()=>validateReplayHistory(unknown));
- assert(!Object.hasOwn(e.createMatch({...opts,mapRevision:1}),'mapRevision'));
+ const old=e.createMatch({...opts,mapRevision:1});assert(!Object.hasOwn(old,'mapRevision'));assert(!Object.hasOwn(old.replayHistory,'mapRevision'));assert.deepEqual(old.players[0].position,getWorld(mapId,1).worldSpawn('p1'));assert.equal(worldGeometry(e.getPlayerView(old,owner.id,1000)).findWorldPath,getWorld(mapId,1).findWorldPath);validateReplayHistoryState(JSON.parse(JSON.stringify(old.replayHistory)),JSON.parse(JSON.stringify(old)));
  if(mapId==='beacon'){const missing=e.getPlayerView(e.createMatch({...opts,mapId:undefined}),owner.id,1000);assert.equal(mapFor(missing),getLegacyMap('beacon',2));assert.equal(worldGeometry(missing).WORLD.width,1600);assert.notEqual(mapIdentity(mapFor(missing)),mapIdentity(getMap({id:'beacon',version:2})));}
 });
 
@@ -29,4 +29,8 @@ test('revision options fail closed across board/systems/tactical and do not rebi
 test('strategic intentions revoke across legacy revision namespace without moving from old geometry',()=>{
  const state=e.createMatch({id:'strategy-revision',world:true,seed:7,now:1000}),id=state.players.find(p=>p.role==='crew').id,view=e.getPlayerView(state,id,1000),memory={};install(memory,{type:'intend',goal:'position',roomId:'engine'},view);
  const newer=e.getPlayerView(e.createMatch({id:state.id,world:true,mapRevision:2,seed:7,now:1000}),id,1000);assert.notEqual(situation(view,memory),situation(newer,memory));assert.equal(execute(newer,memory),null);
+});
+
+test('startup navigation preparation respects illustrated aliases and immutable revision namespaces',()=>{
+ const references=[{mapId:'beacon',revision:2},{id:'beacon',version:2},{mapId:'storm-foundry',revision:2},{mapId:'storm-foundry',revision:1}];const prepared=e.prepareNavigation(references);assert.deepEqual(prepared.map(p=>[p.id,p.version]),[['beacon-illustrated',2],['beacon',2],['storm-foundry',2],['storm-foundry',1]]);assert(prepared.every(p=>p.warmed));assert(e.prepareNavigation(references).every(p=>p.warmed===false));
 });
