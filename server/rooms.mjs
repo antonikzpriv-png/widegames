@@ -2,6 +2,7 @@ import {parseMapId} from '../shared/world.mjs';
 import {parseFeatures} from '../shared/features.mjs';
 import {randomBytes,createHash} from 'node:crypto';
 import {ROOM_ID,validateRoom} from './store.mjs';
+import {spectatorInspection} from './spectator.mjs';
 
 export class ServiceError extends Error {
   constructor(status,code,message){super(message);this.status=status;this.code=code;}
@@ -51,7 +52,10 @@ export function createRooms({store,engine,ai,now=Date.now,maxActiveRooms=12,room
     const notices=Array.isArray(data.aiContext.notices)?data.aiContext.notices.filter(x=>typeof x==='string').slice(-10).map(x=>x.slice(0,240)):[];
     if(safeAi.mode==='live')notices.push(safeAi.strategy==='strategic'?'Strategic AI: model plans and council; local legal execution.':'Hybrid AI: live model council; navigation and deck actions use local policy.');
     if(room.aiBlocked)notices.push('AI paused because durable storage or budget reservation failed.');
-    return {...(data.mapId?{mapId:data.mapId}:{}),...(data.mapRevision===2?{mapRevision:2}:{}),...(data.features?{features:structuredClone(data.features)}:{}),roomId:data.id,mode:data.mode,isHost:identity.host,seatId:identity.seatId,phase:data.state?.phase||'lobby',connection:'connected',game:data.state?engine.getPlayerView(data.state,identity.seatId,now()):null,ai:safeAi,notices,createdAt:data.createdAt};
+    const at=now(),game=data.state?engine.getPlayerView(data.state,identity.seatId,at):null;
+    const inspection=spectatorInspection(data.state,{mode:data.mode,seatId:identity.seatId,now:at,context:data.aiContext});
+    if(game&&inspection)game.inspection=inspection;
+    return {...(data.mapId?{mapId:data.mapId}:{}),...(data.mapRevision===2?{mapRevision:2}:{}),...(data.features?{features:structuredClone(data.features)}:{}),roomId:data.id,mode:data.mode,isHost:identity.host,seatId:identity.seatId,phase:data.state?.phase||'lobby',connection:'connected',game,ai:safeAi,notices,createdAt:data.createdAt};
   }
   async function restore() {
     for(const data of await store.load()) {

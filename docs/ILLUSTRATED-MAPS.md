@@ -40,7 +40,7 @@ The visual change preserves task identities, task totals and all eleven puzzle f
 
 ## Recorded qualification
 
-The [final integrated validation record](illustrated-maps/validation.md) includes the complete 621-test suite, all six browser suites and independent execution of every directed station pair.
+The [final integrated validation record](illustrated-maps/validation.md) includes the complete 664-test suite, all seven browser suites and independent execution of every directed station pair.
 
 `tests/illustrated-maps-geometry.test.mjs` and `tests/illustrated-maps-demo.test.mjs` passed **10 tests**. An independent polygon/collider flood checks every station, bell and spawn, and checks route segments against physical walls. All three safe-view demo simulations perform real server-confirmed task work, survive JSON restart and reach rule-based victories without provider calls. Separate cases move a dead crew member through each new layout while preserving the corpse position and filtering the ghost from living/public views. Revision-1 geometry remains independent.
 
@@ -50,10 +50,10 @@ Run the dedicated browser qualification with an installed Chrome/Chromium:
 CHROME_PATH=/path/to/chromium node scripts/illustrated-maps-browser-check.mjs
 ```
 
-The final run passed **65 browser checks**, toured **all 32 rooms** using actual authenticated navigation, and retained **50 screenshots**. Native equipment completed through the existing server stages on each map; completion survived reload. The fixture verifies collisions, spectator filtering, mobile layout, **M/Escape** closing the map and restoring movement controls, and unchanged hashes of every runtime `.mjs`, `.css` and `.html` file in `public`, `shared` and `server`. There were no page errors. The three console errors were the deliberate HTTP 409 attempts to navigate into solid machinery, one per map.
+The final run against the redesign combined with current main's spectator-camera and inspector work passed **65 browser checks**, toured **all 32 rooms** using actual authenticated navigation, and retained **50 screenshots**. Native equipment completed through the existing server stages on each map; completion survived reload. The fixture verifies collisions, human-room spectator filtering, mobile layout, **M/Escape** closing the map and restoring movement controls, and unchanged hashes of every runtime `.mjs`, `.css` and `.html` file in `public`, `shared` and `server`. There were no page errors. The three console errors were the deliberate HTTP 409 attempts to navigate into solid machinery, one per map.
 
 This is a seeded, accelerated offline fixture using the real app, cookies, HTTP, engine and persistent store with explicitly idle demo bots. It does not fabricate responses, task completion or victory. Full-match simulations separately run the normal local bot policy. No paid/live provider call, third-party CAPTCHA service or deployment is part of qualification.
 
-The retained report is [browser-qualification.json](illustrated-maps/browser-qualification.json). All fifty screenshots and the private fixture data remain under `_artifacts/illustrated-maps-browser-TtKyH6/` in the cloud checkout; the selected images here are actual app captures. Earlier failed qualification artifacts are kept separately and are not counted as passing evidence. Their findings led to wider equipment access, a tiny revision-2 collision tolerance for floating-point boundary rounding, and correct map-dialog movement restoration.
+The retained report is [browser-qualification.json](illustrated-maps/browser-qualification.json). All fifty screenshots and the private fixture data remain under `_artifacts/illustrated-maps-browser-sjGec5/` in the cloud checkout; the selected images here are actual app captures from the combined implementation. Earlier qualification artifacts are kept separately and are not counted as current passing evidence. Their findings led to wider equipment access, a tiny revision-2 collision tolerance for floating-point boundary rounding, and correct map-dialog movement restoration.
 
 Mobile examples: [Lantern Wake](illustrated-maps/beacon-mobile.png), [Storm Foundry](illustrated-maps/storm-foundry-mobile.png), [Tidal Observatory](illustrated-maps/tidal-observatory-mobile.png).

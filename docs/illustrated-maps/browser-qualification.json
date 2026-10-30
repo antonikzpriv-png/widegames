@@ -1,5 +1,5 @@
 {
-  "sourceCommit": "41b4c6e2ddfce65882ac635c6dc5b7e4cf1fc4ef",
+  "sourceCommit": "382f98507e6a4670fc46ee070291247cf27bed0c",
   "fixture": "Actual production app, HTTP/cookies, revision-2 collision/pathfinding, native task controls and persistent store. Seeded crew assignment, explicitly idle demo AI and accelerated server clock; no provider calls, response fabrication or artificial task completion.",
   "checks": [
     "beacon production lobby selects immutable revision-2 geometry",

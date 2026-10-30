@@ -1,5 +1,5 @@
 import {parseMapId} from '../shared/world.mjs';
-import {parseFeatures} from '../shared/features.mjs';
+import {parseFeatures,isGhost} from '../shared/features.mjs';
 import http from 'node:http';
 import {WebSocketServer,WebSocket} from 'ws';
 import {serveStatic} from './static.mjs';
@@ -111,7 +111,9 @@ export async function createGameServer(config,dependencies={}) {
           if(typeof engine.applyInput!=='function')fail(409,'INPUT_UNAVAILABLE','Continuous movement is not available for this match.');
           const result=engine.applyInput(structuredClone(data.state),identity.seatId,input,now());
           if(!object(result)||typeof result.accepted!=='boolean'||!object(result.state)||result.state.id!==data.state.id||result.state.mode!==data.state.mode||result.state.schemaVersion!==data.state.schemaVersion||!Number.isSafeInteger(result.state.version)||result.state.version<data.state.version)throw new Error('Invalid engine input result');
-          const next=structuredClone(data);next.state=result.state;
+          // The engine result owns its state. Copy the room envelope, not the
+          // retained replay again; commit publishes only after durable save.
+          const next={...data,state:result.state};
           // Validate even an inert result before considering a durable update.
           service.validate(next);
           if(result.accepted&&result.state.schemaVersion===2&&result.state.players.find(player=>player.id===identity.seatId)?.motion.seq!==input.seq)throw new Error('Invalid engine input sequence');
@@ -140,8 +142,8 @@ export async function createGameServer(config,dependencies={}) {
             if(!identity.seatId)fail(403,'SPECTATOR','Spectators cannot act.');
             if(!data.state)fail(409,'NOT_STARTED','Start the match first.');
             const result=engine.applyAction(data.state,identity.seatId,input,now());
-            if(!result.accepted){if(result.state.version!==data.state.version){const next=structuredClone(data);next.state=result.state;await commit(room,next);broadcast(room);}const error=result.error||{};fail(409,typeof error.code==='string'?error.code:'ACTION_REJECTED',typeof error.message==='string'?error.message:'Action rejected.');}
-            const next=structuredClone(data);next.state=result.state;await commit(room,next);
+            if(!result.accepted){if(result.state.version!==data.state.version){const next={...data,state:result.state};await commit(room,next);broadcast(room);}const error=result.error||{};fail(409,typeof error.code==='string'?error.code:'ACTION_REJECTED',typeof error.message==='string'?error.message:'Action rejected.');}
+            const next={...data,state:result.state};await commit(room,next);
           }
         });
         broadcast(room);json(res,200,view(room,identity));return;
@@ -166,12 +168,11 @@ export async function createGameServer(config,dependencies={}) {
   });
   function scheduleAi(room) {
     if(closing||room.aiBusy||room.aiBlocked||room.removed||!room.data.state||['ended','paused'].includes(room.data.state.phase))return;
-    const canScheduleActor=actor=>{
-      const v=engine.getPlayerView(room.data.state,actor.id,now());
-      return v.self?.alive||(v.self?.ghost&&v.phase==='roam'&&v.self.role==='crew'&&v.self.tasks.some(t=>!t.completed));
-    };
+    // Eligibility is authoritative local state, not a reason to construct six
+    // complete redacted views (including hints/history) on every server tick.
+    const canScheduleActor=actor=>actor.alive||(isGhost(room.data.state,actor)&&room.data.state.phase==='roam'&&actor.role==='crew'&&actor.tasks.some(t=>!t.completed));
     const roster=(room.data.state.players??CHARACTERS).slice(0,24).map(p=>({id:p.id,name:p.name,color:p.color}));
-    const player=roster.filter(p=>(room.data.mode==='spectator'||p.id!=='p1')&&(room.nextDecision.get(p.id)||0)<=now()&&canScheduleActor(p)).sort((a,b)=>(room.nextDecision.get(a.id)||0)-(room.nextDecision.get(b.id)||0))[0];
+    const player=roster.filter(p=>(room.data.mode==='spectator'||p.id!=='p1')&&(room.nextDecision.get(p.id)||0)<=now()&&canScheduleActor(room.data.state.players.find(actor=>actor.id===p.id))).sort((a,b)=>(room.nextDecision.get(a.id)||0)-(room.nextDecision.get(b.id)||0))[0];
     if(!player)return;
     room.nextDecision.set(player.id,now()+Math.max(100,config.ai?.decisionIntervalMs??1800));room.aiBusy=true;
     track((async()=>{
@@ -183,7 +184,7 @@ export async function createGameServer(config,dependencies={}) {
         const commitReservation=async({id,amountUsd})=>{
           if(closing||room.abort.signal.aborted||!valid())throw new Error('AI stopped');
           if(typeof id!=='string'||!/^[A-Za-z0-9:._-]{1,150}$/.test(id)||!Number.isFinite(amountUsd)||amountUsd<0)throw new Error('Invalid AI reservation');
-          await run(room,async data=>{if(!valid())throw new Error('AI stopped');const next=structuredClone(data);next.aiContext=structuredClone(context);await commit(room,next);});
+          await run(room,async data=>{if(!valid())throw new Error('AI stopped');const next={...data,aiContext:structuredClone(context)};await commit(room,next);});
           // Ordering is essential: match reservation, then deployment reservation, then send.
           await daily.reserve({id:`${room.data.id}:${id}`,amount:amountUsd});
         };
@@ -191,7 +192,7 @@ export async function createGameServer(config,dependencies={}) {
         if(closing||room.abort.signal.aborted)return;
         await run(room,async data=>{
           if(!valid())return;
-          const next=structuredClone(data);next.aiContext=structuredClone(context);
+          const next={...data,aiContext:structuredClone(context)};
           if(proposal&&!['ended','paused'].includes(next.state.phase)) {
             const result=engine.applyAction(next.state,player.id,proposal,now());next.state=result.state;
           }
@@ -210,7 +211,7 @@ export async function createGameServer(config,dependencies={}) {
           await run(room,async data=>{
             if(!data.state||['ended','paused'].includes(data.state.phase))return;
             const result=engine.tick(data.state,now());
-            if(result.state.version!==data.state.version){const next=structuredClone(data);next.state=result.state;await commit(room,next);broadcast(room);}
+            if(result.state.version!==data.state.version){const next={...data,state:result.state};await commit(room,next);broadcast(room);}
           });scheduleAi(room);
         }catch {room.aiBlocked=true;}
       }));

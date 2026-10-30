@@ -171,7 +171,8 @@ function paint(c,geometry){
  for(const prop of geometry.WORLD_OBSTACLES)equipment(c,prop);
 }
 /** Static art is shared between live/replay scenes; positions, tasks and hidden state never enter this cache. */
-export function drawInterior(c,geometry){
+export function drawInterior(c,geometry,{cache=true}={}){
+ if(!cache){paint(c,geometry);return;}
  let layer=layers.get(geometry);
  if(layer===undefined){
   const canvas=globalThis.document?.createElement?.('canvas')||null,ctx=canvas?.getContext?.('2d');

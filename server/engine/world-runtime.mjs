@@ -75,5 +75,7 @@ export function worldRuntime(geometry) {
     return changed;
   }
   const moving=(state,p,now)=>state.phase==='roam'&&canWorldAct(state,p)&&!!(p.motion.path.length||(p.motion.manual&&now<p.motion.leaseUntil));
-  return {WORLD,walkable:isWalkable,station,bell:WORLD_BELL?.position??WORLD_BELL,initialize,settle,stop,stopAll,navigation,navigate,input,moving,sees,nearby,point};
+  // A read-only preflight avoids cloning the retained replay on idle server ticks.
+  const pending=(state,until)=>state.phase==='roam'&&state.players.some(p=>canWorldAct(state,p)&&p.motion&&until>p.motion.at&&(p.motion.manual||p.motion.path.length>0));
+  return {WORLD,walkable:isWalkable,station,bell:WORLD_BELL?.position??WORLD_BELL,initialize,settle,stop,stopAll,navigation,navigate,input,moving,pending,sees,nearby,point};
 }

@@ -1,20 +1,26 @@
 # Final illustrated-map validation — 2026-10-30
 
-The complete redesign was integrated on main base `41b4c6e2ddfce65882ac635c6dc5b7e4cf1fc4ef`. Six contributors authored the three new layouts, illustrated renderer, revision/persistence/replay integration, and independent qualification. The original task, lobby, ghost/ability, AI and replay behavior remains covered. Current remote main was fetched again before handoff and had no intervening commits.
+The complete redesign was integrated with current main `aa1f58c`, preserving its ghost spectator inspector and movement/rendering optimizations. Six contributors authored the three new layouts, illustrated renderer, revision/persistence/replay integration, and independent qualification. The original task, lobby, ghost/ability, AI and replay behavior remains covered. Main advanced five commits during final handoff, so the overlapping scene, controls, room projection and package changes were merged and all checks were rerun on the combined runtime.
 
 | Check | Final result | Cloud evidence |
 | --- | --- | --- |
 | `npm ci --ignore-scripts --cache /workspace/.cache/widegames-npm --no-audit --no-fund` | Passed; frozen dependencies installed | Terminal |
-| `npm run check` | 140 JavaScript modules passed | `/tmp/illustrated-check-verified.log` |
-| `TRANSPORT_TEST_TEMP=/workspace/widegames/_artifacts/test-temp npm_config_cache=/workspace/.cache/widegames-npm npm test` | 621 tests: 615 passed, 0 failed, 6 skipped | `/tmp/illustrated-full-tests-verified.log` |
-| `npm run test:illustrated:browser` | 65 checks, 50 screenshots, all 32 rooms toured | `_artifacts/illustrated-maps-browser-TtKyH6/report.json` |
-| `npm run test:maps:browser` | 39 checks; all six new CAPTCHA families solved on both redesigned expansions | `_artifacts/maps-captcha-browser-dE9kU3/report.json` |
-| `npm run test:browser` | 42 checks; original gameplay and complete matches | `_artifacts/world-browser-gKSvQf/report.json` |
-| `npm run test:features:browser` | 19 checks; ghost/ability controls and privacy | `_artifacts/ghost-abilities-browser-v27KvX/report.json` |
-| `node scripts/spatial-replay-browser-check.mjs` | 21 checks; no page/console errors | `_artifacts/spatial-browser-yGFhaJ/report.json` |
-| `LW_WORLD_BROWSER=1 node --test tests/world-ui-browser.test.mjs` | 19 checks in one passing test; no page errors | `_artifacts/world-ui-UOy76e/report.json` |
+| `npm run check` | 154 JavaScript modules passed | `/tmp/illustrated-integrated-check.log` |
+| `TRANSPORT_TEST_TEMP=/workspace/widegames/_artifacts/test-temp npm_config_cache=/workspace/.cache/widegames-npm npm test` | 664 tests: 658 passed, 0 failed, 6 skipped | `/tmp/illustrated-integrated-tests.log` |
+| `npm run test:illustrated:browser` | 65 checks, 50 screenshots, all 32 rooms toured | `_artifacts/illustrated-maps-browser-sjGec5/report.json` |
+| `npm run test:maps:browser` | 39 checks; all six new CAPTCHA families solved on both redesigned expansions | `_artifacts/maps-captcha-browser-yNbqOD/report.json` |
+| `npm run test:browser` | 42 checks; original gameplay and complete matches | `_artifacts/world-browser-XgungW/report.json` |
+| `npm run test:features:browser` | 19 checks; ghost/ability controls and privacy | `_artifacts/ghost-abilities-browser-VNDJWe/report.json` |
+| `node scripts/spatial-replay-browser-check.mjs` | 21 checks; no page/console errors | `_artifacts/spatial-browser-nsG0cM/report.json` |
+| `LW_WORLD_BROWSER=1 node --test tests/world-ui-browser.test.mjs` | 19 checks in one passing test; no page errors | `_artifacts/world-ui-W7hkKk/report.json` |
 
-Browser commands used `CHROME_PATH=/workspace/.local/bin/widegames-chromium`. All six suites exited successfully: **205 checks total**, no page errors. Console HTTP 409 messages were the deliberately rejected direct-completion or collision probes; unexpected console errors were rejected by the respective fixtures. Main, independent UI, spatial replay and the full illustrated tour retained their source-integrity checks. The illustrated tour hashes every runtime module/style/HTML file, including all new map data and artwork.
+| `npm run test:spectator:browser` | 46 checks; inspector, free camera and native ghost traversal on all three revised maps | `_artifacts/spectator-browser-4zkwwZ/report.json` |
+
+Browser commands used `CHROME_PATH=/workspace/.local/bin/widegames-chromium`. All seven suites exited successfully: **251 checks total**, no page errors. The main-game, illustrated and spectator fixtures recorded only their expected HTTP 409 probes (incomplete tasks, collisions or unfinished replay); the spatial replay fixture recorded no console errors. Main, independent UI, spatial replay and the full illustrated tour retained their source-integrity checks. The illustrated tour hashes every runtime module/style/HTML file, including all new map data and artwork.
+
+The new spectator renderer retains its bounded 2048-pixel static layer; the illustrated art paints directly into that layer instead of keeping a duplicate full-map bitmap. Actor interpolation, UI selection, controller plans and inspector descriptions all resolve by both map and revision. The combined suite checks that all-AI inspection stays confined to its authenticated room, while human-room observers and living players retain their established filtering.
+
+The offline engine-equivalence check compared **720 transactions** across three maps, two modes and two feature presets against `41b4c6e`, with identical original-revision states/events/receipts (`/tmp/illustrated-integrated-equivalence.log`). `npm run perf:spectator` also completed (`/tmp/illustrated-integrated-performance.log`); concurrent cloud timings are diagnostic, not a device frame-rate guarantee.
 
 ## Independent authority and movement review
 
