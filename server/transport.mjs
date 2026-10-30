@@ -166,7 +166,15 @@ export async function createGameServer(config,dependencies={}) {
   });
   function scheduleAi(room) {
     if(closing||room.aiBusy||room.aiBlocked||room.removed||!room.data.state||['ended','paused'].includes(room.data.state.phase))return;
-    const canScheduleActor=actor=>{const v=engine.getPlayerView(room.data.state,actor.id,now());return v.self?.alive||(v.self?.ghost&&v.phase==='roam'&&v.self.role==='crew'&&v.self.tasks.some(t=>!t.completed));};
+    const canScheduleActor=actor=>{
+      const state=room.data.state,v=engine.getPlayerView(state,actor.id,now());
+      if(v.self?.alive)return true;
+      if(!v.self?.ghost||v.phase!=='roam')return false;
+      if(v.self.role==='crew'&&v.self.tasks.some(t=>!t.completed))return true;
+      // A fallen observer may send one local message, then needs no idle planner.
+      const memory=room.data.aiContext?.matches?.['match:'+state.id]?.memories?.['actor:'+actor.id];
+      return v.availableActions.includes('ghostSay')&&!memory?.ghostSpoken&&!(state.ghostChat??[]).some(message=>message.playerId===actor.id);
+    };
     const player=aiRoster(room.data.state).filter(p=>(room.nextDecision.get(p.id)||0)<=now()&&canScheduleActor(p)).sort((a,b)=>(room.nextDecision.get(a.id)||0)-(room.nextDecision.get(b.id)||0))[0];
     if(!player)return;
     room.nextDecision.set(player.id,now()+Math.max(100,config.ai?.decisionIntervalMs??1800));room.aiBusy=true;

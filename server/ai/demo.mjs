@@ -129,7 +129,7 @@ export function candidates(view, memory) {
   const allowed = new Set(view.availableActions ?? []);
   const can = type => allowed.has(type);
   const actions = [];
-  if(view.self?.ghost===true&&view.self.role==='crew'&&view.worldVersion===1)return view.phase==='roam'?worldCandidates(view,memory,'skip'):[];
+  if(view.self?.ghost===true&&view.worldVersion===1)return view.phase==='roam'?worldCandidates(view,memory,'skip'):[];
   if (!view.self?.alive || ['ended', 'paused', 'lobby'].includes(view.phase)) return actions;
   if (view.phase === 'discussion') {
     if (can('say') && (memory.discussionCount ?? 0) < 3) actions.push({ type: 'say', text: dialogue(view, memory) });

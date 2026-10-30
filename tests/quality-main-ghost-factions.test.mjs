@@ -1,4 +1,4 @@
-﻿/** Legal-action regression fixtures; no death/position/knowledge assignments. */
+/** Legal-action regression fixtures; no death/position/knowledge assignments. */
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {mkdir,mkdtemp,rm,readFile} from 'node:fs/promises';
@@ -21,12 +21,12 @@ const maps=[{id:'beacon',version:2},{id:'stormbreak-annex',version:1}];
 const roster=Array.from({length:8},(_,i)=>({id:'keeper_'+i,name:'Keeper '+i,color:'#aabbcc',persona:'Public fixture keeper'}));
 const idle={describe:()=>({mode:'demo',provider:'demo',calls:0,tokens:0,costUsd:0}),decide:async()=>null};
 const cache=new Map();
-function fixture(reference){
- const key=reference?JSON.stringify(reference):'legacy2';
+function fixture(reference,npcVictim=false){
+ const key=(reference?JSON.stringify(reference):'legacy2')+(npcVictim?':npc':'');
  if(cache.has(key))return flow(copy(cache.get(key)));
  const options={mode:'human',world:true,seed:'faction-regression',now:1000,features,config:{initialKillCooldownMs:1,killCooldownMs:1,meetingCooldownMs:1,meetingsPerPlayer:4,discussionMs:10,votingMs:10,maxMatchMs:900000},...(reference?{tactical:true,stationTasks:true,map:reference,roster,saboteurCount:2,humanPlayerIds:roster.map(p=>p.id)}:{})};
  const probe=engine.createMatch({id:'faction-probe',...options}),victim=probe.players.find(p=>p.role==='saboteur').id;
- const humans=reference?[victim,...roster.map(p=>p.id).filter(id=>id!==victim)]:undefined;
+ const humans=reference?(npcVictim?roster.map(p=>p.id).filter(id=>id!==victim):[victim,...roster.map(p=>p.id).filter(id=>id!==victim)]):undefined;
  const room=createRoom('human',1000,reference?{roster,saboteurCount:2,humanPlayerIds:humans}:undefined,{tactical:!!reference,stationTasks:!!reference,mapId:reference});
  room.features=copy(features);room.startId='faction:fixture:start';room.state=engine.createMatch({id:room.id,...options,...(reference?{humanPlayerIds:humans}:{})});
  const f=flow(room);f.victim=room.state.players.find(p=>p.role==='saboteur').id;
@@ -112,4 +112,21 @@ test('fallen crew still retain owned station work and execute the same safe loca
  const fetched=t.mock.method(globalThis,'fetch',()=>{throw Error('Fallen crew provider call forbidden');});const ai=createAiController({config:{provider:'anthropic',apiKey:'synthetic-never-sent',strategy:'strategic',decisionIntervalMs:1}}),context={};let reservations=0;
  async function decide(){const view=engine.getPlayerView(f.state,crew,f.state.updatedAt+1),before=copy(view),action=await ai.decide({view,player:{id:crew},context,commitReservation:async()=>{reservations++;throw Error('Fallen crew reservation forbidden');}});assert.deepEqual(view,before);assert.ok(action);const result=engine.applyAction(f.state,crew,action,view.serverNow);assert.equal(result.accepted,true,JSON.stringify(result.error));f.state=result.state;return action;}
  const first=await decide();assert.equal(first.type,'ghostSay');assert.match(first.text,/remaining jobs/);let next=await decide();if(next.type==='navigate'){const actor=f.player(crew);let length=0,previous=actor.position;for(const point of actor.motion.path){length+=getMap(f.state.map).geometry.distance(previous,point);previous=point;}f.tick(f.state.updatedAt+Math.ceil(length/180*1000)+1);next=await decide();}assert.equal(next.type,'taskInteract');assert.ok(f.player(crew).tasks.some(task=>task.challenge.progress.values.length>0));assert.equal(ai.describe(context).calls,0);assert.equal(reservations,0);assert.equal(fetched.mock.callCount(),0);
+});
+
+
+// One actual nonhuman observer; all other seats were configured human BEFORE
+// creation/ejection. This is a trusted roster fixture, not public seat allocation.
+for(const map of maps)test(map.id+': real transport schedules one private observer message, stops idle polling and resumes without duplicate spending',{timeout:20000},async t=>{
+ const f=fixture(map,true),dir=await directory(t);assert.equal(f.player(f.victim).human,false);assert.equal(f.state.players.filter(p=>!p.human).length,1);let clock=f.state.updatedAt,clockReads=0,game;const decisions=[];
+ const config={dataDir:dir,publicOrigin:origin,now:()=>{clockReads++;return clock;},tickMs:15,ai:{provider:'anthropic',apiKey:'synthetic-never-sent',strategy:'strategic',decisionIntervalMs:1,maxCalls:48,maxTokens:120000,maxCostUsd:.5}};
+ const provider=t.mock.method(globalThis,'fetch',()=>{throw Error('Observer provider send forbidden');});
+ const wait=async(predicate,label)=>{const end=Date.now()+6000;while(Date.now()<end){if(predicate())return;await new Promise(resolve=>setTimeout(resolve,20));}assert.fail('Timed out: '+label);};
+ const start=async()=>{const actual=createAiController({config:config.ai}),controller={...actual,decide:async input=>{decisions.push(input.player.id);return actual.decide(input);}};game=await createGameServer(config,{aiController:controller});game.server.listen(0,'127.0.0.1');await once(game.server,'listening');};
+ try{
+  await save(dir,f.room);await start();const live=()=>game.rooms.get(f.room.id).data;
+  await wait(()=>live().state.ghostChat.some(m=>m.playerId===f.victim),'local fallen observer is scheduled');assert.deepEqual(decisions,[f.victim]);assert.equal(live().state.ghostChat.length,1);assert.match(live().state.ghostChat[0].text,/out of the watch/);
+  clock+=1000;const reads=clockReads;await wait(()=>clockReads>reads+12,'several real scheduling ticks');assert.deepEqual(decisions,[f.victim],'accepted private observer speech must not leave idle planner polling');const description=createAiController({config:config.ai}).describe(live().aiContext);assert.equal(description.mode,'live');assert.equal(description.calls,0);assert.equal(description.tokens,0);assert.equal(description.costUsd,0);assert.equal(provider.mock.callCount(),0);assert.deepEqual(live().aiContext.matches['match:'+f.state.id].reservations,[]);
+  await game.close();game=null;await start();const restartReads=clockReads;await wait(()=>clockReads>restartReads+12,'restored scheduler ticks');assert.deepEqual(decisions,[f.victim]);assert.equal(live().state.ghostChat.length,1);assert.equal(provider.mock.callCount(),0);
+ }finally{await game?.close();}
 });

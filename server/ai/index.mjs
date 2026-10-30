@@ -2,7 +2,6 @@ import { randomUUID, createHash } from 'node:crypto';
 import { CHARACTERS } from '../../shared/contracts.mjs';
 import { intentions, remember, install, execute, situation } from './strategic.mjs';
 import { candidates, observe } from './demo.mjs';
-import { worldCandidates } from './world.mjs';
 import { AiFailure, MODEL, makeRequest, send } from './anthropic.mjs';
 
 const REASONS = new Set(['demo_configured', 'missing_credentials', 'unsupported_provider', 'unsupported_model', 'reservation_required', 'reservation_failed', 'budget_calls', 'budget_tokens', 'budget_cost', 'provider_unavailable', 'provider_response', 'provider_usage', 'prompt_limit', 'output_limit', 'timeout', 'invalid_context']);
@@ -102,8 +101,8 @@ export function createAiController({ config = {} } = {}) {
         observe(view, memory);
         if (settings.strategy === 'strategic' && view.worldVersion === 1) remember(view, memory);
         const strategic = settings.strategy === 'strategic' && state.mode === 'live' && !view.self.ghost && view.phase === 'roam' && view.worldVersion === 1;
-        // Fallen factions execute locally; legacy demo entry guards remain separate.
-        const localChoices = view.self.ghost&&view.worldVersion===1 ? (view.phase==='roam'?worldCandidates(view,memory,'skip'):[]) : candidates(view, memory);
+        // The shared local dispatcher includes every permitted fallen faction.
+        const localChoices = candidates(view, memory);
         if (view.phase !== 'roam' || view.self.ghost) delete memory.intention;
         // Retain optional local ability behavior without introducing model calls.
         if (view.self.alive && ['protect', 'decoy'].includes(localChoices[0]?.type)) return envelope(localChoices[0], view, memory);
