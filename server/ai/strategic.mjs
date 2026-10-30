@@ -9,7 +9,7 @@ const ready = (view, key) => (view.self.cooldowns?.[key] ?? 0) <= view.serverNow
 const evidence = view => (view.events ?? []).filter(e => ['body', 'witness'].includes(e.type)).map(e => JSON.stringify([e.type,e.bodyId,e.playerId,e.targetId,e.at]));
 export function situation(view, memory = {}) {
   return JSON.stringify([view.meeting?.id, view.sabotage?.active ? view.sabotage.deadlineAt : null,
-    view.map,view.self.id,view.self.alive,view.self.ghost===true,!!(view.self.transit||view.systems?.selfTransit),
+    view.map??view.mapId,view.self.id,view.self.alive,view.self.ghost===true,!!(view.self.transit||view.systems?.selfTransit),
     (view.systems?.doors??[]).filter(d=>d.closed).map(d=>d.id).sort(),
     view.sabotage?.sites?.map(s=>[s.id,s.progress]),
     (view.self.tasks ?? []).map(t => memory.intention?.goal === 'task_route' ? [t.id, t.roomId] : [t.id, !!t.completed]),
@@ -49,7 +49,7 @@ export function intentions(view, memory) {
   if (view.self.role === 'crew') {
     if(view.beaconVersion){
       if(view.sabotage?.active)for(const site of view.sabotage.sites??[])if(site.progress!==1)add('repair',{roomId:site.roomId,siteId:site.id,systemId:view.sabotage.kind,deadlineAt:view.sabotage.deadlineAt});
-      for(const systemId of ['lights','communications'])if(view.systems?.[systemId]?.active)for(const site of getMap(view.map).fixtures.repairs[systemId])add('repair',{roomId:site.roomId,siteId:site.id,systemId,deadlineAt:view.systems[systemId].deadlineAt});
+      for(const systemId of ['lights','communications'])if(view.systems?.[systemId]?.active)for(const site of getMap(view.map??view.mapId).fixtures.repairs[systemId])add('repair',{roomId:site.roomId,siteId:site.id,systemId,deadlineAt:view.systems[systemId].deadlineAt});
       if(!view.sabotage?.active&&!view.systems?.communications?.active)for(const device of (view.investigation?.devices??[]).slice(0,3))if(point(device.position))add('device',{deviceId:device.id,roomId:device.roomId});
     }else if (view.sabotage?.active && memory.worldRepairDeadline !== view.sabotage.deadlineAt) add('repair', { roomId: view.sabotage.roomId, deadlineAt: view.sabotage.deadlineAt });
     const work = (view.self.tasks ?? []).filter(t => !t.completed).slice(0, 8);
@@ -117,7 +117,7 @@ export function execute(view, memory) {
     if (progress.routeIndex >= plan.taskIds.length) return null;
   }
   if(plan.goal==='device'){const d=(view.investigation?.devices??[]).find(d=>d.id===plan.deviceId);if(!d||view.systems?.communications?.active)return null;target=d.position;}
-  if(plan.goal==='repair'&&view.beaconVersion){const effect=['lights','communications'].includes(plan.systemId)?view.systems?.[plan.systemId]:view.sabotage;if(!effect?.active||effect.deadlineAt!==plan.deadlineAt)return null;const site=(effect.sites??getMap(view.map).fixtures.repairs[plan.systemId]??[]).find(s=>s.id===plan.siteId&&s.progress!==1);if(!site)return null;target=site.position;}
+  if(plan.goal==='repair'&&view.beaconVersion){const effect=['lights','communications'].includes(plan.systemId)?view.systems?.[plan.systemId]:view.sabotage;if(!effect?.active||effect.deadlineAt!==plan.deadlineAt)return null;const site=(effect.sites??getMap(view.map??view.mapId).fixtures.repairs[plan.systemId]??[]).find(s=>s.id===plan.siteId&&s.progress!==1);if(!site)return null;target=site.position;}
   if (plan.goal === 'investigate' && plan.position) target = plan.position;
   if (['follow', 'avoid', 'isolate'].includes(plan.goal)) {
     const player = visible(view).find(p => p.id === plan.targetId);

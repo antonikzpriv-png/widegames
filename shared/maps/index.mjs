@@ -10,9 +10,17 @@ const fixtures=deepFreeze(structuredClone({doors:BEACON_DOORS,vents:BEACON_VENTS
 const roomLayout=deepFreeze(structuredClone(ROOM_LAYOUT));
 const beacon=deepFreeze({id:'beacon',version:1,name:'Lantern Beacon',description:'The original storm-beacon watch.',theme:'beacon',roomLayout,fixtures,geometry:{...legacy,ROOM_LAYOUT:roomLayout,WORLD_VIEWPOINT:{x:800,y:285},WORLD_SPAWN_ROOM:'bridge',fixtures}});
 // Exact persisted identities are permanent; only string selection follows the latest catalog.
+// Expanded maps retain current-main's world2/taskStep protocol and geometry.
+const expanded=['storm-foundry','tidal-observatory'].map(id=>{
+ const base=legacy.getWorld(id),roomLayout=deepFreeze(structuredClone(base.ROOM_LAYOUT));
+ const fixtures=deepFreeze({doors:[],vents:[],repairs:{},devices:[],cameras:[]});
+ const geometry=Object.freeze({...base,ROOM_LAYOUT:roomLayout,WORLD_VIEWPOINT:base.worldSpawn('p1'),WORLD_SPAWN_ROOM:'bridge',fixtures});
+ return deepFreeze({id,version:1,name:base.metadata.name,description:base.metadata.description,theme:id,tactical:false,taskProtocol:'taskStep',tasksPerCrew:base.metadata.tasksPerCrew,metadata:base.metadata,roomLayout,fixtures,geometry});
+});
 const versions=new Map([['beacon',new Map([[1,beacon],[2,BEACON_V2]])],['stormbreak-annex',new Map([[1,STORMBREAK_ANNEX]])]]);
-const latest=new Map([['beacon',BEACON_V2],['stormbreak-annex',STORMBREAK_ANNEX]]);
-export const MAP_CATALOG=deepFreeze([...latest.values()].map(({id,version,name,description,theme})=>({id,version,name,description,theme})));
+for(const map of expanded)versions.set(map.id,new Map([[map.version,map]]));
+const latest=new Map([['beacon',BEACON_V2],['stormbreak-annex',STORMBREAK_ANNEX],...expanded.map(map=>[map.id,map])]);
+export const MAP_CATALOG=deepFreeze([...latest.values()].map(({id,version,name,description,theme,tactical=true,taskProtocol='station'})=>({id,version,name,description,theme,tactical,taskProtocol})));
 export function getMap(reference){
  if(reference===undefined)return beacon;
  if(typeof reference==='string'){const map=latest.get(reference);if(map)return map;}
@@ -21,4 +29,4 @@ export function getMap(reference){
  }
  throw new TypeError('Unsupported map identity/version');
 }
-export function mapFor(value){return getMap(value?.map);}
+export function mapFor(value){return getMap(value?.map??value?.mapId);}

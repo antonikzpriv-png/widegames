@@ -8,8 +8,8 @@ import { WORLD, WORLD_STATIONS, WORLD_BELL, distance, findWorldPath, canSeeWorld
 import {localGoals,localNavigationIntent} from '../features/strategy/index.mjs';
 
 const navigators=new Map();
-export function worldGeometry(view){return getMap(view.map).geometry;}
-export function worldRoute(view,target){const self=view.self;if(!self?.position||self.transit||view.systems?.selfTransit||(!self.alive&&!(self.ghost===true)))return null;const map=getMap(view.map),key=map.id+':'+map.version;if(!navigators.has(key))navigators.set(key,createSpatialWorld(map.geometry));return navigators.get(key).navigation({id:self.id,alive:true,position:self.position},target,view.serverNow,{systems:{doors:view.systems?.doors??[],transit:{}}});}
+export function worldGeometry(view){return getMap(view.map??view.mapId).geometry;}
+export function worldRoute(view,target){const self=view.self;if(!self?.position||self.transit||view.systems?.selfTransit||(!self.alive&&!(self.ghost===true)))return null;const map=getMap(view.map??view.mapId),key=map.id+':'+map.version;if(!navigators.has(key))navigators.set(key,createSpatialWorld(map.geometry));return navigators.get(key).navigation({id:self.id,alive:true,position:self.position},target,view.serverNow,{systems:{doors:view.systems?.doors??[],transit:{}}});}
 export function worldTaskAction(view,task){if(!task||task.completed)return {type:'wait'};if(task.kind==='station'){const input=nextStationInput(task.challenge);return input?{type:'taskInteract',taskId:task.id,...input}:{type:'wait'};}if(task.progress&&typeof task.progress==='object'){const p=task.progress;if(p.kind==='repair'&&p.index===3&&view.serverNow<p.readyAt)return {type:'wait'};return p.index<p.total?{type:'taskStep',taskId:task.id,step:p.index,input:taskInput(task)}:{type:'task',taskId:task.id};}return {type:'task',taskId:task.id};}
 
 const ordered = values => [...values].sort((a, b) => a.id.localeCompare(b.id));
@@ -19,7 +19,7 @@ const at = (view, target, radius) => point(target) && distance(view.self.positio
 
 /** Only coordinates already visible in this actor's safe view are usable. */
 export function visibleWorldPlayer(view, player) {
-  return player.id !== view.self.id && player.alive===true && point(player.position) && (view.beaconVersion===1||canSeeWorldPoint(view.self.position, player.position));
+  return player.id !== view.self.id && player.alive===true && point(player.position) && (view.beaconVersion===1||worldGeometry(view).canSeeWorldPoint(view.self.position, player.position));
 }
 
 function pathLength(start, target) {
@@ -34,6 +34,8 @@ function pathLength(start, target) {
 export function worldCandidates(view, memory, suspect) {
   if(!view.self?.alive){const optional=featureCandidates(view,memory);if(optional)return optional;}
   if(view.beaconVersion===1)return beaconCandidates(view,memory,suspect);
+  const {WORLD,WORLD_STATIONS,WORLD_BELL,ROOM_LAYOUT,findWorldPath,canSeeWorldPoint}=worldGeometry(view);
+  const pathLength=(start,target)=>{const route=findWorldPath(start,target);if(!route)return Infinity;let sum=0,previous=start;for(const next of route){sum+=distance(previous,next);previous=next;}return sum;};
   const allowed = new Set(view.availableActions ?? []);
   const wait = () => allowed.has('wait') ? [{ type: 'wait' }] : [];
   const self = view.self;
@@ -120,7 +122,7 @@ export function worldCandidates(view, memory, suspect) {
 
 /** Group1 adaptation: local goals consume only server-permitted observations. */
 function beaconCandidates(view,memory,suspect){
- const map=getMap(view.map),{WORLD,WORLD_STATIONS,WORLD_BELL,distance}=map.geometry,ROOM_LAYOUT=map.roomLayout;
+ const map=getMap(view.map??view.mapId),{WORLD,WORLD_STATIONS,WORLD_BELL,distance}=map.geometry,ROOM_LAYOUT=map.roomLayout;
  const self=view.self,allowed=new Set(view.availableActions??[]),wait=()=>allowed.has('wait')?[{type:'wait'}]:[];
  if(!point(self?.position)||self.transit)return wait();
  const controls=(view.interactions??[]).filter(a=>a.enabled),proposal=d=>({type:d.type,...d.fields});
