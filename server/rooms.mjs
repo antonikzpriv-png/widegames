@@ -51,7 +51,7 @@ export function createRooms({store,engine,ai,now=Date.now,maxActiveRooms=12,room
     const notices=Array.isArray(data.aiContext.notices)?data.aiContext.notices.filter(x=>typeof x==='string').slice(-10).map(x=>x.slice(0,240)):[];
     if(safeAi.mode==='live')notices.push(safeAi.strategy==='strategic'?'Strategic AI: model plans and council; local legal execution.':'Hybrid AI: live model council; navigation and deck actions use local policy.');
     if(room.aiBlocked)notices.push('AI paused because durable storage or budget reservation failed.');
-    return {...(data.mapId?{mapId:data.mapId}:{}),...(data.features?{features:structuredClone(data.features)}:{}),roomId:data.id,mode:data.mode,isHost:identity.host,seatId:identity.seatId,phase:data.state?.phase||'lobby',connection:'connected',game:data.state?engine.getPlayerView(data.state,identity.seatId,now()):null,ai:safeAi,notices,createdAt:data.createdAt};
+    return {...(data.mapId?{mapId:data.mapId}:{}),...(data.mapRevision===2?{mapRevision:2}:{}),...(data.features?{features:structuredClone(data.features)}:{}),roomId:data.id,mode:data.mode,isHost:identity.host,seatId:identity.seatId,phase:data.state?.phase||'lobby',connection:'connected',game:data.state?engine.getPlayerView(data.state,identity.seatId,now()):null,ai:safeAi,notices,createdAt:data.createdAt};
   }
   async function restore() {
     for(const data of await store.load()) {
@@ -65,10 +65,11 @@ export function createRooms({store,engine,ai,now=Date.now,maxActiveRooms=12,room
     }
     if(rooms.size>maxActiveRooms)throw new Error('Persisted rooms exceed configured room limit');
   }
-  async function create(mode,features,mapId) {
+  async function create(mode,features,mapId,mapRevision=1) {
     const work=creationQueue.catch(()=>{}).then(async()=>{
       if(rooms.size>=maxActiveRooms)fail(429,'ROOM_LIMIT','All room slots are in use.');
-      const data=createRoom(mode,now());const selectedMap=parseMapId(mapId);if(selectedMap!=='beacon')data.mapId=selectedMap;if(features!==undefined)data.features=parseFeatures(features);const issued=issueIdentity(data,true);await store.save(data);
+      if(![1,2].includes(mapRevision))throw new TypeError('Invalid map revision');
+      const data=createRoom(mode,now());if(mapRevision===2)data.mapRevision=2;const selectedMap=parseMapId(mapId);if(selectedMap!=='beacon')data.mapId=selectedMap;if(features!==undefined)data.features=parseFeatures(features);const issued=issueIdentity(data,true);await store.save(data);
       const room=entry(data);rooms.set(data.id,room);return {room,...issued};
     });creationQueue=work;return work;
   }

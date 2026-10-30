@@ -19,11 +19,11 @@ export function worldTaskAction(view, task) {
 
 /** Only coordinates already visible in this actor's safe view are usable. */
 export function visibleWorldPlayer(view, player) {
-  return player.id !== view.self.id && player.alive && point(player.position) && getWorld(view.mapId).canSeeWorldPoint(view.self.position, player.position);
+  return player.id !== view.self.id && player.alive && point(player.position) && getWorld(view.mapId,view.mapRevision??1).canSeeWorldPoint(view.self.position, player.position);
 }
 
-function worldPathLength(start, target, mapId) {
-  const path = getWorld(mapId).findWorldPath(start, target);
+function worldPathLength(start, target, mapId, mapRevision) {
+  const path = getWorld(mapId,mapRevision??1).findWorldPath(start, target);
   if (!path) return Infinity;
   let length = 0, previous = start;
   for (const next of path) { length += distance(previous, next); previous = next; }
@@ -32,8 +32,8 @@ function worldPathLength(start, target, mapId) {
 
 /** World proposals use public geometry and the actor's safe view, never state. */
 export function worldCandidates(view, memory, suspect) {
-  const {WORLD,WORLD_STATIONS,WORLD_BELL,findWorldPath,canSeeWorldPoint,ROOM_LAYOUT}=getWorld(view.mapId);
-  const pathLength=(a,b)=>worldPathLength(a,b,view.mapId);
+  const {WORLD,WORLD_STATIONS,WORLD_BELL,findWorldPath,canSeeWorldPoint,ROOM_LAYOUT}=getWorld(view.mapId,view.mapRevision??1);
+  const pathLength=(a,b)=>worldPathLength(a,b,view.mapId,view.mapRevision??1);
   const allowed = new Set(view.availableActions ?? []);
   const wait = () => allowed.has('wait') ? [{ type: 'wait' }] : [];
   const self = view.self;

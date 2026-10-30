@@ -42,7 +42,7 @@ test('world UI: real room APIs, walking leases, three task puzzles, council focu
  async function check(name,fn){try{const detail=await fn();report.checks.push({name,pass:true,detail});}catch(error){report.checks.push({name,pass:false,error:error.stack});throw error;}}
  async function shot(name){const file=path.join(evidence,`${name}.png`);await page.screenshot({path:file,fullPage:true});report.screenshots.push(file);}
  try{
-  server=await createGameServer({publicOrigin:origin,dataDir,now:stamp,tickMs:30,worldMode:true,ai:{provider:'demo',decisionIntervalMs:1000,maxDailyCostUsd:0},rules:{moveCooldownMs:1,taskCooldownMs:1,initialKillCooldownMs:1,killCooldownMs:1,sabotageCooldownMs:1,meetingCooldownMs:1,discussionMs:20000,votingMs:20000,criticalDurationMs:60000,roamDeadlineMs:900000,maxMatchMs:3600000}},{engine,aiController,worldGeometry:geometry});
+  server=await createGameServer({publicOrigin:origin,dataDir,now:stamp,tickMs:30,worldMode:true,mapRevision:1,ai:{provider:'demo',decisionIntervalMs:1000,maxDailyCostUsd:0},rules:{moveCooldownMs:1,taskCooldownMs:1,initialKillCooldownMs:1,killCooldownMs:1,sabotageCooldownMs:1,meetingCooldownMs:1,discussionMs:20000,votingMs:20000,criticalDurationMs:60000,roamDeadlineMs:900000,maxMatchMs:3600000}},{engine,aiController,worldGeometry:geometry});
   const apiHandler=server.server.listeners('request')[0];server.server.removeAllListeners('request');
   server.server.on('request',(req,res)=>{
    if(req.url.startsWith('/api/')){apiHandler(req,res);return;}

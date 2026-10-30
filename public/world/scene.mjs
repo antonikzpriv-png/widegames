@@ -1,4 +1,5 @@
 import * as world from '../../shared/world.mjs';
+import {drawInterior,drawInteriorLabels,drawInteriorLights} from './interior-art.mjs';
 import {ActorSamples,clamp,point,visibleBodies} from './model.mjs';
 import {CHARACTERS} from '../../shared/contracts.mjs';
 
@@ -73,15 +74,16 @@ function mapDecor(ctx,item,time,reduced){
 }
 export function createWorldScene(canvas,{reduced=false,playback=false}={}){
  const ctx=canvas.getContext('2d'),samples=new ActorSamples();let room=null,lastKey=null,geometry=world,camera={x:800,y:400},view={width:1,height:1,zoom:1},stopped=false;
- function update(next,at){geometry=typeof world.getWorld==='function'?world.getWorld(next?.game?.mapId||next?.mapId||'beacon'):world;const key=`${next?.roomId}:${next?.game?.matchId}:${geometry.metadata?.id||'beacon'}`;if(key!==lastKey){samples.clear();lastKey=key;camera={...(next?.game?.self?.position||geometry.worldSpawn?.('p1')||{x:800,y:300})};}room=next;samples.update(room?.game,at);}
+ function update(next,at){geometry=typeof world.getWorld==='function'?world.getWorld(next?.game?.mapId||next?.mapId||'beacon',next?.game?.mapRevision??next?.mapRevision??1):world;const key=`${next?.roomId}:${next?.game?.matchId}:${geometry.metadata?.id||'beacon'}:${geometry.metadata?.revision||1}`;if(key!==lastKey){samples.clear();lastKey=key;camera={...(next?.game?.self?.position||geometry.worldSpawn?.('p1')||{x:800,y:300})};}room=next;samples.update(room?.game,at);}
  function draw(time,{overview=false,follow:followId=null}={}){
   if(stopped)return;const rect=canvas.getBoundingClientRect();if(!rect.width||!rect.height)return;
   const dpr=Math.min(2,globalThis.devicePixelRatio||1),width=rect.width,height=rect.height;
   if(canvas.width!==Math.round(width*dpr)||canvas.height!==Math.round(height*dpr)){canvas.width=Math.round(width*dpr);canvas.height=Math.round(height*dpr);}
   ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,width,height);
-  const sea=ctx.createLinearGradient(0,0,width,height);sea.addColorStop(0,'#102f48');sea.addColorStop(1,'#244957');ctx.fillStyle=sea;ctx.fillRect(0,0,width,height);
+  const illustrated=geometry.metadata?.revision===2;
+  const sea=ctx.createLinearGradient(0,0,width,height);sea.addColorStop(0,illustrated?'#09151e':'#102f48');sea.addColorStop(1,illustrated?'#182c36':'#244957');ctx.fillStyle=sea;ctx.fillRect(0,0,width,height);
   if(!reduced){ctx.strokeStyle='#93c2d01c';ctx.lineWidth=2;for(let i=0;i<45;i++){const x=(i*137+time*.014)% (width+80)-40,y=(i*83+time*.038)%(height+80)-40;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x-12,y+27);ctx.stroke();}}
-  const game=room?.game,lobby=!game,legacy=!geometry.metadata?.id||geometry.metadata.id==='beacon',mapCenter={x:geometry.WORLD.width/2,y:geometry.WORLD.height/2},lobbyCenter=legacy?{x:800,y:310}:geometry.WORLD_ROOMS.find(r=>r.id==='bridge')?.center||mapCenter;
+  const game=room?.game,lobby=!game,legacy=!illustrated&&(!geometry.metadata?.id||geometry.metadata.id==='beacon'),mapCenter={x:geometry.WORLD.width/2,y:geometry.WORLD.height/2},lobbyCenter=legacy?{x:800,y:310}:geometry.WORLD_ROOMS.find(r=>r.id==='bridge')?.center||mapCenter;
   const followed=game?.players?.find(p=>p.id===followId&&point(p.position));
   const follow=followed?.position||game?.self?.position||samples.at(game?.players?.find(p=>point(p.position)&&p.alive)?.id,time,reduced)||mapCenter;
   // Camera moves only toward an observed position; hidden actors have no samples.
@@ -89,6 +91,9 @@ export function createWorldScene(canvas,{reduced=false,playback=false}={}){
   const zoom=overview?Math.min((width-30)/geometry.WORLD.width,(height-30)/geometry.WORLD.height):lobby?Math.min(width/620,height/390):clamp(Math.min(width/650,height/650),.58,1.2);
   if(overview)camera=mapCenter;view={width,height,zoom,camera:{...camera}};
   ctx.save();ctx.translate(width/2,height/2);ctx.scale(zoom,zoom);ctx.translate(-camera.x,-camera.y);
+  // Revision-2 cutaway art uses the exact shared polygon and collider geometry.
+  if(illustrated){drawInterior(ctx,geometry);drawInteriorLights(ctx,geometry,time,reduced);drawInteriorLabels(ctx,geometry,zoom);}
+  else {
   // Structural silhouette beneath the painted floor.
   for(const floor of geometry.WORLD_FLOORS)round(ctx,floor.x-8,floor.y-8,floor.width+16,floor.height+16,13,'#142838','#091c2c',9);
   for(const floor of geometry.WORLD_FLOORS)if(!floor.center){round(ctx,floor.x,floor.y,floor.width,floor.height,6,'#719398','#1b3545',4);ctx.strokeStyle='#c1d5c02b';ctx.lineWidth=2;for(let x=floor.x+20;x<floor.x+floor.width;x+=32){ctx.beginPath();ctx.moveTo(x,floor.y+8);ctx.lineTo(x,floor.y+floor.height-8);ctx.stroke();}}
@@ -97,10 +102,6 @@ export function createWorldScene(canvas,{reduced=false,playback=false}={}){
    ctx.save();ctx.beginPath();ctx.rect(r.x+12,r.y+16,r.width-24,r.height-30);ctx.clip();ctx.strokeStyle='#19344413';ctx.lineWidth=2;for(let x=r.x+30;x<r.x+r.width;x+=36){ctx.beginPath();ctx.moveTo(x,r.y+14);ctx.lineTo(x,r.y+r.height-8);ctx.stroke();}ctx.restore();
    const roomLabel=r.name?.toUpperCase()||names[r.id]||r.id.toUpperCase(),authoredLabel=(geometry.WORLD_DECOR||[]).some(item=>item.kind==='label'&&String(item.text).toUpperCase()===roomLabel);
    if(!authoredLabel)text(ctx,roomLabel,r.x+r.width/2,r.y+r.height-7,19,'#163346');if(legacy)decor(ctx,r,time,reduced);else if(r.description){const limit=Math.max(25,Math.floor((r.width-40)/6)),words=r.description.split(' ');let line='',lines=[];for(const word of words){if((line+' '+word).length>limit){lines.push(line);line=word;}else line+=(line?' ':'')+word;}if(line)lines.push(line);for(const [i,line]of lines.slice(0,2).entries())text(ctx,line,r.x+r.width/2,r.y+28+i*14,11,'#254d5a');}
-   const station=geometry.WORLD_STATIONS[r.id],hasTask=game?.self?.tasks?.some(t=>!t.completed&&t.roomId===r.id)||playback&&game?.replayTaskRooms?.includes(r.id),critical=game?.sabotage?.active&&game.sabotage.roomId===r.id;
-   if(!station)continue;
-   if(hasTask||critical){ctx.save();ctx.shadowColor=critical?'#ff6963':'#ffe895';ctx.shadowBlur=reduced?14:20+Math.sin(time/250)*7;circle(ctx,station.x,station.y,31,critical?'#e87162':'#f3d98e',undefined,4);ctx.restore();}
-   round(ctx,station.x-22,station.y-24,44,48,8,'#31586a');round(ctx,station.x-14,station.y-17,28,22,4,critical?'#ff8573':hasTask?'#ffeb9e':'#9dcaba',null);text(ctx,critical?'!':hasTask?'E':'·',station.x,station.y+1,18,'#224859');
   }
   // Open thresholds exactly where shared corridor floors cross a room boundary.
   for(const r of geometry.WORLD_ROOMS)for(const f of geometry.WORLD_FLOORS.filter(f=>!f.center)){
@@ -110,6 +111,13 @@ export function createWorldScene(canvas,{reduced=false,playback=false}={}){
    for(const edge of [r.y,r.y+r.height])if(f.y<edge&&f.y+f.height>edge&&right-left>30){ctx.fillRect(left+3,edge-7,right-left-6,14);ctx.beginPath();ctx.moveTo(left+2,edge-11);ctx.lineTo(left+2,edge+11);ctx.moveTo(right-2,edge-11);ctx.lineTo(right-2,edge+11);ctx.stroke();}
   }
   if(!legacy){for(const prop of geometry.WORLD_OBSTACLES)mapObstacle(ctx,prop,time,reduced);for(const item of geometry.WORLD_DECOR||[])mapDecor(ctx,item,time,reduced);}
+  }
+  for(const r of geometry.WORLD_ROOMS){
+   const station=geometry.WORLD_STATIONS[r.id],hasTask=game?.self?.tasks?.some(t=>!t.completed&&t.roomId===r.id)||playback&&game?.replayTaskRooms?.includes(r.id),critical=game?.sabotage?.active&&game.sabotage.roomId===r.id;
+   if(!station)continue;
+   if(hasTask||critical){ctx.save();ctx.shadowColor=critical?'#ff6963':'#ffe895';ctx.shadowBlur=reduced?14:20+Math.sin(time/250)*7;circle(ctx,station.x,station.y,31,critical?'#e87162':'#f3d98e',undefined,4);ctx.restore();}
+   round(ctx,station.x-22,station.y-24,44,48,8,'#31586a');round(ctx,station.x-14,station.y-17,28,22,4,critical?'#ff8573':hasTask?'#ffeb9e':'#9dcaba',null);text(ctx,critical?'!':hasTask?'E':'·',station.x,station.y+1,18,'#224859');
+  }
   circle(ctx,geometry.WORLD_BELL.x,geometry.WORLD_BELL.y,19,'#e1a34f');circle(ctx,geometry.WORLD_BELL.x,geometry.WORLD_BELL.y,9,'#fff0ba',undefined,2);
   for(const body of visibleBodies(game)){ctx.save();ctx.translate(body.position.x,body.position.y);ctx.rotate(-.25);const color=game.players.find(p=>p.id===body.playerId)?.color||'#d3b48b';round(ctx,-25,-10,48,24,12,color);round(ctx,-15,-8,20,13,5,'#274958',undefined,3);ctx.restore();text(ctx,'FALLEN',body.position.x,body.position.y+31,11,'#fbf1d5');}
   for(const effect of game?.effects||[]){const position=effect.kind==='echo'?effect.position:game.players.find(p=>p.id===effect.targetId)?.position;if(!point(position))continue;ctx.save();ctx.strokeStyle=effect.kind==='echo'?'#eaaaf0':'#a9f7e0';ctx.lineWidth=4;ctx.setLineDash(effect.kind==='echo'?[8,6]:[]);ctx.beginPath();ctx.arc(position.x,position.y,40,0,Math.PI*2);ctx.stroke();text(ctx,effect.kind==='echo'?'SIGNAL ECHO':'HARBOR WARD',position.x,position.y-48,12,'#fff4cc');ctx.restore();}

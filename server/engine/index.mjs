@@ -6,9 +6,9 @@ import {initializeFeatures,isGhost,nextEffectAt,clearEffects,featureDenial,activ
 import {worldRuntime} from './world-runtime.mjs';
 import {checkpointReplay,replayMetadata} from './replay-history.mjs';
 const defaultRuntime=worldRuntime(await import(process.env.WORLD_ENGINE_GEOMETRY_MODULE||'../../shared/world.mjs'));
-const runtimes=new Map([['beacon',defaultRuntime]]);
-function worldFor(state){const id=state.mapId??'beacon';if(!runtimes.has(id))runtimes.set(id,worldRuntime(getWorld(id)));return runtimes.get(id);}
-const layoutFor=state=>state.mapId?getWorld(state.mapId).ROOM_LAYOUT:ROOM_LAYOUT;
+const runtimes=new Map([['beacon:1',defaultRuntime]]);
+function worldFor(state){const id=state.mapId??'beacon',revision=state.mapRevision??1,key=`${id}:${revision}`;if(!runtimes.has(key))runtimes.set(key,worldRuntime(getWorld(id,revision)));return runtimes.get(key);}
+const layoutFor=state=>state.mapId||state.mapRevision===2?getWorld(state.mapId,state.mapRevision??1).ROOM_LAYOUT:ROOM_LAYOUT;
 const isWorld=state=>state.schemaVersion===2&&state.worldVersion===1;
 
 const MAX_REQUESTS = 2048;
@@ -116,14 +116,15 @@ function advance(state,now) {
   return changed;
 }
 
-export function createMatch({id,mode='human',humanPlayerId='p1',now=Date.now(),seed,config={},world=false,features,mapId}={}) {
+export function createMatch({id,mode='human',humanPlayerId='p1',now=Date.now(),seed,config={},world=false,features,mapId,mapRevision=1}={}) {
   const selectedMap=parseMapId(mapId);
+  if(![1,2].includes(mapRevision)||(!world&&mapRevision!==1))throw new TypeError('Invalid map revision');
   if(!world&&selectedMap!=='beacon')throw new TypeError('Maps require world mode');
-  const layout=selectedMap==='beacon'?ROOM_LAYOUT:getWorld(selectedMap).ROOM_LAYOUT,taskRooms=layout.map(r=>r.id);
+  const layout=selectedMap==='beacon'&&mapRevision===1?ROOM_LAYOUT:getWorld(selectedMap,mapRevision).ROOM_LAYOUT,taskRooms=layout.map(r=>r.id);
   if (typeof world!=='boolean')throw new TypeError('Invalid world option');
   if (typeof id!=='string' || !/^[A-Za-z0-9_-]{1,100}$/.test(id) || !['human','spectator'].includes(mode) || !finiteTime(now) || humanPlayerId!=='p1') throw new TypeError('Invalid match options');
   if (!config || typeof config!=='object' || Array.isArray(config)) throw new TypeError('Invalid rules');
-  const rules={...DEFAULT_RULES,...(selectedMap!=='beacon'?{tasksPerCrew:getWorld(selectedMap).metadata.tasksPerCrew,roamDeadlineMs:480000,maxMatchMs:1800000}: {})};
+  const rules={...DEFAULT_RULES,...(selectedMap!=='beacon'?{tasksPerCrew:getWorld(selectedMap,mapRevision).metadata.tasksPerCrew,roamDeadlineMs:480000,maxMatchMs:1800000}: {})};
   for (const [key,value] of Object.entries(config)) {
     if (!Object.hasOwn(rules,key) || !Number.isSafeInteger(value) || value<1 || value>86400000) throw new TypeError('Invalid rules');
     rules[key]=value;
@@ -138,7 +139,7 @@ export function createMatch({id,mode='human',humanPlayerId='p1',now=Date.now(),s
   const players=CHARACTERS.map((p,i)=>({id:p.id,name:p.name,color:p.color,role:i===saboteurIndex?'saboteur':'crew',alive:true,roomId:'bridge',human:mode==='human'&&p.id===humanPlayerId,
     tasks:i===saboteurIndex?[]:Array.from({length:rules.tasksPerCrew},(_,j)=>{const roomId=selectedMap==='beacon'?roomIds[random(roomIds.length)]:taskRooms[(i+j)%taskRooms.length];return {...(selectedMap!=='beacon'?{kind:TASK_KINDS[(i+j)%TASK_KINDS.length]}:{}),id:`t${createHash('sha256').update(`${secret}:task:${i}:${j}`).digest('hex').slice(0,20)}`,label:`Service ${layout.find(r=>r.id===roomId).name} relay`,roomId,completed:false};}),
     cooldowns:{moveAt:now,taskAt:now,killAt:now+rules.initialKillCooldownMs,sabotageAt:now+rules.sabotageCooldownMs,meetingAt:now+rules.meetingCooldownMs},meetingsRemaining:rules.meetingsPerPlayer}));
-  const state={...(selectedMap!=='beacon'?{mapId:selectedMap}:{}),schemaVersion:1,id,mode,version:1,phase:'roam',startedAt:now,updatedAt:now,deadlineAt:now+rules.roamDeadlineMs,rules,players,bodies:[],sabotage:null,meeting:null,meetingCount:0,outcome:null,sequence:0,events:[],replaySequence:0,replay:[],requests:Object.fromEntries(players.map(p=>[p.id,[]]))};
+  const state={...(selectedMap!=='beacon'?{mapId:selectedMap}:{}),...(mapRevision===2?{mapRevision}:{}),schemaVersion:1,id,mode,version:1,phase:'roam',startedAt:now,updatedAt:now,deadlineAt:now+rules.roamDeadlineMs,rules,players,bodies:[],sabotage:null,meeting:null,meetingCount:0,outcome:null,sequence:0,events:[],replaySequence:0,replay:[],requests:Object.fromEntries(players.map(p=>[p.id,[]]))};
   if(world)worldFor(state).initialize(state,now);
   initializeFeatures(state,features,random);
   publicEvent(state,'started',now); record(state,'started',now,{...(world?{worldVersion:1,positions:players.map(p=>({id:p.id,position:clone(p.position)}))}:{}),roles:players.map(p=>({id:p.id,role:p.role})),tasks:players.map(p=>({id:p.id,tasks:clone(p.tasks)}))});
@@ -321,7 +322,7 @@ export function getPlayerView(state,playerIdOrNull,now=Date.now()) {
     if (type==='vote') candidates=[{id:'hint',type,targetId:'skip'}];
     if (candidates.some(a=>!denial(state,p,a,now,true))) hints.push(type);
   }
-  return {...(state.mapId?{mapId:state.mapId}:{}),matchId:state.id,...(isWorld(state)?{worldVersion:1}:{}),...(state.features?{features:clone(state.features),effects:safeEffects(state,p,worldFor(state),now),...(isGhost(state,p)?{ghostChat:clone(state.ghostChat)}:{})}:{}),version:state.version,phase:state.phase,serverNow:now,deadlineAt:state.deadlineAt,
+  return {...(state.mapId?{mapId:state.mapId}:{}),...(state.mapRevision===2?{mapRevision:2}:{}),matchId:state.id,...(isWorld(state)?{worldVersion:1}:{}),...(state.features?{features:clone(state.features),effects:safeEffects(state,p,worldFor(state),now),...(isGhost(state,p)?{ghostChat:clone(state.ghostChat)}:{})}:{}),version:state.version,phase:state.phase,serverNow:now,deadlineAt:state.deadlineAt,
     rooms:clone(layoutFor(state)),players:state.players.map(q=>({id:q.id,name:q.name,color:q.color,alive:q.alive,roomId:visible(q)?q.roomId:null,...(isWorld(state)?{position:visible(q)?clone(q.position):null}:{}),...(ended?{role:q.role}:{})})),
     self:p?{id:p.id,role:p.role,alive:p.alive,...(state.features?{ghost:isGhost(state,p),...(p.ability?{ability:clone(p.ability)}:{})}: {}),roomId:p.roomId,...(isWorld(state)?{position:clone(p.position),inputSeq:p.motion.seq,moving:worldFor(state).moving(state,p,now),destination:clone(p.motion.destination)}:{}),tasks:isWorld(state)?p.tasks.map(t=>({...clone(t),progress:clone(taskProgress(t))})):clone(p.tasks),cooldowns:clone(p.cooldowns),meetingsRemaining:p.meetingsRemaining}:null,
     tasks:{completed:state.players.flatMap(q=>q.tasks).filter(t=>t.completed).length,total:state.players.flatMap(q=>q.tasks).length},

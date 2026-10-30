@@ -12,7 +12,7 @@ export function situation(view, memory = {}) {
     memory.seenEvents ?? evidence(view)]);
 }
 export function remember(view, memory) {
-  const {WORLD,WORLD_STATIONS,findWorldPath,canSeeWorldPoint}=getWorld(view.mapId);
+  const {WORLD,WORLD_STATIONS,findWorldPath,canSeeWorldPoint}=getWorld(view.mapId,view.mapRevision??1);
   memory.seenEvents = Array.isArray(memory.seenEvents) ? memory.seenEvents.filter(s => typeof s === 'string' && s.length <= 240).slice(-48) : [];
   memory.observations = Array.isArray(memory.observations) ? memory.observations
     .filter(o => Number.isFinite(o?.at) && Array.isArray(o.players)).slice(-12)
@@ -39,7 +39,7 @@ export function remember(view, memory) {
   memory.suspicions = Object.entries(memory.suspicion ?? {}).slice(0, 24).map(([id, score]) => ({ id, score, at: view.serverNow }));
 }
 export function intentions(view, memory) {
-  const {WORLD,WORLD_STATIONS,findWorldPath,canSeeWorldPoint}=getWorld(view.mapId);
+  const {WORLD,WORLD_STATIONS,findWorldPath,canSeeWorldPoint}=getWorld(view.mapId,view.mapRevision??1);
   const choices = [];
   const add = (goal, fields = {}) => choices.push({ type: 'intend', goal, ...fields });
   if (view.self.role === 'crew') {
@@ -83,7 +83,7 @@ export function install(memory, intention, view) {
 // Returns only legal engine action shapes. Historical sightings never supply a
 // moving player's current coordinate. The engine validates every proposal again.
 export function execute(view, memory) {
-  const {WORLD,WORLD_STATIONS,findWorldPath,canSeeWorldPoint}=getWorld(view.mapId);
+  const {WORLD,WORLD_STATIONS,findWorldPath,canSeeWorldPoint}=getWorld(view.mapId,view.mapRevision??1);
   const plan = memory.intention, progress = memory.planProgress;
   if (!plan || !progress || !Number.isFinite(plan.startedAt) || !Number.isFinite(plan.expiresAt) ||
       plan.startedAt > view.serverNow || plan.expiresAt > plan.startedAt + 30000 ||

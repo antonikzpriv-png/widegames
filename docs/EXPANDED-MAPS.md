@@ -1,5 +1,7 @@
 # Expanded maps and CAPTCHA equipment
 
+Fresh rooms now use the [illustrated redesign of all three maps](ILLUSTRATED-MAPS.md), with polygon rooms, asymmetric passages and original cutaway artwork. Existing saves and replays retain their original physical layout; create a new room after updating to see the redesigned decks.
+
 The lobby map selector independently chooses the playing field before a match starts. The server validates and freezes that map, then applies that map's task and timing defaults. Hosts can still independently select ghost tasks and ability roles. Existing match data without a map ID restores on the original beacon, without migration.
 
 | Map | Size in world units | Rooms | Crew assignments |
@@ -8,9 +10,9 @@ The lobby map selector independently chooses the playing field before a match st
 | Storm Foundry | 3000 × 2200 | 12 | 60 total, 12 per crew keeper |
 | Tidal Observatory | 3200 × 2500 | 14 | 60 total, 12 per crew keeper |
 
-**Storm Foundry** uses seventeen looping passages between an industrial command deck, archives, casting hall, signal laboratory, filtration machinery, freight gallery and other themed rooms. Forty-eight solid props and thirty-six authored details give its floors distinct equipment and landmarks. [Full map notes](MAP-STORM-FOUNDRY.md).
+**Storm Foundry** uses twenty-two bending passage segments between an offset command deck, archive, large central casting hall, signal laboratory, filtration machinery, freight gallery and other themed rooms. Ninety-three solid props and one hundred five authored environmental details give its floors distinct equipment and landmarks. [Current map design and screenshots](ILLUSTRATED-MAPS.md).
 
-**Tidal Observatory** connects fourteen rooms with nineteen corridors around a broad tide ring, twin instrument halls and long service spines. Seventy solid props and forty-six authored labels/lights distinguish charts, spectrum, intake, conservatory, ballast, lens, radio and sonar rooms. [Full map notes](maps/TIDAL-OBSERVATORY.md).
+**Tidal Observatory** connects fourteen irregular rooms through twenty-seven passage segments, with an octagonal orrery crown, angled wings and stepped service loops. Ninety-two solid props and one hundred thirty-two authored details distinguish charts, spectrum, intake, conservatory, ballast, lens, radio and sonar rooms. [Current map design notes](maps/TIDAL-V2-DESIGN.md).
 
 Both maps have six safe starting positions, reachable stations and an emergency bell. Walking uses the original speed, body radius, collision, line-of-sight and interaction rules. Solid machinery stays solid. Geometry/path caches are bound to a map, so two rooms or replay canvases can use different maps concurrently. Maps have eight-minute roam deadlines and a thirty-minute maximum by default; existing explicit numeric rule overrides are respected.
 
@@ -45,7 +47,7 @@ Replay histories retain their selected map and task kinds. Bounds, rooms, paths,
 
 See [recorded checks](MAPS-CAPTCHA-VALIDATION.md) for fixtures and initial results. The final integrated verification is recorded in [qualification](maps/qualification.md). Map browser fixtures use real app/HTTP/task actions, seeded crew assignments, accelerated movement time and idle demo scheduling; full-match integration tests separately exercise normal local bots and rule-based outcomes with no paid calls.
 
-![Storm Foundry](maps/screenshots/storm-foundry-overview.png)
-![Tidal Observatory](maps/screenshots/tidal-observatory-overview.png)
+![Storm Foundry](illustrated-maps/storm-foundry-overview.png)
+![Tidal Observatory](illustrated-maps/tidal-observatory-overview.png)
 ![Glyph equipment](maps/screenshots/storm-foundry-glyphs.png)
 ![Mobile puzzle](maps/screenshots/tidal-observatory-glyphs-mobile.png)
