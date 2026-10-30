@@ -1,3 +1,7 @@
+# Current gameplay-quality rules
+
+New normal rooms use schema4 / match5 and owner-only stationTasksVersion1, with four station jobs of different kinds per crew member. The fourteen-room Beacon2 is the default; Annex1 is also selectable. Read [QUALITY-RULES.md](QUALITY-RULES.md) for the current additions. The tactical deadlines, discovery policy and faction rules below remain. Legacy room/match versions keep their recorded maps and relay rules.
+
 # Current tactical rules
 
 Normal new rooms use the tactical preset on Storm Beacon or Stormbreak Annex. Read [TACTICAL-RULES.md](TACTICAL-RULES.md) for map-specific repairs, shared cooldowns, one-second door warnings/25-second closures, discovery knowledge, exact deadline precedence and equipment limits. The schema3 rules below remain the original saved-game behavior; they do not override schema4 tactical rules.

@@ -1,3 +1,7 @@
+# Station and navigation integration
+
+For match5, local worldCandidates uses nextStationInput on only its character's projected puzzle clues, then proposes ordinary validated taskInteract actions. All six original puzzle kinds are playable without credentials. Geometry caches contain only immutable public walkability/edge data, bounded to four closed-door signatures per registered map; actors, routes and model memory are not cached there. Server startup prepares selected-map navigation before accepting requests. Council models, budgets, identities and explicit demo/hybrid labels remain as below.
+
 # Lantern Wake AI
 
 Current beacon matches use explicit safe-view unknown/alive/dead status and dynamic rosters up to12 keepers. Unknown is never converted to dead in memory/provider input. Local goals handle actual system repair sites, disruptions and physical navigation; completed terminal sessions and reported historical bodies cannot trap the policy. Council can reference up to three owner-permitted dated device samples, separately from attack witnesses and proximity inferences. Existing provider/call/token/cost limits are unchanged. All new verification uses fixtures or labeled local demo, with no paid calls. See NEXT_FEATURE_INTERFACES.md.

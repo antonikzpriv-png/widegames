@@ -1,3 +1,7 @@
+# Current gameplay-quality contract
+
+New normal startup opts into room schema4 / match schema5 / stationTasksVersion1. Exact old formats1..4 remain supported. [QUALITY-CONTRACT.md](QUALITY-CONTRACT.md) specifies ownership and pure station payloads; [QUALITY-INTERFACES.md](QUALITY-INTERFACES.md) lists the executable additions. getMap(string) chooses the latest registered version, while getMap({id,version}) must resolve the exact retained version; getMap(undefined) remains legacy Beacon1. No live hidden-state projection, provider budget or seat identity contract is relaxed.
+
 # Current tactical integration contract
 
 Normal new rooms use room schema3, match schema4/worldVersion1/beaconVersion1/tacticalVersion1 and an immutable map/version plus tactical preset. See [TACTICAL-INTERFACES.md](TACTICAL-INTERFACES.md) for actual exports, HTTP settings, observations and extension examples, [TACTICAL-CONTRACT.md](TACTICAL-CONTRACT.md) for ownership and [TACTICAL-RULES.md](TACTICAL-RULES.md) for semantics. Room/match schemas1/2/3 retain their original behavior. Unsupported future versions stop restoration with the original file preserved. The earlier contracts below are historical and apply to their stated versions.

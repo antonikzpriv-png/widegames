@@ -1,3 +1,7 @@
+# Gameplay-quality handoff additions
+
+The working baseline now includes six authoritative station interactions rather than local completion for new matches. Reuse [QUALITY-INTERFACES.md](QUALITY-INTERFACES.md), the existing task service and server/ai/world.mjs safe proposal path; do not create competing task or navigation loops. Interactive task, strategic AI, multiplayer, ability and replay reservations below remain. This does not merge unfinished Group2 branches.
+
 # Tactical integration addendum
 
 The existing executable feature services below are retained. [TACTICAL-INTERFACES.md](TACTICAL-INTERFACES.md) adds exact map-aware registrations and integrated examples for task progression, strategic navigation, roster/factions, death/abilities, UI panels and ended replay. Group2 branches were not merged at the recorded main90bb6e8 and are not prerequisites. Resolve geometry from each persisted map, never fixed six-room constants; do not replace existing task, planner, lobby, ability or replay services.
