@@ -240,3 +240,43 @@ git diff --exit-code 941e857f046ef7cc9bae25f0fcad27cf6ab7578a -- server public s
 ```
 
 All browser processes/local servers are closed and the owned private profile/data directories removed. **Chrome lease explicitly released after the all-AI completion, before this receipt/commit; no further Chrome launch.** Manager may use Chrome now. This is a development source911 qualification with scoped native evidence, not final walking closure, every device/match strategy approval, paid-provider qualification, full suite/hosted CI, main, push or deployment. Final native qualification waits for the forthcoming committed walking closure source and renewed explicit lease.
+
+## Early current-main merge root-boundary counterexamples
+
+Independent read-only review of coordinator merge foundation **047ae494128fb76f7e474fac2cd8193a13add178** and incoming main **43c079999506785196ab85750105ceb102ba9314**. Reviewed both parent diffs for staged config/rooms/store/transport/root app, plus feature/replay contracts. The coordinator index is actively changing and has unresolved engine/UI/AI files. **No conflicted engine is imported, no current combined integration is approved, and prior6ca8ba6 native evidence remains qualified only to911522d.** Chrome stays coordinator-owned; none was launched.
+
+The ignored `_artifacts/quality-main-staged-root-047-43` is an explicitly labeled **boundary fixture**, not a claimed integration commit: exact committed047 runtime with the following captured stage0 root/shared/task-reader blobs overlaid. Existing047 engine creates the real normal station match and serves the real HTTP receipt case; optional ghost engine behavior is not claimed. This isolates root checks while Core implements the combined engine. Manifest SHA256 **a0fd12710606da57d820751dcc4fcabaa23bdbcefd2fd1b41b970132806a4430**,86 files verified unchanged.
+
+| Captured staged file | Exact blob |
+| --- | --- |
+| server/config.mjs | a2cf081491a535e652928e11aba7dfb7c5368c9b |
+| server/rooms.mjs | ed2ed95851ccfe4df5fff86e60259dc2dcfc151e |
+| server/store.mjs | f7d517cf765b3be2c765afd6219b4c0aae61fb44 |
+| server/transport.mjs | 2ba18f7ad1d3193cf4703905aa75a8d2e8eb7843 |
+| server/feature-validation.mjs | ffe0b8cfc465474c6a3160fb5806603b9f5d0a8d |
+| server/engine/tasks.mjs | f04a75a99784070a4f74bc4473ed97acd2af48c5 |
+| shared/features.mjs | 544e5a79e1ba5548c9d11eaee934743499b96ec3 |
+| shared/replay.mjs | 15b8ab5537c4ed514506be5e47457df299892221 |
+| public/app.mjs | 739e81d3f2e61fd1b9946cb0c2e0c39d412c7b77 |
+
+`tests/quality-main-boundaries-root.test.mjs`: **0 pass/3 fail/0 skip**, with real passing prerequisites before the three active positive assertions. Evidence `_artifacts/quality-main-staged-root-first.txt`, SHA256 **4f5829c03ff50228f9a54bc291163f063bfce6435514c83bc5be048af69dc84b**. These failures are product-boundary results on the captured blob fixture, not swallowed setup errors:
+
+- **Q-M1, changed start payload falsely acknowledged.** `server/transport.mjs:133` returns immediately on matching startId before parsing/comparing features. Actual HTTP accepts start id X with `{deathPolicy:'transfer',abilities:false}`; the same host/id with `{deathPolicy:'ghost-tasks',abilities:true}` gets200 and the original features. Same-payload retry200, different start ID409 and visitor start403 controls pass. Positive conflict assertion expects409 and stays red. The incoming43 parent already has the early same-ID return at line125;047 has it at128 when only id was accepted. This is an inherited feature-parameter receipt gap exposed by the combined interface, not a claim that a new merge line alone introduced it. No feature switch or secret data leak actually occurs, but changed intent is falsely acknowledged.
+- **Q-M2, legacy replay relabeled onto a larger match.** `server/store.mjs:45–48` validates replay history in isolation. A real normal Beacon2/schema5 save with no replayHistory validates. Attaching a separately well-shaped strict v1 `lantern-wake-v1` history with six original actor IDs, empty allowed task lists and that match's actual Bridge spawn coordinates also validates. Those coordinates fit old numerical bounds and current static geometry, so shape/bounds checks cannot bind the declared replay map to the match. An original schema2/v1 fixture remains readable as a prerequisite. Positive assertion rejects the large-match/v1 combination and stays red. This is restore integrity at a local saved-file boundary, not an unauthenticated client ability to upload state. Store must bind new history identity/version to its actual match while preserving legitimate legacy readers; enlarging v1 would not resolve it.
+- **Q-M3, future replay history reclassified as corrupt.** Captured `server/store.mjs:203–207` lacks replay-history future-version preflight. Put version3 history on an otherwise validated station save, then actual store.load returns[] and moves the original file to `.quarantine-*`; no VERSION_UNAVAILABLE is thrown. Diagnostics prove the quarantine retains the original bytes. Positive assertion requires unavailable-version failure with original pathname/bytes intact. This is improper quarantine of future data, not deletion. Existing room/match/map/station guards alone do not cover the newly merged replay subversion.
+
+Source-only interface gaps are kept separate from reproduced failures: `server/feature-validation.mjs:14,19–20` still accepts optional state features only on schema2, assumes exactly five crew task sets and original ROOM_LAYOUT; `shared/features.mjs:10` treats any dead faction as a ghost. Core's early handoff already identifies schema3..5/custom-map support and dead-crew-only semantics. These are pending integration dependencies, not an invented approval of the incomplete engine or an independently reproduced live ghost leak. Root scheduleAi itself checks crew role for ghost task scheduling, and the root app retains taskStep/match/phase/room ownership guards.
+
+During this review the coordinator index advanced: newer staged store **7b54f80ba8666b12b60d0528ddf492e88e2fcc4b** includes replayHistory.version>2 and features.version>1 unavailable guards, and shared replay **920b573517b733e2e1a69f5d92e9715ad96da353** adds separate v2 delegation/readers. These uncommitted changes do not retroactively alter the preserved red fixture. Q-M3 has a source-visible candidate correction; independent positive receipt and exact final committed pin remain pending. No claim is made that all three original findings still exist in every newer working/index state.
+
+```powershell
+$env:TEMP='D:/Widegames-work/temp'; $env:TMP=$env:TEMP
+$env:npm_config_cache='D:/Widegames-work/npm-cache'
+Remove-Item Env:WORLD_ENGINE_GEOMETRY_MODULE -ErrorAction SilentlyContinue
+$env:QUALITY_MAIN_REVIEW_ROOT=(Resolve-Path '_artifacts/quality-main-staged-root-047-43').Path
+node --test tests/quality-main-boundaries-root.test.mjs
+node --check tests/quality-main-boundaries-root.test.mjs
+git diff --check
+```
+
+The new tests default to the actual checkout and have no skip/source-fallback logic; the optional source root explicitly labels this incomplete-merge boundary fixture. The old941 audit checkout does not pretend to implement Group2. No runtime, other worktree, main, provider, deployment or push mutation is made. Q-A1/Q-A2 implementation is now manager-reported fixed via the safe-motion/camera change integrated as **f6cb78b4c61e0859fcf0d0ddb5a8171d87e20789**; the original assertions/red remain preserved. Independent unchanged requalification is deferred until the final combined source is frozen, as requested.
