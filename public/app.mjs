@@ -110,7 +110,7 @@ function renderWorld(){
   const host=h('div',{id:'world-host'}),owner={id:roomId};main.replaceChildren(host);worldSession=owner;
   worldExperience=createWorldExperience(host,{
    action:(type,fields={})=>worldMutation(owner,'/action',actionEnvelope(type,fields)),
-   input:input=>worldInput(owner,input),start:features=>worldMutation(owner,'/start',{id:crypto.randomUUID(),...(features?{features}:{})}),
+   input:input=>worldInput(owner,input),start:(features,mapId)=>worldMutation(owner,'/start',{id:crypto.randomUUID(),...(features?{features}:{}),...(mapId?{mapId}:{})}),
    settings:mapId=>{if(!ownsWorld(owner)||room?.game||!room?.isHost||!networkReady)return Promise.reject(new DOMException('Map settings are unavailable.','AbortError'));return worldMutation(owner,'/settings',{id:crypto.randomUUID(),mapId,expectedRevision:room.settingsRevision});},
    leave:()=>{if(worldSession===owner)home();},loadReplay:options=>worldReplay(owner,options)
   });
