@@ -8,7 +8,7 @@ import {spawn} from 'node:child_process';
 import {createRequire} from 'node:module';
 import {createHash} from 'node:crypto';
 import {fileURLToPath,pathToFileURL} from 'node:url';
-const pin=process.env.QUALITY_PRODUCTION_REVIEW_PIN||'25ce0700fb16320fdd40f4192ef94b32fe3fb824';
+const pin=process.env.QUALITY_PRODUCTION_REVIEW_PIN||'3c1c206b65d7d44c71471450120ba23c43efad9e';
 assert.match(pin,/^[a-f0-9]{40}$/,'Review pin must be an exact full Git hash');
 const archiveName='quality-production-'+pin.slice(0,7);
 const artifacts=fileURLToPath(new URL('../_artifacts/',import.meta.url));
