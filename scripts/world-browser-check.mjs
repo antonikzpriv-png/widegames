@@ -17,13 +17,15 @@ const legacyTaskRun=process.env.LW_TASK_PROGRESS_BROWSER==='1';
 const selectedMap=legacyTaskRun?getMap():getMap('beacon'),{WORLD,WORLD_STATIONS,WORLD_BELL}=selectedMap.geometry,geometry=spatialGeometry(selectedMap.geometry);
 import {taskKind} from '../public/world/model.mjs';
 import {getMap} from '../shared/maps/index.mjs';
-import {challenge} from '../server/engine/tasks.mjs';
+import {challenge,taskWaitUntil} from '../server/engine/tasks.mjs';
+import {LOBBY_DEFAULTS} from '../shared/lobby.mjs';
+import {createTaskPanelDriver} from './lib/task-panel-driver.mjs';
 import {createPageBodyAudit} from './lib/page-body-audit.mjs';
 
 const root=fileURLToPath(new URL('../',import.meta.url)),pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 await mkdir(path.join(root,'_artifacts'),{recursive:true});const output=await mkdtemp(path.join(root,'_artifacts','world-browser-'));
 const git=(...args)=>execFileSync('git',args,{cwd:root,encoding:'utf8',windowsHide:true}).trim();
-const report={taskEdition:legacyTaskRun?1:'station-1',mapRevision:legacyTaskRun?1:null,sourceCommit:git('rev-parse','HEAD'),modifiedPaths:git('status','--porcelain').split(/\r?\n/).filter(Boolean),fixture:'Actual app/main browser modules, native HTTP/WS, persistent store, seeded world engine and real labeled demo AI. Physical routes may use normal authenticated navigate requests and accelerated server time; no state/winner fabrication or provider calls. Auxiliary effects use explicit one-second fixture durations; the dedicated beacon scenarios qualify standard effects.',checks:[],privacyChecks:0,canceledAuditResponses:[],errors:[],consoleErrors:[],screenshots:[],outcomes:[],inputPackets:0,inputTrace:[],puzzleKinds:[],expectedConflicts:0};
+const report={taskEdition:legacyTaskRun?1:['station-1','equipment-3'],mapRevision:legacyTaskRun?1:null,sourceCommit:git('rev-parse','HEAD'),modifiedPaths:git('status','--porcelain').split(/\r?\n/).filter(Boolean),fixture:'Actual app/main browser modules, native HTTP/WS, persistent store, seeded world engine and real labeled demo AI. Physical routes may use normal authenticated navigate requests and accelerated server time; no state/winner fabrication or provider calls. Auxiliary effects use explicit one-second fixture durations; the dedicated beacon scenarios qualify standard effects.',checks:[],privacyChecks:0,canceledAuditResponses:[],errors:[],consoleErrors:[],screenshots:[],outcomes:[],inputPackets:0,inputTrace:[],puzzleKinds:[],expectedConflicts:0};
 let browser,game,page,origin,skew=0,auditClosed=false;const pending=new Set();
 const runtimeFiles=git('ls-files','public','server','shared','package.json','package-lock.json').split(/\r?\n/);
 async function hashes(){return Promise.all(runtimeFiles.map(async file=>[file,createHash('sha256').update(await readFile(path.join(root,file))).digest('hex')]));}
@@ -75,26 +77,44 @@ async function touchPuzzle(label){
  },label);
  await page.touchscreen.tap(point.x,point.y);
 }
+async function openAssignedTask(task){
+ await navigate(WORLD_STATIONS[task.roomId]);
+ // Power may move to another assigned station. Use the actual first available
+ // job there before reopening its accept panel, as the normal USE control does.
+ let current=await view(),preceding=current.game.self.tasks.find(t=>!t.completed&&t.roomId===task.roomId);
+ if(preceding&&preceding.id!==task.id){await solveTask(preceding);await navigate(WORLD_STATIONS[task.roomId]);}
+ if(!legacyTaskRun)await until(r=>r.game.interactions.some(h=>h.type==='task'&&h.enabled&&h.fields.taskId===task.id),'permitted task');
+ await page.waitForFunction(label=>{const b=document.querySelector('.lw-action-use');return b?.title===label&&b.getAttribute('aria-disabled')==='false';},{},task.label);
+ await page.focus('.lw-world-canvas');await page.keyboard.press('e');await page.waitForSelector('.lw-task-modal',{visible:true});
+}
 async function solveTask(task){
+ task=(await view()).game.self.tasks.find(t=>t.id===task.id);if(task.completed)return;
  if(task.kind==='station'){
- await navigate(WORLD_STATIONS[task.roomId]);await until(r=>r.game.interactions.some(h=>h.type==='task'&&h.enabled&&h.fields.taskId===task.id),'permitted task');await page.waitForFunction(label=>{const b=document.querySelector('.lw-action-use');return b?.title===label&&b.getAttribute('aria-disabled')==='false';},{},task.label);await page.focus('.lw-world-canvas');await page.keyboard.press('e');await page.waitForSelector('.lw-station-modal',{visible:true});
+ await openAssignedTask(task);await page.waitForSelector('.lw-station-modal',{visible:true});
  report.puzzleKinds.push(task.challenge.kind);await shot('04-task-'+task.challenge.kind);
  await exerciseNativeStationTask({page,taskId:task.id,readRoom:view});await until(r=>r.game.self.tasks.find(t=>t.id===task.id)?.completed,'server task acknowledgement');await page.waitForSelector('.lw-task-modal',{hidden:true});
  }else{
- await navigate(WORLD_STATIONS[task.roomId]);await page.focus('.lw-world-canvas');await page.keyboard.press('e');await page.waitForSelector('.lw-task-modal',{visible:true});
+ await openAssignedTask(task);
  let current=(await view()).game.self.tasks.find(t=>t.id===task.id);const kind=current.progress.kind;report.puzzleKinds.push(kind);await shot('04-task-'+kind);
  if(kind==='pressure')await page.setViewport({hasTouch:true,width:390,height:844});
  const direct=await propose({type:'task',taskId:task.id});assert.equal(direct.status,409);assert.equal(direct.body.error.code,'TASK_INCOMPLETE');report.expectedConflicts++;
  const forged=await propose({type:'task',taskId:task.id,solved:true});assert.equal(forged.status,409);assert.equal(forged.body.error.code,'INVALID_ACTION');report.expectedConflicts++;
- while(current.progress.index<current.progress.total){const c=current.progress;
-  if(kind==='wires'){await keyboardPuzzle(`Left cable ${c.index+1}`);await keyboardPuzzle(`Right socket ${c.index+1}`);}
+ while(current.progress.index<current.progress.total){const c=current.progress,previousRoomId=current.roomId;
+  if(c.v===3){
+   const latest=await view(),readyAt=taskWaitUntil(current);
+   if(readyAt>latest.game.serverNow){skew+=readyAt-latest.game.serverNow+50;await page.waitForFunction(()=>document.querySelector('.lw-diagnostic-timer')?.dataset.ready==='true');}
+   await createTaskPanelDriver(page).step(c);
+  }
+  else if(kind==='wires'){await keyboardPuzzle(`Left cable ${c.index+1}`);await keyboardPuzzle(`Right socket ${c.index+1}`);}
   else if(kind==='sequence')await keyboardPuzzle(String(c.sequence[c.index]));
   else if(kind==='repair'){if(c.index===3)skew+=1600;await keyboardPuzzle(['Isolate power','Replace fuse','Start diagnostic','Verify diagnostic'][c.index]);}
   else if(kind==='pressure'){await touchPuzzle(c.index===0?(c.pressure<5?'Flow right to left':'Flow left to right'):`Transfer ${Math.abs(5-c.pressure)} bar`);}
   else {await page.focus('.lw-frequency-slider');await page.keyboard.press('Home');for(let value=0;value<c.target;value++)await page.keyboard.press('ArrowRight');await keyboardPuzzle('Lock frequency');}
   current=(await until(r=>r.game.self.tasks.find(t=>t.id===task.id).progress.index>c.index,'authoritative semantic step')).game.self.tasks.find(t=>t.id===task.id);
-  await page.waitForFunction(()=>document.querySelector('.lw-task-modal .lw-puzzle button:not(:disabled)'));
-  check(await page.evaluate(()=>document.querySelector('.lw-task-modal .lw-puzzle').contains(document.activeElement)),`Keyboard focus survives ${kind} step ${c.index}`);
+  if(current.roomId!==previousRoomId){await page.waitForSelector('.lw-task-modal',{hidden:true});check(kind==='power','Power routing revokes the previous station controls');await openAssignedTask(current);}
+  else{await page.waitForFunction(()=>document.querySelector('.lw-task-modal .lw-puzzle button:not(:disabled)'));
+   check(await page.evaluate(()=>document.querySelector('.lw-task-modal .lw-puzzle').contains(document.activeElement)),`Keyboard focus survives ${kind} step ${c.index}`);}
+
   if(kind==='pressure'){check(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'Touch pressure controls fit mobile viewport');await shot('04b-pressure-mobile');}
  }
  await keyboardPuzzle('Send completed task');await until(r=>r.game.self.tasks.find(t=>t.id===task.id)?.completed,'server task acknowledgement');await page.waitForSelector('.lw-task-modal',{hidden:true});if(kind==='pressure')await page.setViewport({hasTouch:true,width:1440,height:1000});
@@ -111,8 +131,8 @@ function seedForHuman(){
  if(legacyTaskRun){
  for(let i=0;i<2500;i++){const seed='world-browser-'+i,state=engine.createMatch({id:'seed',seed,world:true,mapRevision:1,taskEdition:1,config:{tasksPerCrew:5}}),self=state.players[0];if(self.role==='crew'&&self.tasks.some(t=>t.roomId==='bridge')&&new Set(self.tasks.map((task,index)=>challenge(task).kind)).size===5)return seed;}
  }
- for(let i=0;i<2500;i++){const seed='world-browser-'+i,state=engine.createMatch({id:'seed',seed,tactical:true,stationTasks:true,map:{id:selectedMap.id,version:selectedMap.version}}),self=state.players[0];if(self.role==='crew'&&self.tasks.some(t=>t.roomId==='bridge')&&new Set(self.tasks.map(task=>task.challenge.kind)).size===4)return seed;}
- throw Error('Normal generated tasks must expose four actual station kinds, including a Bridge task');
+ for(let i=0;i<2500;i++){const seed='world-browser-'+i,state=engine.createMatch({id:'seed',seed,tactical:true,stationTasks:true,map:{id:selectedMap.id,version:selectedMap.version},settings:{...LOBBY_DEFAULTS,tasksPerCrew:4},config:{tasksPerCrew:4}}),self=state.players[0];if(self.role==='crew'&&self.tasks.some(t=>t.roomId==='bridge')&&new Set(self.tasks.map(task=>task.challenge?.kind??challenge(task).kind)).size===4)return seed;}
+ throw Error('Normal configured tasks must expose four distinct native/edition-3 families, including a Bridge task');
 }
 try{
  const humanSeed=seedForHuman(),probe=net.createServer();await new Promise(resolve=>probe.listen(0,'127.0.0.1',resolve));const port=probe.address().port;await new Promise(resolve=>probe.close(resolve));origin=`http://127.0.0.1:${port}`;
