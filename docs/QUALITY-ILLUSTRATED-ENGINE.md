@@ -40,3 +40,25 @@ node --test --test-isolation=none tests/latest-illustrated-engine-demo.test.mjs
 No new required exports. Compatible additive parameter: createMatch({mapRevision=1}); replayGeometry(map,mapRevision=1),validReplayEffect(effect,map,mapRevision=1),validateReplayAnchor(anchor,map,mapRevision=1). validateReplayHistory/Metadata dispatch mapped v2 exactly as before. validateReplayHistoryState binds both legacy map string and revision. started replay records optional mapRevision2 for geometry recovery if metadata is truncated. Old rev1 recordings do not gain that field. AI worldRoute returns defensive x/y waypoints from native g.findWorldPath in world2; strategic situation pins mapIdentity(mapFor(view)). Root current-view fences may also include mapRevision for clarity, but immutable matches and this situation guard already reject cross-revision plan execution.
 
 No source overlays or other-worktree edits, main/push, paid/provider calls, Chrome, full suite or deployment. All previous receipts remain historical. Combined storage/client/HTTP/browser qualification and final independent review remain coordinator/other-owner work; this handoff does not approve a main merge.
+
+## Final combined fixture repair at77cbf18
+
+Separate worker D:/Widegames-work/ship-quality-final-engine-tests-20261030, branch codex/ship-quality-final-engine-tests-20261030, from exact coordinator77cbf18c8e5faa0ef83cad5c5c8e7565c131bdd6. Only tests/integration-service.test.mjs, tests/illustrated-spectator-integration.test.mjs and this receipt change; no third-party cherry-pick or application/shared/server edit.
+
+Reproduced the reported failures on exact source:7 tests,1 pass,6 fail,0 skips (_artifacts/final-engine-tests-original-red.txt). Three service fixtures spread loadConfig's new production mapRevision2 into worldMode:false and therefore correctly reject before startup. Three direct inspector fixtures omitted the required authenticated host identity and correctly returned null. The existing real HTTP/WS privacy case passed unchanged.
+
+The historical service fixtures now explicitly omit inherited map selection/revision and disable world/systems/tactical/station modes. Each successful HTTP start additionally asserts actual engine schema1 and absence of worldVersion, so these tests cannot silently drift into a walking-map protocol. Scheduler inspection confirms earliest-due sorting; the original25ms timer/100ms decision interval and exact six-identity coverage remain, exercising overlapping due times. The denial test retains INVALID_ROOM then same-ID REQUEST_CONFLICT and unchanged room assertions, and additionally reads the durable room file to prove the rejected receipt exists before the HTTP error returns. The inactive case still waits for a real pending decision, advances the unchanged300ms configured maximum, requires abort without disconnect and checks paused phase. No runtime scheduler/denial/inactive bug was found in these bounded controls.
+
+Direct inspector positive calls now supply an explicit trusted host-observer identity. Existing negative mode/seat cases receive the same otherwise-valid identity so they cannot pass merely because authentication is absent. Added separate missing-identity, nonhost-observer and seated-host rejection checks. All existing exact geometry/plan/task-count, private-reasoning exclusion, legal elimination/ghost route/corpse immutability, copy independence, hidden living position/chat, and real cookie/HTTP/WS public/private assertions remain. HTTP identity is still issued/authenticated by actual transport; the direct-call identity is a labelled unit boundary fixture, not permission synthesis in the product.
+
+Both suites now use checkout-local ignored _artifacts/test-temp with mkdir/mkdtemp and verified relative containment before cleanup; no hardcoded /tmp or C: paths. D:/Widegames-work/temp is also supplied as TEMP/TMP. Dependencies are reused read-only via a node_modules junction; no install/update.
+
+Focused nonisolated run7/7 passed,0 skips (5399.9851ms), then ordinary isolated Node workers with concurrency2 also7/7 passed,0 skips (2355.761ms):
+
+```powershell
+$env:TEMP='D:/Widegames-work/temp'; $env:TMP=$env:TEMP
+node --test --test-isolation=none tests/integration-service.test.mjs tests/illustrated-spectator-integration.test.mjs
+node --test --test-concurrency=2 tests/integration-service.test.mjs tests/illustrated-spectator-integration.test.mjs
+```
+
+Evidence: _artifacts/final-engine-tests-focused-green.txt and _artifacts/final-engine-tests-normal-runner.txt. No semantic assertions removed/weakened, no provider/model calls (decisions explicitly stubbed), Chrome/browser, build, full suite, main/push or deployment. This is fixture repair on exact77cb source, not independent native/browser approval or final combined-suite qualification.
