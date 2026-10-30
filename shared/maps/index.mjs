@@ -41,6 +41,7 @@ export function getMap(reference){
 }
 export function mapIdentity(reference){const map=reference?.geometry?reference:getMap(reference);return map.namespaceKey??'tactical:'+map.id+':'+map.version;}
 export function mapFor(value){
+ if(value?.mapId!==undefined&&typeof value.mapId!=='string'||value?.mapRevision!==undefined&&![1,2].includes(value.mapRevision))throw new TypeError('Unsupported legacy map identity/revision');
  if(value?.map!==undefined){const map=getMap(value.map);
   if(value.mapId!==undefined&&value.mapId!==(map.legacyMapId??map.id)&&value.mapId!==map.id)throw new TypeError('Conflicting map identities');
   if(value.mapRevision!==undefined&&mapIdentity(getLegacyMap(value.mapId??map.legacyMapId??map.id,value.mapRevision))!==mapIdentity(map))throw new TypeError('Conflicting map namespaces');

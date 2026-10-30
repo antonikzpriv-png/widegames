@@ -17,5 +17,5 @@ test('catalog keeps five real selections and public metadata excludes implementa
  assert.deepEqual(MAP_CATALOG.map(m=>[m.id,m.version]),[['beacon',2],['stormbreak-annex',1],['storm-foundry',2],['tidal-observatory',2],['beacon-illustrated',2]]);assert.equal(TACTICAL_MAP_CATALOG.length,2);for(const m of PUBLIC_MAP_CATALOG)assert.deepEqual(Object.keys(m).sort(),['description','id','name','theme','version']);
 });
 test('unknown legacy revisions and namespace aliases fail closed',()=>{
- for(const revision of [0,3,null,'2',2.5])assert.throws(()=>getLegacyMap('beacon',revision));assert.throws(()=>getLegacyMap('stormbreak-annex',2));assert.throws(()=>getMap({mapId:'beacon',revision:2,extra:true}));
+ for(const revision of [0,3,null,'2',2.5]){assert.throws(()=>getLegacyMap('beacon',revision));assert.throws(()=>mapFor({mapRevision:revision}));assert.throws(()=>mapFor({map:{id:'beacon-illustrated',version:2},mapRevision:revision}));}assert.throws(()=>mapFor({mapId:null}));assert.throws(()=>getLegacyMap('stormbreak-annex',2));assert.throws(()=>getMap({mapId:'beacon',revision:2,extra:true}));
 });
