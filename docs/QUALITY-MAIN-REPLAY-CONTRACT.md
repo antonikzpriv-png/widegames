@@ -1,0 +1,9 @@
+# Map-aware replay2 reader
+
+Coordinator added shared/replay-v2.mjs and shared/replay-common.mjs. Dependency graph is acyclic: replay -> v2 -> common; replay also imports/reexports the unchanged legacy limits/task-progress helper from common. The v1 reader keeps exactly six p1..p6, original room IDs and bounds. shared/replay.mjs validateReplayHistory/Metadata dispatch explicit version2 only. No persistence writes occur in these shared modules.
+
+Version2 history: {version:2,map:{id,version},checkpoints:[anchor]}. Metadata: {version:2,map:{id,version},matchId,coverage:{startedAt,from,through,partial},anchor}. Anchors retain main field names/shapes; their context map comes from the outer record, with no new map property in an anchor. Registered exact geometry validates rooms, routes, points and4..12unique custom IDs/1..3minority saboteurs. New station task anchors use {kind:'station',challenge} and no Group2progress; old step progress remains supported. taskKind is optional bounded compatibility metadata. Exports validateMappedReplayAnchor(anchor,mapReference), validateMappedReplayHistory, validateMappedReplayMetadata, replayMap.
+
+Core owned replay-history validator may delegate these public structural checks and add exact-state identity/clock checks. Root store will retain strict versioned checks and full user files; future versions must fail without rewrite. Frontend must reconstruct using exact metadata map, actual coverage and permitted ended/live scopes. Never identify a large map as the old string.
+
+TDD evidence: corrected controlled fixtures reproduce3replay2 failures/1unchangedv1pass, then4/4pass in _artifacts/quality-main-replay-red-valid-fixtures.txt and quality-main-replay-green.txt. This is isolated positive/negative contract verification, not a complete match/browser or saved-game qualification. Native composed-source validation still follows.

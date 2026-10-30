@@ -1,4 +1,4 @@
-﻿import test from 'node:test';
+import test from 'node:test';
 import assert from 'node:assert/strict';
 import {mkdtemp,mkdir,readFile,writeFile,readdir,rm} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
@@ -32,7 +32,7 @@ test('world UI: real room APIs, walking leases, three task puzzles, council focu
  for(let i=0;i<10000&&(!seeds.crew||!seeds.saboteur);i++){
   const state=actual.createMatch({id:'seed-probe',seed:String(i),world:true}),p=state.players[0];
   if(p.role==='saboteur')seeds.saboteur??=String(i);
-  if(p.role==='crew'&&p.tasks.some(t=>t.roomId==='bridge')&&new Set(p.tasks.map(taskKind)).size===3)seeds.crew??=String(i);
+  if(p.role==='crew'&&p.tasks.some(t=>t.roomId==='bridge')&&['bridge','lantern','archive'].every(roomId=>p.tasks.some(task=>task.roomId===roomId)))seeds.crew??=String(i);
  }
  assert.ok(seeds.crew&&seeds.saboteur,'Actual engine must supply role/task fixture seeds.');
  const engine={...actual,createMatch(options){let state=actual.createMatch({...options,now:options.now-5,seed:seeds[fixture==='critical'?'crew':fixture],world:true});if(fixture==='critical'){const actor=state.players.find(p=>p.role==='saboteur');const result=actual.applyAction(state,actor.id,{id:'fixture-critical',type:'sabotage'},options.now);assert.ok(result.accepted);state=result.state;}return state;}};
@@ -57,7 +57,7 @@ test('world UI: real room APIs, walking leases, three task puzzles, council focu
    })().catch(()=>{res.writeHead(404);res.end('Not found');});
   });
   await new Promise(resolve=>server.server.listen(port,'127.0.0.1',resolve));
-  browser=await puppeteer.launch({executablePath:process.env.CHROME_PATH||'C:/Program Files/Google/Chrome/Application/chrome.exe',headless:true,userDataDir:profile,args:['--disable-gpu','--no-first-run','--disable-default-apps']});
+  browser=await puppeteer.launch({executablePath:process.env.CHROME_PATH||'C:/Program Files/Google/Chrome/Application/chrome.exe',headless:true,userDataDir:profile,args:[...(process.platform==='linux'?['--no-sandbox','--disable-dev-shm-usage']:[]),'--disable-gpu','--no-first-run','--disable-default-apps']});
   report.browserPid=browser.process()?.pid;report.browserVersion=await browser.version();report.nodeVersion=process.version;report.serverOrigin=origin;
   page=await browser.newPage();page.setDefaultTimeout(12000);page.on('pageerror',e=>report.errors.push(e.message));
   const requests=[];page.on('request',req=>{if(/\/(input|action|start)$/.test(req.url())){let body;try{body=JSON.parse(req.postData()||'{}');}catch{}requests.push({path:new URL(req.url()).pathname,body});}});
@@ -87,11 +87,19 @@ test('world UI: real room APIs, walking leases, three task puzzles, council focu
   let tasks=(await view()).game.self.tasks;
   for(const kind of ['wires','tuning','sequence'])await check(`actual ${kind} task: puzzle gates one real task completion`,async()=>{
    const task=tasks.find(t=>taskKind(t)===kind);assert.ok(task);if(kind!=='wires'||task.roomId!=='bridge')await navigate(geometry.WORLD_STATIONS[task.roomId]);
-   await page.waitForSelector('[data-world-action=use][aria-disabled=false]');await page.focus('.lw-world-canvas');const before=requests.filter(r=>r.body?.type==='task').length;await page.keyboard.press('e');await page.waitForSelector('.lw-task-modal');assert.equal(await page.$eval('.lw-task-modal>.lw-primary',n=>n.disabled),true);
-   if(kind==='wires'){for(const n of [1,2,3]){await page.click(`[aria-label^="Left cable ${n}"]`);await page.click(`[aria-label^="Right socket ${n}"]`);}}
-   if(kind==='tuning'){await page.focus('.lw-frequency-slider');await page.keyboard.press('Home');for(let i=0;i<72;i++)await page.keyboard.press('ArrowRight');await page.click('.lw-puzzle-tuning button');}
-   if(kind==='sequence'){await page.click('[aria-label="Sequence tile 1"]');assert.match(await page.$eval('.lw-puzzle-status',n=>n.textContent),/reset/);for(const n of [2,4,1,3])await page.click(`[aria-label="Sequence tile ${n}"]`);}
-   await shot(`task-${kind}`);assert.equal(requests.filter(r=>r.body?.type==='task').length,before);await page.click('.lw-task-modal>.lw-primary');await page.waitForSelector('.lw-task-modal',{hidden:true});assert.equal((await view()).game.self.tasks.find(t=>t.id===task.id).completed,true);assert.equal(requests.filter(r=>r.body?.type==='task').length,before+1);
+   await page.waitForSelector('[data-world-action=use][aria-disabled=false]');await page.focus('.lw-world-canvas');const before=requests.filter(r=>r.body?.type==='task').length;await page.keyboard.press('e');await page.waitForSelector('.lw-task-modal');
+   assert.equal(await page.$$eval('.lw-task-modal button',buttons=>buttons.some(button=>button.textContent==='Send completed task')),false);
+   let current=(await view()).game.self.tasks.find(t=>t.id===task.id);
+   const count=current.progress.total;
+   while(current.progress.index<count){const progress=current.progress;
+    if(kind==='wires'){await page.locator(`button::-p-text(Left cable ${progress.index+1})`).click();await page.locator(`button::-p-text(Right socket ${progress.index+1})`).click();}
+    else if(kind==='tuning'){await page.focus('.lw-frequency-slider');await page.keyboard.press('Home');for(let i=0;i<progress.target;i++)await page.keyboard.press('ArrowRight');await page.click('.lw-puzzle-tuning button');}
+    else {if(progress.index===0){await page.click(`[aria-label="Sequence tile ${progress.sequence[0]===1?2:1}"]`);await page.waitForFunction(()=>document.querySelector('.lw-puzzle-status')?.textContent.includes('incorrect'));}await page.locator(`button[aria-label="Sequence tile ${progress.sequence[progress.index]}"]`).click();}
+    await page.waitForFunction(async({id,taskId,index})=>{const room=await (await fetch('/api/rooms/'+id)).json();return room.game.self.tasks.find(t=>t.id===taskId).progress.index>index;},{timeout:12000,polling:80},{id,taskId:task.id,index:progress.index});
+    current=(await view()).game.self.tasks.find(t=>t.id===task.id);
+   }
+   await shot(`task-${kind}`);assert.equal(requests.filter(r=>r.body?.type==='task').length,before);await page.locator('button::-p-text(Send completed task)').click();await page.waitForSelector('.lw-task-modal',{hidden:true});assert.equal((await view()).game.self.tasks.find(t=>t.id===task.id).completed,true);assert.equal(requests.filter(r=>r.body?.type==='task').length,before+1);
+
   });
   await navigate(geometry.WORLD_BELL);
   await check('emergency transition + persistent live chat draft/focus and literal text',async()=>{

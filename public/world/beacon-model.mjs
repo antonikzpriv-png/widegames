@@ -7,19 +7,19 @@ export function knowledge(game,player){
  if(game?.beaconVersion===1)return ['alive','dead'].includes(player?.status)?player.status:'unknown';
  return player?.alive===false?'dead':'alive';
 }
-const BASE_FIELDS=Object.freeze({task:['taskId'],report:['bodyId'],eliminate:['targetId'],meeting:[]});
+const BASE_FIELDS=Object.freeze({task:['taskId'],report:['bodyId'],eliminate:['targetId'],meeting:[],protect:['targetId'],decoy:['x','y']});
 export function actionDescriptors(game){
  if(game?.beaconVersion!==1)return [];
  return (game.interactions||[]).filter(h=>{
   const fields=Object.hasOwn(BASE_FIELDS,h?.type)?BASE_FIELDS[h.type]:(TYPES.has(h?.type)?BEACON_ACTION_FIELDS[h.type]:null);
-  return fields&&typeof h.id==='string'&&h.fields&&typeof h.fields==='object'&&!Array.isArray(h.fields)&&Object.keys(h.fields).length===fields.length&&fields.every(key=>Object.hasOwn(h.fields,key)&&typeof h.fields[key]==='string')&&(h.type!=='ability'||h.fields.abilityId==='field-note'&&!!game.self&&h.fields.targetId===game.self.id);
+  return fields&&typeof h.id==='string'&&h.fields&&typeof h.fields==='object'&&!Array.isArray(h.fields)&&Object.keys(h.fields).length===fields.length&&fields.every(key=>Object.hasOwn(h.fields,key)&&(['x','y'].includes(key)?Number.isFinite(h.fields[key]):typeof h.fields[key]==='string'))&&(h.type!=='ability'||h.fields.abilityId==='field-note'&&!!game.self&&h.fields.targetId===game.self.id);
  });
 }
 // Base tasks must still go through equipment puzzles, never generic panel buttons.
 export function descriptors(game){return actionDescriptors(game).filter(h=>TYPES.has(h.type));}
 export function hasActionDescriptor(game,type,fields){return actionDescriptors(game).some(h=>h.enabled===true&&h.type===type&&Object.keys(h.fields).length===Object.keys(fields).length&&Object.keys(fields).every(key=>h.fields[key]===fields[key]));}
 export function descriptorKey(h){return JSON.stringify([h.id,h.type,Object.entries(h.fields).sort(([a],[b])=>a.localeCompare(b))]);}
-export function viewKey(room){const g=room?.game,s=g?.self;return JSON.stringify([room?.roomId,g?.matchId,mapKey(g?.map??room?.map),g?.phase,s?.id,s?.alive,s?.roomId,s?.position,g?.systems?.selfTransit||s?.transit||null,g?.investigation?.session||null,g?.sabotage?.kind,g?.sabotage?.deadlineAt,g?.sabotage?.active,g?.sabotage?.repairsCompleted,g?.systems?.lights,g?.systems?.communications,g?.systems?.doors,g?.systems?.cooldowns,actionDescriptors(g).map(h=>[descriptorKey(h),h.enabled]),g?.vision?.radius,s?.tasks?.map(t=>[t.id,t.completed,t.progress,t.challenge?.progress]),g?.abilities?.notes]);}
+export function viewKey(room){const g=room?.game,s=g?.self;return JSON.stringify([room?.roomId,g?.matchId,mapKey(g?.map??room?.map),g?.phase,s?.id,s?.alive,s?.ghost,s?.ability,s?.roomId,s?.position,g?.systems?.selfTransit||s?.transit||null,g?.investigation?.session||null,g?.sabotage?.kind,g?.sabotage?.deadlineAt,g?.sabotage?.active,g?.sabotage?.repairsCompleted,g?.systems?.lights,g?.systems?.communications,g?.systems?.doors,g?.systems?.cooldowns,actionDescriptors(g).map(h=>[descriptorKey(h),h.enabled]),g?.vision?.radius,s?.tasks?.map(t=>[t.id,t.completed,t.progress,t.challenge?.progress]),g?.abilities?.notes]);}
 export function criticalSites(game,map=getMap(game?.map)){
  if(game?.beaconVersion!==1||!game.sabotage?.active)return [];
  const kind=game.sabotage.kind,sites=game.systems?.critical?.sites||game.sabotage.sites;

@@ -1,5 +1,6 @@
 import { randomUUID, createHash } from 'node:crypto';
 import { CHARACTERS } from '../../shared/contracts.mjs';
+import { intentions, remember, install, execute, situation } from './strategic.mjs';
 import { candidates, observe } from './demo.mjs';
 import { AiFailure, MODEL, makeRequest, send } from './anthropic.mjs';
 
@@ -22,6 +23,7 @@ async function bounded(operation, signal) {
 export function createAiController({ config = {} } = {}) {
   const source = config.ai ?? config;
   const settings = {
+    strategy: source.strategy === 'strategic' ? 'strategic' : 'hybrid',
     provider: source.provider ?? 'demo', apiKey: typeof source.apiKey === 'string' ? source.apiKey : '',
     model: source.model ?? MODEL,
     maxCalls: Math.floor(number(source.maxCalls, 48, 500)),
@@ -68,6 +70,7 @@ export function createAiController({ config = {} } = {}) {
   }
   function envelope(action, view, memory) {
     if (!action) return null;
+    if (action.type === 'ghostSay') memory.ghostSpoken=true;
     if (action.type === 'say') memory.discussionCount = (memory.discussionCount ?? 0) + 1;
     if (view.worldVersion === 1 && action.type === 'repair') memory.worldRepairDeadline = view.sabotage?.deadlineAt;
     if (action.type === 'move' || action.type === 'navigate') memory.patrol = (memory.patrol ?? 0) + 1;
@@ -75,10 +78,12 @@ export function createAiController({ config = {} } = {}) {
     return { ...action, id: `ai_${scope}_${randomUUID()}` };
   }
   return {
-    async decide({ view, player, context, signal, commitReservation } = {}) {
-      if (signal?.aborted || !record(context) || !view?.self || !view.self.alive || typeof view.matchId !== 'string' || !Number.isFinite(view.serverNow) || !['roam', 'discussion', 'voting'].includes(view.phase)) return null;
-      const observed=(view.players??[]).find(p=>p.id===player?.id);
-      const actor=(!view.beaconVersion?CHARACTERS.find(p=>p.id===player?.id):null)??(observed?{id:observed.id,name:observed.name,color:observed.color,persona:typeof player?.persona==='string'?player.persona.slice(0,500):'A storm-beacon keeper.'}:null);
+    async decide({ view, player, context, signal, commitReservation, getCurrentView } = {}) {
+      if (signal?.aborted || !record(context) || !view?.self || (!view.self.alive&&!(view.self.ghost===true&&view.self.role==='crew')) || typeof view.matchId !== 'string' || !Number.isFinite(view.serverNow) || !['roam', 'discussion', 'voting'].includes(view.phase)) return null;
+      const publicEntry=(view.players??[]).slice(0,24).find(p=>p.id===player?.id);
+      const validName=typeof publicEntry?.name==='string'&&publicEntry.name.trim().length>0&&publicEntry.name.length<=80&&!/[\u0000-\u001f\u007f]/u.test(publicEntry.name);
+      // Public roster wins over canonical defaults; never consume a supplied hidden persona.
+      const actor=publicEntry&&/^[A-Za-z][A-Za-z0-9_-]{0,63}$/.test(publicEntry.id)&&validName?{id:publicEntry.id,name:publicEntry.name,color:publicEntry.color,persona:'A keeper aboard the beacon.'}:null;
       if (!actor || actor.id !== view.self.id) return null;
       const state = getState(context, view.matchId);
       const actorKey = `actor:${actor.id}`;
@@ -92,19 +97,36 @@ export function createAiController({ config = {} } = {}) {
       pending.add(busyKey);
       try {
         observe(view, memory);
-        const choices = candidates(view, memory);
+        if (settings.strategy === 'strategic' && view.worldVersion === 1) remember(view, memory);
+        const strategic = settings.strategy === 'strategic' && state.mode === 'live' && !view.self.ghost && view.phase === 'roam' && view.worldVersion === 1;
+        const localChoices = candidates(view, memory);
+        if (view.phase !== 'roam' || view.self.ghost) delete memory.intention;
+        // Retain optional local ability behavior without introducing model calls.
+        if (view.self.alive && ['protect', 'decoy'].includes(localChoices[0]?.type)) return envelope(localChoices[0], view, memory);
+        if(view.self.transit||view.systems?.selfTransit||view.investigation?.session?.status==='reading')return envelope(localChoices[0],view,memory);
+        if (strategic) {
+          const continued = execute(view, memory);
+          if (continued) return envelope(continued, view, memory);
+          delete memory.intention;
+          // A failed/completed plan cannot buy repeated replans on each tick.
+          if (memory.plannedSituation === situation(view, memory) && view.serverNow < memory.replanAt) return envelope(localChoices[0], view, memory);
+        }
+        const choices = strategic ? intentions(view, memory) : localChoices;
         if (!choices.length) return null;
-        const demo = () => envelope(choices[0], view, memory);
-        // Local policy owns every roam action; only council decisions spend.
-        if (view.phase === 'roam' || (choices.length === 1 && choices[0].type === 'wait')) return demo();
+        const demo = () => envelope(localChoices[0], view, memory);
+        // Ordinary hybrid roaming stays local; strategic intentions use this same budget path.
+        if (view.self.ghost || (!strategic && view.phase === 'roam') || (choices.length === 1 && choices[0].type === 'wait')) return demo();
         if (state.mode === 'live' && view.phase === 'discussion' && (memory.discussionCount ?? 0) >= 2) return null;
         if (state.mode !== 'live') return demo();
         if (typeof commitReservation !== 'function') { fallback(context, state, 'reservation_required'); return demo(); }
+        if (strategic) { memory.plannedSituation = situation(view, memory); memory.replanAt = view.serverNow + 30000; }
+        const current = () => getCurrentView ? getCurrentView() : view;
+        const valid = () => { const fresh=current();return context.activeMatchId===view.matchId&&fresh?.matchId===view.matchId&&fresh.phase===view.phase&&fresh.self?.id===actor.id&&fresh.self?.alive===true&&JSON.stringify(fresh.map)===JSON.stringify(view.map)&&fresh.meeting?.id===view.meeting?.id&&(!strategic||situation(fresh,memory)===situation(view,memory)); };
         let request;
         try { request = makeRequest(view, actor, memory, choices); }
         catch (error) { fallback(context, state, error.code); return demo(); }
         for (let attempt = 0; attempt < 2; attempt++) {
-          if (signal?.aborted) return null;
+          if (signal?.aborted || !valid()) return null;
           if (state.mode !== 'live') return demo();
           const reason = state.calls + 1 > settings.maxCalls ? 'budget_calls' : state.tokens + request.tokens > settings.maxTokens ? 'budget_tokens' : state.costUsd + request.amountUsd > settings.maxCostUsd ? 'budget_cost' : null;
           if (reason) { fallback(context, state, reason); return demo(); }
@@ -126,12 +148,16 @@ export function createAiController({ config = {} } = {}) {
             if (permission === false || permission?.allowed === false) throw new AiFailure('reservation_failed');
             persisted = true;
             timeout.signal.throwIfAborted();
+            if (!valid()) return null;
             if (state.mode !== 'live') return demo();
             const action = await bounded(() => send({ request, apiKey: settings.apiKey, choices, signal: timeout.signal }), timeout.signal);
             if (signal?.aborted) return null;
-            return state.mode === 'live' ? envelope(action, view, memory) : demo();
+            if (!valid()) return null;
+            if (state.mode !== 'live') return demo();
+            if (strategic) { install(memory, action, current()); return envelope(execute(current(), memory), current(), memory); }
+            return envelope(action, current(), memory);
           } catch (error) {
-            if (signal?.aborted) return null;
+            if (signal?.aborted || !valid()) return null;
             const code = !persisted ? 'reservation_failed' : timeout.signal.aborted ? 'timeout' : error.code;
             if (persisted && attempt === 0 && (error.retryable || code === 'timeout')) continue;
             fallback(context, state, code);
@@ -149,7 +175,7 @@ export function createAiController({ config = {} } = {}) {
       const reason = initialReason ?? (REASONS.has(state?.limitReason) ? state.limitReason : undefined);
       const mode = initialReason ? 'demo' : state?.mode === 'demo' ? 'demo' : 'live';
       return {
-        mode, strategy: mode === 'live' ? 'hybrid' : 'demo',
+        mode, strategy: mode === 'live' ? settings.strategy : 'demo',
         navigation: 'local', council: mode === 'live' ? 'model' : 'demo',
         provider: settings.provider === 'anthropic' ? 'anthropic' : 'demo',
         model: settings.provider === 'anthropic' && settings.model === MODEL ? MODEL : null,

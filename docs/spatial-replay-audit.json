@@ -1,0 +1,147 @@
+{
+  "reviewedFeatureHead": "cb247986b0d8b72e7bba194a7793b9229270dd12",
+  "reviewedMainBase": "90bb6e881f75f77e85b8b49729971a710b4c91b4",
+  "findings": [
+    {
+      "id": "R1",
+      "priority": "P2",
+      "status": "fixed",
+      "problem": "Event seek to a terminal equal-time prefix selected index 25 instead of 21; clock and redraw callbacks discarded the selected event index.",
+      "fix": "Pin the event-index limit across redraws and consume remaining terminal ties before restarting playback."
+    },
+    {
+      "id": "R2",
+      "priority": "P2",
+      "status": "fixed",
+      "problem": "Terminal checkpoint replay returned a null outcome after skipping all events already covered by the anchor.",
+      "fix": "Record and validate bounded outcome metadata, preserve exact outcome timestamps, and read retained ended events for earlier version-1 terminal anchors."
+    }
+  ],
+  "validation": {
+    "install": {
+      "command": "npm ci --ignore-scripts --no-audit --no-fund --cache /workspace/.cache/npm",
+      "status": "passed"
+    },
+    "syntax": {
+      "command": "npm run check",
+      "modules": 101,
+      "status": "passed"
+    },
+    "tests": {
+      "command": "npm test",
+      "tests": 452,
+      "passed": 446,
+      "failed": 0,
+      "skipped": 6,
+      "status": "passed"
+    },
+    "focusedReplayTests": {
+      "tests": 20,
+      "passed": 20,
+      "failed": 0
+    },
+    "primaryBrowser": {
+      "summary": {
+        "passed": 26,
+        "failed": 0
+      },
+      "errors": [],
+      "consoleErrors": []
+    },
+    "independentUiBrowser": {
+      "checks": 19,
+      "failed": 0,
+      "errors": [],
+      "sourceUnchanged": true
+    },
+    "spatialBrowser": {
+      "fixture": "Seeded legal engine actions and accelerated clocks produce a completed match. Native app, authenticated HTTP and WebSocket paths; demo/idle scheduling, no provider calls. This is playback qualification, not a full AI strategy evaluation.",
+      "checks": [
+        "live AI follow uses only safe public positions and hides roles",
+        "live demo label remains visible",
+        "new full recording loads from authoritative initial anchor",
+        "initial paused replay paints the map immediately",
+        "recorded AI usage is labeled as reservations",
+        "fractional time scrub is not rounded",
+        "fractional authoritative arrival time is preserved",
+        "play/pause advances the replay clock at bounded speed",
+        "character history distinguishes a captured witness from reconstructed visibility",
+        "claims and evidence are compared without a truth verdict",
+        "postgame ballots are overlaid",
+        "keyboard event seek returns consistently to start and final reveal",
+        "equal-time event scrub preserves the causal prefix before the outcome",
+        "following, perspective and resize preserve the selected equal-time event",
+        "play finishes remaining terminal events before restarting the watch",
+        "event bookmarks seek real eliminations",
+        "replay controls and map fit mobile width",
+        "hidden-page lifecycle pauses playback",
+        "playback, scrubbing, following and leave emit no game actions or movement",
+        "no browser or console errors",
+        "source files remain unchanged during real browser qualification"
+      ],
+      "screenshots": [
+        "01-live-ai-spectator.png",
+        "02-spatial-overview.png",
+        "03-follow-recorded-route.png",
+        "04-perspective-claims-and-ballots.png",
+        "05-mobile-spatial-replay.png"
+      ],
+      "errors": [],
+      "consoleErrors": [],
+      "sourceCommit": "cb247986b0d8b72e7bba194a7793b9229270dd12",
+      "browser": "Chrome/154.0.8037.57",
+      "passed": true,
+      "cleanup": {
+        "browserClosed": true,
+        "serverClosed": true
+      }
+    }
+  },
+  "initialParallelAttempt": {
+    "offline": "One mocked provider reservation test exceeded its 100ms test timeout while three Chromium sessions were running.",
+    "primaryBrowser": "Timed out in a task interaction.",
+    "independentUiBrowser": "Timed out in touch movement.",
+    "resolution": "The affected commands passed when run in isolation, with unchanged assertions and timeouts. Original failed logs remain under _artifacts/spatial-merge-audit/."
+  },
+  "runtimeSha256": {
+    "public/api.mjs": "86e58d5c18377a2d69012346f7608611257e95ce376466cd69c7740bb387ea81",
+    "public/app.mjs": "92caa24056801daa9e73c346c0abdabc3eb407b00615ec4ae9bb945c09d8ad3f",
+    "public/favicon.svg": "6502f813f8a3f0973f28c7fd3d08c8814829cc32832aa326cd57b9daaa1d6c59",
+    "public/game.css": "281173adcc28f2137bfe79ee1c0916a8a7c4280083ec2a20fc3ed204037ce6b2",
+    "public/harbor.mjs": "2fd11c4458764ed1a4d7146e979b20bf077723118e2d97a19ab5d12f91f71e7a",
+    "public/index.html": "79c6455393d4d272dc92c5dfdea0e4590695372ab2124c0603f4e97f245197d9",
+    "public/panels.mjs": "e0fab17f6e478687932bdf197b5f03d69121f67683f58360c8ea9caf645254d2",
+    "public/presentation.mjs": "76f371787ec20dfc9acd1eed55d66b5b9af88cd127a50f760d6223570e6e2e45",
+    "public/styles.css": "335d5670e89500451202f07d60812638a49358ed0dc852af271e3272b8c5ee02",
+    "public/ui.mjs": "60498216e8715ec284ac4ca2e7d3cd5248283d6059016b79b8b5d6fa5a4e1a8f",
+    "public/world-input-envelope.mjs": "5ff82433cebfd15abc549923632a0c862c82a3bbd031b43397159584a4a4cfcc",
+    "public/world/dom.mjs": "96f1b4358301984548cba35f147acd233b8ae9974799210f68a69f0441ba0012",
+    "public/world/experience.mjs": "664a79fa76ba3d4c7bdab41c4f78432305d62aa23b873d9d8a9e894f0825115b",
+    "public/world/input.mjs": "31d4c845f18a84280ec219ade3b0038daf130f4300bdd7fe115244c14c3018d0",
+    "public/world/model.mjs": "15c113c63ad6097f66f7c0173b96b2598198c6b9ab71c674749ad82ab5b30c35",
+    "public/world/phases.mjs": "80d3978fd40e9109ce2a81ca2555afb0364eb7b7d867206e63db815f3ab2bcfe",
+    "public/world/puzzles.mjs": "c4e20ac7ce2c5646fb43409aad1f339d49256ae95ac3a20527d6222531ca6883",
+    "public/world/replay-model.mjs": "ac529b41ac71d4a71c03dcb22b796048867d84b52752eb2d75d83bba43ba1e4d",
+    "public/world/replay-viewer.mjs": "da0929bfbd893347ad724db4a914f1d2e6682bf2f0b1c780f144d84aed6110ee",
+    "public/world/replay.mjs": "fe6d3297c58691bb86ee1e4659552e7f4c25b33f94b126a7bb09bdcedb1c14f2",
+    "public/world/scene.mjs": "0bafa9aa16bfcfeb785d79b674d79dbb227b7d267b8392b72762e15c4c1c237e",
+    "server/ai/anthropic.mjs": "90f4cd5db9135fe3039e313baa50ebef1654e88abb6e701cc13ba4540e007df1",
+    "server/ai/demo.mjs": "7ac516d9ac87360eb819f7d8c7a4fad4fe539addf00fb85965c291486d41ce9d",
+    "server/ai/index.mjs": "8d6fe259535f6757daee923a5b7e6348d7fef989cc6363ef90e256a5ec23ef1c",
+    "server/ai/world.mjs": "8c8863ac106a1038bbc7bee04b4e8935883f377bad5b480a85fdbfea1bd4eaeb",
+    "server/budget.mjs": "20ca2be9c4a6187419a64b7b90b9101739557b276f0fe404edb536ada6345990",
+    "server/config.mjs": "d99c145f3c6701136c52934888b6f6c48e1ca121bf9330563568cb12e84e33d1",
+    "server/engine/index.mjs": "b43510a1c87c55e266f9939ad9846ff84c24cec512d213d244388200b5f7ccec",
+    "server/engine/replay-history.mjs": "f638b0c595dd4a74b250878cd8532ae7ee1925e4f070e01e9b112be08437a750",
+    "server/engine/world-runtime.mjs": "af309f40e15ecca91cd60431ea88ebbdba1a735e2bbec6bf75d3dfe52e8e72af",
+    "server/main.mjs": "1835fb6d7e44e264c137e2a77fc320f986560546ce03404bec58fd67c90b1019",
+    "server/origin.mjs": "6ebdcb4f65cc3f44411ae1de1cbed6fb8618791674e5b550bcb3555ddad67cbe",
+    "server/rooms.mjs": "2eac8901d93cde58d63148f706ebd7ed8d22aed0423e376acb92de17808939db",
+    "server/static.mjs": "cd832f9facdf467bdd2e3129fdaf4281ed92e4f8286a9bfadfe0e25185db974f",
+    "server/store.mjs": "fafb6ae4840bc5e8e10ac2ff9809d7c4af6163b234765cb2830c85dd034dc9b5",
+    "server/transport.mjs": "735322d4f6617cbae21fb524a9931f338b751666c78016d17849f7afad93748b",
+    "shared/contracts.mjs": "b7488001b0107f92c12e7d8d80db15ee64b13c94308dc409239d142abd9434af",
+    "shared/replay.mjs": "4144148b155383fec0316930db8eff9bf4e3bff838a50b18b1271830b908c7cc",
+    "shared/world.mjs": "8c405a3a6771db6a103907ab9124d81eb7dd03517e8a6d7dce08bdb3b0fa1378"
+  }
+}

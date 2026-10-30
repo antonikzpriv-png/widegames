@@ -87,3 +87,62 @@ node --test _artifacts/quality-walking-closure-20261030/candidate/tests/quality-
 ```
 
 In the integrated checkout the new walking driver defaults to its current real source; no archive or old pin is silently selected. This isolated client foundation intentionally lacks the reserved Core file, so use the genuine integrated overlay until manager composes the dependency. Legacy import-stripping VMs must inject the real MotionTrack/ObservedCamera dependencies; runtime does not fall back because a harness stripped imports. Syntax and git diff --check pass. No public game.css, root/server/shared/other-worktree edits, Chrome, server process, full suite, providers, main/push/deployment or production approval. Manager/Reviewer retain the Chrome lease; native walking qualification is next.
+
+## Bounded UI regression audit (before latest-main integration)
+
+Pinned runtime: f6cb78b4c61e0859fcf0d0ddb5a8171d87e20789 with this client overlay. Evidence is preserved in `_artifacts/quality-ui-regression-audit-20261030`, including original sources, source-manifest.json, counterexamples-red.log (7 pass / 4 fail), all green logs and closure-receipt.json. Server/shared and reserved Core helper fingerprints remain unchanged. Four failing checks exposed three defects: cancelling a pending station lost focus to BODY; obsolete council chat/vote rejections changed current-match feedback; disposed legacy puzzles still invoked close handlers.
+
+Pending cancellation now falls back to the still-valid world canvas when disabled USE cannot receive focus. Council promises are guarded by match/meeting/actor/phase generation plus suspension/disposal; stale success cannot clear a replacement draft and stale/abort failures cannot overwrite feedback. Disposed legacy close/Escape handlers are inert. Existing APIs and current failures with useful retry remain intact.
+
+The render delegation check now imports the local available Core helper by default, records its fingerprint, and has no optional-helper skip. An explicit dependency-root override remains supported. The isolated client foundation lacks the reserved tracked helper; the test was run from an ignored genuine integrated overlay with no movement override, rather than substituting a helper.
+
+Checks: audit-final-green.log 13 pass / 0 fail / 0 skip; helper-local-after.log 1 pass / 0 fail / 0 skip; focused-retained.log 11 pass / 0 fail / 0 skip. The 13 adversarial module/DOM controls cover pending cancel, death, room return, authoritative task completion, glyph pending ABA/current rejection, council match and draft ABA, IME, suspension/disposal and pointer cancellation/resource cleanup. Deferred callback fixtures are unit controls, not claimed HTTP workflows. Retained controls cover the six real challenge transitions, real schema5 progress, normal keyboard entry and all three legacy puzzles. Commands:
+
+```powershell
+$env:QUALITY_CLIENT_AUDIT_ROOT='D:/Widegames-work/ship-quality-client-20261030/_artifacts/quality-ui-regression-audit-20261030/runtime'
+node --test tests/quality-client-regression-audit.test.mjs
+# From the real integrated runtime, without QUALITY_CLIENT_MOVEMENT_ROOT:
+node --test --test-name-pattern='scene delegates actual Core motion intent' tests/quality-client-render.test.mjs
+```
+
+Source/syntax and diff checks passed. These counts are bounded module checks, not independent full matches. No Chrome/native server/full suite/provider/main/push/deployment was used. Reviewer retains Chrome; no owned long-lived process remains. Earlier red evidence and historical receipts are unchanged.
+
+
+## Owned latest-main semantic merge resolution
+
+Resolution branch `codex/ship-quality-main-ui-20261030`, separate D: worktree `ship-quality-main-ui-20261030`, starts from quality base `047ae494128fb76f7e474fac2cd8193a13add178`. Main side is exact `43c079999506785196ab85750105ceb102ba9314`. Coordinator merge stages 1/2/3 were read-only inputs. Original audit branch remains clean at `5a01347faaad28d9b202f1a84eb28540a16dbec0`; its three reproduced fixes, mandatory local-helper assertion and original red artifacts are preserved. This commit contains owned final blobs for manager review/install, not a broad merge or permission to discard other owners' conflicts.
+
+Semantic choices:
+
+- Main five authoritative progress panels (wires/tuning/sequence/pressure/repair) retain taskStep, server-confirmed indexes, diagnostic timing and final task submission. Station kind dispatch takes precedence and retains all six challenge panels/taskInteract; all three metadata-free legacy puzzles remain. Current failures retain useful equipment feedback, while room/match/map/access/death/progress ABA invalidates stale feedback. Pending cancel returns focus to valid USE or the world canvas. Council keeps audited async generation/IME/draft/suspension guards and main's fallen-channel guidance.
+- Main ghost task movement and private fallen chat/presets are retained using shared canViewAct. Core MotionTrack remains the production default and was not edited. Because the delivered helper excludes dead actors, ActorSamples adds only the explicitly projected owner ghost at its received position, held without prediction/interpolation; hidden actors are not added. Normal living movement, deterministic camera, cache, detailed original environment, exact versioned maps and leases remain. Ability Ward/Echo controls and permitted effects remain; beacon actions require exact descriptors and legacy schema2 retains its target selector. Spectator follow options use supplied roster IDs, unknown status stays unknown, and only supplied positions can be followed.
+- Main spatial replay toolbar, clock, role toggle, historical perspectives/claims, bookmarks, ballot/history text and cancellation/disposal remain. Geometry now comes from exact ended game/response map; custom supplied roster is used directly. Playback uses recorded points/routes without live prediction, accepts backward seeking and paints the cached detailed environment. Recorded station opening does not claim completion; explicit task_progress completion drives that status. Earlier visibility/claims are labeled reconstruction, not model knowledge.
+- Actual screenshot inspected read-only: `D:/Widegames-work/ship-quality-audit-20261030/_artifacts/quality-browser-911522d-mRR2cL/watch0-glyph-grid-320x740.png`. Its Close station sits behind the top bar. Narrow/short equipment overlays now reserve 105px above and the existing 60px bottom rail, bound the whole panel to remaining height, scroll all contents and retain a sticky equipment header. Critical layout keeps its larger reserved area. No controls are hidden. CSS contract checks cover 320x740,390x844,844x390; these are source/geometry checks, not measured browser rectangles. Native qualification remains required.
+
+### Coordinator/Core interface handoff
+
+Root must combine existing callbacks without narrowing them: `settings(mapId)`, `start({deathPolicy,abilities})`, `action(type,fields)` for both `taskStep {taskId,step,input}` and `taskInteract {taskId,interactionId,value}`, direction-only `input`, and `loadReplay({signal,matchId})`. Returning a real room or `{room}` updates accepted station/progress controls; independently accepted root updates also work. Keep root task/progress/challenge action-context ABA guards and best-effort keepalive stops. shared/features.mjs (main) and the genuine reserved Core helper (quality) are required imports. No extra optional motion factory binding is needed.
+
+Beacon Ward/Echo contexts require exact enabled `protect {targetId}` / `decoy {x,y}` descriptors; legacy non-beacon actions retain main's capability/target path. Root/Core must emit these descriptors if enabling abilities in beacon schemas. The scoped beacon descriptor parser accepts these exact fields without adding actions by hidden-target inference.
+
+Concrete cross-owner replay gap: main shared/replay.mjs validator is still fixed to p1..p6, six classic rooms,1600x1200 coordinates and its legacy metadata map tag. UI now passes an optional third `{map:{id,version},players}` context to validateReplayMetadata; the old validator ignores it. Coordinator/Core must resolve its metadata/history generation/validation for actual map2/Annex/custom roster/station histories. This UI does not bypass validation or silently claim those metadata workflows pass. New map-specific UI tests use explicitly labeled metadata-free recorded-event fixtures; unchanged legacy metadata tests still pass. The full manager merge is not qualified by this UI composition.
+
+### Evidence and bounded checks
+
+`_artifacts/main-ui-resolution` retains all conflict-stage files, initial audit harness failure, missing-dependency replay setup failure, logs, two explicit runtime overlays and resolution-receipt.json source fingerprints. Primary overlay is exact047 public/server/shared with main shared/features.mjs, shared/replay.mjs, public/presentation.mjs and pure server/engine/tasks.mjs, plus candidate owned UI. Legacy replay overlay is exact43 main public/server/shared plus genuine quality map/helper/station dependencies and candidate UI; it runs the two unchanged main replay files with their real main engine fixture. Neither overlay pretends coordinator's unresolved root engine/app has merged. Reserved helper and archived backend/shared dependencies are fingerprint-checked; source pins record both compositions.
+
+- integration-final.log:28 pass/0 fail/0 skip (15 semantic integration controls plus retained13 audit cases).
+- quality-retained.log:31 pass/0 fail/0 skip (10 default walking/legacy plus21 six-station/lifecycle cases).
+- main-replay-retained-2.log:14 pass/0 fail/0 skip; main replay model/lifecycle assertions unchanged.
+- reviewer-retained.log:2 pass/0 fail/0 skip; unchanged independently authored legal-detour and actual-scene cadence assertions, executed read-only.
+- helper-local.log:1 pass/0 fail/0 skip, local real Core helper with no movement-root override.
+
+These bounded checks overlap behavior and are not independent complete matches. Initial audit-first.log failed because the glyph assertion counted the new spectator Overview pressed button globally; it now scopes to equipment without changing glyph expectations. main-replay-retained.log preserves two module-load failures from an omitted genuine beacon dependency before setup was completed. No runtime test failure was hidden. Syntax and diff checks pass. No Chrome, native server, full suite, providers, main/push/deployment, other-worktree edit or production self-approval. Reviewer retains Chrome. No owned long-lived processes remain.
+
+```powershell
+$env:TEMP='D:/Widegames-work/temp'; $env:TMP=$env:TEMP
+$env:QUALITY_CLIENT_MERGE_ROOT='D:/Widegames-work/ship-quality-main-ui-20261030/_artifacts/main-ui-resolution/runtime'
+$env:QUALITY_CLIENT_AUDIT_ROOT=$env:QUALITY_CLIENT_MERGE_ROOT
+node --test tests/quality-client-main-integration.test.mjs tests/quality-client-regression-audit.test.mjs
+# In a completed integrated checkout, leave both overrides unset to test local current source.
+```

@@ -101,3 +101,25 @@ test('an unavailable remembered watch returns to the menu without altering expli
 test('late remembered-room failure cannot send a current room back to the menu',async()=>{
  const f=await fixture(),old=f.api.openRoom('old',undefined,{remembered:true}),request=f.requests[0];await f.open('B');request.reject(Object.assign(new Error('Old room unavailable'),{status:404}));await old;assert.equal(f.api.getRoom().roomId,'B');
 });
+
+
+for(const result of ['reject','resolve'])test(`root taskStep: late ${result} after movement cannot overwrite current feedback`,async()=>{
+ const f=await fixture(),scene=await f.open('A');
+ const pending=scene.callbacks.action('taskStep',{taskId:'task-A',step:0,input:'0:0'}),request=f.requests.at(-1);
+ const newer=state('A',3);newer.game.self.position.x+=100;f.api.accept(newer);
+ if(result==='reject')request.reject(new Error('STALE STEP FAILURE'));
+ else request.resolve(state('A',2));
+ await assert.rejects(pending,error=>error.name==='AbortError');
+ assert(!f.feedback.textContent.includes('STALE STEP FAILURE'));
+ assert(!f.feedback.textContent.includes('Action confirmed'));
+ assert(!f.feedback.children.some(node=>node.text==='Retry same request'));
+ assert.equal(f.api.getRoom().game.version,3);
+});
+
+// Retained root VM, controlled safe-view changes; not an engine/native workflow.
+for(const change of ['position-return','progress'])test('legacy world2 taskStep permanently revokes obsolete reply after '+change,async()=>{
+ const f=await fixture(),scene=await f.open('A'),initial=state('A',2);initial.game.self.tasks=[{id:'task-A',roomId:'bridge',completed:false,progress:{v:1,kind:'wires',index:0,total:3,readyAt:0}}];f.api.accept(initial);
+ const pending=scene.callbacks.action('taskStep',{taskId:'task-A',step:0,input:'0:0'}),request=f.requests.at(-1),next=structuredClone(initial);next.game.version=3;next.game.serverNow++;if(change==='position-return')next.game.self.position.x+=100;else next.game.self.tasks[0].progress.index=1;f.api.accept(next);
+ if(change==='position-return'){const returned=structuredClone(initial);returned.game.version=4;returned.game.serverNow+=2;f.api.accept(returned);}
+ request.reject(new Error('OBSOLETE LEGACY STEP'));await assert.rejects(pending,e=>e.name==='AbortError');assert(!f.feedback.textContent.includes('OBSOLETE LEGACY STEP'));assert(!f.feedback.children.some(n=>n.text==='Retry same request'));
+});

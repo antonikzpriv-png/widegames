@@ -134,3 +134,109 @@ git diff --exit-code 941e857f046ef7cc9bae25f0fcad27cf6ab7578a -- server public s
 The baseline driver accepts only the two authorized historical manifests and defaults to no paid calls. Exported preparation helpers exercise actual native controls for all six station kinds (including the nine-tile glyph grid), four generated human jobs and actual DEMO human/all-AI outcome observation with bounded timeout and no fallback winner. They import without launching Chrome. Their pending renderer selector assumptions were read-only inspected in the Frontend candidate; **they have not been executed or qualified against that mutable source**, and no full schema5 native UI/game claim is made. The next committed integration must supply the real human/all-AI fixtures, verify these selectors, cover the six-kind union across generated watches, and provide a new Chrome lease before running the final native workflows. The baseline remains distinct from those future new-UI scenarios.
 
 No additional station-root product defect was found in these eight bounded checks. **Q-A1 and Q-A2 remain OPEN** with their original unchanged positive assertions/red receipts. The manager reports a smaller early camera gap but has not supplied an independently qualified closure; no before/after improvement or MotionTrack delegation approval is claimed here. No full suite, broad browser gate, hosted CI, deployment, provider call, main edit, push or other worker mutation was performed.
+
+## Native development candidate911522d receipt, 2026-10-30
+
+Exact authorized product source **911522d1c74feda96283785d5d45927be4794072**, extracted without overlays to `_artifacts/quality-source-911522d`:82 committed runtime/package files. Raw manifest SHA256 **4db2a6e5ee7e83e478288c5d24d9c495b8bec3a6979ede12384301f81ab32f4c**. The final lifecycle/autonomous runs verify all manifest file hashes before and after, including failure cleanup. Source inspection covers the14 runtime files changed since95e9260, including actual station renderer integration **f7af9d6f0a0eb42ae5f26e4701037e693878713b**, spatial legality cache **c203712abfa97986b09dfe3c3561485e0f58e9f8**, and911522d normal stationTasksMode/default startup preparation. The root app lifecycle blob remains the previously reviewed bc47ba5759d98575898044fa975845917d53d18b. No product source is edited by this review.
+
+| Exact911 source | Blob |
+| --- | --- |
+| public/features/tasks/station.mjs | 3b7bad4a40b8ef40796c717e365366276c9b639f |
+| public/world/experience.mjs | fff2fcd9d9eadda0e40c8262ce1059458c8ebf63 |
+| public/game.css | b94cfba0c373f0ed2b5153198d56d079652005d1 |
+| server/config.mjs | da021d8dd90c1e443b61488c1c1fa2474abfff82 |
+| server/transport.mjs | c27eb368fdd0f0c1fad59abacf61dcb9220cacfb |
+| server/engine/index.mjs | c4ebdd17e96e4fb8931c71760cf0f5c459cc1dcb |
+| server/engine/world/geometry.mjs | dc33078c2f9b58d69d17bd895a7bd4ac9befbd95 |
+
+### Native puzzle, layout and lifecycle evidence
+
+The runner has explicit `baseline` and `candidate` modes. Baseline still accepts only frozen941/d551 and retains its historical5-check receipt unchanged. Candidate accepts **only911522d**, requires its raw manifest, installs no source overlays, and writes profile/data/evidence under this assigned D: worktree. Chrome156.0.8078.79 is native headless Chrome; app, engine, HTTP, WS, authenticated cookies and persistent store are real. Node/browser outbound guards and zero-call/cost DEMO config prevent paid/provider traffic.
+
+Staged console coverage explicitly uses idle/scripted other seats, with a visible AUDIT STAGED notice. It never counts as an autonomous watch. Two actual four-job generated crew watches use `quality-native-39` (circuit/glyphs/sequence/signal) and `quality-native-1` (alignment/sequence/glyphs/manifolds); no task, position, role, response or winner is injected. Real navigate actions and authoritative accelerated arrival time stage access to stations. Native input controls then confirm each server step. Eight real jobs complete with steps4,5,4,1 and3,4,4,5 respectively, covering all six kinds, including real nine-tile glyph grids. These are not local solved flags or direct completion requests.
+
+The main coverage run `_artifacts/quality-browser-911522d-mRR2cL/report.json` has **16 passing checks followed by one fixture failure**, not an all-green run. SHA256 **0b2b8fd8c9e4dbe662c76cf24e9e6e3ab4941ebe241508bbc67cd300d2d7c0cb**. Its positives include native create/start/secret role, actual room4/match5/default four jobs, Beacon2 whole-map view and fourteen exact room names in a readable numbered legend, desktop keyboard/mobile390 touch movement and two profiling windows, real spectator HTTP/WS privacy, all eight jobs/six kinds, actual current-error feedback and pending/moved-away stale rejection. It records202 HTTP and202 WS safe-view inspections, zero page/console errors and only explicitly scoped401 join bootstrap /409 incorrect/stale task rejections. Its overall failure is preserved and explained below rather than silently called a passing suite.
+
+Focused remaining lifecycle run `_artifacts/quality-browser-911522d-jj8gvj/report.json` is **4/4 pass**, archive intact,47 HTTP/60 WS inspections,0 page/console errors, no outbound requests. SHA256 **0608666e31b23214398f651ce06734efb87493a4b8473f94aa05c83f9717ea05**. It confirms:
+
+- A genuinely wrong native sequence control displays the literal actual409 error and retains its unchanged empty server progress; a rejection is not reported successful.
+- A held real task request disables controls. Actual movement away closes the station, then releasing the request produces the real engine INVALID_TASK rejection. Its late error cannot repaint the new station or disable its valid controls.
+- A different staged keeper legally walks to the bell, waits for its actual cooldown and calls council through a queued, engine-validated action. Council revokes equipment. Mobile320 chat submits a literal `<img ...>` string through the real form: the actual chat log contains that text, creates no image, and executes no handler. Landscape native skip voting is acknowledged by the actual meeting state.
+- A real hidden page stops its direction lease; visible resume does not resurrect equipment. No synthetic visibility event or fabricated state is used.
+
+Portrait320x740,390x844 and landscape844x390 glyph layouts are exercised. Each rendered control is scrolled into view and its center is checked against actual elementFromPoint, including close/verify controls; the dialog need not fit as one unscrollable card. This is bounded native reachability evidence, not a blanket accessibility or all-device approval. The fourteen-room whole-map screenshot is visually inspected. Controls, map and council screenshots are retained for the manager's visual review.
+
+Screenshot roots, all under `D:/Widegames-work/ship-quality-audit-20261030/_artifacts/`:
+
+- `quality-browser-911522d-mRR2cL/desktop-whole-map-fourteen-room-key.png` and `desktop-beacon2-start.png`.
+- Same root: `watch0-circuit-open.png`, `watch0-signal-open.png`, `watch0-sequence-open.png`, `watch0-glyphs-open.png`, `watch1-alignment-open.png`, `watch1-manifolds-open.png`, with corresponding `-confirmed.png` images.
+- Same root: `watch0-glyph-grid-320x740.png`, `watch0-glyph-grid-390x844.png`, `watch0-glyph-grid-844x390.png` and the second watch's three grid variants. Scroll positions are real and may show the card header partly above the fixed bar; all tested control centers remain reachable after scrolling.
+- `quality-browser-911522d-jj8gvj/mobile320-council-literal-message.png`, `landscape-council.png`, `landscape-vote-recorded.png`, `mobile-pending-task-controls.png`, `mobile-current-literal-task-error.png`, `mobile-new-station-after-stale-rejection.png`, `landscape-resumed-world.png`.
+
+### Two actual completed DEMO watches
+
+These are separate from staged idle/scripted seats. Every nonhuman proposal delegates to the actual packaged createAiController with provider DEMO; no no-op AI is counted. Config/rules stay normal, including four jobs. Only the authoritative clock is accelerated by800ms per bounded observation loop, in addition to actual elapsed host time. The human-mode seat is intentionally idle; the active human six-kind console coverage is the staged section above. These cases do not claim a skilled active-human win or that AI completed every job before the saboteur won.
+
+| Real watch, seed3 | Actual outcome | Jobs | Real taskInteract proposals | Accepted / denied receipts | Ended replay / snapshots |
+| --- | --- | --- | --- | --- | --- |
+| Human mode, human idle | saboteur / parity | 5/20 | 24 | 260 /1 UNAVAILABLE | 729 /68 |
+| All-AI spectator mode | saboteur / parity | 6/20 | 27 | 240 /0 | 689 /61 |
+
+Human result is preserved in `_artifacts/quality-browser-911522d-3s2DF8/report.json` SHA256 **8f6624c9cb8b3b707954d22992528a66a90915e05dc0e1bdbaedcf0d9f66c2a9**. Its human-watch check passes, actual elapsed observation47141ms. The enclosing run later fails on a spectator-start fixture race, so its report truthfully says1 pass/1 fail; the human result is not discarded or rerun to obtain a preferred outcome.433 HTTP/713 WS inspections,0 page/console errors; archive intact. Every observation asserts actual DEMO mode, zero AI calls and cost. Its top-level providerCalls field is absent because the later fixture failure bypassed success-only finalization, not because a live call occurred. Both network guards prohibit provider access. **One human-mode proposal was denied UNAVAILABLE**; its code/count is retained, but the original failed-run receipt did not retain enough action/time detail to classify that single denial as a product defect. This is explicitly not zero-denial qualification.
+
+All-AI result is `_artifacts/quality-browser-911522d-0vmOJ0/report.json`: **1/1 pass**, SHA256 **be9b68c8805c2ef0529ec2917fd329b5b94c45dc8e072f3ba80311b889d1bc81**, elapsed observation42100ms,388 HTTP/645 WS inspections,0 errors/console errors/outbound requests/provider calls, archive intact. All240 recorded proposals are accepted; jobs were genuinely progressed by27 structured inputs. Six completed jobs here does not imply one of each kind; six-kind human-native coverage is separately established above.
+
+Both load the actual role-revealed replay through the results UI and real GET. Event and snapshot timestamps are checked nondecreasing. Complete public-ended replay artifacts are `autonomous-human-public-ended-replay.json` under3s2DF8 and `autonomous-spectator-public-ended-replay.json` under0vmOJ0, with actual outcome/replay screenshots beside them. Before ended, safe views forbid peer roles/tasks/motion/private evidence and spectator owner data; ended roles/replay are deliberately authorized. No fallback winner, state replacement or skipped incomplete-game timeout is used. These workflow checks exercise historically self-authored AI as a dependency; they do not independently self-approve its implementation or any live-model behavior.
+
+### Same-probe real profiling, with limits
+
+The exact rAF monitor, Canvas dispatch wrappers and CDP/V8 measurement body from the941 baseline are shared by both runner modes. Two quiet windows per coverage attempt, desktop1440x1000 and mobile390x844, use400ms native movement plus850ms idle. Initial fixture corrections required three coverage attempts; **all three raw reports/profiles are preserved**, not a selected best trial. The table uses the16-positive-check coverage run mRR2cL, chosen for its full puzzle evidence, not for favorable timing. Baseline W9c8JK remains separate; maps/art/content differ, so this is not a controlled causal attribution to one cache change or a walking-fix approval.
+
+| Instrumented source/window | rAF samples /median /p95 /max interval ms | Canvas calls /dispatch wall ms | CDP TaskDuration delta s | V8 samples |
+| --- | --- | --- | --- | --- |
+| Frozen941 desktop baseline | 110 /11.4 /12.8 /23.6 | 193917 /113.400 | 0.314513 | 803 |
+| Frozen941 mobile baseline | 123 /11.5 /12.5 /12.7 | 216628 /110.100 | 0.299127 | 864 |
+| Exact911 desktop development | 118 /11.8 /12.0 /23.7 | 112114 /65.400 | 0.218164 | 827 |
+| Exact911 mobile390 development | 123 /11.4 /12.7 /12.8 | 116436 /78.600 | 0.244382 | 860 |
+
+Actual raw intervals, per-method counts/times and `desktop-move-idle.cpuprofile` / `mobile390-move-idle.cpuprofile` are in mRR2cL. These measure instrumented JS/native dispatch and sampled main-thread CPU, never GPU completion, guaranteed FPS, full-machine CPU or absolute hardware performance. Profiling overhead, headless scheduling and different map content limit inference. No perf threshold, score or GPU-bottleneck claim is invented. Walking Q-A1/Q-A2 stay open regardless of these measurements.
+
+### Preserved preparation failures and exact classification
+
+Every interrupted run has its own report/failure screenshot; none is overwritten or presented as an all-green workflow:
+
+- `quality-browser-911522d-OKS7j8`:6 positives then the harness incorrectly required an entire320px glyph card to fit onscreen. Actual parent scrolling and control hit tests establish reachability. This was a fixture assumption, not a proven unusable UI.
+- `...-lr6lFj`:9 positives then the harness returned to `/` expecting a new menu; the real app correctly resumed its remembered watch. Corrected by leaving through the actual Exit control before creating another room. A spectator's initial expected GET401/join bootstrap is now explicitly scoped, not a generic ignored error.
+- `...-mRR2cL` and diagnostic `...-wkgjms`: a staged navigation helper let a station descriptor's id overwrite its fresh request ID. Returning to station-cargo replayed the original accepted request while the actor remained at station-engine; own receipts/fingerprints expose the collision. The server correctly preserved idempotency. The final helper submits only{x,y} and puts its fresh id/type after supplied fields. **No Core walking counterexample is established by this fixture failure.**
+- `...-kyPdZo` / `...-pknRTf`: attempted global network-idle/request-object waiting strategies failed during emulation/lifecycle traffic. These were harness synchronization attempts, not evidence of a server action failure; they are removed, not used to excuse an engine assertion. The receipt diagnosis above supplies the reproducible cause of the original stationary route.
+- `...-nuIk3Q`: actual staged council caller correctly returned COOLDOWN. The fixture now advances only to its actual declared meetingAt before proposing a fresh legal meeting action.
+- `...-3s2DF8`: human DEMO completion passes; the spectator fixture reads game before the asynchronous start acknowledgement, while lobby connection is already true. The final runner waits for an actual started match, then the focused all-AI watch passes without repeating the human game.
+
+No new reproducible product counterexample is established in this bounded development run. The reports retain real failures and one human-AI denial, so this is not an unqualified all-green or all-proposals-accepted statement. The original Q-A1/Q-A2 tests and historical red remain untouched.
+
+`tests/quality-review-browser-helper.test.mjs` adds **two passing driver-unit controls**, not a native UI claim. Actual legal engine actions complete the other keepers' generated one-job fixture, then the helper's last real signal action produces actual crew/tasks ended outcome. The helper permits that completed final acknowledgement. A separate actual council interruption with the owner's task incomplete is rejected. Views are actual engine projections; only the browser-control surface is stubbed. Default imports use the current checkout; QUALITY_REVIEW_ROOT remains the explicit optional raw source root.
+
+```powershell
+$env:TEMP='D:/Widegames-work/temp'; $env:TMP=$env:TEMP
+$env:npm_config_cache='D:/Widegames-work/npm-cache'
+$env:QUALITY_BROWSER_MODE='candidate'
+$env:QUALITY_BROWSER_ROOT=(Resolve-Path '_artifacts/quality-source-911522d').Path
+# Full candidate attempt captured mRR2cL; failures remain in its report.
+# The runner now supports focused continuations without rerunning passed puzzles:
+$env:QUALITY_BROWSER_SECTION='lifecycle'
+node scripts/quality-browser-check.mjs
+$env:QUALITY_BROWSER_SECTION='autonomous'
+Remove-Item Env:QUALITY_BROWSER_WATCH -ErrorAction SilentlyContinue
+node scripts/quality-browser-check.mjs
+# Human passed before spectator fixture race; focused remaining all-AI command:
+$env:QUALITY_BROWSER_WATCH='spectator'
+node scripts/quality-browser-check.mjs
+$env:QUALITY_REVIEW_ROOT=$env:QUALITY_BROWSER_ROOT
+node --test tests/quality-review-browser-helper.test.mjs
+node --check scripts/quality-browser-check.mjs
+node --check tests/quality-review-browser-helper.test.mjs
+git diff --check
+git diff --exit-code 941e857f046ef7cc9bae25f0fcad27cf6ab7578a -- server public shared
+```
+
+All browser processes/local servers are closed and the owned private profile/data directories removed. **Chrome lease explicitly released after the all-AI completion, before this receipt/commit; no further Chrome launch.** Manager may use Chrome now. This is a development source911 qualification with scoped native evidence, not final walking closure, every device/match strategy approval, paid-provider qualification, full suite/hosted CI, main, push or deployment. Final native qualification waits for the forthcoming committed walking closure source and renewed explicit lease.

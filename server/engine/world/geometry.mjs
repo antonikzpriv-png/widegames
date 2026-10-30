@@ -1,3 +1,4 @@
+import {canWorldAct} from '../features.mjs';
 import {BEACON_DOORS,BEACON_VENTS,BEACON_DEVICES,DEFAULT_BEACON_RULES} from '../../../shared/beacon.mjs';
 const valid=p=>p&&Number.isFinite(p.x)&&Number.isFinite(p.y);
 const inside=(p,r)=>p.x>=r.x&&p.x<=r.x+r.width&&p.y>=r.y&&p.y<=r.y+r.height;
@@ -58,7 +59,7 @@ export function spatialGeometry(geometry){
   }
   function radius(state,observerId){
     const rules={...DEFAULT_BEACON_RULES,...state?.beaconRules},observer=observerId===undefined||observerId===null?null:state?.players?.find(p=>p.id===observerId);
-    if(observerId!==undefined&&observerId!==null&&(!observer||!observer.alive||inTransit(state,observerId)))return 0;
+    if(observerId!==undefined&&observerId!==null&&(!observer||!canWorldAct(state,observer)||inTransit(state,observerId)))return 0;
     const base=observer?.role==='saboteur'?rules.saboteurVisionRadius:rules.visionRadius;
     const value=state?.systems?.lights?.active&&observer?.role!=='saboteur'?Math.min(base,rules.lightsVisionRadius):base;
     return Number.isFinite(value)&&value>=0?value:0;

@@ -2,6 +2,7 @@ import {deviceFacts} from '../features/strategy/index.mjs';
 import { ROOM_LAYOUT, CHARACTERS } from '../../shared/contracts.mjs';
 import { worldCandidates, visibleWorldPlayer } from './world.mjs';
 
+const own=(o,k)=>o&&Object.hasOwn(o,k)?o[k]:undefined;
 const rooms = new Map(ROOM_LAYOUT.map(room => [room.id, room]));
 const ordered = list => [...list].sort((a, b) => String(a.id).localeCompare(String(b.id)));
 
@@ -40,9 +41,9 @@ function visibleBodies(view) {
 
 function suspect(view, memory) {
   const living = ordered((view.players ?? []).filter(p => p.alive && p.id !== view.self.id));
-  const witnessed = living.filter(p => memory.witnesses?.[p.id]);
+  const witnessed = living.filter(p => own(memory.witnesses,p.id));
   if (witnessed.length) return witnessed.sort((a, b) => memory.witnesses[b.id].at - memory.witnesses[a.id].at || a.id.localeCompare(b.id))[0].id;
-  const ranked = living.filter(p => (memory.suspicion?.[p.id] ?? 0) > 0)
+  const ranked = living.filter(p => (own(memory.suspicion,p.id) ?? 0) > 0)
     .sort((a, b) => memory.suspicion[b.id] - memory.suspicion[a.id] || a.id.localeCompare(b.id));
   if (ranked.length) return ranked[0].id;
   if (view.self.role === 'saboteur' && living.length) return living[0].id;
@@ -63,13 +64,13 @@ function dialogue(view, memory) {
   const name = (view.players??CHARACTERS).find(p => p.id === target)?.name;
   const room = (view.rooms??ROOM_LAYOUT).find(r=>r.id===view.self.roomId)?.name ?? 'my station';
   const number = Math.min(memory.discussionCount ?? 0, 2);
-  const voice=VOICES[view.self.id]??Object.values(VOICES)[[...view.self.id].reduce((n,c)=>n+c.charCodeAt(0),0)%Object.keys(VOICES).length];
+  const voice=(Object.hasOwn(VOICES,view.self.id)?VOICES[view.self.id]:undefined)??Object.values(VOICES)[[...view.self.id].reduce((n,c)=>n+c.charCodeAt(0),0)%Object.keys(VOICES).length];
   if (view.self.role === 'saboteur') return [
     voice[0] + ' I was checking the relays near ' + room + '. Who can account for the last crossing?',
     voice[1] + (name ? ' ' + name + ', tell us your route. We need a consistent account.' : ' Keep the repair teams together.'),
     voice[2] + ' I am voting on the accounts we have heard.'
   ][number];
-  const witness = memory.witnesses?.[target];
+  const witness = own(memory.witnesses,target);
   if (witness && number < 2) {
     const victim = (view.players??CHARACTERS).find(p => p.id === witness.targetId)?.name;
     const where = (view.rooms??ROOM_LAYOUT).find(r=>r.id===witness.roomId)?.name??witness.roomId;
@@ -103,6 +104,9 @@ export function observe(view, memory) {
       memory.witnesses[event.playerId] = { targetId: event.targetId, roomId: event.roomId, at: Number.isFinite(event.at) ? event.at : view.serverNow };
     }
   }
+  const rosterIds=new Set((view.players??[]).slice(0,24).map(p=>p.id));
+  for(const field of ['witnesses','suspicion'])if(memory[field])memory[field]=Object.fromEntries(Object.entries(memory[field]).filter(([id])=>rosterIds.has(id)).slice(0,24));
+  if(memory.observation&&(!Array.isArray(memory.observation.nearby)||!Array.isArray(memory.observation.dead)))delete memory.observation;
   const dead = new Set((view.players ?? []).filter(p => p.alive===false).map(p => p.id));
   if (memory.observation?.roomId === view.self.roomId) {
     const newlyDead = memory.observation.nearby.filter(id => dead.has(id) && !memory.observation.dead.includes(id));
@@ -125,6 +129,7 @@ export function candidates(view, memory) {
   const allowed = new Set(view.availableActions ?? []);
   const can = type => allowed.has(type);
   const actions = [];
+  if(view.self?.ghost===true&&view.self.role==='crew'&&view.worldVersion===1)return view.phase==='roam'?worldCandidates(view,memory,'skip'):[];
   if (!view.self?.alive || ['ended', 'paused', 'lobby'].includes(view.phase)) return actions;
   if (view.phase === 'discussion') {
     if (can('say') && (memory.discussionCount ?? 0) < 3) actions.push({ type: 'say', text: dialogue(view, memory) });

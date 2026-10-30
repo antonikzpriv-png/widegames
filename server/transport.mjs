@@ -1,3 +1,4 @@
+import {parseFeatures} from '../shared/features.mjs';
 import http from 'node:http';
 import {WebSocketServer,WebSocket} from 'ws';
 import {serveStatic} from './static.mjs';
@@ -68,12 +69,14 @@ export async function createGameServer(config,dependencies={}) {
       if(!url.pathname.startsWith('/api/')){await serveStatic(req,res);return;}
       checkOrigin(req,req.method!=='GET');
       const ip=req.socket.remoteAddress||'unknown';limit(`all:${ip}`,600);
-      if(url.search)fail(400,'INVALID_REQUEST','API requests do not accept query parameters.');
+      if(url.search&&!(req.method==='GET'&&/^\/api\/rooms\/[A-Za-z0-9_-]+\/replay$/.test(url.pathname)&&[...url.searchParams.keys()].length===1&&url.searchParams.has('matchId')))fail(400,'INVALID_REQUEST','API requests do not accept query parameters.');
       if(req.method==='GET'&&url.pathname==='/api/health'){json(res,200,{ok:true,game:'Lantern Wake',protocol:1});return;}
       if(req.method==='POST'&&url.pathname==='/api/rooms') {
         limit(`create:${ip}`,8);const input=await body(req,Math.min(config.maxBodyBytes??8192,8192));
-        if(!['human','spectator'].includes(input.mode)||Object.keys(input).some(k=>!['mode','name'].includes(k))||(input.name!==undefined&&(typeof input.name!=='string'||input.name.length>40)))fail(400,'INVALID_ROOM','Choose human or spectator mode.');
-        const {room,token,identity}=await service.create(input.mode);json(res,201,view(room,identity),{'Set-Cookie':cookie(room.data.id,token,secure)});return;
+        if(!['human','spectator'].includes(input.mode)||Object.keys(input).some(k=>!['mode','name','features'].includes(k))||(input.name!==undefined&&(typeof input.name!=='string'||input.name.length>40)))fail(400,'INVALID_ROOM','Choose human or spectator mode.');
+        let features;try{features=parseFeatures(Object.hasOwn(input,'features')?input.features:config.features);}catch{fail(400,'INVALID_FEATURES','Choose a valid death policy and ability preset.');}
+        if((features.deathPolicy==='ghost-tasks'||features.abilities)&&config.worldMode!==true)fail(400,'WORLD_REQUIRED','Optional presets require world mode.');
+        const {room,token,identity}=await service.create(input.mode,features);json(res,201,view(room,identity),{'Set-Cookie':cookie(room.data.id,token,secure)});return;
       }
       const match=/^\/api\/rooms\/([A-Za-z0-9_-]+)(?:\/(join|start|settings|action|input|replay|socket))?$/.exec(url.pathname);
       if(!match)fail(404,'NOT_FOUND','Route not found.');
@@ -95,8 +98,10 @@ export async function createGameServer(config,dependencies={}) {
         json(res,200,view(room,identity));return;
       }
       if(route==='replay'&&req.method==='GET') {
+        if(url.searchParams.has('matchId')&&url.searchParams.get('matchId')!==room.data.state?.id)fail(404,'MATCH_NOT_FOUND','This completed match is not available in this room.');
         if(room.data.state?.phase!=='ended')fail(409,'REPLAY_UNAVAILABLE','Replay is available after the match ends.');
-        json(res,200,{roomId:room.data.id,...(room.data.state.tacticalVersion===1?{map:{...room.data.state.map},preset:{...room.data.state.preset}}:{}),replay:engine.getReplay(room.data.state),...(room.data.state.beaconVersion?{snapshots:engine.getReplaySnapshots(room.data.state)}:{})});return;
+        const metadata=engine.getReplayMetadata?.(room.data.state),aiSummary=view(room,identity).ai;
+        json(res,200,{roomId:room.data.id,matchId:room.data.state.id,...(room.data.state.tacticalVersion===1?{map:{...room.data.state.map},preset:{...room.data.state.preset}}:{}),replay:engine.getReplay(room.data.state),...(room.data.state.beaconVersion?{snapshots:engine.getReplaySnapshots(room.data.state)}:{}),...(metadata?{metadata}:{}),ai:aiSummary});return;
       }
       if(route==='input'&&req.method==='POST') {
         limit(`input-ip:${ip}`,600);limit(`input-actor:${room.data.id}:${identity.hash}`,600);
@@ -124,10 +129,13 @@ export async function createGameServer(config,dependencies={}) {
         await run(room,async data=>{
           if(route==='start') {
             if(!identity.host)fail(403,'HOST_REQUIRED','Only the host can start this room.');
-            if(Object.keys(input).some(k=>k!=='id'))fail(400,'INVALID_START','Start accepts only a request ID.');
+            if(Object.keys(input).some(k=>!['id','features'].includes(k)))fail(400,'INVALID_START','Start accepts a request ID and optional feature presets.');
             if(data.startId===input.id)return;
             if(data.state)fail(409,'ALREADY_STARTED','This match has already started.');
-            const next=structuredClone(data);next.startId=input.id;next.state=engine.createMatch({id:data.id,mode:data.mode,humanPlayerId:data.lobby?.humanPlayerIds[0]??'p1',...(data.lobby?{roster:data.lobby.roster,humanPlayerIds:data.lobby.humanPlayerIds,saboteurCount:data.lobby.saboteurCount}:{}),now:now(),config:config.rules||{},world:config.worldMode===true||[2,3,4].includes(data.schema),systems:[2,3,4].includes(data.schema),...([3,4].includes(data.schema)?{tactical:true,map:data.map,stationTasks:data.schema===4}:{}),beaconRules:config.beaconRules??{}});await commit(room,next);
+            const next=structuredClone(data);
+            if(Object.hasOwn(input,'features')){try{next.features=parseFeatures(input.features);}catch{fail(400,'INVALID_FEATURES','Choose a valid death policy and ability preset.');}}
+            if((next.features?.deathPolicy==='ghost-tasks'||next.features?.abilities)&&config.worldMode!==true)fail(400,'WORLD_REQUIRED','Optional presets require world mode.');
+            next.startId=input.id;next.state=engine.createMatch({id:data.id,mode:data.mode,humanPlayerId:data.lobby?.humanPlayerIds[0]??'p1',...(data.lobby?{roster:data.lobby.roster,humanPlayerIds:data.lobby.humanPlayerIds,saboteurCount:data.lobby.saboteurCount}:{}),now:now(),config:config.rules||{},world:config.worldMode===true||[2,3,4].includes(data.schema),systems:[2,3,4].includes(data.schema),...([3,4].includes(data.schema)?{tactical:true,map:data.map,stationTasks:data.schema===4}:{}),features:next.features,beaconRules:config.beaconRules??{}});await commit(room,next);
           } else {
             if(!identity.seatId||(data.state&&!data.state.players.some(p=>p.id===identity.seatId&&p.human)))fail(403,'SPECTATOR','Spectators cannot act.');
             if(!data.state)fail(409,'NOT_STARTED','Start the match first.');
@@ -158,22 +166,27 @@ export async function createGameServer(config,dependencies={}) {
   });
   function scheduleAi(room) {
     if(closing||room.aiBusy||room.aiBlocked||room.removed||!room.data.state||['ended','paused'].includes(room.data.state.phase))return;
-    const player=aiRoster(room.data.state).filter(p=>(room.nextDecision.get(p.id)||0)<=now()&&engine.getPlayerView(room.data.state,p.id,now()).self?.alive).sort((a,b)=>(room.nextDecision.get(a.id)||0)-(room.nextDecision.get(b.id)||0))[0];
+    const canScheduleActor=actor=>{const v=engine.getPlayerView(room.data.state,actor.id,now());return v.self?.alive||(v.self?.ghost&&v.phase==='roam'&&v.self.role==='crew'&&v.self.tasks.some(t=>!t.completed));};
+    const player=aiRoster(room.data.state).filter(p=>(room.nextDecision.get(p.id)||0)<=now()&&canScheduleActor(p)).sort((a,b)=>(room.nextDecision.get(a.id)||0)-(room.nextDecision.get(b.id)||0))[0];
     if(!player)return;
     room.nextDecision.set(player.id,now()+Math.max(100,config.ai?.decisionIntervalMs??1800));room.aiBusy=true;
     track((async()=>{
+      const originState=room.data.state,generation=room.aiGeneration;
       const context=structuredClone(room.data.aiContext),snapshot=engine.getPlayerView(room.data.state,player.id,now());
+      const freshView=()=>room.aiGeneration===generation&&!room.removed&&room.data.state?.id===originState.id?engine.getPlayerView(room.data.state,player.id,now()):null;
+      const valid=()=>{const v=freshView();return room.aiGeneration===generation&&!room.removed&&v?.matchId===snapshot.matchId&&v.phase===snapshot.phase&&v.meeting?.id===snapshot.meeting?.id&&(v.self?.alive||v.self?.ghost);};
       try {
         const commitReservation=async({id,amountUsd})=>{
-          if(closing||room.abort.signal.aborted||['ended','paused'].includes(room.data.state?.phase))throw new Error('AI stopped');
+          if(closing||room.abort.signal.aborted||!valid())throw new Error('AI stopped');
           if(typeof id!=='string'||!/^[A-Za-z0-9:._-]{1,150}$/.test(id)||!Number.isFinite(amountUsd)||amountUsd<0)throw new Error('Invalid AI reservation');
-          await run(room,async data=>{const next=structuredClone(data);next.aiContext=structuredClone(context);await commit(room,next);});
+          await run(room,async data=>{if(!valid())throw new Error('AI stopped');const next=structuredClone(data);next.aiContext=structuredClone(context);await commit(room,next);});
           // Ordering is essential: match reservation, then deployment reservation, then send.
           await daily.reserve({id:`${room.data.id}:${id}`,amount:amountUsd});
         };
-        const proposal=await ai.decide({view:snapshot,player,context,signal:room.abort.signal,commitReservation});
+        const proposal=await ai.decide({view:snapshot,player,context,signal:room.abort.signal,commitReservation,getCurrentView:freshView});
         if(closing||room.abort.signal.aborted)return;
         await run(room,async data=>{
+          if(!valid())return;
           const next=structuredClone(data);next.aiContext=structuredClone(context);
           if(proposal&&!['ended','paused'].includes(next.state.phase)) {
             const result=engine.applyAction(next.state,player.id,proposal,now());next.state=result.state;

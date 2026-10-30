@@ -1,6 +1,10 @@
+import {validateFeatures} from './feature-validation.mjs';
+import {canWorldAct} from '../shared/features.mjs';
+import {validProgress} from './engine/tasks.mjs';
 import {mkdir, readdir, lstat, readFile, open, rename, unlink} from 'node:fs/promises';
 import path from 'node:path';
 import {randomUUID} from 'node:crypto';
+import {validateReplayHistory,REPLAY_LIMITS} from '../shared/replay.mjs';
 import {ROOM_LAYOUT} from '../shared/contracts.mjs';
 import {normalizeRoster,PLAYER_ID} from './features/lobbies/index.mjs';
 import {DEFAULT_BEACON_RULES} from '../shared/beacon.mjs';
@@ -38,6 +42,12 @@ export function validateRoom(room) {
   if (room.state === null && room.startId !== null) throw new Error('Invalid lobby');
   if(room.state!==null){
     const state=room.state;
+    if(state.replayHistory!==undefined){
+      if(![2,3,4,5].includes(state.schemaVersion))throw new Error('Mixed legacy/world replay history');
+      validateReplayHistory(state.replayHistory);
+      if(state.replayHistory.checkpoints.some(a=>a.at<state.startedAt||a.at>state.updatedAt||a.sequence>state.replaySequence))throw new Error('Replay checkpoint exceeds match history');
+    }
+    if(state.replayBytes!==undefined&&(!Number.isSafeInteger(state.replayBytes)||state.replayBytes<0||state.replayBytes>REPLAY_LIMITS.bytes||!Array.isArray(state.replay)||state.replay.length>REPLAY_LIMITS.events||state.replayBytes!==state.replay.reduce((n,e)=>n+Buffer.byteLength(JSON.stringify(e)),0)))throw new Error('Invalid replay byte accounting');
     if(![1,2,3,4,5].includes(state.schemaVersion)||state.mode!==room.mode||state.version<1)throw new Error('Unsupported match schema');
     if([4,5].includes(state.schemaVersion)){if(room.schema!==(state.schemaVersion===5?4:3)||state.tacticalVersion!==1||validateMapSelection(state.map).id!==room.map.id||state.map.version!==room.map.version||state.preset?.id!==room.preset.id||state.preset?.version!==room.preset.version||Object.keys(state.preset).length!==2)throw new Error('Tactical match selection mismatch');}
     else if(['map','preset','tacticalVersion'].some(key=>Object.hasOwn(state,key)))throw new Error('Mixed tactical/legacy match');
@@ -48,6 +58,7 @@ export function validateRoom(room) {
     }else validateWorldStructure(state);
     if(extended(state)){if(![2,3,4].includes(room.schema))throw new Error('Beacon match requires versioned lobby');validateBeaconStructure(state,setup);}
   }
+  validateFeatures(room);
   return room;
 }
 
@@ -64,6 +75,7 @@ function validateWorldStructure(state){
   const ids=new Set();
   for(const player of state.players){
     if(!object(player)||!(extended(state)?PLAYER_ID.test(player.id):/^p[1-6]$/.test(player.id))||ids.has(player.id)||!['crew','saboteur'].includes(player.role)||typeof player.alive!=='boolean'||!roomIds.has(player.roomId)||player.human!==(extended(state)?state.configuration.humanPlayerIds.includes(player.id):state.mode==='human'&&player.id==='p1')||!point(player.position))throw new Error('Invalid world player');
+    if(!Array.isArray(player.tasks)||player.tasks.length>(extended(state)?240:100)||player.tasks.some(t=>Object.hasOwn(t,'progress')&&!validProgress(t.progress,t,state)))throw new Error('Invalid task progress');
     ids.add(player.id);const motion=player.motion;
     if(!object(motion)||!Number.isSafeInteger(motion.seq)||motion.seq<0||![motion.dx,motion.dy].every(n=>Number.isInteger(n)&&n>=-1&&n<=1)||typeof motion.manual!=='boolean'||![motion.at,motion.leaseUntil,motion.recordedAt].every(finiteTime)||motion.at>state.updatedAt+1e-6||motion.recordedAt>state.updatedAt+1e-6||!Array.isArray(motion.path)||motion.path.length>4096||motion.path.some(p=>!point(p))||(motion.destination!==null&&!point(motion.destination)))throw new Error('Invalid world motion');
     // Early schema-2 checkpoints lack error; new Core persists null or a bounded receipt.
@@ -71,7 +83,7 @@ function validateWorldStructure(state){
       const error=motion.error;
       if(!object(error)||Object.keys(error).length!==2||!Object.hasOwn(error,'code')||!Object.hasOwn(error,'message')||typeof error.code!=='string'||!/^[A-Z][A-Z0-9_]{0,63}$/.test(error.code)||typeof error.message!=='string'||error.message.length<1||error.message.length>240)throw new Error('Invalid world motion error');
     }
-    if((motion.manual&&(!(motion.dx||motion.dy)||motion.path.length||motion.destination!==null))||(motion.path.length===0)!==(motion.destination===null)||((!player.alive||state.phase!=='roam')&&(motion.manual||motion.path.length||motion.destination!==null)))throw new Error('Inconsistent world motion');
+    if((motion.manual&&(!(motion.dx||motion.dy)||motion.path.length||motion.destination!==null))||(motion.path.length===0)!==(motion.destination===null)||((!canWorldAct(state,player)||state.phase!=='roam')&&(motion.manual||motion.path.length||motion.destination!==null)))throw new Error('Inconsistent world motion');
   }
   if(state.players.filter(player=>player.role==='saboteur').length!==(extended(state)?state.configuration.saboteurCount:1))throw new Error('Invalid world role assignment');
   for(const body of state.bodies)if(!object(body)||!(extended(state)?body.id==='body-'+body.playerId:/^body-p[1-6]$/.test(body.id))||!ids.has(body.playerId)||!roomIds.has(body.roomId)||typeof body.reported!=='boolean'||!point(body.position)||!finiteTime(body.at)||body.at>state.updatedAt)throw new Error('Invalid world body');
@@ -121,6 +133,10 @@ export async function validateRoomSnapshot(room,{worldGeometry:provided}={}){
       for(const entry of Object.values(room.state.abilities))for(const note of entry.notes)if(!validHistorical(note))throw new Error('Invalid historical note map position');
       for(const snapshot of room.state.replaySnapshots)for(const player of snapshot.players)if(!validHistorical(player))throw new Error('Invalid replay map position');
     }
+    for(const a of room.state.replayHistory?.checkpoints||[]){
+      if(a.players.some(p=>!validPoint(p.position)||p.route.some(q=>!validPoint(q)))||a.bodies.some(b=>!validPoint(b.position))||(a.effects||[]).some(e=>e.kind==='echo'&&!validPoint(e.position)))throw new Error('Invalid replay checkpoint geometry');
+    }
+    for(const e of room.state.effects||[])if(e.kind==='echo'&&!validPoint(e.position))throw new Error('Invalid echo position');
   }
   return room;
 }
@@ -184,7 +200,7 @@ export async function createRoomStore(directory,{worldGeometry:providedGeometry}
         let room;
         try {
           const info=await lstat(file);if(!info.isFile()||info.isSymbolicLink()||info.size>8*1024*1024)throw new Error('Invalid room file');
-          const candidate=JSON.parse(await readFile(file,'utf8'));if(Number.isSafeInteger(candidate.schema)&&candidate.schema>4||Number.isSafeInteger(candidate.state?.schemaVersion)&&candidate.state.schemaVersion>5||candidate.stationTasksVersion>1||candidate.state?.stationTasksVersion>1||candidate.state?.players?.some?.(p=>p.tasks?.some?.(t=>t.kind==='station'&&t.challenge?.version>1)))throw Object.assign(new Error('Saved room version is newer than this application; preserve the data directory.'),{code:'VERSION_UNAVAILABLE'});room=validateRoom(candidate);if(room.id!==match[1])throw new Error('Room ID mismatch');
+          const candidate=JSON.parse(await readFile(file,'utf8'));if(Number.isSafeInteger(candidate.schema)&&candidate.schema>4||Number.isSafeInteger(candidate.state?.schemaVersion)&&candidate.state.schemaVersion>5||(Number.isSafeInteger(candidate.state?.features?.version)&&candidate.state.features.version>1)||(Number.isSafeInteger(candidate.state?.replayHistory?.version)&&candidate.state.replayHistory.version>2)||candidate.stationTasksVersion>1||candidate.state?.stationTasksVersion>1||candidate.state?.players?.some?.(p=>p.tasks?.some?.(t=>t.kind==='station'&&t.challenge?.version>1)))throw Object.assign(new Error('Saved room version is newer than this application; preserve the data directory.'),{code:'VERSION_UNAVAILABLE'});room=validateRoom(candidate);if(room.id!==match[1])throw new Error('Room ID mismatch');
         } catch(error) {if(['MAP_UNAVAILABLE','VERSION_UNAVAILABLE'].includes(error.code))throw error;await rename(file,`${file}.quarantine-${randomUUID()}`);continue;}
         // Missing deployment geometry is a setup error, not corrupt user data.
         const geometry=[2,3].includes(room.state?.schemaVersion)?await worldGeometry(providedGeometry):undefined;
