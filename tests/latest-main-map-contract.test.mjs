@@ -20,3 +20,14 @@ test('tactical recording protocol cannot authorize expanded world2 maps',()=>{
  for(const id of ['storm-foundry','tidal-observatory'])assert.throws(()=>replayMap({id,version:1}));
  assert.equal(replayMap({id:'beacon',version:2}),getMap('beacon'));
 });
+
+test('main replay v1 retains canonical six-seat bounds while expanded-map geometry survives',async()=>{
+ const engine=await import('../server/engine/index.mjs'),{validateReplayAnchor}=await import('../shared/replay.mjs');
+ for(const mapId of ['storm-foundry','tidal-observatory']){
+  const state=engine.createMatch({id:'legacy-limit-'+mapId,world:true,mapId,seed:1,now:1000}),anchor=state.replayHistory.checkpoints[0];
+  validateReplayAnchor(anchor,mapId);
+  const fewer=structuredClone(anchor);fewer.players.pop();assert.throws(()=>validateReplayAnchor(fewer,mapId));
+  const renamed=structuredClone(anchor);renamed.players[0].id='custom_actor';assert.throws(()=>validateReplayAnchor(renamed,mapId));
+ }
+ for(const map of [{id:'storm-foundry',version:1},{id:'tidal-observatory',version:1}])assert.throws(()=>engine.createMatch({id:'wrong-tactical',tactical:true,map,now:1000}));
+});

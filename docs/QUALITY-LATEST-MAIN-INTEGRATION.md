@@ -12,3 +12,10 @@ One map catalog must include Beacon1/2, Annex1, Foundry1 and Observatory1. Resol
 The unified MAP_CATALOG contains four current selections; exact Beacon1 remains permanently resolvable. getMap accepts a current ID or exact {id,version}; mapFor accepts .map or legacy .mapId and rejects conflicting pairs. Expanded adapters preserve getWorld geometry/task defaults and explicitly declare tactical:false and taskProtocol:taskStep. TACTICAL_MAP_CATALOG derives only maps with authored tactical fixtures; general geometry tests still cover all maps. No synthetic device or door positions are invented for the new main maps.
 
 The first composed map/geometry/collision-route run passes17/17 with0 skips. This is not full candidate qualification. Production and browser receipts from3c/8a remain historical until current combined engine/storage/client checks pass.
+
+
+## Engine composition checkpoint
+
+Integrated Core90448b2 as de955f5. All thirteen retained CAPTCHA engine controls and three added protocol controls pass; three map-replay presentation checks remain red until the separate client integration lands (18/21 composed initial run; not final qualification). The coordinator aligns expanded-mode gating with explicit tactical:false, rather than the presence of an empty fixture object.
+
+Core's early v1 replay milestone broadened roster limits unnecessarily. Actual main41 and prior quality v1 require canonical six IDs/one saboteur, so coordinator retains those strict v1 limits and100-task bound, while preserving new map-string geometry, explicit task kinds and v2 progress. Dynamic4..12 rosters remain in existing tactical replay v2. Four composed identity/protocol regressions pass, including rejection of fabricated v1 roster shapes and expanded tactical recordings. The early worker receipt is historical to its own commit, not the final limits.

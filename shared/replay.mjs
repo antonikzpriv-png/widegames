@@ -9,7 +9,7 @@ import {validateMappedReplayHistory,validateMappedReplayMetadata} from './replay
 const object=v=>v!==null&&typeof v==='object'&&!Array.isArray(v);
 const time=n=>Number.isFinite(n)&&n>=0&&n<=Number.MAX_SAFE_INTEGER;
 const id=s=>typeof s==='string'&&/^[A-Za-z0-9:_-]{1,100}$/.test(s);
-const player=s=>typeof s==='string'&&/^[A-Za-z][A-Za-z0-9_-]{0,31}$/.test(s)&&!['constructor','prototype','__proto__'].includes(s);
+const player=s=>typeof s==='string'&&/^p[1-6]$/.test(s);
 const originalKinds=['wires','tuning','sequence','pressure','repair'];
 const allKinds=[...originalKinds,...CAPTCHA_KINDS];
 const totals={wires:3,tuning:1,sequence:4,pressure:2,repair:4,glyphs:3,count:2,order:4,rotate:3,oddity:2,code:1};
@@ -33,7 +33,7 @@ export function validReplayEffect(e,map=REPLAY_MAP){
 }
 export function validateReplayAnchor(a,map=REPLAY_MAP){
  const {room,point}=validators(map);
- if(!keys(a,['at','sequence','phase','players','bodies','sabotage','meeting','outcome','features','effects'])||!time(a.at)||!Number.isSafeInteger(a.sequence)||a.sequence<0||!['roam','discussion','voting','ended','paused'].includes(a.phase)||!bounded(a.players,12)||a.players.length<4||new Set(a.players.map(p=>p?.id)).size!==a.players.length)reject();
+ if(!keys(a,['at','sequence','phase','players','bodies','sabotage','meeting','outcome','features','effects'])||!time(a.at)||!Number.isSafeInteger(a.sequence)||a.sequence<0||!['roam','discussion','voting','ended','paused'].includes(a.phase)||!bounded(a.players,6)||a.players.length!==6||new Set(a.players.map(p=>p?.id)).size!==6)reject();
  const actorIds=new Set(a.players.map(p=>p.id)),actor=id=>player(id)&&actorIds.has(id);
  if(a.features!=null&&(!keys(a.features,['version','deathPolicy','abilities'])||a.features.version!==1||!['transfer','ghost-tasks'].includes(a.features.deathPolicy)||typeof a.features.abilities!=='boolean'))reject();
  if(a.effects!==undefined&&(!bounded(a.effects,2)||a.effects.some(e=>!validReplayEffect(e,map)||e.createdAt>a.at||e.expiresAt<=a.at)||a.effects.length&&(!a.features?.abilities||a.phase!=='roam')))reject();
@@ -46,12 +46,12 @@ export function validateReplayAnchor(a,map=REPLAY_MAP){
  }
  let tasks=0;
  for(const p of a.players){
-  if(!keys(p,['id','role','alive','roomId','position','tasks','route','ability'])||!player(p.id)||!['crew','saboteur'].includes(p.role)||typeof p.alive!=='boolean'||!room(p.roomId)||!point(p.position)||!bounded(p.tasks,240)||!bounded(p.route,REPLAY_LIMITS.route)||p.route.some(q=>!point(q)))reject();
+  if(!keys(p,['id','role','alive','roomId','position','tasks','route','ability'])||!player(p.id)||!['crew','saboteur'].includes(p.role)||typeof p.alive!=='boolean'||!room(p.roomId)||!point(p.position)||!bounded(p.tasks,100)||!bounded(p.route,REPLAY_LIMITS.route)||p.route.some(q=>!point(q)))reject();
   if(p.ability!==undefined&&(!a.features?.abilities||!keys(p.ability,['type','readyAt'])||!['ward','echo'].includes(p.ability.type)||!time(p.ability.readyAt)))reject();
   tasks+=p.tasks.length;
   for(const t of p.tasks)if(!keys(t,['id','roomId','label','completed','progress','kind','taskKind'])||!id(t.id)||!room(t.roomId)||typeof t.label!=='string'||t.label.length>200||typeof t.completed!=='boolean'||t.kind!==undefined&&t.kind!=='relay'&&!allKinds.includes(t.kind)||t.taskKind!==undefined&&!originalKinds.includes(t.taskKind)||t.progress!==undefined&&(!validReplayTaskProgress(t.progress)||(t.kind!==undefined&&t.kind!=='relay'?(t.progress.v!==2||t.progress.kind!==t.kind):t.progress.v!==1)))reject();
  }
- const hostile=a.players.filter(p=>p.role==='saboteur').length;if(tasks>240||hostile<1||hostile>3||hostile*2>=a.players.length||!bounded(a.bodies,12)||new Set(a.bodies.map(b=>b?.playerId)).size!==a.bodies.length)reject();
+ const hostile=a.players.filter(p=>p.role==='saboteur').length;if(tasks>100||hostile!==1||!bounded(a.bodies,6)||new Set(a.bodies.map(b=>b?.playerId)).size!==a.bodies.length)reject();
  for(const b of a.bodies)if(!keys(b,['id','playerId','roomId','position','at','reported'])||!id(b.id)||!actor(b.playerId)||!room(b.roomId)||!point(b.position)||!time(b.at)||b.at>a.at||typeof b.reported!=='boolean')reject();
  if(a.sabotage!==null&&(!keys(a.sabotage,['active','roomId','deadlineAt','repairsCompleted','repairsRequired'])||!room(a.sabotage.roomId)||typeof a.sabotage.active!=='boolean'||!time(a.sabotage.deadlineAt)||!Number.isInteger(a.sabotage.repairsCompleted)||a.sabotage.repairsCompleted<0||a.sabotage.repairsCompleted>6||a.sabotage.repairsRequired!==2))reject();
  if(a.meeting!==null){const m=a.meeting;if(!keys(m,['id','votes','eligibleVoters','tallied'])||!id(m.id)||!bounded(m.votes,12)||!bounded(m.eligibleVoters,12)||new Set(m.eligibleVoters).size!==m.eligibleVoters.length||new Set(m.votes.map(v=>v?.playerId)).size!==m.votes.length||m.eligibleVoters.some(p=>!actor(p))||m.votes.some(v=>!keys(v,['playerId','targetId'])||!actor(v.playerId)||!(v.targetId==='skip'||actor(v.targetId)))||typeof m.tallied!=='boolean')reject();}

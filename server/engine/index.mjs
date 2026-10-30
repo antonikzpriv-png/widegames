@@ -174,10 +174,10 @@ export function createMatch({id,mode='human',humanPlayerId,now=Date.now(),seed,c
   if(typeof stationTasks!=='boolean'||stationTasks&&!tactical||typeof tactical!=='boolean'||(!tactical&&map!==undefined))throw new TypeError('Invalid tactical option');
   if(mapId!==undefined&&(typeof mapId!=='string'||tactical))throw new TypeError('Invalid legacy map selection');
   const expanded=mapId!==undefined&&mapId!=='beacon'?getMap(mapId):null;
-  if(expanded&&(!world||systems||expanded.fixtures))throw new TypeError('Expanded maps require their authored world2 mode');
+  if(expanded&&(!world||systems||expanded.tactical!==false))throw new TypeError('Expanded maps require their authored world2 mode');
   if(tactical){world=true;systems=true;}
   const selected=tactical?getMap(map):expanded,layout=selected?.roomLayout??ROOM_LAYOUT,roomIds=layout.map(r=>r.id);
-  if(tactical&&!selected.fixtures)throw new TypeError('Map does not support tactical systems');
+  if(tactical&&selected.tactical===false)throw new TypeError('Map does not support tactical systems');
   if (typeof world!=='boolean'||typeof systems!=='boolean'||(systems&&!world))throw new TypeError('Invalid world option');
   if (typeof id!=='string' || !/^[A-Za-z0-9_-]{1,100}$/.test(id) || !['human','spectator'].includes(mode) || !finiteTime(now) || (!systems&&(humanPlayerId??'p1')!=='p1')) throw new TypeError('Invalid match options');
   if (!config || typeof config!=='object' || Array.isArray(config)) throw new TypeError('Invalid rules');
