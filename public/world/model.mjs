@@ -9,6 +9,7 @@ export function visibleBodies(game){return (game?.events||[]).filter(e=>e.type==
 export function roleLabel(game){if(game?.self?.ghost)return 'Ghost · '+(game.self.role==='crew'?'Crew':'Saboteur');return !game?.self?'Spectator':game.self.role==='saboteur'?'Saboteur':'Crew';}
 export function aiLabel(ai){return ai?.mode==='live'?'HYBRID · live council / local navigation':ai?.mode==='demo'?'DEMO · local keepers':'AI mode pending';}
 export function taskKind(task,index=0){
+ if(task.progress)return task.progress.kind;
  const text=String(task.label||'').toLowerCase();
  if(/wire|circuit/.test(text))return 'wires';
  if(/tune|signal|frequency|calibrat/.test(text))return 'tuning';

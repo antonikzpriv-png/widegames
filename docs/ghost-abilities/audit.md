@@ -25,3 +25,9 @@ No paid/live provider calls or deployment. The audit does not claim compatibilit
 ## Main advanced during final validation
 
 The final integration fetch found `80dcc60` (server-authoritative interactive world tasks) on main. The counts above qualify the ghost audit before that integration. The final combined validation and any task compatibility changes are recorded below after integrating current main.
+
+## Authoritative-task integration
+
+Integrated main at `80dcc60` without dropping its engine/task module, five puzzles, task-step API, timer validation, stale-reply handling, keyboard/touch qualification, replay or prior documentation. Resolved the shared engine/view/store/root-app conflicts by preserving both task progress and optional feature metadata. Ghosts can submit the same authenticated, server-validated `taskStep` actions as living crew. Their local bots use the new semantic inputs and diagnostic wait. Death retains confirmed steps and restarts an unfinished diagnostic; a new regression covers stage retention, direct-finish rejection, exact diagnostic wait and valid persisted completion while still dead.
+
+Combined unit validation: 474 tests, 468 passed, 0 failed, 6 opt-in skips. The focused suite has 28 passing tests, including per-transition snapshot validation in the full demo matches. The combined syntax check covers 100 modules. Combined browser validation passed: 42 main-browser checks (all five authoritative puzzles, human and all-AI wins), 19 ghost/ability checks (including real ghost task steps), and 19 independent world-UI checks. Evidence: `_artifacts/world-browser-BWiY28/report.json`, `_artifacts/ghost-abilities-browser-STmi8a/report.json`, `_artifacts/world-ui-UeRgwr/report.json`. No browser page errors; the main fixture recorded only its deliberately asserted invalid-task HTTP 409 console messages.

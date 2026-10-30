@@ -1,7 +1,7 @@
 /** Stable wire/rules constants; no server secrets in this module. */
 export const PROTOCOL_VERSION = 1;
 export const PHASES = Object.freeze(['lobby','roam','discussion','voting','ended','paused']);
-export const ACTION_TYPES = Object.freeze(['move','task','sabotage','repair','eliminate','report','meeting','say','vote','wait']);
+export const ACTION_TYPES = Object.freeze(['move','task','taskStep','sabotage','repair','eliminate','report','meeting','say','vote','wait']);
 export const ROOM_LAYOUT = Object.freeze([
   {id:'bridge',name:'Bridge',x:50,y:15,neighbors:['archive','lantern','workshop'],description:'The storm chart and emergency bell.'},
   {id:'archive',name:'Archive',x:15,y:34,neighbors:['bridge','galley'],description:'Weather logs and signal records.'},

@@ -1,0 +1,253 @@
+{
+  "sourceCommit": "788936c5692edc650d853b6af1c2e3fbfa91ff8d",
+  "modifiedPaths": [],
+  "fixture": "Actual app/main browser modules, native HTTP/WS, persistent store, seeded world engine and real labeled demo AI. Physical routes may use normal authenticated navigate requests and accelerated server time; no state/winner fabrication or provider calls.",
+  "checks": [
+    {
+      "name": "Original character game menu loads",
+      "passed": true
+    },
+    {
+      "name": "Menu help opens before joining",
+      "passed": true
+    },
+    {
+      "name": "Open menu help closes before the full-screen game",
+      "passed": true
+    },
+    {
+      "name": "Hovered primary game button retains readable measured contrast",
+      "passed": true
+    },
+    {
+      "name": "Normal production config starts a physical world and private human role",
+      "passed": true
+    },
+    {
+      "name": "Room seat remains HttpOnly",
+      "passed": true
+    },
+    {
+      "name": "Physical game fills the viewport without displaced content",
+      "passed": true
+    },
+    {
+      "name": "WASD diagonal moves the actual character through validated integer input",
+      "passed": true
+    },
+    {
+      "name": "Hiding the page cancels an authoritative walking route before arrival",
+      "passed": true
+    },
+    {
+      "name": "Keyboard focus survives repair step 0",
+      "passed": true
+    },
+    {
+      "name": "Keyboard focus survives repair step 1",
+      "passed": true
+    },
+    {
+      "name": "Keyboard focus survives repair step 2",
+      "passed": true
+    },
+    {
+      "name": "Keyboard focus survives repair step 3",
+      "passed": true
+    },
+    {
+      "name": "Keyboard focus survives tuning step 0",
+      "passed": true
+    },
+    {
+      "name": "Keyboard focus survives sequence step 0",
+      "passed": true
+    },
+    {
+      "name": "Keyboard focus survives sequence step 1",
+      "passed": true
+    },
+    {
+      "name": "Keyboard focus survives sequence step 2",
+      "passed": true
+    },
+    {
+      "name": "Keyboard focus survives sequence step 3",
+      "passed": true
+    },
+    {
+      "name": "Keyboard focus survives pressure step 0",
+      "passed": true
+    },
+    {
+      "name": "Touch pressure controls fit mobile viewport",
+      "passed": true
+    },
+    {
+      "name": "Keyboard focus survives pressure step 1",
+      "passed": true
+    },
+    {
+      "name": "Touch pressure controls fit mobile viewport",
+      "passed": true
+    },
+    {
+      "name": "A pending out-of-range Bridge task does not mask the emergency bell",
+      "passed": true
+    },
+    {
+      "name": "Council draft and focus survive physical-world snapshots",
+      "passed": true
+    },
+    {
+      "name": "Council dialogue renders literal text",
+      "passed": true
+    },
+    {
+      "name": "Shared room opens a role-private public spectator",
+      "passed": true
+    },
+    {
+      "name": "Reload restores the same world identity and private role",
+      "passed": true
+    },
+    {
+      "name": "Keyboard focus survives wires step 0",
+      "passed": true
+    },
+    {
+      "name": "Keyboard focus survives wires step 1",
+      "passed": true
+    },
+    {
+      "name": "Keyboard focus survives wires step 2",
+      "passed": true
+    },
+    {
+      "name": "Five real generated equipment minigames complete through UI and server acknowledgement",
+      "passed": true
+    },
+    {
+      "name": "Human-plus-AI world reaches a rules-based victory and attributed replay",
+      "passed": true
+    },
+    {
+      "name": "Human-plus-AI exports actual replay in chronological order",
+      "passed": true
+    },
+    {
+      "name": "All-AI world uses the same authoritative engine without a human private view",
+      "passed": true
+    },
+    {
+      "name": "World and HUD fit mobile390",
+      "passed": true
+    },
+    {
+      "name": "World and HUD fit mobile320",
+      "passed": true
+    },
+    {
+      "name": "World and HUD fit mobile landscape",
+      "passed": true
+    },
+    {
+      "name": "All-AI world finishes and reveals roles only after the match",
+      "passed": true
+    },
+    {
+      "name": "All-AI exports actual replay in chronological order",
+      "passed": true
+    },
+    {
+      "name": "No browser exceptions or unsafe returned world views",
+      "passed": true
+    },
+    {
+      "name": "Only expected direct-finish rejection console errors",
+      "passed": true
+    },
+    {
+      "name": "Runtime source remained unchanged during qualification",
+      "passed": true
+    }
+  ],
+  "privacyChecks": 1093,
+  "errors": [],
+  "consoleErrors": [
+    "Failed to load resource: the server responded with a status of 409 (Conflict)",
+    "Failed to load resource: the server responded with a status of 409 (Conflict)",
+    "Failed to load resource: the server responded with a status of 409 (Conflict)",
+    "Failed to load resource: the server responded with a status of 409 (Conflict)",
+    "Failed to load resource: the server responded with a status of 409 (Conflict)",
+    "Failed to load resource: the server responded with a status of 409 (Conflict)",
+    "Failed to load resource: the server responded with a status of 409 (Conflict)",
+    "Failed to load resource: the server responded with a status of 409 (Conflict)",
+    "Failed to load resource: the server responded with a status of 409 (Conflict)",
+    "Failed to load resource: the server responded with a status of 409 (Conflict)"
+  ],
+  "screenshots": [
+    "01-harbor.png",
+    "02-lobby.png",
+    "03-private-role.png",
+    "03b-world.png",
+    "04-task-repair.png",
+    "04-task-tuning.png",
+    "04-task-sequence.png",
+    "04-task-pressure.png",
+    "04b-pressure-mobile.png",
+    "04b-pressure-mobile.png",
+    "05-council.png",
+    "06-vote.png",
+    "04-task-wires.png",
+    "07-human-replay.png",
+    "08-all-ai-mobile.png",
+    "09-all-ai-replay.png"
+  ],
+  "outcomes": [
+    {
+      "winner": "crew",
+      "reason": "tasks",
+      "at": 1793310969415
+    },
+    {
+      "winner": "crew",
+      "reason": "tasks",
+      "at": 1793311135581
+    }
+  ],
+  "inputPackets": 8,
+  "puzzleKinds": [
+    "repair",
+    "tuning",
+    "sequence",
+    "pressure",
+    "wires"
+  ],
+  "expectedConflicts": 10,
+  "hoverColors": {
+    "foreground": "rgb(23, 56, 74)",
+    "background": "rgb(255, 221, 160)"
+  },
+  "browser": "Chrome/154.0.8037.57",
+  "rules": {
+    "tasksPerCrew": 5,
+    "moveCooldownMs": 200,
+    "taskCooldownMs": 1200,
+    "initialKillCooldownMs": 300000,
+    "killCooldownMs": 15000,
+    "sabotageCooldownMs": 300000,
+    "criticalDurationMs": 40000,
+    "discussionMs": 18000,
+    "votingMs": 10000,
+    "meetingCooldownMs": 1000,
+    "roamDeadlineMs": 180000,
+    "maxMatchMs": 900000
+  },
+  "humanSeed": "world-browser-5",
+  "cleanupErrors": [],
+  "summary": {
+    "passed": 42,
+    "failed": 0
+  }
+}

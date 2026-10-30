@@ -75,17 +75,17 @@ export function createWorldExperience(host,callbacks){
  function closeTask(restore=true){const current=puzzle;puzzle=null;taskSession=null;current?.dispose();render();if(restore)restoreTrigger(actionButtons.use);}
  function openTask(task){
   taskSession={taskId:task.id,roomId:room.roomId,matchId:room.game.matchId,location:room.game.self.roomId};
-  puzzle=createTaskPuzzle({id:uid,task,kind:taskKind(task,room.game.self.tasks.indexOf(task)),onClose:()=>closeTask(),onSubmit:async()=>{
+  puzzle=createTaskPuzzle({id:uid,task,kind:taskKind(task,room.game.self.tasks.indexOf(task)),onClose:()=>closeTask(),onSubmit:async step=>{
    if(!validTaskSession(taskSession,room,world)){closeTask();setFeedback('Station closed: the task or your location changed.');return;}
    const current=puzzle,session=taskSession,taskId=session.taskId;
    const ownsSubmission=()=>!disposed&&puzzle===current&&taskSession===session&&validTaskSession(session,room,world);
    current.setPending(true);
    try{
-    await perform('task',{taskId});
-    if(ownsSubmission()){closeTask();setFeedback('Task submitted. The server confirms your progress.');}
+    await perform(step?'taskStep':'task',{taskId,...(step||{})});
+    if(ownsSubmission()){if(!step){closeTask();setFeedback('Task submitted.');}else {current.update?.(room.game.self.tasks.find(t=>t.id===taskId));current.setPending(false);}}
    }catch(error){
     if(!ownsSubmission())return;
-    setFeedback(error?.message||'Task could not be sent.');current.setPending(false);
+    setFeedback(error?.message||'Task could not be sent.');current.feedback?.(error?.message||'Input rejected.');current.setPending(false);
    }
   }});input.stop();overlay.append(puzzle.node);render();puzzle.focus();
  }
@@ -133,6 +133,7 @@ export function createWorldExperience(host,callbacks){
   const current=contexts(game,world);
   for(const [key,b]of Object.entries(actionButtons)){const c=current[key];b.hidden=key==='protect'?(!game?.self?.alive||game.self.ability?.type!=='ward'):key==='decoy'?(!game?.self?.alive||game.self.ability?.type!=='echo'):(game?.self?.ghost&&key!=='use')||(['eliminate','sabotage'].includes(key)&&game?.self?.role!=='saboteur');b.setAttribute('aria-disabled',String(!c.enabled||pending()||!options.connected));b.title=c.enabled?c.label:c.hint;b.setAttribute('aria-label',`${c.label}${key==='use'?' (E / Space)':key==='report'?' (R)':key==='eliminate'?' (Q)':''}`);}
   canvas.setAttribute('aria-label',isLobby?'Six raincoat keepers gathered on the storm beacon.':`${roomName(game?.self?.roomId)}. Visible keepers: ${visiblePlayers(game).map(p=>p.name).join(', ')||'none'}. ${canWalk?'Use keyboard or click the deck to walk.':'Observation only. Open the map to view the platform.'}`);
+  puzzle?.update?.(game?.self?.tasks?.find(t=>t.id===taskSession?.taskId));
   if(puzzle&&!validTaskSession(taskSession,room,world)){const old=puzzle;puzzle=null;old.dispose();const completed=game?.matchId===taskSession?.matchId&&game?.self?.tasks?.some(task=>task.id===taskSession?.taskId&&task.completed);setFeedback(completed?'Task complete.':'Station closed: the watch state or your location changed.');taskSession=null;}
   if(confirmTarget&&!validElimination()){confirmTarget=null;setFeedback('That keeper is no longer in reach.');}
   if(game?.phase!=='roam')ejectionKey=null;

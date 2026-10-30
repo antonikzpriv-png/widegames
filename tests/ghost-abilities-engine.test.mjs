@@ -1,3 +1,4 @@
+import {taskProgress,taskInput} from '../server/engine/tasks.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createMatch,applyAction,applyInput,tick,getPlayerView,getReplay} from '../server/engine/index.mjs';
@@ -11,6 +12,11 @@ const clone=structuredClone;
 let serial=0;
 const act=(s,p,type,fields={},at=s.updatedAt)=>applyAction(s,p.id,{id:'g'+(++serial),type,...fields},at);
 const place=(p,position=stations.bridge)=>{p.position={...position};p.roomId=Object.keys(stations).find(k=>stations[k]===position)||'bridge';};
+function finishTask(s,p,taskId,now=s.updatedAt){
+ let task=s.players.find(q=>q.id===p.id).tasks.find(t=>t.id===taskId);
+ while(taskProgress(task).index<taskProgress(task).total){const c=taskProgress(task);now=Math.max(now,c.readyAt);const r=act(s,p,'taskStep',{taskId,step:c.index,input:taskInput(task)},now);assert(r.accepted,JSON.stringify(r.error));s=r.state;task=s.players.find(q=>q.id===p.id).tasks.find(t=>t.id===taskId);}
+ return act(s,p,'task',{taskId},Math.max(now,s.updatedAt));
+}
 function actors(s){return {sab:s.players.find(p=>p.role==='saboteur'),crew:s.players.filter(p=>p.role==='crew'),ward:s.players.find(p=>p.ability?.type==='ward')};}
 function killed(features){let s=make(features);const {sab,crew}=actors(s);const victim=crew.find(p=>!p.ability)||crew[0];place(sab);place(victim);const result=act(s,sab,'eliminate',{targetId:victim.id},1001);assert(result.accepted);return {s:result.state,victim:result.state.players.find(p=>p.id===victim.id),sab:result.state.players.find(p=>p.id===sab.id)};}
 function room(s){return {schema:1,id:s.id.padEnd(24,'x'),mode:s.mode,createdAt:1000,updatedAt:s.updatedAt,identities:[{hash:'a'.repeat(64),host:true,seatId:null}],state:{...s,id:s.id.padEnd(24,'x')},startId:'start',aiContext:{}};}
@@ -41,7 +47,7 @@ test('ghost death retains task identity/progress; dead movement and task complet
  const living=getPlayerView(s,s.players.find(p=>p.alive&&p.role==='crew').id,1202),ghost=getPlayerView(s,v.id,1202),spectator=getPlayerView(s,null,1202);
  assert(ghost.self.ghost);assert.equal(ghost.self.alive,false);for(const view of [living,spectator]){const p=view.players.find(p=>p.id===v.id);assert.equal(p.position,null);assert.equal(p.roomId,null);assert.equal(view.ghostChat,undefined);}
  const task=v.tasks[0];place(s.players.find(p=>p.id===v.id),stations[task.roomId]);s.players.find(p=>p.id===v.id).motion.manual=false;
- r=act(s,v,'task',{taskId:task.id},1203);assert(r.accepted);assert.equal(r.state.players.flatMap(p=>p.tasks).length,total);assert.equal(r.state.players.find(p=>p.id===v.id).tasks[0].completed,true);assert.deepEqual(r.state.bodies[0],body);
+ r=finishTask(s,v,task.id,1203);assert(r.accepted);assert.equal(r.state.players.flatMap(p=>p.tasks).length,total);assert.equal(r.state.players.find(p=>p.id===v.id).tasks[0].completed,true);assert.deepEqual(r.state.bodies[0],body);
 });
 
 test('ghost navigation uses ordinary walls, routes, input idempotency and lease expiry',()=>{
@@ -159,7 +165,7 @@ test('cooldown boundary, issuer death and critical failure preserve authoritativ
 test('ghost-only tasks can supply the final authoritative crew task victory',()=>{
  let {s,victim:v}=killed({deathPolicy:'ghost-tasks'});for(const p of s.players)for(const t of p.tasks)t.completed=true;
  const task=s.players.find(p=>p.id===v.id).tasks[0];task.completed=false;place(s.players.find(p=>p.id===v.id),stations[task.roomId]);
- const r=act(s,v,'task',{taskId:task.id},1002);assert(r.accepted);assert.equal(r.state.outcome.reason,'tasks');assert.equal(r.state.players.find(p=>p.id===v.id).alive,false);
+ const r=finishTask(s,v,task.id,1002);assert(r.accepted);assert.equal(r.state.outcome.reason,'tasks');assert.equal(r.state.players.find(p=>p.id===v.id).alive,false);
 });
 
 test('audit: declared optional room presets cannot silently lose engine metadata on restore',async()=>{
@@ -173,4 +179,17 @@ test('audit: restored effects cannot duplicate an ability owner even with differ
  let s=make();const {ward,sab}=actors(s);place(ward);place(sab);s=act(s,ward,'protect',{targetId:ward.id}).state;
  const bad=room(s);bad.state.effects.push({...clone(s.effects[0]),id:'fx-'+'a'.repeat(32),targetId:sab.id});
  await assert.rejects(validateRoomSnapshot(bad),/optional feature/);
+});
+
+test('audit: death retains ghost task stages and restarts the authoritative repair diagnostic',async()=>{
+ let s=make({deathPolicy:'ghost-tasks'});const {sab,crew}=actors(s),v=crew[0],task=v.tasks[0];task.roomId='workshop';place(v,stations.workshop);place(sab,stations.workshop);
+ for(let step=0;step<3;step++){const t=s.players.find(p=>p.id===v.id).tasks[0],r=act(s,v,'taskStep',{taskId:t.id,step,input:taskInput(t)},1000);assert(r.accepted);s=r.state;}
+ assert.equal(taskProgress(s.players.find(p=>p.id===v.id).tasks[0]).index,3);
+ const death=act(s,sab,'eliminate',{targetId:v.id},1001);assert(death.accepted);s=JSON.parse(JSON.stringify(death.state));
+ let t=s.players.find(p=>p.id===v.id).tasks[0];assert.equal(t.id,task.id);assert.equal(t.progress.index,2);assert.equal(t.progress.readyAt,0);assert.equal(s.players.flatMap(p=>p.tasks).length,15);await validateRoomSnapshot(room(s));
+ assert.equal(act(s,v,'task',{taskId:t.id},1002).error.code,'TASK_INCOMPLETE');
+ let r=act(s,v,'taskStep',{taskId:t.id,step:2,input:'start'},1002);assert(r.accepted);s=r.state;
+ assert.equal(act(s,v,'taskStep',{taskId:t.id,step:3,input:'test'},2501).error.code,'TOO_EARLY');
+ r=act(s,v,'taskStep',{taskId:t.id,step:3,input:'test'},2502);assert(r.accepted);s=r.state;
+ r=act(s,v,'task',{taskId:t.id},2502);assert(r.accepted);assert(!r.state.players.find(p=>p.id===v.id).alive);await validateRoomSnapshot(room(r.state));
 });

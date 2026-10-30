@@ -31,3 +31,7 @@ Retained local evidence:
 - Earlier pre-fix browser timeout: `_artifacts/world-browser-axbO7n/report.json`.
 
 The source-controlled screenshots in this directory come from the successful feature fixture. Private fixture storage and browser profiles remain ignored. Browser execution and test reports establish local qualification only; no paid Anthropic calls, deployment, merge or environment publication was performed.
+
+## Audit and current-main integration
+
+The later [pre-merge audit](audit.md) fixed effect persistence/restore validation and incorporated `80dcc60`, the authoritative five-puzzle task implementation merged to main during validation. Ghosts now use its real task-step protocol in engine, bots, UI and browser checks; no direct-finish bypass was introduced. Current combined results supersede the initial counts above: 100 syntax-checked modules; 474 tests with 468 passed, 6 opt-in skips and 0 failures; 28 focused feature tests; all 42 main browser checks, 19 ghost/ability checks and 19 independent world-UI checks passed. New task-branch evidence/screenshots and original evidence were preserved. The feature browser is now also registered in CI.

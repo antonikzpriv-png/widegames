@@ -1,5 +1,6 @@
 import {validateFeatures} from './feature-validation.mjs';
 import {canWorldAct} from '../shared/features.mjs';
+import {validProgress} from './engine/tasks.mjs';
 import {mkdir, readdir, lstat, readFile, open, rename, unlink} from 'node:fs/promises';
 import path from 'node:path';
 import {randomUUID} from 'node:crypto';
@@ -41,6 +42,7 @@ function validateWorldStructure(state){
   const ids=new Set();
   for(const player of state.players){
     if(!object(player)||!/^p[1-6]$/.test(player.id)||ids.has(player.id)||!['crew','saboteur'].includes(player.role)||typeof player.alive!=='boolean'||!roomIds.has(player.roomId)||player.human!==(state.mode==='human'&&player.id==='p1')||!point(player.position))throw new Error('Invalid world player');
+    if(!Array.isArray(player.tasks)||player.tasks.length>100||player.tasks.some(t=>Object.hasOwn(t,'progress')&&!validProgress(t.progress,t,state)))throw new Error('Invalid task progress');
     ids.add(player.id);const motion=player.motion;
     if(!object(motion)||!Number.isSafeInteger(motion.seq)||motion.seq<0||![motion.dx,motion.dy].every(n=>Number.isInteger(n)&&n>=-1&&n<=1)||typeof motion.manual!=='boolean'||![motion.at,motion.leaseUntil,motion.recordedAt].every(finiteTime)||motion.at>state.updatedAt+1e-6||motion.recordedAt>state.updatedAt+1e-6||!Array.isArray(motion.path)||motion.path.length>4096||motion.path.some(p=>!point(p))||(motion.destination!==null&&!point(motion.destination)))throw new Error('Invalid world motion');
     // Early schema-2 checkpoints lack error; new Core persists null or a bounded receipt.

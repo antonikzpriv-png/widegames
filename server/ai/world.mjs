@@ -1,3 +1,4 @@
+import {taskProgress,taskInput} from '../engine/tasks.mjs';
 import { CHARACTERS, ROOM_LAYOUT } from '../../shared/contracts.mjs';
 import { WORLD, WORLD_STATIONS, WORLD_BELL, distance, findWorldPath, canSeeWorldPoint } from '../../shared/world.mjs';
 
@@ -44,7 +45,7 @@ export function worldCandidates(view, memory, suspect) {
     if(allowed.has('ghostSay')&&!memory.ghostSpoken)return [{type:'ghostSay',text:'Fallen channel: I will finish my remaining relays. The living cannot hear this.'}];
     const tasks=ordered((self.tasks||[]).filter(t=>!t.completed));
     const here=tasks.find(t=>at(view,WORLD_STATIONS[t.roomId],WORLD.interactionRadius));
-    if(here&&allowed.has('task'))return [{type:'task',taskId:here.id}];
+    if(here&&allowed.has('task')){const c=taskProgress(here);if(c.kind==='repair'&&c.index===3&&view.serverNow<c.readyAt)return wait();return [c.index<c.total?{type:'taskStep',taskId:here.id,step:c.index,input:taskInput(here)}:{type:'task',taskId:here.id}];}
     if(self.moving)return wait();
     const next=tasks.map(t=>({...t,length:pathLength(self.position,WORLD_STATIONS[t.roomId])})).sort((a,b)=>a.length-b.length||a.id.localeCompare(b.id))[0];
     return next?navigate(WORLD_STATIONS[next.roomId]):wait();
@@ -90,7 +91,7 @@ export function worldCandidates(view, memory, suspect) {
     }
   } else {
     const here = ordered((self.tasks ?? []).filter(task => !task.completed && task.roomId === self.roomId));
-    if (allowed.has('task') && ready(view, 'taskAt') && at(view, WORLD_STATIONS[self.roomId], WORLD.interactionRadius) && here.length) return [{ type: 'task', taskId: here[0].id }];
+    if (allowed.has('task') && ready(view, 'taskAt') && at(view, WORLD_STATIONS[self.roomId], WORLD.interactionRadius) && here.length) {const t=here[0];if(!t.progress)return [{type:'task',taskId:t.id}];const c=taskProgress(t);if(c.kind==='repair'&&c.index===3&&view.serverNow<c.readyAt)return [{type:'wait'}];return [c.index<c.total?{type:'taskStep',taskId:t.id,step:c.index,input:taskInput(t)}:{type:'task',taskId:t.id}];}
     if (!critical?.active && self.meetingsRemaining > 0 && ready(view, 'meetingAt') && suspect !== 'skip') {
       if (allowed.has('meeting') && at(view, WORLD_BELL, WORLD.interactionRadius)) return [{ type: 'meeting' }];
       return navigate(bellApproach());
