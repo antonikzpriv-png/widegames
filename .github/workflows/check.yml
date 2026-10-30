@@ -20,7 +20,13 @@ jobs:
       - run: npm run test:browser
         env:
           CHROME_PATH: /usr/bin/google-chrome
+      - run: npm run test:maps:browser
+        env:
+          CHROME_PATH: /usr/bin/google-chrome
       - run: npm run test:features:browser
+        env:
+          CHROME_PATH: /usr/bin/google-chrome
+      - run: node scripts/spatial-replay-browser-check.mjs
         env:
           CHROME_PATH: /usr/bin/google-chrome
       - run: node --test tests/world-ui-browser.test.mjs
@@ -28,6 +34,9 @@ jobs:
           CHROME_PATH: /usr/bin/google-chrome
           LW_WORLD_BROWSER: '1'
       - run: npm run test:multiplayer-browser
+        env:
+          CHROME_PATH: /usr/bin/google-chrome
+      - run: npm run test:tasks:browser
         env:
           CHROME_PATH: /usr/bin/google-chrome
       - uses: actions/upload-artifact@v4
@@ -46,3 +55,9 @@ jobs:
             _artifacts/multiplayer-browser-*/*.png
             _artifacts/ghost-abilities-browser-*/report.json
             _artifacts/ghost-abilities-browser-*/*.png
+            _artifacts/spatial-browser-*/report.json
+            _artifacts/spatial-browser-*/*.png
+            _artifacts/maps-captcha-browser-*/report.json
+            _artifacts/maps-captcha-browser-*/*.png
+            _artifacts/task-depth-browser-*/report.json
+            _artifacts/task-depth-browser-*/*.png

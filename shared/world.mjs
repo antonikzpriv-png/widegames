@@ -1,9 +1,14 @@
 /** Original Lantern Wake geometry shared by drawing, navigation and authority. */
 const ACTOR_ID=/^p(?:[1-9]|1[0-5])$/;
+import {ROOM_LAYOUT as legacyLayout} from './contracts.mjs';
+import stormFoundry from './maps/storm-foundry.mjs';
+import tidalObservatory from './maps/tidal-observatory.mjs';
 
-export const WORLD=Object.freeze({version:1,width:1600,height:1200,speed:180,bodyRadius:14,visibilityRadius:360,interactionRadius:92,killRadius:70,reportRadius:130,inputLeaseMs:600,grid:28});
+function createWorld(descriptor=null){
+
+const WORLD=Object.freeze({version:1,width:descriptor?.width??1600,height:descriptor?.height??1200,speed:180,bodyRadius:14,visibilityRadius:360,interactionRadius:92,killRadius:70,reportRadius:130,inputLeaseMs:600,grid:28});
 const rect=(id,x,y,width,height,center)=>Object.freeze({id,x,y,width,height,...(center?{center:Object.freeze(center)}:{})});
-export const WORLD_ROOMS=Object.freeze([
+const WORLD_ROOMS=Object.freeze(descriptor?.rooms??[
  rect('bridge',600,90,400,280,{x:800,y:285}),
  rect('archive',80,380,360,260,{x:260,y:510}),
  rect('lantern',1160,380,360,260,{x:1340,y:510}),
@@ -11,31 +16,37 @@ export const WORLD_ROOMS=Object.freeze([
  rect('galley',80,840,360,240,{x:260,y:960}),
  rect('engine',1160,840,360,240,{x:1340,y:960})
 ]);
-export const WORLD_FLOORS=Object.freeze([...WORLD_ROOMS,
+const WORLD_FLOORS=Object.freeze(descriptor?.floors??[...WORLD_ROOMS,
  rect('spine',750,350,100,270),rect('west-upper',420,450,350,80),rect('east-upper',830,450,350,80),
  rect('west-lower',220,620,80,240),rect('east-lower',1300,620,80,240),
  rect('lower-spine',750,840,100,160),rect('west-bottom',420,920,350,80),rect('east-bottom',830,920,350,80)
 ]);
-export const WORLD_OBSTACLES=Object.freeze([
+const WORLD_OBSTACLES=Object.freeze(descriptor?.obstacles??[
  rect('chart-table',740,170,120,60),rect('turbine',1220,990,100,50)
 ]);
-export const WORLD_STATIONS=Object.freeze(Object.fromEntries(WORLD_ROOMS.map(room=>[room.id,Object.freeze({x:room.x+room.width-70,y:room.y+room.height/2,id:`station-${room.id}`} )])));
+const WORLD_STATIONS=Object.freeze(descriptor?.stations??Object.fromEntries(WORLD_ROOMS.map(room=>[room.id,Object.freeze({x:room.x+room.width-70,y:room.y+room.height/2,id:`station-${room.id}`} )])));
 // Usable standing point at the chart table's south edge, outside its collider.
-export const WORLD_BELL=Object.freeze({x:800,y:250});
+const WORLD_BELL=Object.freeze(descriptor?.bell??{x:800,y:250});
 const point=p=>p&&Number.isFinite(p.x)&&Number.isFinite(p.y);
 const inside=(p,r)=>p.x>=r.x&&p.x<=r.x+r.width&&p.y>=r.y&&p.y<=r.y+r.height;
 const floor=p=>point(p)&&WORLD_FLOORS.some(r=>inside(p,r));
 // Static geometry caches have at most one entry per fixed grid node/edge.
 const gridSafety=new Map(),gridEdges=new Map();
-export function distance(a,b){return point(a)&&point(b)?Math.hypot(a.x-b.x,a.y-b.y):Infinity;}
-export function worldRoomAt(position){return WORLD_ROOMS.find(room=>point(position)&&inside(position,room))?.id??null;}
-export function worldSpawn(playerId){
+function distance(a,b){return point(a)&&point(b)?Math.hypot(a.x-b.x,a.y-b.y):Infinity;}
+function worldRoomAt(position){return WORLD_ROOMS.find(room=>point(position)&&inside(position,room))?.id??null;}
+function worldSpawn(playerId){
  if(!ACTOR_ID.test(playerId))throw new TypeError('Invalid spawn actor');
  const index=Number(playerId.slice(1))-1;
+ if(descriptor){
+  const spawns=descriptor.spawns.map(p=>({...p}));
+  const berth=WORLD_ROOMS.find(r=>r.id==='bridge')||WORLD_ROOMS[0];
+  for(let y=berth.y+WORLD.bodyRadius+8;spawns.length<15&&y<berth.y+berth.height-WORLD.bodyRadius;y+=38)for(let x=berth.x+WORLD.bodyRadius+8;spawns.length<15&&x<berth.x+berth.width-WORLD.bodyRadius;x+=38){const p={x,y};if(isWalkable(p)&&spawns.every(q=>distance(p,q)>=2*WORLD.bodyRadius+2))spawns.push(p);}
+  if(!spawns[index])throw Error('No safe spawn');return {...spawns[index]};
+ }
  if(index<6)return {x:728+(index%3)*72,y:272+Math.floor(index/3)*55};
  return {x:[640,680,920][(index-6)%3],y:260+Math.floor((index-6)/3)*38};
 }
-export function isWalkable(position,radius=WORLD.bodyRadius){
+function isWalkable(position,radius=WORLD.bodyRadius){
  if(!point(position)||!Number.isFinite(radius)||radius<0||radius>100)return false;
  const diagonal=radius/Math.SQRT2;
  for(const [x,y] of [[0,0],[radius,0],[-radius,0],[0,radius],[0,-radius],[diagonal,diagonal],[-diagonal,diagonal],[diagonal,-diagonal],[-diagonal,-diagonal]]){
@@ -52,13 +63,13 @@ function clearSegment(from,to,radius=WORLD.bodyRadius){
  for(let i=0;i<=steps;i++)if(!isWalkable({x:from.x+(to.x-from.x)*i/steps,y:from.y+(to.y-from.y)*i/steps},radius))return false;
  return true;
 }
-export function canSeeWorldPoint(from,to,radius=WORLD.visibilityRadius){
+function canSeeWorldPoint(from,to,radius=WORLD.visibilityRadius){
  if(distance(from,to)>radius||!floor(from)||!floor(to))return false;
  const steps=Math.max(1,Math.ceil(distance(from,to)/7));
  for(let i=0;i<=steps;i++)if(!floor({x:from.x+(to.x-from.x)*i/steps,y:from.y+(to.y-from.y)*i/steps}))return false;
  return true;
 }
-export function moveWorldPoint(position,dx,dy,amount){
+function moveWorldPoint(position,dx,dy,amount){
  if(!isWalkable(position)||![dx,dy,amount].every(Number.isFinite)||amount<0)return {...position};
  const magnitude=Math.hypot(dx,dy);if(!magnitude)return {...position};
  const scale=Math.max(1,magnitude),length=Math.min(amount,WORLD.width+WORLD.height),steps=Math.max(1,Math.ceil(length/6));
@@ -72,7 +83,7 @@ export function moveWorldPoint(position,dx,dy,amount){
  return current;
 }
 /** A bounded grid route. Waypoints exclude the input start and end at the target. */
-export function findWorldPath(start,target){
+function findWorldPath(start,target){
  if(!isWalkable(start)||!isWalkable(target))return null;
  if(distance(start,target)<.01)return [];
  if(clearSegment(start,target))return [{x:target.x,y:target.y}];
@@ -110,3 +121,19 @@ export function findWorldPath(start,target){
  }
  return route;
 }
+
+ const ROOM_LAYOUT=descriptor?Object.freeze(WORLD_ROOMS.map(r=>({id:r.id,name:r.name,description:r.description,neighbors:r.neighbors,x:r.center.x,y:r.center.y}))):legacyLayout;
+ const metadata=Object.freeze(descriptor?{id:descriptor.id,name:descriptor.name,description:descriptor.description,width:WORLD.width,height:WORLD.height,tasksPerCrew:descriptor.tasksPerCrew,roomCount:WORLD_ROOMS.length}:{id:'beacon',name:'Lantern Wake',description:'The original six-room storm beacon.',width:1600,height:1200,tasksPerCrew:3,roomCount:6});
+ return Object.freeze({WORLD,WORLD_ROOMS,WORLD_FLOORS,WORLD_OBSTACLES,WORLD_STATIONS,WORLD_BELL,WORLD_DECOR:descriptor?.decor??[],ROOM_LAYOUT,metadata,distance,worldRoomAt,worldSpawn,isWalkable,canSeeWorldPoint,moveWorldPoint,findWorldPath});
+}
+const descriptors=[stormFoundry,tidalObservatory];
+const original=createWorld();
+const worlds=new Map([['beacon',original]]);
+export const MAPS=Object.freeze([original.metadata,...descriptors.map(d=>Object.freeze({id:d.id,name:d.name,description:d.description,width:d.width,height:d.height,tasksPerCrew:d.tasksPerCrew,roomCount:d.rooms.length}))]);
+export function getWorld(mapId='beacon'){
+ if(typeof mapId!=='string'||!MAPS.some(m=>m.id===mapId))throw new TypeError('Invalid map selection');
+ if(!worlds.has(mapId))worlds.set(mapId,createWorld(descriptors.find(d=>d.id===mapId)));
+ return worlds.get(mapId);
+}
+export function parseMapId(value='beacon'){return getWorld(value).metadata.id;}
+export const {WORLD,WORLD_ROOMS,WORLD_FLOORS,WORLD_OBSTACLES,WORLD_STATIONS,WORLD_BELL,WORLD_DECOR,distance,worldRoomAt,worldSpawn,isWalkable,canSeeWorldPoint,moveWorldPoint,findWorldPath}=original;

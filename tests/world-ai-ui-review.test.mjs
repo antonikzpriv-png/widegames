@@ -9,6 +9,7 @@ const sourceRoot = process.env.WORLD_AI_SOURCE_ROOT ? pathToFileURL(resolve(proc
 const uiRoot = process.env.WORLD_AI_REVIEW_UI_ROOT ? pathToFileURL(resolve(process.env.WORLD_AI_REVIEW_UI_ROOT) + '/') : sourceRoot;
 const world = await import(new URL('shared/world.mjs', sourceRoot));
 const { CHARACTERS } = await import(new URL('shared/contracts.mjs', sourceRoot));
+const presentation = await import(new URL('public/presentation.mjs', uiRoot));
 const pin = process.env.WORLD_AI_REVIEW_UI_PIN;
 if (pin) assert.match(pin, /^[a-f0-9]{40}$/);
 const source = (path, revision = pin) => revision ? execFileSync('git', ['show', `${revision}:${path}`], { encoding: 'utf8' }) : readFileSync(new URL(path, uiRoot), 'utf8');
@@ -42,7 +43,7 @@ function fixture(sourcePin = pin) {
   }
   document.createElement = tag => new Node(tag); document.body = new Node('body'); document.activeElement = document.body;
   const win = { ...events(), setInterval: () => 1, clearInterval() {} }, calls = [];
-  const context = vm.createContext({ document, window: win, world, CHARACTERS, console, Date, performance: { now: () => 100 }, matchMedia: () => ({ matches: true }), requestAnimationFrame: () => 1, cancelAnimationFrame() {},
+  const context = vm.createContext({ document, window: win, world, CHARACTERS, keeperLabel:presentation.keeperLabel,nameOf:presentation.nameOf, console, Date, performance: { now: () => 100 }, matchMedia: () => ({ matches: true }), requestAnimationFrame: () => 1, cancelAnimationFrame() {},
     drawKeeper() {}, createWorldScene: () => ({ update() {}, draw() {}, toWorld() { return { x: 0, y: 0 }; }, dispose() {} }), replayText: event => event.type, replayEvents: value => value.replay ?? [], outcomeText: reason => reason });
   const module = (path, names) => Object.assign(context, vm.runInContext(`(()=>{${strip(source(path, sourcePin))};return {${names}};})()`, context));
   module('public/world/dom.mjs', 'dom,control,setText,trapDialog,restoreTrigger');

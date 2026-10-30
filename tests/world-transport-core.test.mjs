@@ -23,7 +23,7 @@ async function directory(t,label){await mkdir(temporary,{recursive:true});const 
 async function service(t,options={}){
  const dataDir=await directory(t,'http');let now=100000,game,base;
  const config={publicOrigin:origin,dataDir,tickMs:10,now:()=>now,worldMode:true,maxActiveRooms:12,roomTtlMs:3600000,ai:{provider:'demo',decisionIntervalMs:100},...options};
- const engine={...core,createMatch:args=>core.createMatch({...args,seed:fixtureSeed})};
+ const engine={...core,createMatch:args=>core.createMatch({...args,taskEdition:1,seed:fixtureSeed})};
  const launch=async()=>{game=await createGameServer(config,{engine,aiController,worldGeometry:geometry});game.server.listen(0,'127.0.0.1');await once(game.server,'listening');base=`http://127.0.0.1:${game.server.address().port}`;};await launch();
  t.after(async()=>{await game.close();assert(path.resolve(dataDir).startsWith(path.resolve(temporary)+path.sep));await rm(dataDir,{recursive:true,force:true});});
  async function request(route,data,cookie){const res=await fetch(base+route,{method:data===undefined?'GET':'POST',headers:{Origin:origin,...(cookie?{Cookie:cookie}:{}),...(data===undefined?{}:{'Content-Type':'application/json'})},...(data===undefined?{}:{body:JSON.stringify(data)})});return {status:res.status,body:await res.json(),cookie:res.headers.get('set-cookie')?.split(';')[0]};}

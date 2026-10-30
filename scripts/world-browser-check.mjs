@@ -52,7 +52,7 @@ async function navigate(position){
 async function keyboardPuzzle(label){
  // Traverse the real dialog with Tab; Enter generates the native button action.
  for(let attempt=0;attempt<12;attempt++){
-  const selected=await page.evaluate(label=>document.activeElement?.tagName==='BUTTON'&&document.activeElement.textContent===label&&!document.activeElement.disabled,label);
+  const selected=await page.evaluate(label=>document.activeElement?.tagName==='BUTTON'&&(document.activeElement.getAttribute('aria-label')||document.activeElement.textContent)===label&&!document.activeElement.disabled,label);
   if(selected){await page.keyboard.press('Enter');return;}
   await page.keyboard.press('Tab');
  }
@@ -60,7 +60,7 @@ async function keyboardPuzzle(label){
 }
 async function touchPuzzle(label){
  const point=await page.$eval('.lw-task-modal',(modal,label)=>{
-  const button=[...modal.querySelectorAll('button')].find(button=>button.textContent===label);
+  const button=[...modal.querySelectorAll('button')].find(button=>(button.getAttribute('aria-label')||button.textContent)===label);
   if(!button||button.disabled)throw Error('Missing enabled touch control');
   button.scrollIntoView({block:'center'});const r=button.getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2};
  },label);
@@ -100,7 +100,7 @@ try{
  const humanSeed=seedForHuman(),probe=net.createServer();await new Promise(resolve=>probe.listen(0,'127.0.0.1',resolve));const port=probe.address().port;await new Promise(resolve=>probe.close(resolve));origin=`http://127.0.0.1:${port}`;
  const config=loadConfig({HOST:'127.0.0.1',PORT:String(port),PUBLIC_ORIGIN:origin,DATA_DIR:path.join(output,'state'),AI_PROVIDER:'demo'});config.now=()=>Date.now()+skew;config.tickMs=65;config.ai.decisionIntervalMs=250;
  config.rules={tasksPerCrew:5,moveCooldownMs:200,taskCooldownMs:1200,initialKillCooldownMs:300000,killCooldownMs:15000,sabotageCooldownMs:300000,criticalDurationMs:40000,discussionMs:18000,votingMs:10000,meetingCooldownMs:1000,roamDeadlineMs:180000,maxMatchMs:900000};
- game=await createGameServer(config,{engine:{...engine,createMatch:options=>engine.createMatch({...options,seed:options.mode==='human'?humanSeed:'world-browser-spectator'})}});await new Promise(resolve=>game.server.listen(port,'127.0.0.1',resolve));
+ game=await createGameServer(config,{engine:{...engine,createMatch:options=>engine.createMatch({...options,taskEdition:1,seed:options.mode==='human'?humanSeed:'world-browser-spectator'})}});await new Promise(resolve=>game.server.listen(port,'127.0.0.1',resolve));
  browser=await puppeteer.launch({executablePath:process.env.CHROME_PATH||(process.platform==='win32'?'C:/Program Files/Google/Chrome/Application/chrome.exe':'/usr/bin/google-chrome'),headless:true,userDataDir:path.join(output,'chrome-profile'),args:['--no-sandbox','--disable-dev-shm-usage']});page=await browser.newPage();page.setDefaultTimeout(30000);await page.setViewport({hasTouch:true,width:1440,height:1000});instrument(page,true);
  const cdp=await page.createCDPSession();await cdp.send('Network.enable');cdp.on('Network.webSocketFrameReceived',event=>{if(event.response.opcode!==1)return;try{const payload=JSON.parse(event.response.payloadData);if(payload.type==='state')safeRoom(payload.room);}catch(error){report.errors.push(String(error));}});
  await page.goto(origin,{waitUntil:'networkidle0'});await page.waitForSelector('.harbor-play');await shot('01-harbor');check((await page.title()).includes('Lantern Wake'),'Original character game menu loads');

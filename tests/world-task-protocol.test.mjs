@@ -77,7 +77,7 @@ async function httpFixture(t) {
  assert.notEqual(seed,undefined);
  const config={dataDir,publicOrigin:origin,worldMode:true,tickMs:1000000,now:()=>now,rules:{tasksPerCrew:5},ai:{provider:'demo',decisionIntervalMs:1000000}};
  const launch=async()=>{
-  game=await createGameServer(config,{engine:{...engine,createMatch:options=>engine.createMatch({...options,seed})},aiController:{decide:async()=>null,describe:()=>({mode:'demo',calls:0,tokens:0,costUsd:0})}});
+  game=await createGameServer(config,{engine:{...engine,createMatch:options=>engine.createMatch({...options,taskEdition:1,seed,taskEdition:1})},aiController:{decide:async()=>null,describe:()=>({mode:'demo',calls:0,tokens:0,costUsd:0})}});
   game.server.listen(0,'127.0.0.1');await once(game.server,'listening');base=`http://127.0.0.1:${game.server.address().port}`;
  };
  await launch();t.after(async()=>{await game.close();await rm(dataDir,{recursive:true,force:true});});

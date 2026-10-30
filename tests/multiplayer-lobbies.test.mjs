@@ -9,11 +9,11 @@ import {createRoom,issueIdentity} from '../server/rooms.mjs';
 import {createRoomStore,validateRoomSnapshot} from '../server/store.mjs';
 import * as engine from '../server/engine/index.mjs';
 import {LOBBY_DEFAULTS,PERSONAS,rosterFor,changeSettings} from '../shared/lobby.mjs';
-import {WORLD,worldSpawn,isWalkable,distance} from '../shared/world.mjs';
+import {WORLD,getWorld,worldSpawn,isWalkable,distance} from '../shared/world.mjs';
 import {createAiController} from '../server/ai/index.mjs';
 import {makeRequest} from '../server/ai/anthropic.mjs';
 import {createDailyBudget} from '../server/budget.mjs';
-import {taskProgress,taskInput} from '../server/engine/tasks.mjs';
+import {taskProgress,taskInput,taskWaitUntil} from '../server/engine/tasks.mjs';
 const delay=ms=>new Promise(r=>setTimeout(r,ms));
 async function until(fn,label){for(let i=0;i<200;i++){const v=await fn();if(v)return v;await delay(10);}throw Error('Timeout: '+label);}
 const idle={describe:()=>({mode:'demo'}),decide:async()=>null};
@@ -142,7 +142,7 @@ test('rematch fences pending AI/provider/reservations/actions/input, resets cont
   const player=entry.data.state.players.find(p=>p.id===actor.id);
   player.position={x:task.roomId==='bridge'?930:({archive:370,lantern:1450,workshop:930,galley:370,engine:1450})[task.roomId],y:({bridge:230,archive:510,lantern:510,workshop:730,galley:960,engine:960})[task.roomId]};
   player.roomId=task.roomId;player.cooldowns.taskAt=f.now;
-  for(let step=0;step<5;step++){const current=entry.data.state.players.find(p=>p.id===player.id).tasks.find(t=>t.id===task.id),progress=taskProgress(current);if(progress.index>=progress.total)break;if(progress.kind==='repair'&&progress.index===3&&f.now<progress.readyAt)f.advance(progress.readyAt-f.now);const result=engine.applyAction(entry.data.state,player.id,{id:`step-${task.id}-${progress.index}`,type:'taskStep',taskId:task.id,step:progress.index,input:taskInput(current)},f.now);assert(result.accepted,JSON.stringify(result.error));entry.data.state=result.state;}
+  for(let step=0;step<5;step++){const currentActor=entry.data.state.players.find(p=>p.id===player.id),current=currentActor.tasks.find(t=>t.id===task.id),progress=taskProgress(current);currentActor.roomId=current.roomId;currentActor.position={...getWorld(entry.data.state.mapId).WORLD_STATIONS[current.roomId]};if(progress.index>=progress.total)break;if(f.now<taskWaitUntil(current))f.advance(taskWaitUntil(current)-f.now);const result=engine.applyAction(entry.data.state,player.id,{id:`step-${task.id}-${progress.index}`,type:'taskStep',taskId:task.id,step:progress.index,input:taskInput(current)},f.now);assert(result.accepted,JSON.stringify(result.error));entry.data.state=result.state;}
   const completed=engine.applyAction(entry.data.state,player.id,{id:'complete-'+task.id,type:'task',taskId:task.id},f.now);assert(completed.accepted,JSON.stringify(completed.error));entry.data.state=completed.state;
  }
  assert.equal(entry.data.state.phase,'ended');

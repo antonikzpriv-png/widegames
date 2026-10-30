@@ -1,4 +1,4 @@
-﻿import test from 'node:test';
+import test from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
@@ -14,7 +14,7 @@ async function loadEngine(revision) {
   // Only dependency locations change; the actual committed engine/runtime logic
   // runs against the qualified public geometry used by the source root.
   const contracts = dataUrl(readFileSync(new URL('shared/contracts.mjs', root), 'utf8'));
-  const geometry = dataUrl(readFileSync(new URL('shared/world.mjs', root), 'utf8').replace("'./contracts.mjs'", JSON.stringify(contracts)));
+  const geometry = dataUrl(readFileSync(new URL('shared/world.mjs', root), 'utf8').replace("'./contracts.mjs'", JSON.stringify(contracts)).replace(/from '(\.\/maps\/[^']+)'/g, (_match, specifier) => `from ${JSON.stringify(new URL(specifier, new URL('shared/world.mjs', root)).href)}`));
   const runtime = dataUrl(show('server/engine/world-runtime.mjs'));
   const source = show('server/engine/index.mjs');
   assert(source.includes("'./world-runtime.mjs'"));

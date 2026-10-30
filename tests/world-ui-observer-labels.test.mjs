@@ -14,6 +14,7 @@ function fixture(){
   constructor(tag){this.tagName=tag;this.children=[];this.attrs={};this.dataset={};this.style={};this.text='';this.hidden=false;Object.assign(this,events());}
   setAttribute(key,value){this.attrs[key]=String(value);}getAttribute(key){return this.attrs[key];}
   append(...nodes){for(const node of nodes){node.remove();node.parent=this;this.children.push(node);}}
+  replaceChildren(...nodes){for(const child of [...this.children])child.remove();this.text='';this.append(...nodes);}
   remove(){if(this.parent)this.parent.children=this.parent.children.filter(node=>node!==this);this.parent=null;}
   set textContent(value){this.text=String(value);this.children=[];}get textContent(){return this.text+this.children.map(node=>node.textContent).join('');}
   focus(){}getContext(){return {clearRect(){}};}

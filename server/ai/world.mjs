@@ -1,6 +1,6 @@
-import {taskProgress,taskInput} from '../engine/tasks.mjs';
+import {taskProgress,taskInput,taskWaitUntil} from '../engine/tasks.mjs';
 import { ROOM_LAYOUT } from '../../shared/contracts.mjs';
-import { WORLD, WORLD_STATIONS, WORLD_BELL, distance, findWorldPath, canSeeWorldPoint } from '../../shared/world.mjs';
+import { getWorld, WORLD, WORLD_STATIONS, WORLD_BELL, distance, findWorldPath, canSeeWorldPoint } from '../../shared/world.mjs';
 
 const ordered = values => [...values].sort((a, b) => a.id.localeCompare(b.id));
 const point = value => value && Number.isFinite(value.x) && Number.isFinite(value.y);
@@ -11,7 +11,7 @@ const at = (view, target, radius) => point(target) && distance(view.self.positio
 export function worldTaskAction(view, task) {
   if (!task.progress) return { type: 'task', taskId: task.id };
   const progress = taskProgress(task);
-  if (progress.kind === 'repair' && progress.index === 3 && view.serverNow < progress.readyAt) return { type: 'wait' };
+  if (view.serverNow < taskWaitUntil(task)) return { type: 'wait' };
   return progress.index < progress.total
     ? { type: 'taskStep', taskId: task.id, step: progress.index, input: taskInput(task) }
     : { type: 'task', taskId: task.id };
@@ -19,11 +19,11 @@ export function worldTaskAction(view, task) {
 
 /** Only coordinates already visible in this actor's safe view are usable. */
 export function visibleWorldPlayer(view, player) {
-  return player.id !== view.self.id && !view.self.teammates?.includes(player.id) && player.alive && point(player.position) && canSeeWorldPoint(view.self.position, player.position,view.settings?.vision);
+  return player.id !== view.self.id && !view.self.teammates?.includes(player.id) && player.alive && point(player.position) && getWorld(view.mapId).canSeeWorldPoint(view.self.position, player.position,view.settings?.vision);
 }
 
-function pathLength(start, target) {
-  const path = findWorldPath(start, target);
+function worldPathLength(start, target, mapId) {
+  const path = getWorld(mapId).findWorldPath(start, target);
   if (!path) return Infinity;
   let length = 0, previous = start;
   for (const next of path) { length += distance(previous, next); previous = next; }
@@ -32,6 +32,8 @@ function pathLength(start, target) {
 
 /** World proposals use public geometry and the actor's safe view, never state. */
 export function worldCandidates(view, memory, suspect) {
+  const {WORLD,WORLD_STATIONS,WORLD_BELL,findWorldPath,canSeeWorldPoint,ROOM_LAYOUT}=getWorld(view.mapId);
+  const pathLength=(a,b)=>worldPathLength(a,b,view.mapId);
   const allowed = new Set(view.availableActions ?? []);
   const wait = () => allowed.has('wait') ? [{ type: 'wait' }] : [];
   const self = view.self;

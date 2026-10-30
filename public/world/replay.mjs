@@ -3,6 +3,8 @@ import {replayText,keeperLabel} from '../presentation.mjs';
 export function worldReplayText(event,game){
  const actor=id=>{const p=game.players.find(p=>p.id===id);return `${keeperLabel(p)||id||'Keeper'}${game.phase==='ended'&&p?.role?` (${p.role})`:''}`;};
  const direction=(dx,dy)=>`${dy<0?'north':dy>0?'south':''}${dx<0?'west':dx>0?'east':''}`;
+ if(event.type==='task_routed'){const room=game.rooms?.find(r=>r.id===event.roomId);return `${actor(event.playerId)} routed power to ${room?.name||event.roomId}; acceptance is required at the destination.`;}
+ if(event.type==='action'&&event.action?.type==='taskStep')return `${actor(event.playerId)} confirmed ${['wires','tuning','sequence','pressure','repair'].includes(event.taskProgress?.kind)?event.taskProgress.kind:'equipment'} step ${Number.isInteger(event.action.step)?event.action.step+1:'(recorded)'}.`;
  if(event.type==='effect_started')return `${actor(event.playerId)} activated ${event.kind==='ward'?'Harbor Ward':'Signal Echo'}${event.targetId?' for '+actor(event.targetId):''}.`;
  if(event.type==='effect_ended')return `${event.kind==='ward'?'Harbor Ward':'Signal Echo'} ended (${event.reason}).`;
  if(event.type==='attack_blocked')return `Harbor Ward absorbed ${actor(event.playerId)}’s attack on ${actor(event.targetId)}. No keeper fell.`;

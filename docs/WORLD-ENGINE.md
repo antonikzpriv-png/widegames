@@ -1,5 +1,7 @@
 # Authoritative world engine
 
+Current integrated replay recording adds bounded gameplay checkpoints and accepted navigation waypoints while preserving the ended-only event-array export and stable timestamp ordering. See [spatial replay](SPATIAL-REPLAY.md) for the versioned metadata, retention/storage limits and partial-coverage rules. The historical qualification below remains a record of its original revisions.
+
 Milestone: schema-2 world state, continuous movement, input sequencing and physical navigation are implemented in server/engine/index.mjs and world-runtime.mjs. createMatch defaults world:false for schema-1 fixtures. Production passes world:true. The existing five exports remain and applyInput is added. Navigation is a discrete action {id,type:'navigate',x,y}; move {roomId} in a world starts a physical route to that adjacent room's station. WASD input overrides the route.
 
 Shared API foundation: coordinator geometry contract commit 6f6f7c023ed3727b9849cdf27040a0ca88ddb46e. Final qualification uses the later corrected/optimized geometry eb64cc8fc6f9a024c0fe6c84dabf384e897819fe. Production imports shared/world.mjs. This isolated owner checkout may qualify against that read-only module with WORLD_ENGINE_GEOMETRY_MODULE=file:///D:/Widegames-work/world-coordinator-20261029/shared/world.mjs; no shared or other-owner source is copied or changed.

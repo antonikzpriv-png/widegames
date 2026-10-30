@@ -88,10 +88,11 @@ async function worldMutation(owner,suffix,body){
  if(!result?.ok)throw new Error(result?.error||'Wait for the current action to finish.');
  return result.data;
 }
-async function worldReplay(owner,matchId){
+async function worldReplay(owner,options={}){
  if(!ownsWorld(owner))throw new DOMException('The room changed.','AbortError');
- const current=epoch,opened=controller;
- const data=await request(roomPath(owner.id,'/replay'),{signal:opened.signal,headers:matchId?{'X-Match-ID':matchId}:{}});
+ const current=epoch,opened=controller,archived=typeof options==='string',matchId=archived?options:room?.game?.matchId;
+ const data=await request(roomPath(owner.id,'/replay')+'?matchId='+encodeURIComponent(matchId),{signal:!archived&&options.signal?AbortSignal.any([opened.signal,options.signal]):opened.signal});
+ if(!archived&&room?.game?.matchId!==matchId||data.matchId&&data.matchId!==matchId)throw new DOMException('The match changed.','AbortError');
  if(!ownsWorld(owner)||current!==epoch||controller!==opened)throw new DOMException('The room changed.','AbortError');
  return data;
 }
@@ -100,9 +101,9 @@ function renderWorld(){
   const host=h('div',{id:'world-host'}),owner={id:roomId,generation:room?.generation,matchId:room?.game?.matchId};main.replaceChildren(host);worldSession=owner;
   worldExperience=createWorldExperience(host,{
    action:(type,fields={})=>worldMutation(owner,'/action',actionEnvelope(type,fields)),
-   input:input=>worldInput(owner,input),start:features=>worldMutation(owner,'/start',{id:crypto.randomUUID(),...(features?{features}:{})}),
+   input:input=>worldInput(owner,input),start:(features,mapId)=>worldMutation(owner,'/start',{id:crypto.randomUUID(),...(features?{features}:{}),...(mapId?{mapId}:{})}),
    archive:matchId=>worldReplay(owner,matchId),lobby:(suffix,body)=>worldMutation(owner,suffix,body),rematch:()=>worldMutation(owner,'/rematch',{id:crypto.randomUUID()}),
-   leave:()=>{if(worldSession===owner)home();},loadReplay:()=>worldReplay(owner)
+   leave:()=>{if(worldSession===owner)home();},loadReplay:options=>worldReplay(owner,options)
   });
  }
  worldExperience.update(room,{now:Date.now()+offset,connected:networkReady,pending,feedback:feedback.textContent});
@@ -160,14 +161,21 @@ function accept(data){
  if(meeting!==draftMeeting){draft='';draftMeeting=meeting;}
  render();
 }
-async function create(mode){
+async function create(mode,preferences){
  releaseWorld();
  stop();controller=new AbortController();
  await busy(async()=>{
   const current=epoch;
-  const data=await request('/api/rooms',{method:'POST',body:{mode},signal:controller.signal});
+  let data=await request('/api/rooms',{method:'POST',body:{mode,...(preferences?.profile?.name?{name:preferences.profile.name}:{}),...(preferences?.features?{features:preferences.features}:{}),...(preferences?.mapId?{mapId:preferences.mapId}:{})},signal:controller.signal});
   if(current!==epoch)return;
-  await openRoom(roomFrom(data).roomId,data);
+  const createdId=roomFrom(data).roomId;
+  try{
+   if(preferences?.settings)data=await request(roomPath(createdId,'/settings'),{method:'POST',body:{settings:preferences.settings,generation:data.generation},signal:controller.signal});
+   const profile=data.seats?.find(p=>p.id===data.seatId);
+   if(profile&&preferences?.profile&&(profile.color!==preferences.profile.color||profile.name!==preferences.profile.name))data=await request(roomPath(createdId,'/profile'),{method:'POST',body:{name:preferences.profile.name,color:preferences.profile.color,generation:data.generation},signal:controller.signal});
+  }catch(error){if(current===epoch)await openRoom(createdId,data);throw error;}
+  if(current!==epoch)return;
+  await openRoom(createdId,data);
   tell(mode==='human'?'Your crew seat is ready.':'Spectator room ready.');
  });
 }
@@ -314,7 +322,9 @@ async function joinInvitation(code){
  await busy(async()=>{const data=await request('/api/invitations',{method:'POST',body:{code}});await openRoom(data.roomId);});
 }
 function landing(){
- return harbor({create,pending,joinInvitation});
+ let remembered;try{remembered=sessionStorage.getItem('lantern-room');}catch{}
+ const resume=remembered&&/^[A-Za-z0-9_-]{1,100}$/.test(remembered)?()=>openRoom(remembered,undefined,{remembered:true}):null;
+ return harbor({create,pending,joinInvitation,resume});
 }
 function setConfirmation(value,returnTo,current){
  if(current!==epoch)return;
@@ -382,8 +392,5 @@ window.addEventListener('pageshow',event=>{if(event.persisted&&roomId)openRoom(r
 window.addEventListener('popstate',()=>{const id=roomIdFromPath(location.pathname);if(id)openRoom(id);else{releaseWorld();stop();room=roomId=null;render();}});
 const initial=roomIdFromPath(location.pathname);
 if(initial)openRoom(initial);
-else{
- let remembered;try{remembered=sessionStorage.getItem('lantern-room');}catch{}
- if(remembered&&/^[A-Za-z0-9_-]{1,100}$/.test(remembered))openRoom(remembered,undefined,{remembered:true});else render();
-}
+else render();
 setInterval(()=>{if(document.hidden)return;if(worldExperience&&room)worldExperience.update(room,{now:Date.now()+offset,connected:networkReady,pending,feedback:feedback.textContent});for(const item of document.querySelectorAll('[data-deadline]'))item.textContent=clockText(secondsUntil(Number(item.dataset.deadline),Date.now()+offset));},500);

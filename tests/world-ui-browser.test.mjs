@@ -35,7 +35,7 @@ test('world UI: real room APIs, walking leases, three task puzzles, council focu
   if(p.role==='crew'&&p.tasks.some(t=>t.roomId==='bridge')&&['bridge','lantern','archive'].every(roomId=>p.tasks.some(task=>task.roomId===roomId)))seeds.crew??=String(i);
  }
  assert.ok(seeds.crew&&seeds.saboteur,'Actual engine must supply role/task fixture seeds.');
- const engine={...actual,createMatch(options){let state=actual.createMatch({...options,now:options.now-5,seed:seeds[fixture==='critical'?'crew':fixture],world:true});if(fixture==='critical'){const actor=state.players.find(p=>p.role==='saboteur');const result=actual.applyAction(state,actor.id,{id:'fixture-critical',type:'sabotage'},options.now);assert.ok(result.accepted);state=result.state;}return state;}};
+ const engine={...actual,createMatch(options){let state=actual.createMatch({...options,taskEdition:1,now:options.now-5,seed:seeds[fixture==='critical'?'crew':fixture],world:true});if(fixture==='critical'){const actor=state.players.find(p=>p.role==='saboteur');const result=actual.applyAction(state,actor.id,{id:'fixture-critical',type:'sabotage'},options.now);assert.ok(result.accepted);state=result.state;}return state;}};
  const aiController={describe:()=>({mode:'demo',provider:'demo',strategy:'Idle scheduling fixture',calls:0,tokens:0,costUsd:0}),async decide(){return null;}};
  const probe=http.createServer();await new Promise(resolve=>probe.listen(0,'127.0.0.1',resolve));const port=probe.address().port;await new Promise(resolve=>probe.close(resolve));const origin=`http://127.0.0.1:${port}`;
  let page;

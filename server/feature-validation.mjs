@@ -1,3 +1,4 @@
+import {getWorld} from '../shared/world.mjs';
 import {ROOM_LAYOUT} from '../shared/contracts.mjs';
 import {parseFeatures,isGhost,ABILITY_RULES as R} from '../shared/features.mjs';
 const object=v=>v&&typeof v==='object'&&!Array.isArray(v);
@@ -15,9 +16,10 @@ export function validateFeatures(room){
  const f=parseFeatures({deathPolicy:s.features.deathPolicy,abilities:s.features.abilities});
  assert(f.deathPolicy==='ghost-tasks'||f.abilities);
  if(room.features)assert(room.features.deathPolicy===f.deathPolicy&&room.features.abilities===f.abilities);
+ const taskRooms=getWorld(s.mapId).ROOM_LAYOUT;
  const tasks=s.players.flatMap(p=>p.tasks||[]);
  assert(tasks.length===s.rules.tasksPerCrew*s.players.filter(p=>p.role==='crew').length&&new Set(tasks.map(t=>t.id)).size===tasks.length);
- assert(tasks.every(t=>object(t)&&/^t[a-f0-9]{20}$/.test(t.id)&&typeof t.completed==='boolean'&&ROOM_LAYOUT.some(r=>r.id===t.roomId)&&typeof t.label==='string'&&t.label.length<=200));
+ assert(tasks.every(t=>object(t)&&/^t[a-f0-9]{20}$/.test(t.id)&&typeof t.completed==='boolean'&&taskRooms.some(r=>r.id===t.roomId)&&typeof t.label==='string'&&t.label.length<=200));
  assert(new Set(s.bodies.map(b=>b.playerId)).size===s.bodies.length&&s.bodies.every(b=>s.players.some(p=>p.id===b.playerId&&!p.alive)));
  if(f.deathPolicy==='ghost-tasks'){
   assert(Array.isArray(s.ghostChat)&&s.ghostChat.length<=R.ghostChatLimit);

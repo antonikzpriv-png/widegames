@@ -1,0 +1,46 @@
+/* Original perspective launch room; object buttons remain native keyboard controls. */
+.harbor.launch-bay{position:relative;display:flex;align-items:center;justify-content:flex-start;min-height:calc(100dvh - 185px);gap:0;width:100%;max-width:1400px;margin:0 auto;padding:18px 14px 24px;overflow:visible;border:1px solid #455a60;border-radius:24px;background:radial-gradient(ellipse at 50% 10%,#35454b 0,#121e27 52%,#09121b 100%);box-shadow:inset 0 0 70px #020b14,0 20px 60px #02091466;color:#eff2df}
+.launch-bay .launch-header{z-index:1;width:100%;text-align:center;display:flex;justify-content:space-between;align-items:center;gap:15px;padding:0 28px;max-width:1120px}
+.launch-bay .launch-header h1{font:950 clamp(23px,3.3vw,42px)/1.1 system-ui,sans-serif;letter-spacing:5px;margin:0;text-shadow:0 3px #07131b;color:#e8ecdb}
+.launch-bay .launch-header h1 span{display:inline;font:inherit;letter-spacing:inherit;margin:0;color:#eac57d}
+.launch-bay .launch-header p{font-size:10px;letter-spacing:2px;color:#9eb2b7;margin:5px 0 0}
+.launch-room-status{display:flex;align-items:center;gap:7px;font-size:10px;font-weight:800;letter-spacing:1px;color:#cce2bc;white-space:nowrap}
+.launch-room-status:before{content:'';height:7px;width:7px;border-radius:50%;background:#a5d5a1;box-shadow:0 0 13px #ace9aa99}
+.launch-bay .launch-room-scene{position:relative;width:min(1120px,100%);margin:-4px auto -28px;aspect-ratio:1160/740;isolation:isolate}
+.launch-room-art{display:block;width:100%;height:100%;filter:drop-shadow(0 14px 15px #02091277)}
+.launch-your-keeper{position:absolute;pointer-events:none;width:14%;height:auto;left:43%;top:39%;filter:drop-shadow(0 8px 4px #13293055)}
+.launch-keeper-name{position:absolute;left:40%;top:74%;width:20%;text-align:center;color:#f1f5df;font-size:clamp(9px,1.2vw,14px);font-weight:900;text-shadow:0 2px 3px #10212c;padding:3px;overflow-wrap:anywhere}
+.launch-bay .launch-object{position:absolute;margin:0;padding:0;min-height:0;border:0;border-radius:15px;box-shadow:none;background:transparent;color:#e9efdc;cursor:pointer;touch-action:manipulation;transition:filter .14s ease,background .14s ease;outline-offset:2px}
+.launch-bay .launch-object:hover:not(:disabled){background:#d0ecd50c;filter:drop-shadow(0 0 10px #aee9b27a)}
+.launch-bay .launch-object:focus-visible{outline:3px solid #f4db86;background:#e7daa119;box-shadow:0 0 25px #ffd56e22}
+.launch-bay .launch-object:disabled{opacity:.6;cursor:wait}
+.launch-object-computer{left:20.5%;top:41.5%;width:18%;height:28%}
+.launch-object-wardrobe{left:65%;top:39%;width:17%;height:37%}
+.launch-object-caption{position:absolute;bottom:-2px;left:50%;transform:translateX(-50%);font:900 clamp(8px,1.1vw,12px)/1.3 system-ui,sans-serif;letter-spacing:1px;white-space:nowrap;background:#1c303c;border:1px solid #819b98;border-bottom:3px solid #4e6768;border-radius:5px;padding:6px 12px;box-shadow:0 3px 8px #00121b44}
+.launch-object-caption small{display:block;margin-top:3px;letter-spacing:.3px;font-size:9px;font-weight:600;color:#abc3bf}
+.launch-bay .launch-bottom{z-index:2;display:flex;flex-direction:column;align-items:center;width:100%;position:relative;gap:14px;padding:0 16px}
+.launch-bay .launch-selection-summary{margin:0;color:#b9cbca;font-size:11px;line-height:1.5;text-align:center;max-width:650px}
+.launch-selection-summary strong{color:#eee4bd}
+.launch-bay .harbor-actions{display:flex;flex-direction:row;gap:14px;flex-wrap:wrap;justify-content:center;margin:0}
+.launch-bay .harbor-actions button{display:flex;flex-direction:column;align-items:center;gap:4px;justify-content:center;min-width:255px;min-height:62px;padding:12px 26px;border:2px solid #16333f;border-radius:11px;font-size:14px;font-weight:950;letter-spacing:.7px;box-shadow:0 5px #07151f}
+.launch-bay .harbor-actions button small{font-size:10px;letter-spacing:.15px;font-weight:650;opacity:.8}
+.launch-bay .harbor-actions .harbor-play{color:#163745;background:#e8c678;border-color:#fae0a0}
+.launch-bay .harbor-actions .harbor-watch{color:#143a43;background:#a9cbb7;border-color:#cde5cc}
+.launch-bay .harbor-join{display:flex;align-items:center;justify-content:center;gap:8px;max-width:520px;margin:0;flex-wrap:wrap}
+.launch-bay .harbor-join input{height:36px;min-height:36px;border:1px solid #577078;border-radius:6px;background:#152c38;color:#eff2dc;padding:7px 12px;width:190px;letter-spacing:2px;font-size:11px;text-transform:uppercase}
+.launch-bay .harbor-join input::placeholder{color:#8aa3a8;letter-spacing:.5px;text-transform:none}
+.launch-bay .harbor-join button{min-height:36px;border:1px solid #6c8b8b;border-radius:6px;background:#294551;color:#e2ebe2;padding:7px 13px;font-size:11px;font-weight:750;box-shadow:none}
+.launch-bay .launch-demo{font-size:10px;color:#829fa5;margin:0;line-height:1.5;text-align:center;max-width:660px}
+@media(min-width:1100px) and (min-height:850px){.harbor.launch-bay{padding-top:24px}.launch-bay .launch-room-scene{margin-top:0;margin-bottom:-35px;width:min(1080px,100%)}}
+@media(max-width:700px){.harbor.launch-bay{padding:18px 0 24px;border-radius:15px;min-height:calc(100dvh - 155px)}.launch-bay .launch-header{padding:0 20px;justify-content:center}.launch-bay .launch-header h1{font-size:24px;letter-spacing:3px}.launch-bay .launch-header p{font-size:8px}.launch-room-status{display:none}.launch-bay .launch-room-scene{width:100%;margin:12px auto 0}.launch-object-caption{font-size:8px;letter-spacing:.3px;padding:6px 8px;bottom:-15px}.launch-object-caption small{display:none}.launch-bay .launch-bottom{gap:13px;padding:0 15px}.launch-bay .harbor-actions{flex-direction:row;gap:10px;width:100%}.launch-bay .harbor-actions button{width:auto;min-width:0;flex:1 1 180px;padding:11px 12px;min-height:59px;font-size:12px}.launch-bay .harbor-actions button small{font-size:9px}.launch-bay .launch-selection-summary{font-size:10px}.launch-keeper-name{font-size:9px;top:76%;left:33%;width:34%}.launch-bay .launch-demo{font-size:9px;max-width:320px}}
+@media(max-width:390px){.launch-bay .harbor-actions{flex-direction:column}.launch-bay .harbor-actions button{flex:none;width:100%;min-height:54px}.launch-bay .launch-header h1{font-size:21px;letter-spacing:2px}.launch-bay .launch-room-scene{width:calc(100% + 8px);margin-left:-4px}.launch-object-caption{padding:5px 6px;font-size:7px}.launch-object-computer{width:23%;left:18%;min-height:44px!important}.launch-object-wardrobe{left:64%;width:21%;min-height:44px!important}}
+@media(prefers-reduced-motion:reduce){.launch-bay .launch-object{transition:none}}
+/* The launch bay is the home screen; remove the earlier dashboard page gutters. */
+body:has(.launch-bay){background:#0b151d}
+body:has(.launch-bay)>main{max-width:1460px;padding:10px 26px 20px;min-height:calc(100dvh - 80px)}
+body:has(.launch-bay)>.masthead{max-width:1460px;margin:auto;padding:16px 32px}
+body:has(.launch-bay)>footer{display:none}
+body:has(.launch-bay)>.feedback:empty{display:none}
+.launch-bay .launch-room-scene{width:min(1120px,100%,max(620px,calc(156.8dvh - 580px)));margin-top:0}
+@media(max-width:700px){body:has(.launch-bay)>main{padding:4px 10px 15px}body:has(.launch-bay)>.masthead{padding:14px 16px}.launch-bay .launch-room-scene{width:100%}}
+.launch-bay .harbor-actions button small{color:#24474c;opacity:1}
