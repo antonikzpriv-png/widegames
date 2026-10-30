@@ -45,6 +45,8 @@ function featureHints(state,p,now){
  const add=(type,fields,label,position)=>{if(!denial(state,p,{id:'hint',type,...fields},now))hints.push({id:type+':'+Object.values(fields).join(':'),type,fields,label,enabled:true,...(position?{position:clone(position)}:{})});};
  for(const task of p.tasks)add('task',{taskId:task.id},task.label,runtime(state).station(task.roomId));
  if(!p.alive)return hints;
+ if(p.ability?.type==='ward')for(const target of [p,...state.players.filter(q=>q.id!==p.id)])add('protect',{targetId:target.id},'Harbor Ward for '+target.name,target.position);
+ if(p.ability?.type==='echo')add('decoy',{x:p.position.x,y:p.position.y},'Signal Echo at your position',p.position);
  for(const target of state.players)add('eliminate',{targetId:target.id},'Eliminate '+target.name,target.position);
  for(const body of state.bodies)add('report',{bodyId:body.id},'Report fallen keeper',body.position);
  add('meeting',{},'Emergency bell',runtime(state).bell);return hints;
