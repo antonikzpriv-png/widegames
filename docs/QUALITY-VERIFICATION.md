@@ -4,7 +4,7 @@ This branch extends the existing Lantern Wake server and browser; it does not bu
 
 ## Source and preservation
 
-Started from actual origin/main **90bb6e881f75f77e85b8b49729971a710b4c91b4** and incorporated the completed tactical PR5 revision **d55144dd3c71f5ad965814aee92f4612bc4084ba**. Main advanced during implementation to **43c079999506785196ab85750105ceb102ba9314**; it is preserved through merge **7d8532afdb47179b96ec56ead6a7f0ee1bc34941**. Original branches, worktrees, map1 saves, identities, action receipts, private evidence and uncertain spending reservations remain. No direct main changes, merge, deployment or live paid provider calls occurred.
+Started from actual origin/main **90bb6e881f75f77e85b8b49729971a710b4c91b4** and incorporated the completed tactical PR5 revision **d55144dd3c71f5ad965814aee92f4612bc4084ba**. Main advanced during implementation to **43c079999506785196ab85750105ceb102ba9314**; it is preserved through merge **7d8532afdb47179b96ec56ead6a7f0ee1bc34941**. Original branches, worktrees, map1 saves, identities, action receipts, private evidence and uncertain spending reservations remain. No direct main changes, merge into main, deployment or live paid provider calls occurred.
 
 ## Integrated implementation
 
