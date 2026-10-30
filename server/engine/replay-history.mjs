@@ -16,7 +16,7 @@ function snapshot(state){
 }
 export function checkpointReplay(state){
  if(![2,3,4,5].includes(state.schemaVersion)||state.worldVersion!==1)return;
- const selected=state.schemaVersion===2?null:getMap(state.map),map=selected?{id:selected.id,version:selected.version}:REPLAY_MAP;
+ const selected=state.schemaVersion===2?null:getMap(state.map),map=selected?{id:selected.id,version:selected.version}:state.mapId??REPLAY_MAP;
  const h=state.replayHistory??={version:selected?2:REPLAY_VERSION,map,checkpoints:[]};
  const last=h.checkpoints.at(-1),first=replaySequenceOf(state.replay.find(e=>replaySequenceOf(e)!==null))||0;
  if(last&&state.replaySequence-last.sequence<REPLAY_LIMITS.interval&&h.checkpoints.some(a=>a.sequence>=first-1))return;
@@ -29,13 +29,15 @@ export function replayMetadata(state){
  let anchor=null;
  const first=replaySequenceOf(state.replay.find(e=>replaySequenceOf(e)!==null))||0;
  if(state.replayHistory){validateReplayHistoryState(state.replayHistory,state);anchor=state.replayHistory.checkpoints.find(a=>a.sequence>=first-1)??null;}
- const selected=[3,4,5].includes(state.schemaVersion)?getMap(state.map):null;const metadata={version:selected?2:REPLAY_VERSION,map:selected?{id:selected.id,version:selected.version}:REPLAY_MAP,matchId:state.id,anchor,
+ const selected=[3,4,5].includes(state.schemaVersion)?getMap(state.map):null;const metadata={version:selected?2:REPLAY_VERSION,map:selected?{id:selected.id,version:selected.version}:state.mapId??REPLAY_MAP,matchId:state.id,anchor,
   coverage:{startedAt:state.startedAt,from:anchor?.at??Math.min(...state.replay.map(e=>e.at),state.outcome?.at??state.updatedAt),through:state.outcome?.at??state.updatedAt,partial:!anchor||anchor.at!==state.startedAt||first>1}};return copy(selected?metadata:validateReplayMetadata(metadata,state.id));
 }
 
 /** Store integration hook: version1 stays exact; version2 is exact-map aware. */
 export function validateReplayHistoryState(h,state){
- if(h?.version===1){if(state.schemaVersion!==2)throw new Error('Mixed mapped/legacy replay history');const result=validateReplayHistory(h);if(h.checkpoints.some(a=>a.at<state.startedAt||a.at>state.updatedAt||a.sequence>state.replaySequence))throw new Error('Replay checkpoint exceeds match history');return result;}
+ if(h?.version===1){if(state.schemaVersion!==2)throw new Error('Mixed mapped/legacy replay history');if(h.map!==(state.mapId??REPLAY_MAP))throw new Error('Replay map does not match world2 state');const result=validateReplayHistory(h);
+  const ids=new Set(state.players.map(p=>p.id));for(const a of h.checkpoints)for(const p of a.players){if(!ids.has(p.id)||p.role!==state.players.find(q=>q.id===p.id)?.role)throw new Error('Replay roster mismatch');for(const t of p.tasks){if(t.progress&&!validProgress(t.progress,t,{startedAt:state.startedAt,updatedAt:a.at}))throw new Error('Invalid replay task progress');}}
+  if(h.checkpoints.some(a=>a.at<state.startedAt||a.at>state.updatedAt||a.sequence>state.replaySequence))throw new Error('Replay checkpoint exceeds match history');return result;}
  const object=v=>v&&typeof v==='object'&&!Array.isArray(v),keys=(v,allowed)=>object(v)&&Object.keys(v).every(k=>allowed.includes(k)),time=v=>Number.isFinite(v)&&v>=0&&v<=Number.MAX_SAFE_INTEGER,check=v=>{if(!v)throw new Error('Invalid mapped replay history');};
  check(keys(h,['version','map','checkpoints'])&&h.version===2&&[3,4,5].includes(state.schemaVersion));const map=getMap(h.map),expected=getMap(state.map);check(map===expected&&Object.keys(h.map).length===2);
  const ids=new Set(state.players.map(p=>p.id)),rooms=new Set(map.roomLayout.map(r=>r.id)),point=p=>keys(p,['x','y'])&&map.geometry.isWalkable(p);

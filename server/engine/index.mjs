@@ -1,4 +1,4 @@
-import {taskProgress,stepError,advanceTask,interruptTasks} from './tasks.mjs';
+import {TASK_KINDS,taskProgress,stepError,advanceTask,interruptTasks} from './tasks.mjs';
 import {initializeFeatures,isGhost,canWorldAct,nextEffectAt,clearEffects,featureDenial,activateFeature,safeEffects} from './features.mjs';
 import {checkpointReplay,replayMetadata} from './replay-history.mjs';
 import { randomBytes, createHash } from 'node:crypto';
@@ -24,15 +24,17 @@ const stepTask=(state,t)=>!!t&&isWorld(state)&&!t.challenge&&(state.schemaVersio
 const featureWorld=(state,p)=>{const w=runtime(state);return {...w,sees:(a,b)=>w.sees(a,b,state,p?.id??null),nearby:(a,b,r)=>w.nearby(a,b,r,state,p?.id??null),walkable:a=>isBeacon(state)?w.walkable(a,state):w.walkable(a),observerOrigin:isBeacon(state)?w.projectWorld(state,p?.id??null,state.updatedAt).vision.origin:null};};
 const ownEntry=(map,id)=>map&&Object.hasOwn(map,id)?map[id]:undefined;
 const mapRuntimes=new Map();
-const mapGeometry=state=>state.map?getMap(state.map).geometry:geometry;
-const layoutFor=state=>state.map?getMap(state.map).roomLayout:ROOM_LAYOUT;
+const mapGeometry=state=>state.map?getMap(state.map).geometry:state.mapId&&state.mapId!=='beacon'?getMap(state.mapId).geometry:geometry;
+const layoutFor=state=>state.map?getMap(state.map).roomLayout:state.mapId&&state.mapId!=='beacon'?getMap(state.mapId).roomLayout:ROOM_LAYOUT;
 const spatialFor=state=>{if(!state.map)return spatialEngine;const map=getMap(state.map),key=map.id+':'+map.version;if(!mapRuntimes.has(key))mapRuntimes.set(key,createSpatialWorld(map.geometry));return mapRuntimes.get(key);};
-const runtime=state=>isBeacon(state)?spatialFor(state):worldEngine;
+const legacyRuntimes=new Map();
+const worldFor=state=>{if(!state.mapId||state.mapId==='beacon')return worldEngine;const map=getMap(state.mapId),key=map.id+':'+map.version;if(!legacyRuntimes.has(key))legacyRuntimes.set(key,worldRuntime(map.geometry));return legacyRuntimes.get(key);};
+const runtime=state=>isBeacon(state)?spatialFor(state):worldFor(state);
 const preparedNavigation=new Set();
 /** Warm immutable navigation before accepting players; no match/AI state exists here. */
 export function prepareNavigation(references=MAP_CATALOG.map(({id,version})=>({id,version}))){
  if(!Array.isArray(references)||references.length>8)throw new TypeError('Invalid navigation preparation');
- const result=[];for(const reference of references){const map=getMap(reference),key=map.id+':'+map.version;let warmed=false;if(!preparedNavigation.has(key)){const g=map.geometry,start=g.worldSpawn('p1'),target=Object.values(g.WORLD_STATIONS).sort((a,b)=>g.distance(start,b)-g.distance(start,a))[0];const state={map:{id:map.id,version:map.version},systems:{doors:[],transit:{}}};const route=spatialFor(state).navigation({id:'prepare',alive:true,position:start},target,0,state);if(!route)throw new Error('Registered map navigation is unavailable');preparedNavigation.add(key);warmed=true;}result.push({id:map.id,version:map.version,warmed});}return result;
+ const result=[];for(const reference of references){const map=getMap(reference),key=map.id+':'+map.version;let warmed=false;if(!preparedNavigation.has(key)){const g=map.geometry,start=g.worldSpawn('p1'),target=Object.values(g.WORLD_STATIONS).sort((a,b)=>g.distance(start,b)-g.distance(start,a))[0];const state={map:{id:map.id,version:map.version},systems:{doors:[],transit:{}}};const route=map.fixtures?spatialFor(state).navigation({id:'prepare',alive:true,position:start},target,0,state):worldFor({mapId:map.id}).navigation({id:'prepare',alive:true,position:start},target,0);if(!route)throw new Error('Registered map navigation is unavailable');preparedNavigation.add(key);warmed=true;}result.push({id:map.id,version:map.version,warmed});}return result;
 }
 
 const nearby=(state,p,target,range=mapGeometry(state).WORLD.interactionRadius)=>runtime(state).nearby(p.position,target,range,state,p.id);
@@ -168,14 +170,18 @@ function advance(state,now) {
   return changed;
 }
 
-export function createMatch({id,mode='human',humanPlayerId,now=Date.now(),seed,config={},world=false,systems=false,roster,saboteurCount=1,humanPlayerIds,beaconRules={},tactical=false,map,stationTasks=false,features}={}) {
+export function createMatch({id,mode='human',humanPlayerId,now=Date.now(),seed,config={},world=false,systems=false,roster,saboteurCount=1,humanPlayerIds,beaconRules={},tactical=false,map,stationTasks=false,features,mapId}={}) {
   if(typeof stationTasks!=='boolean'||stationTasks&&!tactical||typeof tactical!=='boolean'||(!tactical&&map!==undefined))throw new TypeError('Invalid tactical option');
+  if(mapId!==undefined&&(typeof mapId!=='string'||tactical))throw new TypeError('Invalid legacy map selection');
+  const expanded=mapId!==undefined&&mapId!=='beacon'?getMap(mapId):null;
+  if(expanded&&(!world||systems||expanded.fixtures))throw new TypeError('Expanded maps require their authored world2 mode');
   if(tactical){world=true;systems=true;}
-  const selected=tactical?getMap(map):null,layout=selected?.roomLayout??ROOM_LAYOUT,roomIds=layout.map(r=>r.id);
+  const selected=tactical?getMap(map):expanded,layout=selected?.roomLayout??ROOM_LAYOUT,roomIds=layout.map(r=>r.id);
+  if(tactical&&!selected.fixtures)throw new TypeError('Map does not support tactical systems');
   if (typeof world!=='boolean'||typeof systems!=='boolean'||(systems&&!world))throw new TypeError('Invalid world option');
   if (typeof id!=='string' || !/^[A-Za-z0-9_-]{1,100}$/.test(id) || !['human','spectator'].includes(mode) || !finiteTime(now) || (!systems&&(humanPlayerId??'p1')!=='p1')) throw new TypeError('Invalid match options');
   if (!config || typeof config!=='object' || Array.isArray(config)) throw new TypeError('Invalid rules');
-  const rules={...DEFAULT_RULES,...(stationTasks?{tasksPerCrew:4}:{})};
+  const rules={...DEFAULT_RULES,...(expanded?{tasksPerCrew:expanded.metadata?.tasksPerCrew??expanded.geometry.metadata?.tasksPerCrew,roamDeadlineMs:480000,maxMatchMs:1800000}:{}),...(stationTasks?{tasksPerCrew:4}:{})};
   for (const [key,value] of Object.entries(config)) {
     if (!Object.hasOwn(rules,key) || !Number.isSafeInteger(value) || value<1 || value>86400000) throw new TypeError('Invalid rules');
     rules[key]=value;
@@ -188,11 +194,11 @@ export function createMatch({id,mode='human',humanPlayerId,now=Date.now(),seed,c
   const setup=systems?normalizeRoster({roster,mode,saboteurCount,humanPlayerIds,humanPlayerId}):{players:CHARACTERS,saboteurCount:1,humanPlayerIds:mode==='human'?['p1']:[]};
   const saboteurs=new Set();while(saboteurs.size<setup.saboteurCount)saboteurs.add(random(setup.players.length));
   const players=setup.players.map((p,i)=>({id:p.id,name:p.name,color:p.color,role:saboteurs.has(i)?'saboteur':'crew',alive:true,roomId:selected?.geometry.WORLD_SPAWN_ROOM??'bridge',human:setup.humanPlayerIds.includes(p.id),...(systems?{persona:p.persona}:{}),
-    tasks:saboteurs.has(i)?[]:(()=>{const remaining=[...roomIds],usedKinds=new Set();return Array.from({length:rules.tasksPerCrew},(_,j)=>{if(!remaining.length)remaining.push(...roomIds);let pool=stationTasks&&selected?.taskKinds?remaining.filter(r=>!usedKinds.has(selected.taskKinds[r])):remaining;if(!pool.length){usedKinds.clear();pool=remaining;}const roomId=stationTasks?pool[random(pool.length)]:roomIds[random(roomIds.length)];if(stationTasks)remaining.splice(remaining.indexOf(roomId),1);const id=`t${createHash('sha256').update(`${secret}:task:${i}:${j}`).digest('hex').slice(0,20)}`,kind=selected?.taskKinds?.[roomId]??STATION_TASK_KINDS[(j+i)%STATION_TASK_KINDS.length];if(stationTasks)usedKinds.add(kind);return {id,label:stationTasks?`Restore ${layout.find(r=>r.id===roomId).name} ${kind}`:`Service ${layout.find(r=>r.id===roomId).name} relay`,roomId,completed:false,...(stationTasks?{kind:'station',challenge:createStationChallenge({kind,seed:id})}:{})};});})(),
+    tasks:saboteurs.has(i)?[]:(()=>{const remaining=[...roomIds],usedKinds=new Set();return Array.from({length:rules.tasksPerCrew},(_,j)=>{if(!remaining.length)remaining.push(...roomIds);let pool=stationTasks&&selected?.taskKinds?remaining.filter(r=>!usedKinds.has(selected.taskKinds[r])):remaining;if(!pool.length){usedKinds.clear();pool=remaining;}const roomId=expanded?roomIds[(i+j)%roomIds.length]:stationTasks?pool[random(pool.length)]:roomIds[random(roomIds.length)];if(stationTasks)remaining.splice(remaining.indexOf(roomId),1);const id=`t${createHash('sha256').update(`${secret}:task:${i}:${j}`).digest('hex').slice(0,20)}`,kind=selected?.taskKinds?.[roomId]??STATION_TASK_KINDS[(j+i)%STATION_TASK_KINDS.length];if(stationTasks)usedKinds.add(kind);return {...(expanded?{kind:TASK_KINDS[(i+j)%TASK_KINDS.length]}:{}),id,label:stationTasks?`Restore ${layout.find(r=>r.id===roomId).name} ${kind}`:`Service ${layout.find(r=>r.id===roomId).name} relay`,roomId,completed:false,...(stationTasks?{kind:'station',challenge:createStationChallenge({kind,seed:id})}:{})};});})(),
     cooldowns:{moveAt:now,taskAt:now,killAt:now+rules.initialKillCooldownMs,sabotageAt:now+rules.sabotageCooldownMs,meetingAt:now+rules.meetingCooldownMs},meetingsRemaining:rules.meetingsPerPlayer}));
-  const state={schemaVersion:1,id,mode,version:1,phase:'roam',startedAt:now,updatedAt:now,deadlineAt:now+rules.roamDeadlineMs,rules,players,bodies:[],sabotage:null,meeting:null,meetingCount:0,outcome:null,sequence:0,events:[],replaySequence:0,replay:[],requests:Object.fromEntries(players.map(p=>[p.id,[]]))};
+  const state={...(expanded?{mapId:expanded.id}:{}),schemaVersion:1,id,mode,version:1,phase:'roam',startedAt:now,updatedAt:now,deadlineAt:now+rules.roamDeadlineMs,rules,players,bodies:[],sabotage:null,meeting:null,meetingCount:0,outcome:null,sequence:0,events:[],replaySequence:0,replay:[],requests:Object.fromEntries(players.map(p=>[p.id,[]]))};
   if(tactical){state.map={id:selected.id,version:selected.version};state.preset={id:TACTICAL_PRESET.id,version:TACTICAL_PRESET.version};state.tacticalVersion=1;}
-  if(world)(systems?spatialFor(state):worldEngine).initialize(state,now);
+  if(world)(systems?spatialFor(state):worldFor(state)).initialize(state,now);
   if(systems){
     if(!beaconRules||typeof beaconRules!=='object'||Array.isArray(beaconRules))throw new TypeError('Invalid beacon rules');
     const values={...(tactical?DEFAULT_TACTICAL_BEACON_RULES:DEFAULT_BEACON_RULES)};for(const [key,value]of Object.entries(beaconRules)){if(!Object.hasOwn(values,key)||!Number.isSafeInteger(value)||value<1||value>86400000)throw new TypeError('Invalid beacon rule');values[key]=value;}
@@ -201,7 +207,7 @@ export function createMatch({id,mode='human',humanPlayerId,now=Date.now(),seed,c
     systemsModule.initializeSystems(state,now);investigationModule.initializeInvestigation(state,now);refreshKnowledge(state,now);captureReplaySnapshot(state,now);
   }
   initializeFeatures(state,features,random);
-  publicEvent(state,'started',now); record(state,'started',now,{...(tactical?{tacticalVersion:1,map:clone(state.map),preset:clone(state.preset)}:{}),...(world?{worldVersion:1,positions:players.map(p=>({id:p.id,position:clone(p.position)}))}:{}),roles:players.map(p=>({id:p.id,role:p.role})),tasks:players.map(p=>({id:p.id,tasks:clone(p.tasks)}))});
+  publicEvent(state,'started',now); record(state,'started',now,{...(expanded?{mapId:expanded.id}:{}),...(tactical?{tacticalVersion:1,map:clone(state.map),preset:clone(state.preset)}:{}),...(world?{worldVersion:1,positions:players.map(p=>({id:p.id,position:clone(p.position)}))}:{}),roles:players.map(p=>({id:p.id,role:p.role})),tasks:players.map(p=>({id:p.id,tasks:clone(p.tasks)}))});
   checkpointReplay(state);return state;
 }
 
@@ -383,7 +389,7 @@ export function getPlayerView(state,playerIdOrNull,now=Date.now()) {
     if (candidates.some(a=>!denial(state,p,a,now,true))) hints.push(type);
   }
   const descriptors=featureHints(state,p,now);for(const d of descriptors)if(d.enabled&&!hints.includes(d.type))hints.push(d.type);
-  return {matchId:state.id,...(state.features?{features:clone(state.features),effects:safeEffects(state,p,featureWorld(state,p),now),...(isGhost(state,p)?{ghostChat:clone(state.ghostChat)}:{})}:{}),...(state.stationTasksVersion===1?{stationTasksVersion:1}:{}),...(state.tacticalVersion===1?{tacticalVersion:1,map:clone(state.map),preset:clone(state.preset)}:{}),...(isBeacon(state)?{beaconVersion:1,vision:projection.vision,systems:systemsModule.getSystemsView(state,playerIdOrNull,now,context(state)),investigation:investigationModule.getInvestigationView(state,playerIdOrNull,now,context(state)),abilities:getAbilityView(state,playerIdOrNull),interactions:descriptors}:{}),...(isWorld(state)?{worldVersion:1}:{}),version:state.version,phase:state.phase,serverNow:now,deadlineAt:state.deadlineAt,
+  return {matchId:state.id,...(state.mapId?{mapId:state.mapId}:{}),...(state.features?{features:clone(state.features),effects:safeEffects(state,p,featureWorld(state,p),now),...(isGhost(state,p)?{ghostChat:clone(state.ghostChat)}:{})}:{}),...(state.stationTasksVersion===1?{stationTasksVersion:1}:{}),...(state.tacticalVersion===1?{tacticalVersion:1,map:clone(state.map),preset:clone(state.preset)}:{}),...(isBeacon(state)?{beaconVersion:1,vision:projection.vision,systems:systemsModule.getSystemsView(state,playerIdOrNull,now,context(state)),investigation:investigationModule.getInvestigationView(state,playerIdOrNull,now,context(state)),abilities:getAbilityView(state,playerIdOrNull),interactions:descriptors}:{}),...(isWorld(state)?{worldVersion:1}:{}),version:state.version,phase:state.phase,serverNow:now,deadlineAt:state.deadlineAt,
     rooms:clone(layoutFor(state)),players:projection?.players??state.players.map(q=>({id:q.id,name:q.name,color:q.color,alive:q.alive,roomId:visible(q)?q.roomId:null,...(isWorld(state)?{position:visible(q)?clone(q.position):null}:{}),...(ended?{role:q.role}:{})})),
     self:p?{id:p.id,role:p.role,alive:p.alive,...(state.features?{ghost:isGhost(state,p),...(p.ability?{ability:clone(p.ability)}:{})}:{}),roomId:p.roomId,...(isWorld(state)?{position:clone(p.position),inputSeq:p.motion.seq,moving:runtime(state).moving(state,p,now),destination:clone(p.motion.destination)}:{}),tasks:isWorld(state)?p.tasks.map(t=>stepTask(state,t)?{...clone(t),progress:clone(taskProgress(t))}:isBeacon(state)?{...clone(t),...taskService.progress(t)}:clone(t)):clone(p.tasks),...(isBeacon(state)?{transit:ownEntry(state.systems.transit,p.id)?{entryId:ownEntry(state.systems.transit,p.id).entryId,exitId:ownEntry(state.systems.transit,p.id).exitId,deadlineAt:ownEntry(state.systems.transit,p.id).deadlineAt}:null}:{}),cooldowns:clone(p.cooldowns),meetingsRemaining:p.meetingsRemaining}:null,
     tasks:{completed:state.players.flatMap(q=>q.tasks).filter(t=>t.completed).length,total:state.players.flatMap(q=>q.tasks).length},
