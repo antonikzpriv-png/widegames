@@ -91,7 +91,8 @@ export function createTaskPuzzle(options){
  const node=dom('section','lw-task-modal');node.setAttribute('role','dialog');node.setAttribute('aria-modal','true');node.tabIndex=-1;
  const heading=dom('h2','',task.label);heading.id=`${id}-title`;node.setAttribute('aria-labelledby',heading.id);
  const close=control('Close station',()=>{if(!closed)onClose();},'lw-close'),copy=dom('p','lw-task-instruction'),area=dom('div','lw-puzzle'),status=dom('p','lw-puzzle-status');status.setAttribute('role','status');
- node.append(close,heading,copy,area,status,dom('p','lw-modal-footnote','Progress is saved by the server. Leaving or council closes equipment; an unfinished diagnostic must restart.'));
+ const top=dom('div','lw-modal-title');top.append(dom('p','lw-eyebrow','FIELD EQUIPMENT'),close);
+ node.append(top,heading,copy,area,status,dom('p','lw-modal-footnote','Progress is saved by the server. Leaving or council closes equipment; an unfinished diagnostic must restart.'));
  const firstAvailable=()=>[...area.querySelectorAll('button,input')].find(control=>!control.disabled);
  function send(input){if(!pending&&!closed)onSubmit(input===undefined?undefined:{step:task.progress.index,input});}
  function render(){const c=task.progress,next=JSON.stringify(c);if(next===key)return;key=next;const epoch=++renderEpoch,sendStep=input=>{if(epoch===renderEpoch)send(input);};area.replaceChildren();area.className=`lw-puzzle lw-puzzle-${c.kind}`;status.textContent=`${c.index} / ${c.total} steps confirmed`;

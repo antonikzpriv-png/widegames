@@ -20,6 +20,7 @@ let instance=0;
 
 /** A safe-view-only game surface. The owner supplies networking and request IDs. */
 export function createWorldExperience(host,callbacks,{mapResolver=getMap,motionFactory}={}){
+ if(document.head&&!document.querySelector('link[data-captcha-style]')){const link=make('link');link.rel='stylesheet';link.href='/world/captcha.css';link.setAttribute('data-captcha-style','');document.head.append(link);}
  if(document.head&&!document.querySelector('link[data-beacon-style]')){const link=make('link');link.rel='stylesheet';link.href='/world/beacon.css';link.setAttribute('data-beacon-style','');document.head.append(link);}
  let mapError='',lastScope=null,actionGeneration=0,lastActionKey=null;
  const actionKey=view=>view?.game?.beaconVersion===1?viewKey(view):JSON.stringify([equipmentOwner(view),view?.game?.self?.ghost,view?.game?.self?.position,view?.game?.availableActions,view?.game?.self?.tasks]);
@@ -241,7 +242,7 @@ export function createWorldExperience(host,callbacks,{mapResolver=getMap,motionF
  document.addEventListener('visibilitychange',visibility);if(!document.hidden)raf=requestAnimationFrame(frame);
  const api={update(next,nextOptions={}){
   if(disposed)return;let nextMap;
-  try{nextMap=mapResolver(next.game?.map??next.map);}catch(error){setGhostChatOpen(false);navigationEpoch++;actionGeneration++;input.stop();puzzle?.dispose();puzzle=null;taskSession=null;confirmTarget=null;beaconPanel?.suspend();sound.suspend();room=next;options={...options,...nextOptions};mapError=error?.message||'Unsupported map/version.';render();unavailableTitle.focus();return;}
+  try{nextMap=mapResolver(next.game?.map??next.game?.mapId??next.map??next.mapId);if(next.game?.map===undefined&&next.game?.mapId!==undefined){next={...next,game:{...next.game,map:{id:nextMap.id,version:nextMap.version}}};}else if(!next.game&&next.map===undefined&&next.mapId!==undefined)next={...next,map:{id:nextMap.id,version:nextMap.version}};}catch(error){setGhostChatOpen(false);navigationEpoch++;actionGeneration++;input.stop();puzzle?.dispose();puzzle=null;taskSession=null;confirmTarget=null;beaconPanel?.suspend();sound.suspend();room=next;options={...options,...nextOptions};mapError=error?.message||'Unsupported map/version.';render();unavailableTitle.focus();return;}
   const nextActionKey=actionKey(next);if(lastActionKey!==null&&lastActionKey!==nextActionKey)actionGeneration++;lastActionKey=nextActionKey;const scope=equipmentOwner(next);
   if(lastScope&&lastScope!==scope){setGhostChatOpen(false);ghostGeneration++;navigationEpoch++;input.stop();puzzle?.dispose();puzzle=null;taskSession=null;confirmTarget=null;beaconPanel?.suspend();}
   const changed=selectedMap.id!==nextMap.id||selectedMap.version!==nextMap.version;

@@ -67,3 +67,11 @@
  .lw-world[data-critical=true] .lw-scene-overlay:has(.lw-task-modal:not([hidden])){padding-top:370px}
  .lw-world[data-critical=true] .lw-scene-overlay>.lw-task-modal{max-height:calc(100dvh - 446px)}
 }
+
+/* Expanded-map jobs remain readable without covering the spatial stage. The
+   existing numbered map key/scrolling panel scales to every catalog room. */
+.lw-world .lw-tasks{max-height:min(27vh,220px);overflow-y:auto;overscroll-behavior:contain}
+.lw-world select:focus-visible{outline:3px solid #fff1a9;outline-offset:4px}
+.lw-world .lw-lobby{overflow-y:auto;overscroll-behavior:contain;pointer-events:auto}
+@media(max-width:700px){.lw-world .lw-tasks{max-height:15vh}}
+@media(max-height:540px) and (min-width:560px){.lw-world .lw-tasks{max-height:20vh}}

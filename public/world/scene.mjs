@@ -29,12 +29,47 @@ export function drawKeeper(ctx,player,x,y,{scale=1,step=0,selected=false,ghost=f
  if(label){text(ctx,player.name||'Keeper',0,36,14,'#102d3e');ctx.lineWidth=4;ctx.strokeStyle='#eff8e8';ctx.strokeText(player.name||'Keeper',0,36);text(ctx,player.name||'Keeper',0,36,14,'#102d3e');}
  ctx.restore();
 }
+/** Detail follows collider footprints, so illustrated furniture is never a hidden wall. */
+function mapObstacle(ctx,prop,time,reduced){
+ const {x,y,width:w,height:h}=prop,kind=prop.kind||'machine',color=prop.color||'#566b79';
+ ctx.save();ctx.shadowColor='#09253788';ctx.shadowBlur=6;ctx.shadowOffsetY=6;round(ctx,x,y,w,h,Math.min(12,w/5,h/5),color,'#173144',4);ctx.restore();
+ const cx=x+w/2,cy=y+h/2,pad=Math.min(12,w/6,h/6);
+ if(['tank','turbine','generator','filters','furnace','telescope'].includes(kind)){
+  const radius=Math.min(w,h)*.31;circle(ctx,cx,cy,radius,kind==='furnace'?'#f3b16c':'#9abfc0','#284857',3);circle(ctx,cx,cy,radius*.6,kind==='furnace'?'#ffdf9b':'#527b89',null);
+  ctx.save();ctx.translate(cx,cy);ctx.rotate(reduced?0:time/3000);ctx.strokeStyle='#d8e5c9';ctx.lineWidth=3;for(let i=0;i<4;i++){ctx.rotate(Math.PI/2);ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(radius*.8,0);ctx.stroke();}ctx.restore();
+ }else if(['shelf','crates','crate','records','tools','kitchen'].includes(kind)){
+  for(let col=0;col<3;col++)for(let row=0;row<2;row++)round(ctx,x+pad+col*(w-pad*2)/3,y+pad+row*(h-pad*2)/2,(w-pad*2)/3-4,(h-pad*2)/2-4,2,['#d9b887','#92b7aa','#baa6c5'][(row+col)%3],'#344f5a',2);
+ }else if(kind==='planter'){
+  for(let i=0;i<4;i++){const px=x+pad+(w-pad*2)*(i+.5)/4;circle(ctx,px,cy,Math.min(h*.3,13),'#7fa67a','#34594f',2);circle(ctx,px+4,cy-5,Math.min(h*.19,8),'#b6d398',null);}
+ }else if(kind==='table'){
+  round(ctx,x+pad,y+pad,w-pad*2,h-pad*2,5,'#b6cfbf','#527d7e',2);ctx.strokeStyle='#5c8e99';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(x+pad,cy);ctx.lineTo(x+w-pad,cy);ctx.moveTo(cx,y+pad);ctx.lineTo(cx,y+h-pad);ctx.stroke();
+ }else {
+  round(ctx,x+pad,y+pad,w-pad*2,Math.max(10,h*.35),4,'#244657','#142e3e',2);ctx.fillStyle='#c6e2b0';for(let i=0;i<4;i++)ctx.fillRect(x+pad+5+i*(w-pad*2-10)/4,y+h-pad-9,Math.max(3,w*.055),5);
+ }
+}
+function mapDecor(ctx,item,time,reduced){
+ if(!Number.isFinite(item.x)||!Number.isFinite(item.y))return;
+ if(item.kind==='label'){text(ctx,String(item.text||''),item.x,item.y,Number.isFinite(item.size)?item.size:13,item.color||'#daf0d0');return;}
+ if(item.kind==='lamps'){for(const [dx,dy]of [[0,0],[item.width||0,0],[0,item.height||0],[item.width||0,item.height||0]])mapDecor(ctx,{...item,kind:'lamp',x:item.x+dx,y:item.y+dy},time,reduced);return;}
+ if(item.kind==='stripes'){ctx.save();ctx.strokeStyle=item.color||'#d3c89566';ctx.globalAlpha=.45;ctx.lineWidth=4;for(let x=0;x<(item.width||60);x+=24){ctx.beginPath();ctx.moveTo(item.x+x,item.y);ctx.lineTo(item.x+x+Math.min(item.height||30,24),item.y+(item.height||30));ctx.stroke();}ctx.restore();return;}
+ if(['light','lamp'].includes(item.kind)){ctx.save();ctx.shadowColor=item.color||'#f0d69e';ctx.shadowBlur=reduced?8:10+Math.sin(time/600)*3;circle(ctx,item.x,item.y,5,item.color||'#f0d69e','#365968',2);ctx.restore();return;}
+ if(item.kind==='stripe'){ctx.save();ctx.strokeStyle=item.color||'#d3c89566';ctx.lineWidth=3;ctx.setLineDash([12,10]);ctx.beginPath();ctx.moveTo(item.x,item.y);ctx.lineTo(item.x+(item.width||60),item.y+(item.height||0));ctx.stroke();ctx.restore();}
+}
+// Expanded world2 maps have no tactical fixtures. Their authored static art
+// shares the bounded quality tile cache rather than allocating a whole-map bitmap.
+function paintSceneEnvironment(ctx,map,bounds){
+ paintEnvironment(ctx,map,bounds);
+ if(!['storm-foundry','tidal-observatory'].includes(map.id))return;
+ for(const r of map.geometry.WORLD_ROOMS)if(intersects(r,bounds)&&r.palette){ctx.save();ctx.globalAlpha=.18;ctx.fillStyle=r.palette[1];ctx.fillRect(r.x+12,r.y+16,r.width-24,r.height-30);ctx.restore();}
+ for(const prop of map.geometry.WORLD_OBSTACLES)if(intersects(prop,bounds,16))mapObstacle(ctx,prop,0,true);
+ for(const item of map.geometry.WORLD_DECOR||[])if(intersects({x:item.x-100,y:item.y-32,width:(item.width||0)+200,height:(item.height||0)+64},bounds))mapDecor(ctx,item,0,true);
+}
 export function createWorldScene(canvas,{reduced=false,playback=false,mapResolver=getMap,motionFactory}={}){
  const ctx=canvas.getContext('2d'),samples=motionFactory?motionFactory({mapResolver}):new ActorSamples({mapResolver,world:true});let map=mapResolver(),world=map.geometry;let room=null,lastKey=null,camera={x:800,y:400},view={width:1,height:1,zoom:1},stopped=false,lastOwner=null,lastAt=-Infinity,lastVersion=-1;
  const cameraTrack=new ObservedCamera();
- const cache=createStaticLayer({paint:paintEnvironment,makeCanvas:(w,h)=>{if(typeof OffscreenCanvas!=='undefined')return new OffscreenCanvas(w,h);return canvas.ownerDocument?.createElement?.('canvas')||globalThis.document?.createElement?.('canvas');}});
+ const cache=createStaticLayer({paint:paintSceneEnvironment,makeCanvas:(w,h)=>{if(typeof OffscreenCanvas!=='undefined')return new OffscreenCanvas(w,h);return canvas.ownerDocument?.createElement?.('canvas')||globalThis.document?.createElement?.('canvas');}});
  function update(next,at){
-  const nextMap=mapResolver(next?.game?.map??next?.map),game=next?.game;
+  const nextMap=mapResolver(next?.game?.map??next?.game?.mapId??next?.map??next?.mapId),game=next?.game;
   const owner=JSON.stringify([next?.roomId,game?.matchId,nextMap.id,nextMap.version,game?.self?.id]);
   if(!playback&&owner===lastOwner&&(at<lastAt||Number.isFinite(game?.version)&&game.version<lastVersion))return;
   const key=JSON.stringify([owner,game?.phase,game?.self?.alive,!!(game?.self?.transit||game?.systems?.selfTransit),game?.vision?.mode]);
@@ -42,7 +77,7 @@ export function createWorldScene(canvas,{reduced=false,playback=false,mapResolve
   const target=!game?{x:world.WORLD_VIEWPOINT.x,y:world.WORLD_VIEWPOINT.y+25}:(visionFrame(game,map)?.origin||game?.self?.position||world.WORLD_VIEWPOINT);
   if(key!==lastKey){samples.clear();cameraTrack.reset(target,at);lastKey=key;}else cameraTrack.update(target,at);
   lastOwner=owner;lastAt=at;lastVersion=Number.isFinite(game?.version)?game.version:-1;
-  room=next;samples.update(game,at);
+  room=next;samples.update(game?{...game,map:{id:map.id,version:map.version}}:game,at);
  }
 
  function draw(time,{overview=false,follow:followId=null}={}){
@@ -61,7 +96,7 @@ export function createWorldScene(canvas,{reduced=false,playback=false,mapResolve
   if(overview)camera={x:world.WORLD.width/2,y:world.WORLD.height/2};view={width,height,zoom,camera:{...camera}};
   ctx.save();ctx.translate(width/2,height/2);ctx.scale(zoom,zoom);ctx.translate(-camera.x,-camera.y);
   const bounds=viewportBounds(camera,width,height,zoom,0);
-  if(overview)paintEnvironment(ctx,map,bounds);else cache.draw(ctx,map,bounds);
+  if(overview)paintSceneEnvironment(ctx,map,bounds);else cache.draw(ctx,map,bounds);
   drawRoomLabels(ctx,map,bounds,{overview,zoom});
   for(const r of world.WORLD_ROOMS){const station=world.WORLD_STATIONS[r.id];if(!station||!intersects({x:station.x-40,y:station.y-40,width:80,height:80},bounds))continue;
    const task=game?.self?.tasks?.find(t=>!t.completed&&t.roomId===r.id)||(playback&&game?.replayTaskRooms?.includes(r.id)?{kind:'recorded'}:null),critical=game?.beaconVersion!==1&&game?.sabotage?.active&&game.sabotage.roomId===r.id;
