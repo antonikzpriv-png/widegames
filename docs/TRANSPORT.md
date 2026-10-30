@@ -1,3 +1,7 @@
+# Current configurable transport additions
+
+See [multiplayer](MULTIPLAYER.md) for current room schema 5, authenticated seats, settings, readiness, rematch/action/input generations, private archives and spending fences. Numeric gameplay settings are public; the separate map request ledger, identity hashes, provider state and reservations remain private. Every HTTP mutation and WebSocket projection re-resolves its current authenticated identity. Exact old room formats and map-settings protocols remain accepted. Role inspection is disabled until the unseated all-AI host explicitly consents; other visitors never gain it.
+
 ﻿# Room service and persistence
 
 For the current configurable room schema, routes, ownership, socket re-resolution, rematch fences and archive limits, see [Multiplayer lobbies and rematches](MULTIPLAYER.md). The original fixed-six contracts below describe historical room compatibility where they differ.

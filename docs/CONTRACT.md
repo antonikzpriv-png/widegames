@@ -1,3 +1,7 @@
+# Current integrated configurable contract
+
+[Multiplayer](MULTIPLAYER.md) adds authenticated 4–15-player lobbies, per-match settings, names/badges, invitation/readiness and isolated rematch generations to main `af820b5`. New production room container schema 5 separates numeric `settings` from private `mapSettings` receipts; historical room containers 1–4 and prior configurable schema 2 remain exact. Match schemas 1–5, permanent tactical-map/world-revision namespaces, station challenges, investigations, strategic budgets and spatial replay remain supported. [Detailed tasks](TASK-DEPTH-MECHANICS.md) adds 25 edition-3 families alongside historical task formats and tactical authored stations. Role-revealing AI inspection requires explicit consent from the authenticated seatless host of an all-AI watch. This section supersedes historical fixed-roster/room-schema defaults below.
+
 Current-main integration43c079999506785196ab85750105ceb102ba9314 is included. Optional features retain version1, taskStep remains supported for world2 progress, and map-aware replay2 is documented in [QUALITY-MAIN-REPLAY-CONTRACT.md](QUALITY-MAIN-REPLAY-CONTRACT.md). Saved start request IDs bind their accepted feature settings; conflicting reuse returns409. New histories must match their actual map, actors and clocks.
 
 # Current gameplay-quality contract

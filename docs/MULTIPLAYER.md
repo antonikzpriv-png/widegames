@@ -1,10 +1,10 @@
 # Multiplayer lobbies and rematches
 
-This contract extends the audited `90bb6e8` walking-world baseline and integrates main `22340f0` (authoritative task puzzles, ghost tasks, optional abilities and optional strategic AI). Historical owner allocations, Windows workspace paths, fixed-six-only statements, and the original empty-remote status in older notes are historical. Development uses the current Cloud checkout and existing Node ESM/native HTTP/WebSocket stack. No deployment or paid provider call is needed.
+This contract extends the audited `90bb6e8` baseline and integrates current main `af820b5`, including tactical systems, authored station challenges, strategic AI, private investigation, illustrated map revisions and spatial replay. Historical owner allocations, Windows workspace paths, fixed-six-only statements, and the original empty-remote status in older notes are historical. Development uses the current Cloud checkout and existing Node ESM/native HTTP/WebSocket stack. No deployment or paid provider call is needed.
 
 ## Playing together
 
-Choose **PLAY AS A KEEPER** to host with a human seat, or **WATCH THE AI** to host as a spectator. Defaults remain six keepers, one saboteur, three tasks per crew, and the existing timings. Copy the room invitation or enter its 12-character code through **Join friends**. Joining a link initially creates a spectator identity; **Claim a keeper** claims an available seat. Unclaimed seats become AI at start. The same HttpOnly room cookie restores a human's seat on reload.
+The launch screen is the gray waiting room. Click the left table computer for settings or the right wardrobe for name and raincoat customization. Choose **Play with AI** to host with a human seat, or **Watch AI** to host as a spectator. Defaults remain six keepers, one saboteur, three tasks per crew, and the existing timings. Copy the room invitation or enter its 12-character code through **Join friends**. Joining a link initially creates a spectator identity; **Claim a keeper** claims an available seat. Unclaimed seats become AI at start. The same HttpOnly room cookie restores a human's seat on reload.
 
 Each keeper has a stable actor ID (`p1`–`p15`), public persona, name and raincoat color. Names contain 1–24 visible normalized characters. Names may repeat; numbered badges remain distinct in lobby, world labels, elimination controls, council/chat, ability targets, results and attributed replays. Humans can edit their own name and color before starting. Hosts can remove other lobby occupants. During a match, **Manage crew** opens authenticated access-revocation controls; the seat remains reserved and idle. Everyone with a human seat must ready up; spectators never block start. The host's initial seat is ready by default. Profile edits unready that human; applying settings unreadies guests and readies the seated host.
 
@@ -21,6 +21,12 @@ Sockets retain only an identity digest as a lookup key. Every projection looks u
 Only a saboteur's private `self.teammates` lists fellow saboteur IDs. It includes no extra positions. Crew and spectator payloads do not contain this list; public player roles stay hidden until the end. The AI receives its actor's same safe view plus public persona only. Dynamic local policies and Anthropic snapshots support all 15 actors; only actors whose persisted `human` flag is false are scheduled. The optional strategic feature merged in main remains available through `AI_STRATEGY=strategic`; ordinary demo/hybrid modes remain the defaults. Strategic choices use the same safe dynamic roster, private teammate list and configured vision/options, with the same rematch and spending fences. No strategic model or paid call is required for multiplayer.
 
 Crew win when every saboteur is ejected or all crew tasks are complete. Saboteurs win at living parity or an expired critical countdown. Saboteurs cannot eliminate teammates. Ejecting only one of several saboteurs does not declare crew victory. Existing tie, skip, abstention, task-transfer and deadline rules continue to apply.
+
+## Maps and task variety
+
+The computer and room lobby expose all five current map selections: tactical Beacon, Stormbreak Annex, Storm Foundry, Tidal Observatory and the separate illustrated Beacon. Exact saved tactical versions and world-map revisions remain immutable within a match. Editing numeric settings does not upgrade a saved map implicitly.
+
+`taskMix` selects equipment, mixed or CAPTCHA tasks. Illustrated walking maps use the 25-family edition-3 catalogue; tactical maps blend retained authored stations with modern equipment/challenges. Equipment-only excludes native glyph inspection and the 13 modern CAPTCHA families; CAPTCHA-only selects modern CAPTCHA tasks. Historical tasks are never rewritten. See [task mechanics](TASK-DEPTH-MECHANICS.md).
 
 ## Rematch lifecycle
 
@@ -43,7 +49,8 @@ All POST routes require the configured Origin and JSON. Room routes require the 
 | `POST .../seat` | `{seatId:'auto' | 'pN' | null, name?, generation}` claims/switches/releases one's lobby seat. |
 | `POST .../profile` | `{name?, color?, generation}` edits one's own seated lobby profile. |
 | `POST .../ready` | `{ready:boolean, generation}` changes one's own readiness. |
-| `POST .../settings` | `{settings?:partialSettings, features?:{deathPolicy,abilities}, generation}` is host-only and lobby-only. |
+| `POST .../settings` | `{settings?:partialSettings, features?:{deathPolicy,abilities}, mapId?, generation}` is host-only and lobby-only. Existing optimistic map requests `{id,expectedRevision,mapId}` remain supported through a separate private receipt ledger. |
+| `POST .../inspection` | `{enabled,generation}` explicitly opts in to role-revealing inspection; only the authenticated, seatless host of an all-AI watch qualifies. Rematches reset consent. |
 | `POST .../members` | `{seatId, operation:'release' | 'revoke', generation}` is host-only; release is lobby-only. Hosts cannot remove themselves this way. |
 | `POST .../start` | `{id, generation, features?}` is host-only; requires every human ready and retains start idempotency. |
 | `POST .../rematch` | `{id, generation}` is host-only and terminal-only; repeats of the same transition remain idempotent. |
@@ -53,7 +60,7 @@ All POST routes require the configured Origin and JSON. Room routes require the 
 
 ## Persistence compatibility
 
-Room container schema 1 continues to load without rewriting, deletion, migration or quarantine of valid historical data. Both legacy engine schema 1 and world engine schema 2 retain their original behavior. New configurable rooms use room container schema 2; their engine retains schema 1/2 according to legacy/world mode and carries a validated settings snapshot. The programmatic server constructor without `worldMode:true` and the `createRoom` / `createRooms` helpers without explicit configurable mode retain legacy defaults. Explicit lobby controls or a rematch can transition a historical lobby/group to the new container deliberately.
+Historical room containers 1–4 and the earlier configurable schema-2 format remain readable without rewriting, deletion, migration or quarantine of valid data. New production configurable rooms use container schema 5, with numeric gameplay `settings` separate from private `mapSettings` request receipts. A validated `lobby` mirror retains the historical engine interface. Match formats 1–5 remain distinct: board/world matches retain their old formats, while configured tactical matches retain schema 5 and authored station challenges. Each configured match carries its own validated settings snapshot. The programmatic server constructor without `worldMode:true` and the `createRoom` / `createRooms` helpers without explicit configurable mode retain legacy defaults. Explicit lobby controls or a rematch can transition a historical lobby/group to the new container deliberately.
 
 New container validation checks settings and ratios, sequential unique actor IDs, public profiles, distinct identity digests/seat ownership, host/readiness/revocation, match/generation correspondence, human ownership, faction counts, tasks, receipts, bounded timelines and archives. Existing world motion, lease, body and walkability checks still run on save and restore, including `p10`–`p15` bodies. Existing exclusive writer locks, atomic private writes, and invalid-file handling remain intact.
 

@@ -58,3 +58,17 @@ test('mapped power-route records move the task station and preserve actor positi
  const target=f.map.roomLayout.find(r=>r.id!=='bridge').id,event={type:'task_routed',at:1500,sequence:2,playerId:owner.id,taskId:task.id,roomId:target,label:'Accept routed power'};
  const model=createReplayModel({metadata:f.metadata,replay:[event]});assert.equal(model.at(1400).players.find(p=>p.id===owner.id).tasks[0].roomId,'bridge');const routed=model.at(1600).players.find(p=>p.id===owner.id);assert.equal(routed.tasks[0].roomId,target);assert.deepEqual(routed.position,owner.position);
 });
+
+
+test('anchorless archived profiles retain p15 identity without importing final positions or private fields',()=>{
+ const f=fixture({mapped:true,count:15});f.metadata.anchor=null;f.metadata.coverage.partial=true;
+ const profiles=f.anchor.players.map((p,i)=>({...p,name:`Archived ${i+1}`,color:'#8fd3c1',badge:String(i+1),position:{x:-1000,y:-1000},privateReasoning:'never copied'})),response={metadata:f.metadata,replay:[],players:profiles};
+ const model=createReplayModel(response),frame=model.at(1500);assert.equal(frame.players.length,15);assert.equal(frame.players[14].name,'Archived 15');assert.equal(frame.players[14].badge,'15');assert(frame.players.every(p=>p.position===null&&p.role===null&&p.tasks.length===0));assert(!JSON.stringify(frame).includes('never copied'));
+ for(const mutate of [p=>p.push({...p[0]}),p=>p[14].id='p1',p=>p[14].id='__proto__',p=>p[14].name={private:'never'},p=>p[14].color='url(private)',p=>p[14].badge='16']){const invalid=structuredClone(response);mutate(invalid.players);assert.throws(()=>createReplayModel(invalid),/profile|roster/);}
+});
+
+test('recorded complete starts own membership ahead of contradictory final profile rosters',()=>{
+ const f=fixture({count:15});f.metadata.anchor=null;f.metadata.coverage.partial=true;
+ const start={type:'started',at:1000,sequence:1,worldVersion:1,positions:f.anchor.players.map(p=>({id:p.id,position:{...p.position}})),roles:f.anchor.players.map(p=>({id:p.id,role:p.role})),tasks:[]};
+ const model=createReplayModel({metadata:f.metadata,replay:[start],players:[{id:'unrecorded',name:'Final-only',color:'#8fd3c1'}]}),frame=model.at(1000);assert.equal(frame.players.length,15);assert(frame.players.some(p=>p.id==='p15'));assert(!frame.players.some(p=>p.id==='unrecorded'));
+});

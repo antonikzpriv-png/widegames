@@ -187,7 +187,13 @@ async function create(mode,preferences){
    if(preferences?.settings)data=await request(roomPath(createdId,'/settings'),{method:'POST',body:{settings:preferences.settings,generation:data.generation},signal:controller.signal});
    const profile=data.seats?.find(p=>p.id===data.seatId);
    if(profile&&preferences?.profile&&(profile.color!==preferences.profile.color||profile.name!==preferences.profile.name))data=await request(roomPath(createdId,'/profile'),{method:'POST',body:{name:preferences.profile.name,color:preferences.profile.color,generation:data.generation},signal:controller.signal});
-  }catch(error){if(current===epoch)await openRoom(createdId,data);throw error;}
+  }catch(error){
+   if(current!==epoch||controller?.signal.aborted||error?.name==='AbortError')return;
+   const opening=openRoom(createdId,data),opened=controller,openingEpoch=epoch;
+   await opening;
+   if(epoch===openingEpoch&&roomId===createdId&&controller===opened&&!opened.signal.aborted&&!document.hidden)tell(`Your room is open, but some setup changes could not be confirmed: ${error.message} Review the settings before starting.`,true);
+   return;
+  }
   if(current!==epoch)return;
   await openRoom(createdId,data);
   tell(mode==='human'?'Your crew seat is ready.':'Spectator room ready.');

@@ -55,10 +55,12 @@ function project(r,at){
  // Recorded anchors/full start samples own actor identity. Supplied final
  // profiles may decorate that roster but never invent unrecorded positions.
  const validRows=(rows,min=4)=>Array.isArray(rows)&&rows.length>=min&&rows.length<=15&&new Set(rows.map(p=>p?.id)).size===rows.length&&rows.every(p=>typeof p?.id==='string'&&/^[A-Za-z][A-Za-z0-9_-]{0,31}$/.test(p.id)&&!['constructor','prototype','__proto__'].includes(p.id));
- const rows=anchor?.players??(validRows(started?.positions)?started.positions:players??started?.roles??CHARACTERS);
+ const profiles=players??response?.players;
+ if(profiles!==undefined&&(!validRows(profiles,0)||profiles.some(p=>p.name!==undefined&&(typeof p.name!=='string'||!p.name.trim()||p.name.length>64||/[\x00-\x1f\x7f]/.test(p.name))||p.color!==undefined&&(typeof p.color!=='string'||!/^#[a-fA-F0-9]{6}$/.test(p.color))||p.badge!==undefined&&(typeof p.badge!=='string'||!/^(?:[1-9]|1[0-5])$/.test(p.badge)))))throw new Error('Invalid replay profiles.');
+ const rows=anchor?.players??(validRows(started?.positions)?started.positions:validRows(started?.roles)?started.roles:profiles??started?.roles??CHARACTERS);
  if(!validRows(rows,anchor?4:0))throw new Error('Invalid replay roster.');
  if(anchor)for(const recorded of [started?.positions,started?.roles])if(validRows(recorded)&&(recorded.length!==rows.length||recorded.some(p=>!rows.some(q=>q.id===p.id))))throw new Error('Replay roster does not match recorded metadata.');
- const roster=rows.map(({id})=>{const profile=players?.find(p=>p.id===id)??PERSONAS.find(p=>p.id===id)??{id,name:id};return {id,name:profile.name||id,color:profile.color,...(profile.badge?{badge:profile.badge}:{})};});
+ const roster=rows.map(({id})=>{const profile=profiles?.find(p=>p.id===id)??PERSONAS.find(p=>p.id===id)??{id,name:id};return {id,name:profile.name||id,color:profile.color,...(profile.badge?{badge:profile.badge}:{})};});
  const initial=base(roster);if(anchor?.settings)initial.settings=copy(settings);
  if(anchor){
   if(anchor.bodies.some(b=>!point(b.position)))throw new Error('Invalid replay metadata geometry');

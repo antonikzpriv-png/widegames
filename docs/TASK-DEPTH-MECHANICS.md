@@ -1,3 +1,7 @@
+# Tactical integration note
+
+Current main’s authored station challenges remain available. Configured tactical watches blend these stations with the modern catalogue described below; walking/illustrated watches use the modern catalogue. Equipment-only excludes native glyph inspection as well as modern CAPTCHA tasks, mixed mode includes all supported equipment and CAPTCHA, and CAPTCHA-only uses the 13 modern families. Historical matches retain their recorded assignment protocol and progress.
+
 # Detailed task mechanics
 
 New configurable world matches use task edition 3, with 25 task families: 12 equipment panels and 13 readable CAPTCHA-style game puzzles. The host can choose `equipment`, `mixed` or `captcha` through the task mix setting. This is game content, not an external CAPTCHA provider or an authentication/security mechanism. Challenges are generated deterministically from server-created task IDs, so a reconnect shows the same equipment and confirmed progress. Different task identities provide different wire permutations, targets, codes, patterns, gauge values and classifications.

@@ -1,3 +1,7 @@
+# Current Cloud integration
+
+Work uses `/workspace/widegames` and the existing Node ESM/native HTTP/WebSocket stack. Current configurable multiplayer, detailed tasks and waiting-room contracts are in docs/MULTIPLAYER.md and docs/TASK-DEPTH-MECHANICS.md. Preserve all current tactical/illustrated map versions, schemas 1–5, privacy, generation fences and durable budget reservations. Historical Windows paths, empty-remote statements and exclusive ownership allocations below are superseded only as necessary for the user’s current integrated assignment. Use feature branches; this integration’s final merge is explicitly authorized by the user after validation. No deployment or paid provider calls.
+
 # Lantern Wake workflow
 
 Work only in antonikzpriv-png/widegames on D:/Widegames-work. Preserve existing branches, worktrees, credentials, user rooms and accepted actions. main is now the default stable branch; create new codex task branches from latest origin/main. Do not merge, publish or deploy without current user direction. No paid provider calls without explicit permission. Node ESM/native HTTP/ws/plain browser only.

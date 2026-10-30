@@ -179,7 +179,7 @@ export async function createGameServer(config,dependencies={}) {
             const from=data.generation??0;promote(next);
             if(data.state.phase==='ended'){
               const replay=engine.getReplay(data.state).slice(-2000);while(Buffer.byteLength(JSON.stringify(replay))>1000000)replay.shift();
-              next.archives.push({matchId:data.state.id,generation:from,replay,players:engine.getPlayerView(data.state,null,now()).players,...(engine.getReplayMetadata?{metadata:engine.getReplayMetadata(data.state)}:{})});
+              next.archives.push({matchId:data.state.id,generation:from,replay,players:engine.getPlayerView(data.state,null,now()).players,...(engine.getReplayMetadata?{metadata:engine.getReplayMetadata({...data.state,replay})}:{})});
               while(next.archives.length>3||Buffer.byteLength(JSON.stringify(next.archives))>2000000)next.archives.shift();
             }
             next.generation++;next.lastRematch={id:input.id,from};next.state=null;next.startId=null;next.aiContext={};
