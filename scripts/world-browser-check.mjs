@@ -10,7 +10,10 @@ import puppeteer from 'puppeteer-core';
 import {createGameServer} from '../server/transport.mjs';
 import {loadConfig} from '../server/config.mjs';
 import * as engine from '../server/engine/index.mjs';
-import {WORLD,WORLD_STATIONS,WORLD_BELL,distance,findWorldPath,canSeeWorldPoint} from '../shared/world.mjs';
+import {distance} from '../shared/world.mjs';
+import {spatialGeometry} from '../server/engine/world/geometry.mjs';
+import {exerciseNativeStationTask} from './quality-browser-check.mjs';
+const selectedMap=getMap('beacon'),{WORLD,WORLD_STATIONS,WORLD_BELL}=selectedMap.geometry,geometry=spatialGeometry(selectedMap.geometry);
 import {taskKind} from '../public/world/model.mjs';
 import {getMap} from '../shared/maps/index.mjs';
 
@@ -45,18 +48,15 @@ async function shot(name,target=page){const file=name+'.png';await target.screen
 async function chronologicalReplay(name){const events=await page.evaluate(async()=>{const response=await fetch('/api/rooms/'+location.pathname.split('/')[2]+'/replay');if(!response.ok)throw Error('Replay not authorized');return (await response.json()).replay;});check(events.every((event,index)=>Number.isFinite(event.at)&&(!index||event.at>=events[index-1].at)),name+' exports actual replay in chronological order');}
 async function propose(action,target=page){return target.evaluate(async action=>{const response=await fetch('/api/rooms/'+location.pathname.split('/')[2]+'/action',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:crypto.randomUUID(),...action})});return {status:response.status,body:await response.json()};},action);}
 async function navigate(position){
- const room=await view(),route=findWorldPath(room.game.self.position,position);assert(route,'fixture station must be physically reachable');let length=0,previous=room.game.self.position;for(const p of route){length+=distance(previous,p);previous=p;}
+ const room=await view(),route=geometry.path(room.game.self.position,position,{systems:room.game.systems});assert(route,'fixture station must be physically reachable');let length=0,previous=room.game.self.position;for(const p of route){length+=distance(previous,p);previous=p;}
  const result=await propose({type:'navigate',x:position.x,y:position.y});assert.equal(result.status,200);
  skew+=Math.ceil(length/WORLD.speed*1000)+250;
  return until(r=>distance(r.game.self.position,position)<2&&!r.game.self.moving,'physical route arrival');
 }
 async function solveTask(task){
- await navigate(WORLD_STATIONS[task.roomId]);await until(r=>r.game.interactions.some(h=>h.type==='task'&&h.enabled&&h.fields.taskId===task.id),'permitted task');await page.waitForFunction(label=>{const b=document.querySelector('.lw-action-use');return b?.title===label&&b.getAttribute('aria-disabled')==='false';},{},task.label);await page.focus('.lw-world-canvas');await page.keyboard.press('e');await page.waitForSelector('.lw-task-modal',{visible:true});
- const kind=await page.$eval('.lw-puzzle',node=>['wires','tuning','sequence'].find(kind=>node.classList.contains('lw-puzzle-'+kind)));assert(kind);report.puzzleKinds.push(kind);await shot('04-task-'+kind);
- if(kind==='wires')for(const n of [1,2,3]){await page.locator(`button[aria-label^="Left cable ${n}"]`).click();await page.locator(`button[aria-label^="Right socket ${n}"]`).click();}
- else if(kind==='tuning'){await page.$eval('.lw-frequency-slider',node=>{node.value='72';node.dispatchEvent(new Event('input',{bubbles:true}));});await press('Lock frequency');}
- else for(const n of [2,4,1,3])await page.locator(`button[aria-label="Sequence tile ${n}"]`).click();
- await press('Send completed task');await until(r=>r.game.self.tasks.find(t=>t.id===task.id)?.completed,'server task acknowledgement');await page.waitForSelector('.lw-task-modal',{hidden:true});
+ await navigate(WORLD_STATIONS[task.roomId]);await until(r=>r.game.interactions.some(h=>h.type==='task'&&h.enabled&&h.fields.taskId===task.id),'permitted task');await page.waitForFunction(label=>{const b=document.querySelector('.lw-action-use');return b?.title===label&&b.getAttribute('aria-disabled')==='false';},{},task.label);await page.focus('.lw-world-canvas');await page.keyboard.press('e');await page.waitForSelector('.lw-station-modal',{visible:true});
+ report.puzzleKinds.push(task.challenge.kind);await shot('04-task-'+task.challenge.kind);
+ await exerciseNativeStationTask({page,taskId:task.id,readRoom:view});await until(r=>r.game.self.tasks.find(t=>t.id===task.id)?.completed,'server task acknowledgement');await page.waitForSelector('.lw-task-modal',{hidden:true});
 }
 async function finish(){
  for(let step=0;step<450;step++){
@@ -66,13 +66,13 @@ async function finish(){
  throw Error('Demo world match did not finish within bounded QA steps');
 }
 function seedForHuman(){
- for(let i=0;i<2500;i++){const seed='world-browser-'+i,state=engine.createMatch({id:'seed',seed}),self=state.players[0];if(self.role==='crew'&&self.tasks.some(t=>t.roomId==='bridge')&&new Set(self.tasks.map((task,index)=>taskKind(task,index))).size===3)return seed;}
- throw Error('Normal generated tasks must expose three actual puzzle kinds, including a Bridge task');
+ for(let i=0;i<2500;i++){const seed='world-browser-'+i,state=engine.createMatch({id:'seed',seed,tactical:true,stationTasks:true,map:{id:selectedMap.id,version:selectedMap.version}}),self=state.players[0];if(self.role==='crew'&&self.tasks.some(t=>t.roomId==='bridge')&&new Set(self.tasks.map(task=>task.challenge.kind)).size===4)return seed;}
+ throw Error('Normal generated tasks must expose four actual station kinds, including a Bridge task');
 }
 try{
  const humanSeed=seedForHuman(),probe=net.createServer();await new Promise(resolve=>probe.listen(0,'127.0.0.1',resolve));const port=probe.address().port;await new Promise(resolve=>probe.close(resolve));origin=`http://127.0.0.1:${port}`;
  const config=loadConfig({HOST:'127.0.0.1',PORT:String(port),PUBLIC_ORIGIN:origin,DATA_DIR:path.join(output,'state'),AI_PROVIDER:'demo'});config.beaconRules={...config.beaconRules,lightsDurationMs:1000,communicationsDurationMs:1000,doorDurationMs:1000};config.now=()=>Date.now()+skew;config.tickMs=65;config.ai.decisionIntervalMs=250;
- config.rules={tasksPerCrew:3,moveCooldownMs:200,taskCooldownMs:1200,initialKillCooldownMs:300000,killCooldownMs:15000,sabotageCooldownMs:300000,criticalDurationMs:40000,discussionMs:18000,votingMs:10000,meetingCooldownMs:1000,roamDeadlineMs:180000,maxMatchMs:900000};
+ config.rules={tasksPerCrew:4,moveCooldownMs:200,taskCooldownMs:1200,initialKillCooldownMs:300000,killCooldownMs:15000,sabotageCooldownMs:300000,criticalDurationMs:40000,discussionMs:18000,votingMs:10000,meetingCooldownMs:1000,roamDeadlineMs:180000,maxMatchMs:900000};
  game=await createGameServer(config,{engine:{...engine,createMatch:options=>engine.createMatch({...options,seed:options.mode==='human'?humanSeed:'world-browser-spectator'})}});await new Promise(resolve=>game.server.listen(port,'127.0.0.1',resolve));
  browser=await puppeteer.launch({executablePath:process.env.CHROME_PATH||(process.platform==='win32'?'C:/Program Files/Google/Chrome/Application/chrome.exe':'/usr/bin/google-chrome'),headless:true,userDataDir:path.join(output,'chrome-profile'),args:['--no-sandbox','--disable-dev-shm-usage']});page=await browser.newPage();page.setDefaultTimeout(14000);await page.setViewport({width:1440,height:1000});instrument(page,true);
  const cdp=await page.createCDPSession();await cdp.send('Network.enable');cdp.on('Network.webSocketFrameReceived',event=>{if(event.response.opcode!==1)return;try{const payload=JSON.parse(event.response.payloadData);if(payload.type==='state')safeRoom(payload.room);}catch(error){report.errors.push(String(error));}});
@@ -94,7 +94,7 @@ try{
  await drain();await page.reload({waitUntil:'domcontentloaded'});await page.waitForSelector('.lw-connection[data-connected="true"]');room=await view();check(room.seatId==='p1'&&room.game.self.role==='crew','Reload restores the same world identity and private role');
  skew+=19000;await until(r=>r.game.phase==='voting','voting phase');await press('Skip ejection');await until(r=>r.game.meeting.votes.some(v=>v.playerId==='p1'),'skip ballot');await shot('06-vote');skew+=11000;
  await until(r=>r.game.phase==='roam','roaming resumes after skip');await page.waitForFunction(()=>document.querySelector('.lw-world')?.dataset.phase==='roam');if(await page.$('.lw-role-scene:not([hidden])'))await press('Enter the beacon');if(await page.$('.lw-ejection:not([hidden])'))await press('Return to watch');await solveTask(bridgeTask);
- check(new Set(report.puzzleKinds).size===3,'Three real generated equipment minigames complete through UI and server acknowledgement');
+ check(new Set(report.puzzleKinds).size===4,'Four real generated authoritative station puzzles complete through UI and server acknowledgement');
  await finish();await page.waitForSelector('.lw-results',{visible:true});await press('Open the role-revealed replay');await page.waitForSelector('.lw-replay',{visible:true});check(true,'Human-plus-AI world reaches a rules-based victory and attributed replay');await chronologicalReplay('Human-plus-AI');await shot('07-human-replay');
  await press('Exit');await page.locator('.harbor-watch').click();await page.waitForSelector('.lw-map-select');await page.select('.lw-map-select','stormbreak-annex');await until(r=>r.map?.id==='stormbreak-annex'&&r.settingsRevision===1,'Annex lobby selection');await page.waitForFunction(()=>!document.querySelector('.lw-lobby button.lw-primary')?.disabled);await press('Begin the watch');room=await until(r=>r.mode==='spectator'&&r.game?.worldVersion===1,'all-AI match starts');check(room.game.map.id==='stormbreak-annex'&&room.game.self===null,'All-AI Annex uses the same authoritative engine without a human private view');
  await page.setViewport({width:390,height:844});await shot('08-all-ai-mobile');check(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'World and HUD fit mobile390');await page.setViewport({width:320,height:720});check(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'World and HUD fit mobile320');await page.setViewport({width:844,height:390});check(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'World and HUD fit mobile landscape');
