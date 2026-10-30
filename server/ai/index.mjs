@@ -121,7 +121,7 @@ export function createAiController({ config = {} } = {}) {
         if (typeof commitReservation !== 'function') { fallback(context, state, 'reservation_required'); return demo(); }
         if (strategic) { memory.plannedSituation = situation(view, memory); memory.replanAt = view.serverNow + 30000; }
         const current = () => getCurrentView ? getCurrentView() : view;
-        const valid = () => { const fresh=current();return context.activeMatchId===view.matchId&&fresh?.matchId===view.matchId&&fresh.phase===view.phase&&fresh.self?.id===actor.id&&fresh.self?.alive===true&&JSON.stringify(fresh.map)===JSON.stringify(view.map)&&fresh.meeting?.id===view.meeting?.id&&(!strategic||situation(fresh,memory)===situation(view,memory)); };
+        const valid = () => { const fresh=current();return context.activeMatchId===view.matchId&&fresh?.matchId===view.matchId&&fresh.phase===view.phase&&fresh.self?.id===actor.id&&fresh.self?.alive===true&&fresh.map?.id===view.map?.id&&fresh.map?.version===view.map?.version&&fresh.meeting?.id===view.meeting?.id&&(!strategic||situation(fresh,memory)===situation(view,memory)); };
         let request;
         try { request = makeRequest(view, actor, memory, choices); }
         catch (error) { fallback(context, state, error.code); return demo(); }
