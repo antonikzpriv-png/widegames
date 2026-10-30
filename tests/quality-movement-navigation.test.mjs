@@ -1,7 +1,7 @@
 import test from 'node:test';import assert from 'node:assert/strict';import path from 'node:path';import {pathToFileURL} from 'node:url';
 import {spatialGeometry} from '../server/engine/world/geometry.mjs';import {createSpatialWorld} from '../server/engine/world/index.mjs';import {DEFAULT_BEACON_RULES} from '../shared/beacon.mjs';
-const mapRoot=process.env.QUALITY_MOVEMENT_MAP_ROOT?pathToFileURL(path.resolve(process.env.QUALITY_MOVEMENT_MAP_ROOT)+path.sep):new URL('../',import.meta.url),{getMap,MAP_CATALOG}=await import(new URL('shared/maps/index.mjs',mapRoot));
-const refs=[{id:'beacon',version:1},...MAP_CATALOG.map(({id,version})=>({id,version}))].filter((r,i,all)=>all.findIndex(q=>q.id===r.id&&q.version===r.version)===i),copy=structuredClone;
+const mapRoot=process.env.QUALITY_MOVEMENT_MAP_ROOT?pathToFileURL(path.resolve(process.env.QUALITY_MOVEMENT_MAP_ROOT)+path.sep):new URL('../',import.meta.url),{getMap,TACTICAL_MAP_CATALOG}=await import(new URL('shared/maps/index.mjs',mapRoot));
+const refs=[{id:'beacon',version:1},...TACTICAL_MAP_CATALOG.map(({id,version})=>({id,version}))].filter((r,i,all)=>all.findIndex(q=>q.id===r.id&&q.version===r.version)===i),copy=structuredClone;
 const station=(m,r)=>{const p=m.geometry.WORLD_STATIONS[r]?.position??m.geometry.WORLD_STATIONS[r];return{x:p.x,y:p.y};};
 const ends=m=>[station(m,m.roomLayout[0].id),station(m,m.roomLayout.at(-1).id)];
 const state=(doors=[])=>({systems:{doors:doors.map(id=>({id,closed:true})),transit:{}}});

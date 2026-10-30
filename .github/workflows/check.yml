@@ -48,6 +48,9 @@ jobs:
       - run: npm run test:maps:browser
         env:
           CHROME_PATH: /usr/bin/google-chrome
+      - run: npm run test:illustrated:browser
+        env:
+          CHROME_PATH: /usr/bin/google-chrome
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -72,3 +75,5 @@ jobs:
             _artifacts/spectator-browser-*/*.png
             _artifacts/maps-captcha-browser-*/report.json
             _artifacts/maps-captcha-browser-*/*.png
+            _artifacts/illustrated-maps-browser-*/report.json
+            _artifacts/illustrated-maps-browser-*/*.png

@@ -5,7 +5,7 @@ import * as legacy from '../shared/world.mjs';
 import {STATION_TASK_KINDS} from '../shared/station-contract.mjs';
 test('permanent exact identities and legacy absence differ from newest string selection',()=>{
  const old=getMap();assert.equal(old.version,1);assert.equal(getMap({id:'beacon',version:1}),old);assert.equal(mapFor({}),old);assert.equal(old.geometry.isWalkable,legacy.isWalkable);
- assert.equal(getMap('beacon').version,2);assert.equal(getMap({id:'beacon',version:2}),getMap('beacon'));assert.deepEqual(MAP_CATALOG.map(m=>[m.id,m.version]),[['beacon',2],['stormbreak-annex',1],['storm-foundry',1],['tidal-observatory',1]]);
+ assert.equal(getMap('beacon').version,2);assert.equal(getMap({id:'beacon',version:2}),getMap('beacon'));assert.deepEqual(MAP_CATALOG.map(m=>[m.id,m.version]),[['beacon',2],['stormbreak-annex',1],['storm-foundry',2],['tidal-observatory',2],['beacon-illustrated',2]]);
  for(const ref of [null,{},[],{id:'beacon'},{id:'beacon',version:3},{id:'beacon',version:2,extra:true},{id:'beacon',version:'2'},'toString'])assert.throws(()=>getMap(ref),/Unsupported/);
 });
 test('Beacon 2 publishes fourteen distinct stations, rich collider-aligned art and six task kinds',()=>{

@@ -20,7 +20,8 @@
     "test:task-browser": "node scripts/task-progress-browser-check.mjs",
     "test:maps:browser": "node scripts/maps-captcha-browser-check.mjs",
     "test:spectator:browser": "node scripts/spectator-browser-check.mjs",
-    "perf:spectator": "node scripts/spectator-performance-check.mjs"
+    "perf:spectator": "node scripts/spectator-performance-check.mjs",
+    "test:illustrated:browser": "node scripts/illustrated-maps-browser-check.mjs"
   },
   "dependencies": {
     "ws": "8.22.0"

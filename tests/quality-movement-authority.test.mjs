@@ -4,7 +4,7 @@ import {pathToFileURL} from 'node:url';
 import path from 'node:path';
 const root=process.env.QUALITY_MOVEMENT_ROOT?pathToFileURL(path.resolve(process.env.QUALITY_MOVEMENT_ROOT)+path.sep):new URL('../',import.meta.url);
 const mapRoot=process.env.QUALITY_MOVEMENT_MAP_ROOT?pathToFileURL(path.resolve(process.env.QUALITY_MOVEMENT_MAP_ROOT)+path.sep):root;
-const {getMap,MAP_CATALOG}=await import(new URL('shared/maps/index.mjs',mapRoot));
+const {getMap,TACTICAL_MAP_CATALOG}=await import(new URL('shared/maps/index.mjs',mapRoot));
 const {createSpatialWorld}=await import(new URL('server/engine/world/index.mjs',root));
 const {DEFAULT_BEACON_RULES}=await import(new URL('shared/beacon.mjs',root));
 const copy=structuredClone,record=()=>{};
@@ -30,7 +30,7 @@ test('real engine receipts and private views preserve authority through stop/rev
 });
 
 test('all registered map versions: seeded steering prefixes, safe12 spawns and restart keep geometry isolated',()=>{
- const refs=[{id:'beacon',version:1},...MAP_CATALOG.map(({id,version})=>({id,version}))].filter((r,i,all)=>all.findIndex(q=>q.id===r.id&&q.version===r.version)===i);assert.ok(refs.length>=2);
+ const refs=[{id:'beacon',version:1},...TACTICAL_MAP_CATALOG.map(({id,version})=>({id,version}))].filter((r,i,all)=>all.findIndex(q=>q.id===r.id&&q.version===r.version)===i);assert.ok(refs.length>=2);
  for(const reference of refs){const {map,w,s}=fixture(reference);s.players=Array.from({length:12},(_,i)=>({id:'bounded_'+i,role:i===11?'saboteur':'crew',alive:true}));w.initialize(s,0);assert.equal(new Set(s.players.map(p=>JSON.stringify(p.position))).size,12);for(const p of s.players)assert.ok(w.walkable(p.position,s));let seed=4721;const random=()=>((seed=(Math.imul(seed,1664525)+1013904223)>>>0)/4294967296);
   for(let trace=0;trace<24;trace++){let start;for(let attempt=0;attempt<200;attempt++){const f=map.geometry.WORLD_FLOORS[Math.floor(random()*map.geometry.WORLD_FLOORS.length)],q={x:f.x+random()*f.width,y:f.y+random()*f.height};if(w.walkable(q,s)){start=q;break;}}assert.ok(start);const c=copy(s),p=c.players[0];p.position=start;const dx=random()<.5?-1:1,dy=random()<.5?-1:1;w.input(p,{seq:1,dx,dy},0);const sparse=copy(c);w.settle(sparse,600,record);let previous=copy(start),restored;for(let at=20;at<=600;at+=20){w.settle(c,at,record);assert.ok(w.walkable(p.position,c),JSON.stringify({reference,trace,at,start,previous,position:p.position}));assert.ok(Math.hypot(p.position.x-previous.x,p.position.y-previous.y)<=3.602,JSON.stringify({reference,trace,at,start,previous,position:p.position}));previous=copy(p.position);if(at===300)restored=JSON.parse(JSON.stringify(c));if(at>300)w.settle(restored,at,record);}assert.deepEqual(p.position,sparse.players[0].position);assert.deepEqual(restored.players,c.players);}
  }

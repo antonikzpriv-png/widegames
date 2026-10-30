@@ -1,12 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {getMap,mapFor,MAP_CATALOG,TACTICAL_MAP_CATALOG} from '../shared/maps/index.mjs';
+import {getMap,getLegacyMap,mapFor,MAP_CATALOG,TACTICAL_MAP_CATALOG} from '../shared/maps/index.mjs';
 import {getWorld} from '../shared/world.mjs';
 import {replayMap} from '../shared/replay-v2.mjs';
 test('latest main maps preserve exact geometry and independently scoped task protocol',()=>{
- assert.equal(MAP_CATALOG.length,4);assert.deepEqual(TACTICAL_MAP_CATALOG.map(m=>m.id),['beacon','stormbreak-annex']);
+ assert.equal(MAP_CATALOG.length,5);assert.deepEqual(TACTICAL_MAP_CATALOG.map(m=>m.id),['beacon','stormbreak-annex']);
  for(const id of ['storm-foundry','tidal-observatory']){
-  const map=getMap(id);assert.equal(map,getMap({id,version:1}));assert.equal(mapFor({mapId:id}),map);assert.equal(map.tactical,false);assert.equal(map.taskProtocol,'taskStep');assert.equal(map.tasksPerCrew,12);
+  const map=getLegacyMap(id,1);assert.equal(map,getMap({id,version:1}));assert.equal(mapFor({mapId:id}),map);assert.equal(map.tactical,false);assert.equal(map.taskProtocol,'taskStep');assert.equal(map.tasksPerCrew,12);
   const old=getWorld(id);assert.equal(map.geometry.WORLD,old.WORLD);assert.equal(map.geometry.WORLD_STATIONS,old.WORLD_STATIONS);assert.equal(map.geometry.worldSpawn,old.worldSpawn);assert.deepEqual(map.roomLayout,old.ROOM_LAYOUT);assert(Object.isFrozen(map));assert(Object.isFrozen(map.geometry));assert.deepEqual(map.fixtures.doors,[]);
  }
 });
@@ -34,7 +34,7 @@ test('main replay v1 retains canonical six-seat bounds while expanded-map geomet
 
 test('legacy beacon mapId stays version1 in shared, scene identity and AI geometry',async()=>{
  const {mapReference,resolveViewMap}=await import('../public/world/map-model.mjs'),{worldGeometry}=await import('../server/ai/world.mjs');
- assert.equal(mapFor({mapId:'beacon'}),getMap({id:'beacon',version:1}));assert.deepEqual(mapReference({game:{mapId:'beacon'}}),{id:'beacon',version:1});assert.equal(resolveViewMap({game:{mapId:'beacon'}}).version,1);assert.equal(worldGeometry({mapId:'beacon'}).WORLD.width,1600);assert.equal(worldGeometry({map:{id:'beacon',version:2}}).WORLD.width,3200);
+ assert.equal(mapFor({mapId:'beacon'}),getMap({id:'beacon',version:1}));assert.deepEqual(mapReference({game:{mapId:'beacon'}}),{mapId:'beacon',revision:1});assert.equal(resolveViewMap({game:{mapId:'beacon'}}).version,1);assert.equal(worldGeometry({mapId:'beacon'}).WORLD.width,1600);assert.equal(worldGeometry({map:{id:'beacon',version:2}}).WORLD.width,3200);
 });
 test('known world2 task kind cannot enter tactical relay persistence',async()=>{
  const engine=await import('../server/engine/index.mjs'),{taskProgress}=await import('../server/engine/tasks.mjs'),{createRoom,issueIdentity}=await import('../server/rooms.mjs'),{validateRoomSnapshot}=await import('../server/store.mjs');
