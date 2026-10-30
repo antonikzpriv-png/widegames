@@ -25,7 +25,34 @@ Historical receipts name their exact source and cannot qualify later edits. The 
 
 At **596b5bf74713e1c2e6f5d33e18bde15732fc797d**, npm test passed **1223 tests:1217 pass,0 fail,6 expected skips**,155.446s. The retained sustained strategic fixtures passed without increasing the120000-token production default. Provider calls are mocks. Afterward a separate two-map cross-feature test reproduced doors closing over physical task ghosts; **f465b645c8f4a8a280786a84a578664d747dee17** fixes this through the existing authoritative occupancy check. The focused closure/restart/systems/navigation run passed **21/21**. Red fixture receipts remain preserved.
 
-Current final qualification and screenshot links are recorded after the final integrated runtime is frozen. No pending result is counted as a pass.
+The previous game-runtime qualification is **25ce0700fb16320fdd40f4192ef94b32fe3fb824**. A subsequent faction-compatibility audit found that Group2 ghost classification had been narrowed to crew, instead of current main's all-fallen policy. Its correction and refreshed final runtime qualification follow below;25ce is retained as a historical receipt, not approval of later code.
+
+| Command / qualification | Exact game source | Result / artifact |
+| --- | --- | --- |
+| npm ci | Integrated D: tree |25 packages installed;26 audited;0 reported vulnerabilities |
+| npm run check |25ce070 |255 JavaScript modules syntax-checked |
+| npm run test:browser |25ce070 |26/26;1861 safe views; _artifacts/world-browser-nl3WjL |
+| npm run test:task-browser |25ce070 |42/42;1639 safe views; _artifacts/world-browser-31ez2K |
+| npm run test:tactical-browser |4911f17 |32/32;1568 safe views; _artifacts/tactical-browser-FQaqgR |
+| npm run test:beacon-browser |25ce070 |13/13;602 safe views; _artifacts/beacon-browser-MrTvSd |
+| npm run test:features:browser |25ce070 |19 checks; exit0; _artifacts/ghost-abilities-browser-9eJshB |
+| npm run test:spatial-browser |25ce070 |21 checks; passedtrue; _artifacts/spatial-browser-DPemkq |
+| LW_WORLD_BROWSER=1 node --test tests/world-ui-browser.test.mjs |25ce070 |1 real browser test/19 checks;0 skips; _artifacts/world-ui-24qKGY |
+| Production preparation |25ce070 |30/30,22.243s;429 verified blobs;57 byte-exact assets; [receipt](QUALITY-PRODUCTION.md) |
+
+Every successful browser command used real Windows Chrome156/native events and the actual server, engine and private room routes, with controlled offline fixtures. Critical/ejection outcomes on both maps are recorded in the tactical report. Current/retained task workflows each finish actual human and all-AI matches and export chronological replay. HTTP/WS views, hidden coordinates/roles and owner evidence are checked; zero paid provider calls occurred. The tactical gate predates only the later fallen-chat UI changes; current complete gates cover the retained workflow; the dedicated independent mobile hit-target check is pending.
+
+The first new full suite at25ce reported1267 tests:1256 pass,5 fail,6 skip. All five failures came from a retained label-test DOM missing native Element.contains; actual Chrome flows passed. d05093d adds that DOM behavior without changing any assertion; focused5/5 pass. _artifacts/quality-final-frozen-full.txt retains the red result and quality-final-observer-stub-green.txt the unchanged positive controls. Final combined suite/CI and dedicated independent mobile hit-target requalification are recorded below after execution; pending results are not passes.
+
+CI run [41032751954](https://github.com/antonikzpriv-png/widegames/actions/runs/41032751954) at57d52a3 passed install, syntax, full offline tests, normal browser and retained task browser. It failed the tactical driver when a cancelled route left the actor outside repair range.4911f17 explicitly walks to the accessible panel AFTER preserving the exact collision/cancellation assertions and checks its permission; Windows32/32 passes. Original CI ZIP/report/screenshot are retained in _artifacts/quality-ci57-evidence. A failed runner setup on Windows also preserved that two retained scripts defaulted to Linux Chromium;25ce makes all retained Chrome defaults consistent with the documented platform and CHROME_PATH override. No production permissions/deadlines were loosened.
+
+## Canonical ghost-faction compatibility closure
+
+Core cf73e84/64a0e84 restores current main's shared isGhost policy for all fallen factions. Fallen saboteurs regain private observation/movement/chat, without crew jobs or living powers. The coordinator's f433a4f connects the shared local dispatcher and actual room scheduler: an observer sends one private local message, then its idle planner stops. Restart does not repeat the message or spend. Crew ghosts continue their own real station work. The private Saboteur HUD explains observation rather than promising crew jobs.
+
+The exact-base red Core controls, legal ejection/input/chat/store/authenticated HTTP evidence and forbidden-action assertions remain in QUALITY-PRODUCTION.md. Coordinator added two actual room/controller scheduler fixtures, with only the ejected observer configured nonhuman before match creation. Both fail before transport integration (quality-ghost-scheduler-red.txt) and pass after it. The focused composed run passes19/19 in6.353s, including13 ghost/faction/scheduler controls and retained engine/AI compatibility (quality-ghost-scheduler-green.txt). Provider fetches/reservations/calls/tokens/cost remain zero even with live strategic configuration; all provider boundaries are blocked mocks. No private chat reaches living/public views or replay.
+
+The old merge fixture manufactured a dead saboteur and expected it not to be a ghost. That assertion contradicted current main. It is replaced with legal navigation, meeting, votes and ejection on exact Beacon1/Annex1, positive observer input and no crew jobs, retaining schema/map/history and default-transfer assertions. No saved-state version, identity, accepted receipt, cooldown, source configuration or production budget changed. Full combined/runtime/native requalification follows this last runtime change;25ce receipts above remain explicitly historical.
 
 ## Practical limits and setup
 
