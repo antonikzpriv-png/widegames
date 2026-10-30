@@ -3,6 +3,8 @@ import {randomBytes,createHash} from 'node:crypto';
 import {ROOM_ID,validateRoom} from './store.mjs';
 import {normalizeRoster,publicRoster} from './features/lobbies/index.mjs';
 import {getMap,MAP_CATALOG} from '../shared/maps/index.mjs';
+import {hasTacticalFixtures} from './config.mjs';
+import {CHARACTERS} from '../shared/contracts.mjs';
 import {TACTICAL_PRESET} from '../shared/tactical.mjs';
 
 export class ServiceError extends Error {
@@ -28,12 +30,28 @@ export function issueIdentity(room,host=false) {
 export function cookie(roomId,token,secure) {
   return `${cookieName(roomId)}=${token}; Path=/api/rooms/${roomId}; HttpOnly; SameSite=Strict; Max-Age=604800${secure?'; Secure':''}`;
 }
+/** Reprofile an unstarted lobby only; identities, receipts and budgets are retained. */
+export function selectRoomMap(room,reference,{tactical=true,stationTasks=true}={}) {
+  if(room.state)fail(409,'ALREADY_STARTED','The map is fixed after the watch begins.');
+  const selected=getMap(!tactical&&reference==='beacon'?{id:'beacon',version:1}:reference),systems=tactical&&hasTacticalFixtures(selected);
+  const setup=normalizeRoster({...room.lobby,mode:room.mode,...(room.mode==='spectator'?{humanPlayerIds:[]}:{})});
+  if(!systems&&(setup.players.length!==6||setup.saboteurCount!==1||setup.players.some((p,i)=>p.id!==CHARACTERS[i].id||p.name!==CHARACTERS[i].name||p.color!==CHARACTERS[i].color)||setup.humanPlayerIds.some(id=>id!=='p1')))fail(409,'MAP_ROSTER_UNSUPPORTED','This walking map requires the original six keeper seats and one saboteur.');
+  room.lobby={roster:setup.players,saboteurCount:setup.saboteurCount,humanPlayerIds:setup.humanPlayerIds};
+  room.schema=systems?(stationTasks?4:3):2;
+  room.map={id:selected.id,version:selected.version};
+  if(!systems||Object.hasOwn(room,'mapId'))room.mapId=selected.id;
+  room.settings??={revision:0,requests:[]};
+  if(systems){room.preset={id:TACTICAL_PRESET.id,version:TACTICAL_PRESET.version};if(stationTasks)room.stationTasksVersion=1;else delete room.stationTasksVersion;}
+  else {delete room.preset;delete room.stationTasksVersion;}
+  return room;
+}
 export function createRoom(mode,now,lobbyConfig,{tactical=false,mapId,stationTasks=false}={}) {
   if(typeof stationTasks!=='boolean'||stationTasks&&!tactical)throw new TypeError('Invalid station task mode');
   const id=randomBytes(18).toString('base64url');
   const setup=(lobbyConfig||tactical)?normalizeRoster({...lobbyConfig,mode,...(mode==='spectator'?{humanPlayerIds:[]}: {})}):null;
-  const selected=tactical?getMap(mapId):null;
-  return {schema:stationTasks?4:tactical?3:setup?2:1,...(stationTasks?{stationTasksVersion:1}:{}),...(tactical?{map:{id:selected.id,version:selected.version},preset:{id:TACTICAL_PRESET.id,version:TACTICAL_PRESET.version},settings:{revision:0,requests:[]}}:{}),...(setup?{lobby:{roster:setup.players,saboteurCount:setup.saboteurCount,humanPlayerIds:setup.humanPlayerIds}}:{}),id,mode,createdAt:now,updatedAt:now,identities:[],state:null,startId:null,aiContext:{}};
+  const room={schema:setup?2:1,...(setup?{lobby:{roster:setup.players,saboteurCount:setup.saboteurCount,humanPlayerIds:setup.humanPlayerIds}}:{}),id,mode,createdAt:now,updatedAt:now,identities:[],state:null,startId:null,aiContext:{}};
+  if(tactical||mapId!==undefined)selectRoomMap(room,mapId===undefined?'beacon':!tactical&&mapId==='beacon'?{id:'beacon',version:1}:mapId,{tactical,stationTasks});
+  return room;
 }
 
 export function createRooms({store,engine,ai,now=Date.now,maxActiveRooms=12,roomTtlMs=3600000,lobbyConfig,tacticalMode=false,mapId,stationTasksMode=false}) {
@@ -56,7 +74,7 @@ export function createRooms({store,engine,ai,now=Date.now,maxActiveRooms=12,room
     const notices=Array.isArray(data.aiContext.notices)?data.aiContext.notices.filter(x=>typeof x==='string').slice(-10).map(x=>x.slice(0,240)):[];
     if(safeAi.mode==='live')notices.push(safeAi.strategy==='strategic'?'Strategic AI: model plans and council; local legal execution.':'Hybrid AI: live model council; navigation and deck actions use local policy.');
     if(room.aiBlocked)notices.push('AI paused because durable storage or budget reservation failed.');
-    return {...(data.features?{features:structuredClone(data.features)}:{}),...(data.schema===4?{stationTasksVersion:1}:{}),...([3,4].includes(data.schema)?{map:{...data.map},preset:{...data.preset},availableMaps:MAP_CATALOG,settingsRevision:data.settings.revision}:{}),...([2,3,4].includes(data.schema)?{roster:data.lobby.roster.map(({id,name,color,persona})=>({id,name,color,persona}))}:{}),roomId:data.id,mode:data.mode,isHost:identity.host,seatId:identity.seatId,phase:data.state?.phase||'lobby',connection:'connected',game:data.state?engine.getPlayerView(data.state,identity.seatId,now()):null,ai:safeAi,notices,createdAt:data.createdAt};
+    return {...(data.features?{features:structuredClone(data.features)}:{}),...(data.schema===4?{stationTasksVersion:1}:{}),...(data.mapId?{mapId:data.mapId}:{}),...(data.map?{map:{...data.map},...(data.preset?{preset:{...data.preset}}:{}),availableMaps:MAP_CATALOG,...(data.settings?{settingsRevision:data.settings.revision}:{})}:{}),...([2,3,4].includes(data.schema)?{roster:data.lobby.roster.map(({id,name,color,persona})=>({id,name,color,persona}))}:{}),roomId:data.id,mode:data.mode,isHost:identity.host,seatId:identity.seatId,phase:data.state?.phase||'lobby',connection:'connected',game:data.state?engine.getPlayerView(data.state,identity.seatId,now()):null,ai:safeAi,notices,createdAt:data.createdAt};
   }
   async function restore() {
     for(const data of await store.load()) {
@@ -70,10 +88,10 @@ export function createRooms({store,engine,ai,now=Date.now,maxActiveRooms=12,room
     }
     if(rooms.size>maxActiveRooms)throw new Error('Persisted rooms exceed configured room limit');
   }
-  async function create(mode,features) {
+  async function create(mode,features,selectedMap=mapId) {
     const work=creationQueue.catch(()=>{}).then(async()=>{
       if(rooms.size>=maxActiveRooms)fail(429,'ROOM_LIMIT','All room slots are in use.');
-      const data=createRoom(mode,now(),lobbyConfig,{tactical:tacticalMode,mapId,stationTasks:stationTasksMode});if(features!==undefined)data.features=parseFeatures(features);const issued=issueIdentity(data,true);await store.save(data);
+      const data=createRoom(mode,now(),lobbyConfig,{tactical:tacticalMode,mapId:selectedMap??undefined,stationTasks:stationTasksMode});if(features!==undefined)data.features=parseFeatures(features);const issued=issueIdentity(data,true);await store.save(data);
       const room=entry(data);rooms.set(data.id,room);return {room,...issued};
     });creationQueue=work;return work;
   }

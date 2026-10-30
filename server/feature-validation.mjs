@@ -19,7 +19,7 @@ export function validateFeatures(room){
  if(room.features)assert(room.features.deathPolicy===f.deathPolicy&&room.features.abilities===f.abilities);
  const tasks=s.players.flatMap(p=>p.tasks||[]);
  assert(tasks.length===s.rules.tasksPerCrew*s.players.filter(p=>p.role==='crew').length&&new Set(tasks.map(t=>t.id)).size===tasks.length);
- assert(tasks.every(t=>object(t)&&/^t[a-f0-9]{20}$/.test(t.id)&&typeof t.completed==='boolean'&&(s.map?getMap(s.map).roomLayout:ROOM_LAYOUT).some(r=>r.id===t.roomId)&&typeof t.label==='string'&&t.label.length<=200));
+ assert(tasks.every(t=>object(t)&&/^t[a-f0-9]{20}$/.test(t.id)&&typeof t.completed==='boolean'&&(s.map||s.mapId?getMap(s.map??{id:s.mapId,version:1}).roomLayout:ROOM_LAYOUT).some(r=>r.id===t.roomId)&&typeof t.label==='string'&&t.label.length<=200));
  assert(new Set(s.bodies.map(b=>b.playerId)).size===s.bodies.length&&s.bodies.every(b=>s.players.some(p=>p.id===b.playerId&&!p.alive)));
  if(f.deathPolicy==='ghost-tasks'){
   assert(Array.isArray(s.ghostChat)&&s.ghostChat.length<=R.ghostChatLimit);
