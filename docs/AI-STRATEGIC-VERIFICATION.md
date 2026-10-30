@@ -91,3 +91,24 @@ selection and lifecycle behavior use mocked providers through the real adapter.
 Live model quality, latency and billing are deliberately untested. The initial
 sandbox audit subprocess failures (`spawnSync git EPERM`) were rerun successfully
 with the required process permissions.
+
+## Pre-merge revalidation, 2026-10-30
+
+Re-fetched main (still `90bb6e8`) and audited the PR's source, safe-view boundaries,
+reservation order and lifecycle fences. Fresh `npm ci`, `npm run check` and
+`npm test` passed: 96 modules; 462 passed, zero failed, six existing opt-in skips.
+The additional `LW_WORLD_BROWSER=1` UI browser suite passed without skips, with
+evidence in `_artifacts/world-ui-n3Qhf0/`.
+
+GitHub run `40962864493` had passed the offline suite but failed the browser driver:
+its fixed +19-second jump after reload overshot the 10-second voting window when
+reload took eight real seconds. The driver now advances only to the engine's
+current deadline and waits for actual app connection readiness after reload.
+No engine timing, game rules, AI budgets or assertions were weakened.
+
+A negative control retaining the old fixed jump, with a seven-second post-reload
+delay, reproduced `Timed out: voting phase` in
+`_artifacts/world-browser-bKiGLG/`. The deadline-aware delayed fixture passed in
+`_artifacts/world-browser-IUM73i/`; the final normal browser driver also passed
+both complete match modes in `_artifacts/world-browser-XZfnyw/`.
+GitHub checks on the updated head must pass before the authorized merge proceeds.
