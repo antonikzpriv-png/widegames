@@ -1,9 +1,16 @@
+import {taskInput} from '../engine/tasks.mjs';
+import {createSpatialWorld} from '../engine/world/index.mjs';
 import {nextStationInput} from '../../shared/station-challenges.mjs';
 import {getMap} from '../../shared/maps/index.mjs';
 import { CHARACTERS, ROOM_LAYOUT } from '../../shared/contracts.mjs';
 import { WORLD, WORLD_STATIONS, WORLD_BELL, distance, findWorldPath, canSeeWorldPoint } from '../../shared/world.mjs';
 
 import {localGoals,localNavigationIntent} from '../features/strategy/index.mjs';
+
+const navigators=new Map();
+export function worldGeometry(view){return getMap(view.map).geometry;}
+export function worldRoute(view,target){const self=view.self;if(!self?.position||self.transit||view.systems?.selfTransit||(!self.alive&&!(self.ghost===true&&self.role==='crew')))return null;const map=getMap(view.map),key=map.id+':'+map.version;if(!navigators.has(key))navigators.set(key,createSpatialWorld(map.geometry));return navigators.get(key).navigation({id:self.id,alive:true,position:self.position},target,view.serverNow,{systems:{doors:view.systems?.doors??[],transit:{}}});}
+export function worldTaskAction(view,task){if(!task||task.completed)return {type:'wait'};if(task.kind==='station'){const input=nextStationInput(task.challenge);return input?{type:'taskInteract',taskId:task.id,...input}:{type:'wait'};}if(task.progress&&typeof task.progress==='object'){const p=task.progress;if(p.kind==='repair'&&p.index===3&&view.serverNow<p.readyAt)return {type:'wait'};return p.index<p.total?{type:'taskStep',taskId:task.id,step:p.index,input:taskInput(task)}:{type:'task',taskId:task.id};}return {type:'task',taskId:task.id};}
 
 const ordered = values => [...values].sort((a, b) => a.id.localeCompare(b.id));
 const point = value => value && Number.isFinite(value.x) && Number.isFinite(value.y);
@@ -25,6 +32,7 @@ function pathLength(start, target) {
 
 /** World proposals use public geometry and the actor's safe view, never state. */
 export function worldCandidates(view, memory, suspect) {
+  const optional=featureCandidates(view,memory);if(optional)return optional;
   if(view.beaconVersion===1)return beaconCandidates(view,memory,suspect);
   const allowed = new Set(view.availableActions ?? []);
   const wait = () => allowed.has('wait') ? [{ type: 'wait' }] : [];
@@ -75,7 +83,7 @@ export function worldCandidates(view, memory, suspect) {
     }
   } else {
     const here = ordered((self.tasks ?? []).filter(task => !task.completed && task.roomId === self.roomId));
-    if (allowed.has('task') && ready(view, 'taskAt') && at(view, WORLD_STATIONS[self.roomId], WORLD.interactionRadius) && here.length) return [{ type: 'task', taskId: here[0].id }];
+    if (allowed.has('task') && ready(view, 'taskAt') && at(view, WORLD_STATIONS[self.roomId], WORLD.interactionRadius) && here.length) return [worldTaskAction(view,here[0])];
     if (!critical?.active && self.meetingsRemaining > 0 && ready(view, 'meetingAt') && suspect !== 'skip') {
       if (allowed.has('meeting') && at(view, WORLD_BELL, WORLD.interactionRadius)) return [{ type: 'meeting' }];
       return navigate(bellApproach());
@@ -125,7 +133,7 @@ function beaconCandidates(view,memory,suspect){
   const repair=controls.find(a=>a.type==='systemRepair');if(repair)return [proposal(repair)];
   const goal=localGoals.select(view,memory);
   if(goal?.goalId==='repair'){memory.goal={id:goal.goalId,at:view.serverNow};return navigate(goal.target);}
-  const task=controls.find(h=>h.type==='task');if(task&&ready(view,'taskAt')){const own=self.tasks.find(t=>t.id===task.fields.taskId);if(own?.kind==='station'){const input=nextStationInput(own.challenge);return input?[{type:'taskInteract',taskId:own.id,...input}]:wait();}return [proposal(task)];}
+  const task=controls.find(h=>h.type==='task');if(task&&ready(view,'taskAt')){const own=self.tasks.find(t=>t.id===task.fields.taskId);return own?[worldTaskAction(view,own)]:wait();}
   if(goal?.goalId==='investigate'){const device=controls.find(h=>h.type==='investigate'&&h.fields.deviceId===goal.deviceId);if(device){memory.lastTerminalAt=view.serverNow;memory.tacticalReads=(memory.tacticalReads??0)+1;return [proposal(device)];}return navigate(goal.target);}
   if(!view.sabotage?.active&&suspect!=='skip'&&ready(view,'meetingAt')&&self.meetingsRemaining>0){if(allowed.has('meeting'))return [{type:'meeting'}];return navigate(WORLD_BELL);}
   if(goal){memory.goal={id:goal.goalId,at:view.serverNow};return navigate(goal.target);}
@@ -143,4 +151,24 @@ function beaconCandidates(view,memory,suspect){
  const doors=controls.find(a=>a.type==='systemRepair'&&a.fields.systemId==='door');if(doors)return [proposal(doors)];
  const offset=(view.players??[]).findIndex(p=>p.id===self.id);for(let step=0;step<ROOM_LAYOUT.length;step++){const station=WORLD_STATIONS[ROOM_LAYOUT[((memory.patrol??0)+Math.max(0,offset)+step)%ROOM_LAYOUT.length].id];if(point(station)&&!at(view,station,WORLD.interactionRadius))return navigate(station);}
  return wait();
+}
+
+/** Optional features execute locally from exact advertised capabilities only. */
+function featureCandidates(view,memory){
+ const self=view.self,allowed=new Set(view.availableActions??[]),geo=worldGeometry(view),wait=()=>allowed.has('wait')?[{type:'wait'}]:[];
+ if(!self?.position||self.transit||view.systems?.selfTransit)return null;
+ const navigate=target=>{const route=worldRoute(view,target);if(!allowed.has('navigate')||!route||self.moving&&self.destination&&geo.distance(self.destination,target)<1)return wait();return [{type:'navigate',x:target.x,y:target.y}];};
+ if(!self.alive&&self.ghost===true&&self.role==='crew'){
+  if(allowed.has('ghostSay')&&!memory.ghostSpoken)return [{type:'ghostSay',text:'Fallen channel: I will finish my remaining jobs. The living cannot hear this.'}];
+  const tasks=ordered((self.tasks??[]).filter(t=>!t.completed));
+  const here=tasks.find(t=>geo.WORLD_STATIONS[t.roomId]&&geo.distance(self.position,geo.WORLD_STATIONS[t.roomId])<=geo.WORLD.interactionRadius);
+  if(here&&ready(view,'taskAt')&&(allowed.has('task')||allowed.has('taskStep')||allowed.has('taskInteract')))return [worldTaskAction(view,here)];
+  if(self.moving)return wait();
+  const next=tasks.map(task=>{const target=geo.WORLD_STATIONS[task.roomId],route=target&&worldRoute(view,target);let length=Infinity;if(route){length=0;let p=self.position;for(const q of route){length+=geo.distance(p,q);p=q;}}return{task,target,length};}).sort((a,b)=>a.length-b.length||a.task.id.localeCompare(b.task.id))[0];
+  return next&&Number.isFinite(next.length)?navigate(next.target):wait();
+ }
+ if(!self.alive)return [];
+ if(allowed.has('protect')){const target=ordered((view.players??[]).filter(p=>p.id!==self.id&&p.alive===true&&point(p.position)&&geo.distance(self.position,p.position)<=140))[0]??(view.players??[]).find(p=>p.id===self.id);if(target)return[{type:'protect',targetId:target.id}];}
+ if(allowed.has('decoy'))return[{type:'decoy',x:self.position.x,y:self.position.y}];
+ return null;
 }
