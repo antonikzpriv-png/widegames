@@ -34,3 +34,35 @@ Remote actors interpolate only; no remote extrapolation. Missing/unknown/dead ac
 Phase, map, match, owner, death, transit, vision-radius/lights and closed-door context changes revoke pending motion. Same-owner older versions cannot resurrect prior visibility/phase. clear() releases all samples and intent; Frontend must call it on room/account/hidden/dispose boundaries because game alone carries no room/account lifecycle. This module sends no requests and confers no gameplay authority.
 
 node --test tests/quality-movement-presentation.test.mjs:8/8 pass first run, zero skips. Original ActorSamples is retained in the immutable baseline archive for the separate bounded timing comparison. Pure next-frame16ms direction displacement is0 for original no-prediction samples and2.88 units for MotionTrack, not a browser/physical latency measurement. Timing artifact: _artifacts/quality-movement-presentation-profile.json. Manager/Reviewer independently qualify integration and native feel.
+
+## Final continuous-collision closure and Beacon2 qualification
+
+This follow-up supersedes the provisional solver in ee56faacba7b6236c49cd805f6771051d861c832 and refines helper milestone f40ba241426e7686662af573a4307de0de9eb237. Integrate all three commits in order. The public MotionTrack/factory APIs remain unchanged. Ended presentation retains permitted revealed role fields; pre-end private tasks/routes/motion are never stored in sample.player. Impossible steering anchors farther from current position than elapsed authoritative speed now reject restoration.
+
+A bounded seeded extension found a real candidate flaw at Annex trace17: partial contact recomputation advanced4.34 units over20ms (limit3.6), and a subsequent candidate could interpolate into the concave floor seam. Preserved evidence: quality-movement-beacon2-first.txt, quality-movement-beacon2-contact-red.txt; an intermediate file named beacon2-green actually records a failure and is NOT passing evidence. Fix: each final partial step samples timed segments of the canonical full step. Continuous collision uses exact union-of-floor intervals for all nine existing body probes and rounded rectangle sweeps for props/doors. Steering, navigation and accepted-route invalidation share that segment check; helper presentation independently checks the same continuous boundary. Numerical stop margin is under0.000001 world unit per contact; test displacement tolerance is0.002. No actual timestamps or replay events are fabricated.
+
+The short-seam case is independently a foundation defect: two legal Annex endpoints less than4 units apart contain an invalid body position; original sampled route validation accepts it. Original controls now reproduce3/3 failures at exact941e857; current checks pass, including a collision-safe planned detour. Historical logs/manifests remain local ignored artifacts. The retained raw foundation has308 verified Git blobs; the read-only map-owner snapshot has10 verified shared blobs at47cf97681eb5ba5c550e3ec4ea0cfe464c6ca639, not an assertion about its uncommitted files or full root integration.
+
+Final commands from the assigned worktree (TEMP/TMP D:/Widegames-work/temp; no dependency install):
+
+~~~powershell
+$env:QUALITY_MOVEMENT_MAP_ROOT=(Join-Path (Get-Location) '_artifacts/quality-map-47cf976')
+node --test tests/quality-movement-authority.test.mjs
+Remove-Item Env:QUALITY_MOVEMENT_MAP_ROOT
+node --test tests/quality-movement-presentation.test.mjs tests/world-engine-lifecycle.test.mjs tests/world-engine-replay.test.mjs tests/beacon-world-engine.test.mjs tests/tactical-map-boundary.test.mjs tests/tactical-map-spatial.test.mjs
+~~~
+
+Results:10/10 authority checks with original Beacon1, Annex1 and exact Beacon2;49/49 presentation/legacy/privacy/lifecycle/replay/map checks, zero skips/failures. New-map trace coverage is24 seeded starts per descriptor,72 leases/2160 timed settlements plus12 safe arbitrary-ID spawns per map and JSON restart. Ordinary tests use current checkout source; only explicit QUALITY_MOVEMENT_MAP_ROOT reads the pinned shared snapshot. Original fixtures explicitly select retained version1 rather than resolving a newer string default. No exhaustive new-map all-pairs or browser claim. Focused evidence: _artifacts/quality-movement-beacon2-final.txt and _artifacts/quality-movement-final-compatibility.txt. Original desired failures: _artifacts/quality-movement-original-three-red.txt.
+
+Final spatial benchmark uses the same50-lease/12-actor/300-sample scenarios and is recorded in _artifacts/quality-movement-profile.json (script quality-profile.mjs). Values below supersede provisional timings above; original/initial/ee56 profiles remain separately retained.
+
+| Map/scenario | Original median/p95 ms | Final median/p95 ms | Final max ms |
+| --- | --- | --- | --- |
+| Beacon room |0.109 /0.310 |0.561 /1.228 |2.506 |
+| Beacon corner |0.406 /0.513 |1.600 /2.504 |2.601 |
+| Annex room |0.186 /0.283 |0.651 /1.241 |2.465 |
+| Annex corner |0.550 /0.650 |0.963 /1.783 |2.351 |
+
+Presentation-only final profile (12 visible static keepers,100 warmup then1000 frames; timing at() for12 actors, snapshot updates excluded) measured median0.095ms/p950.211ms/max0.761ms versus original0.0014/0.0025/0.253ms. Exact fixture/script/result: _artifacts/quality-presentation-profile.mjs and quality-movement-presentation-profile.json. Additional collision/privacy work costs CPU. No unsupported FPS, physical input latency or full-server throughput claim.
+
+Handoff: Frontend must delegate ActorSamples, forward local direction packets to setIntent and clear on hidden/room/account/dispose. Coordinator must retain chronological geometry settlement and explicit schema5 root/store dispatch. New maps were read-only geometry qualification, not station-task/default schema5 transport approval. Independent Reviewer/manager approval and native browser feel remain outstanding. No root/shared/other-owner edits, installs, providers, Chrome, full suite, main changes or pushes performed. This bounded implementation assignment is complete.

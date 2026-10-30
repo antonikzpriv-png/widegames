@@ -12,7 +12,19 @@ export class MotionTrack{
  }
  clear(){this.samples.clear();this.context=null;this.intent=null;this.map=null;this.doors=[];this.vision=null;this.selfId=null;this.active=false;this.version=-1;this.receivedAt=-Infinity;this.inputSeq=0;this.owner=null;this.reveal=false;}
  walk(p){const g=this.map?.geometry;if(!g||!point(p)||!g.isWalkable(p))return false;return !this.doors.some(r=>{const x=Math.max(r.x,Math.min(p.x,r.x+r.width)),y=Math.max(r.y,Math.min(p.y,r.y+r.height));return Math.hypot(p.x-x,p.y-y)<g.WORLD.bodyRadius||inside(p,r);});}
- segment(a,b){if(!this.walk(a)||!this.walk(b))return false;const count=Math.max(1,Math.ceil(distance(a,b)/2));for(let i=1;i<count;i++)if(!this.walk({x:a.x+(b.x-a.x)*i/count,y:a.y+(b.y-a.y)*i/count}))return false;return true;}
+ segment(a,b){
+  if(!this.walk(a)||!this.walk(b))return false;
+  const g=this.map.geometry,r=g.WORLD.bodyRadius,d=r/Math.SQRT2,x=b.x-a.x,y=b.y-a.y;
+  function interval(p,rect,strict=false){let low=0,high=1;for(const [v,delta,min,size] of [[p.x,x,rect.x,rect.width],[p.y,y,rect.y,rect.height]]){if(Math.abs(delta)<1e-12){if(strict?v<=min||v>=min+size:v<min||v>min+size)return null;}else{let first=(min-v)/delta,last=(min+size-v)/delta;if(first>last)[first,last]=[last,first];low=Math.max(low,first);high=Math.min(high,last);if(strict?low>=high:low>high)return null;}}return [low,high];}
+  const floors=g.WORLD_FLOORS.filter(f=>f.x<=Math.max(a.x,b.x)+r&&f.x+f.width>=Math.min(a.x,b.x)-r&&f.y<=Math.max(a.y,b.y)+r&&f.y+f.height>=Math.min(a.y,b.y)-r);
+  for(const [ox,oy] of [[0,0],[r,0],[-r,0],[0,r],[0,-r],[d,d],[-d,d],[d,-d],[-d,-d]]){const ranges=floors.map(f=>interval({x:a.x+ox,y:a.y+oy},f)).filter(Boolean).sort((a,b)=>a[0]-b[0]);let covered=0;for(const [low,high] of ranges){if(low>covered+1e-12)break;covered=Math.max(covered,high);}if(covered<1-1e-9)return false;}
+  for(const rect of [...g.WORLD_OBSTACLES,...this.doors]){
+   for(const box of [{x:rect.x-r,y:rect.y,width:rect.width+2*r,height:rect.height},{x:rect.x,y:rect.y-r,width:rect.width,height:rect.height+2*r}]){const span=interval(a,box,true);if(span&&span[0]<1-1e-9)return false;}
+   const speed=x*x+y*y;if(!speed)continue;
+   for(const cx of [rect.x,rect.x+rect.width])for(const cy of [rect.y,rect.y+rect.height]){const px=a.x-cx,py=a.y-cy,dot=px*x+py*y,disc=dot*dot-speed*(px*px+py*py-r*r);if(disc<=0||dot>=0)continue;const hit=(-dot-Math.sqrt(disc))/speed;if(hit>=-1e-9&&hit<1-1e-9)return false;}
+  }
+  return true;
+ }
  permitted(p){
   if(!point(p))return false;if(this.reveal)return true;
   const v=this.vision,g=this.map?.geometry;if(!point(v?.origin)||!Number.isFinite(v.radius))return true;
@@ -39,6 +51,7 @@ export class MotionTrack{
    seen.add(p.id);const old=this.samples.get(p.id),prior=old?this.at(p.id,at):null,to=copy(p.position);
    const from=prior&&this.segment(prior,to)&&this.permitted(prior)?prior:to;
    const player={id:p.id,name:p.name,color:p.color,alive:true,status:p.status,roomId:p.roomId,position:copy(to),moving:p.id===this.selfId?!!game.self.moving:!!old&&distance(old.to,to)>.001};
+   if(this.reveal&&['crew','saboteur'].includes(p.role))player.role=p.role;
    this.samples.set(p.id,{from:copy(from),to,at,player});
    if(p.id===this.selfId&&this.intent&&(this.intent.dx||this.intent.dy)){this.intent.origin=copy(to);this.intent.at=at;}
   }
