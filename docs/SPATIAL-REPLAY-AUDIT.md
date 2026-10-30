@@ -34,6 +34,15 @@ Replay now records independent numeric sequences even when an effect owns the ev
 
 Four integration regressions cover effect IDs and chronology, ward blocking/echo expiry, ghost movement/task steps/chat exclusion, and truncated feature anchors. The ghost scheduler fixture was also serialized through the room queue so an in-flight idle AI commit cannot overwrite the fixture's death. No scheduler assertion or production permission was relaxed.
 
-Final combined validation: **111 modules checked; 498 tests, 492 passed, zero failed, six skipped**. Browser checks passed sequentially: primary **42**, independent UI **19**, ghost/ability **19**, and spatial replay **21**. The primary runner's deliberate direct-finish requests generated its expected HTTP 409 console entries; no unexpected browser exceptions were reported. The replay browser check and its artifacts are now registered in CI.
+Task/ghost combined validation: **111 modules checked; 498 tests, 492 passed, zero failed, six skipped**. Browser checks passed sequentially: primary **42**, independent UI **19**, ghost/ability **19**, and spatial replay **21**. The primary runner's deliberate direct-finish requests generated its expected HTTP 409 console entries; no unexpected browser exceptions were reported. The replay browser check and its artifacts are now registered in CI.
 
 [Combined-source receipt and runtime hashes](spatial-replay-main-integration.json). No deployment or paid calls were performed.
+
+
+## Final strategic-main integration
+
+Main subsequently advanced to `22340f0`, integrating strategic AI with the same task/ghost feature set. That revision was incorporated without dropping its generation-fenced scheduling, reservations, local execution policy or privacy controls. Replay now identifies a recorded live `strategy:strategic` summary as strategic rather than hybrid; regression assertions cover both that label and explicit demo fallback.
+
+The corrected combined source completed **116 module checks and 538 tests: 532 passed, zero failed, six skipped**. All four browser checks passed: primary **42**, independent UI **19**, ghost/ability **19**, and spatial replay **21**. Expected HTTP 409 console messages in the primary runner still correspond only to deliberate task-authority denials. No paid provider calls or deployment were performed.
+
+[Final merge validation and runtime fingerprints](spatial-replay-merge-validation.json) identifies the integrated main revision and validated source. Earlier stage receipts are retained as historical evidence.
