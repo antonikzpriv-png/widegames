@@ -130,10 +130,10 @@ export async function createGameServer(config,dependencies={}) {
           if(route==='start') {
             if(!identity.host)fail(403,'HOST_REQUIRED','Only the host can start this room.');
             if(Object.keys(input).some(k=>!['id','features'].includes(k)))fail(400,'INVALID_START','Start accepts a request ID and optional feature presets.');
-            if(data.startId===input.id)return;
-            if(data.state)fail(409,'ALREADY_STARTED','This match has already started.');
-            const next=structuredClone(data);
-            if(Object.hasOwn(input,'features')){try{next.features=parseFeatures(input.features);}catch{fail(400,'INVALID_FEATURES','Choose a valid death policy and ability preset.');}}
+            if(data.state&&data.startId!==input.id)fail(409,'ALREADY_STARTED','This match has already started.');
+            let requestedFeatures;try{requestedFeatures=parseFeatures(Object.hasOwn(input,'features')?input.features:data.features);}catch{fail(400,'INVALID_FEATURES','Choose a valid death policy and ability preset.');}
+            if(data.startId===input.id){const accepted=parseFeatures(data.features);if(accepted.deathPolicy!==requestedFeatures.deathPolicy||accepted.abilities!==requestedFeatures.abilities)fail(409,'START_CONFLICT','This start request ID was accepted with different feature settings.');return;}
+            const next=structuredClone(data);next.features=requestedFeatures;
             if((next.features?.deathPolicy==='ghost-tasks'||next.features?.abilities)&&config.worldMode!==true)fail(400,'WORLD_REQUIRED','Optional presets require world mode.');
             next.startId=input.id;next.state=engine.createMatch({id:data.id,mode:data.mode,humanPlayerId:data.lobby?.humanPlayerIds[0]??'p1',...(data.lobby?{roster:data.lobby.roster,humanPlayerIds:data.lobby.humanPlayerIds,saboteurCount:data.lobby.saboteurCount}:{}),now:now(),config:config.rules||{},world:config.worldMode===true||[2,3,4].includes(data.schema),systems:[2,3,4].includes(data.schema),...([3,4].includes(data.schema)?{tactical:true,map:data.map,stationTasks:data.schema===4}:{}),features:next.features,beaconRules:config.beaconRules??{}});await commit(room,next);
           } else {

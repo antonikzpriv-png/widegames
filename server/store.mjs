@@ -1,3 +1,4 @@
+import {validateReplayHistoryState} from './engine/replay-history.mjs';
 import {validateFeatures} from './feature-validation.mjs';
 import {canWorldAct} from '../shared/features.mjs';
 import {validProgress} from './engine/tasks.mjs';
@@ -44,7 +45,8 @@ export function validateRoom(room) {
     const state=room.state;
     if(state.replayHistory!==undefined){
       if(![2,3,4,5].includes(state.schemaVersion))throw new Error('Mixed legacy/world replay history');
-      validateReplayHistory(state.replayHistory);
+      if(state.replayHistory.version!==(state.schemaVersion===2?1:2))throw new Error('Replay version does not match the saved map');
+      validateReplayHistory(state.replayHistory);validateReplayHistoryState(state.replayHistory,state);
       if(state.replayHistory.checkpoints.some(a=>a.at<state.startedAt||a.at>state.updatedAt||a.sequence>state.replaySequence))throw new Error('Replay checkpoint exceeds match history');
     }
     if(state.replayBytes!==undefined&&(!Number.isSafeInteger(state.replayBytes)||state.replayBytes<0||state.replayBytes>REPLAY_LIMITS.bytes||!Array.isArray(state.replay)||state.replay.length>REPLAY_LIMITS.events||state.replayBytes!==state.replay.reduce((n,e)=>n+Buffer.byteLength(JSON.stringify(e)),0)))throw new Error('Invalid replay byte accounting');
